@@ -33,6 +33,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zeltlotse.Core.Persistenz",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zeltlotse.Server.Integration.Tests", "tests\Zeltlotse.Server.Integration.Tests\Zeltlotse.Server.Integration.Tests.csproj", "{D5C04ECB-B11B-4788-AD43-A007CD5FC48D}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{07C2787E-EAC7-C090-1BA3-A61EC2A24D84}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zeltlotse.Screenshots", "tools\Zeltlotse.Screenshots\Zeltlotse.Screenshots.csproj", "{3A612222-390C-4CDC-97C0-423E23D31D6A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -199,6 +203,18 @@ Global
 		{D5C04ECB-B11B-4788-AD43-A007CD5FC48D}.Release|x64.Build.0 = Release|Any CPU
 		{D5C04ECB-B11B-4788-AD43-A007CD5FC48D}.Release|x86.ActiveCfg = Release|Any CPU
 		{D5C04ECB-B11B-4788-AD43-A007CD5FC48D}.Release|x86.Build.0 = Release|Any CPU
+		{3A612222-390C-4CDC-97C0-423E23D31D6A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A612222-390C-4CDC-97C0-423E23D31D6A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A612222-390C-4CDC-97C0-423E23D31D6A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3A612222-390C-4CDC-97C0-423E23D31D6A}.Debug|x64.Build.0 = Debug|Any CPU
+		{3A612222-390C-4CDC-97C0-423E23D31D6A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3A612222-390C-4CDC-97C0-423E23D31D6A}.Debug|x86.Build.0 = Debug|Any CPU
+		{3A612222-390C-4CDC-97C0-423E23D31D6A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A612222-390C-4CDC-97C0-423E23D31D6A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A612222-390C-4CDC-97C0-423E23D31D6A}.Release|x64.ActiveCfg = Release|Any CPU
+		{3A612222-390C-4CDC-97C0-423E23D31D6A}.Release|x64.Build.0 = Release|Any CPU
+		{3A612222-390C-4CDC-97C0-423E23D31D6A}.Release|x86.ActiveCfg = Release|Any CPU
+		{3A612222-390C-4CDC-97C0-423E23D31D6A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -217,5 +233,6 @@ Global
 		{38257576-791D-4E5A-AEC7-4C7A73386112} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{7D052D43-85B4-4589-B0A3-59B5E32F2892} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{D5C04ECB-B11B-4788-AD43-A007CD5FC48D} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{3A612222-390C-4CDC-97C0-423E23D31D6A} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
 	EndGlobalSection
 EndGlobal

@@ -452,6 +452,9 @@ table.zl-tabelle tr.zl-beantragt {
 
     .zl-zeile {
         padding: var(--zl-space-3) var(--zl-space-4);
+        /* Bei umbrechendem Untertitel soll das Abzeichen auf der Titelzeile
+           stehen, nicht mittig daneben. */
+        align-items: flex-start;
     }
 
     .zl-feldreihe {
