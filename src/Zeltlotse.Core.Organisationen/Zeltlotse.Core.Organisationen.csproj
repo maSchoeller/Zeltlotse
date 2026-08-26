@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zeltlotse.Core.Persistenz\Zeltlotse.Core.Persistenz.csproj" />
+    <ProjectReference Include="..\Zeltlotse.Core.Organisationen.Contracts\Zeltlotse.Core.Organisationen.Contracts.csproj" />
+    <ProjectReference Include="..\Zeltlotse.Core.Konten.Contracts\Zeltlotse.Core.Konten.Contracts.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Zeltlotse.Core.Tests" />
+    <InternalsVisibleTo Include="Zeltlotse.Server" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>
