@@ -1,0 +1,86 @@
+@page "/o/{Slug}/loeschen"
+@inject ZeltlotseApi Api
+@inject NavigationManager Navigation
+
+<PageTitle>Löschung beantragen · Zeltlotse</PageTitle>
+
+<div class="zl-seite" style="max-width:720px">
+    <div class="zl-kopfbereich">
+        <h1>Diese Organisation löschen lassen</h1>
+    </div>
+
+    @if (_organisation?.LoeschungBeantragtAm is { } beantragt)
+    {
+        <div class="zl-meldung zl-meldung--warnung">
+            <div>
+                Die Löschung ist am @beantragt.ToLocalTime().ToString("dd.MM.yyyy") beantragt. Der
+                Betreiber führt sie aus. Solange das nicht geschehen ist, kannst du den Antrag
+                zurücknehmen.
+            </div>
+        </div>
+
+        <button type="button" class="zl-knopf zl-knopf--sekundaer" @onclick="ZuruecknehmenAsync">
+            Antrag zurücknehmen
+        </button>
+    }
+    else
+    {
+        <div class="zl-karte">
+            <h2>Was passiert dabei</h2>
+            <ul>
+                <li>Die Organisation verschwindet sofort aus Zeltlotse — für alle Mitglieder.</li>
+                <li>Alle Freizeiten, Zuordnungen und offenen Einladungen gehören dazu.</li>
+                <li>30 Tage lang lässt sich das rückgängig machen, danach ist alles endgültig weg.</li>
+                <li>Ausgeführt wird die Löschung vom Betreiber der Plattform, nicht von dir.</li>
+            </ul>
+
+            @if (_fehler is not null)
+            {
+                <div class="zl-meldung zl-meldung--fehler">@_fehler</div>
+            }
+
+            <div style="display:flex; gap:var(--zl-space-3); margin-top:var(--zl-space-5)">
+                <a class="zl-knopf zl-knopf--sekundaer" href="@($"/o/{Slug}")">Zurück</a>
+                <button type="button" class="zl-knopf zl-knopf--primaer" @onclick="BeantragenAsync">
+                    Löschung beantragen
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    private OrganisationDto? _organisation;
+    private string? _fehler;
+
+    protected override async Task OnParametersSetAsync() => await LadenAsync();
+
+    private async Task LadenAsync()
+    {
+        var ergebnis = await Api.OrganisationAsync(Slug);
+        _organisation = ergebnis.Wert;
+        _fehler = ergebnis.Fehler;
+    }
+
+    private async Task BeantragenAsync()
+    {
+        var ergebnis = await Api.LoeschantragAsync(Slug);
+
+        if (!ergebnis.Gelungen)
+        {
+            _fehler = ergebnis.Fehler;
+            return;
+        }
+
+        await LadenAsync();
+    }
+
+    private async Task ZuruecknehmenAsync()
+    {
+        await Api.LoeschantragZuruecknehmenAsync(Slug);
+        await LadenAsync();
+    }
+}

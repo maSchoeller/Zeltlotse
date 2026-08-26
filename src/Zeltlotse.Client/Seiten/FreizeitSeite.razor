@@ -1,0 +1,334 @@
+@page "/o/{Slug}/f/{Id:guid}"
+@inject ZeltlotseApi Api
+@inject NavigationManager Navigation
+
+<PageTitle>@(_freizeit?.Name ?? "Freizeit") · Zeltlotse</PageTitle>
+
+<div class="zl-seite">
+    @if (_fehler is not null)
+    {
+        <div class="zl-meldung zl-meldung--fehler">@_fehler</div>
+        <a class="zl-knopf zl-knopf--sekundaer" href="/">Zur Startseite</a>
+    }
+    else if (_freizeit is null)
+    {
+        <div class="zl-platzhalter" style="width:40%; height:36px"></div>
+        <div class="zl-platzhalter"></div>
+    }
+    else
+    {
+        <div class="zl-kopfbereich">
+            <h1>@_freizeit.Name</h1>
+            <a class="zl-knopf zl-knopf--text" href="@($"/o/{Slug}")">Alle Freizeiten</a>
+        </div>
+
+        @if (_meldung is not null)
+        {
+            <div class="zl-meldung zl-meldung--erfolg">@_meldung</div>
+        }
+
+        <div class="zl-zweispaltig">
+            <section class="zl-karte">
+                <h2>Eckdaten</h2>
+
+                @if (_freizeit.DarfVerwalten)
+                {
+                    <div class="zl-feld" style="margin-top:var(--zl-space-4)">
+                        <label for="name">Name</label>
+                        <input id="name" @bind="_name" />
+                    </div>
+
+                    <div class="zl-feld">
+                        <label>Zeitraum (optional)</label>
+                        <div class="zl-feldreihe">
+                            <input type="date" aria-label="Beginn" @bind="_beginn" />
+                            <input type="date" aria-label="Ende" @bind="_ende" />
+                        </div>
+                    </div>
+
+                    <div class="zl-feld">
+                        <label for="ort">Ort (optional)</label>
+                        <input id="ort" @bind="_ort" />
+                    </div>
+
+                    <div class="zl-feld">
+                        <label for="status">Status</label>
+                        <select id="status" @bind="_status">
+                            <option value="@FreizeitStatus.Offen">Offen</option>
+                            <option value="@FreizeitStatus.Geschlossen">Geschlossen</option>
+                        </select>
+                    </div>
+
+                    @if (_eckdatenFehler is not null)
+                    {
+                        <div class="zl-meldung zl-meldung--fehler">@_eckdatenFehler</div>
+                    }
+
+                    <button type="button" class="zl-knopf zl-knopf--primaer" disabled="@_speichert"
+                            @onclick="SpeichernAsync">
+                        @(_speichert ? "Einen Moment …" : "Speichern")
+                    </button>
+                }
+                else
+                {
+                    <dl class="zl-daten">
+                        <dt>Zeitraum</dt>
+                        <dd>@Zeitraum</dd>
+                        <dt>Ort</dt>
+                        <dd>@(_freizeit.Ort ?? "—")</dd>
+                        <dt>Status</dt>
+                        <dd>@(_freizeit.Status == FreizeitStatus.Offen ? "Offen" : "Geschlossen")</dd>
+                    </dl>
+                }
+            </section>
+
+            <section class="zl-karte">
+                <h2>Team</h2>
+
+                @if (_team.Count == 0)
+                {
+                    <p class="zl-gedaempft" style="margin-top:var(--zl-space-3)">
+                        Noch niemand zugeordnet.
+                    </p>
+                }
+                else
+                {
+                    <ul class="zl-teamliste">
+                        @foreach (var person in _team)
+                        {
+                            <li>
+                                <span>
+                                    @person.EMail
+                                    <span class="zl-abzeichen">
+                                        @(person.Rolle == FreizeitRolle.Leitung ? "Leitung" : "Mitarbeit")
+                                    </span>
+                                </span>
+                                @if (_freizeit.DarfVerwalten)
+                                {
+                                    <button type="button" class="zl-knopf zl-knopf--text"
+                                            @onclick="() => EntfernenAsync(person.NutzerId)">
+                                        Entfernen
+                                    </button>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+
+                @if (_freizeit.DarfVerwalten)
+                {
+                    <button type="button" class="zl-knopf zl-knopf--sekundaer"
+                            style="margin-top:var(--zl-space-4)" @onclick="EinladungOeffnen">
+                        Person einladen
+                    </button>
+                }
+            </section>
+        </div>
+
+        @if (_freizeit.DarfVerwalten)
+        {
+            <div class="zl-abschnitt" style="text-align:right">
+                <button type="button" class="zl-knopf zl-knopf--gefahr" @onclick="() => _loeschenOffen = true">
+                    Freizeit löschen
+                </button>
+            </div>
+        }
+    }
+</div>
+
+@if (_einladungOffen)
+{
+    <Dialog Titel="Person einladen" BeimSchliessen="() => _einladungOffen = false">
+        <Inhalt>
+            @if (_link is null)
+            {
+                <div class="zl-feld">
+                    <label for="einladungsmail">E-Mail-Adresse</label>
+                    <input id="einladungsmail" type="email" @bind="_einladungsMail" @bind:event="oninput" />
+                </div>
+
+                <div class="zl-feld">
+                    <label for="rolle">Rolle in dieser Freizeit</label>
+                    <select id="rolle" @bind="_einladungsRolle">
+                        <option value="@FreizeitRolle.Mitarbeiter">Mitarbeit</option>
+                        <option value="@FreizeitRolle.Leitung">Leitung</option>
+                    </select>
+                </div>
+
+                @if (_einladungsFehler is not null)
+                {
+                    <div class="zl-meldung zl-meldung--fehler">@_einladungsFehler</div>
+                }
+
+                <div class="zl-dialog-fuss">
+                    <button type="button" class="zl-knopf zl-knopf--sekundaer"
+                            @onclick="() => _einladungOffen = false">Abbrechen</button>
+                    <button type="button" class="zl-knopf zl-knopf--primaer"
+                            disabled="@string.IsNullOrWhiteSpace(_einladungsMail)"
+                            @onclick="EinladenAsync">Link erzeugen</button>
+                </div>
+            }
+            else
+            {
+                <Einladungslink Link="@_link" BeimSchliessen="EinladungSchliessen" />
+            }
+        </Inhalt>
+    </Dialog>
+}
+
+@if (_loeschenOffen && _freizeit is not null)
+{
+    <Dialog Titel="Freizeit löschen" BeimSchliessen="() => _loeschenOffen = false">
+        <Inhalt>
+            <p>
+                <strong>@_freizeit.Name</strong> wandert in den Papierkorb und lässt sich dort
+                30 Tage lang wiederherstellen. Danach ist sie endgültig weg.
+            </p>
+
+            <div class="zl-dialog-fuss">
+                <button type="button" class="zl-knopf zl-knopf--sekundaer"
+                        @onclick="() => _loeschenOffen = false">Abbrechen</button>
+                <button type="button" class="zl-knopf zl-knopf--primaer" @onclick="LoeschenAsync">
+                    In den Papierkorb
+                </button>
+            </div>
+        </Inhalt>
+    </Dialog>
+}
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private FreizeitDto? _freizeit;
+    private List<FreizeitTeamDto> _team = [];
+    private string? _fehler;
+    private string? _meldung;
+    private string? _eckdatenFehler;
+    private bool _speichert;
+
+    private string _name = string.Empty;
+    private string _ort = string.Empty;
+    private DateTime? _beginn;
+    private DateTime? _ende;
+    private FreizeitStatus _status;
+
+    private bool _einladungOffen;
+    private bool _loeschenOffen;
+    private string _einladungsMail = string.Empty;
+    private FreizeitRolle _einladungsRolle = FreizeitRolle.Mitarbeiter;
+    private string? _einladungsFehler;
+    private string? _link;
+
+    private string Zeitraum => (_freizeit?.Beginn, _freizeit?.Ende) switch
+    {
+        (null, null) => "noch offen",
+        ({ } b, null) => $"ab {b:dd.MM.yyyy}",
+        (null, { } e) => $"bis {e:dd.MM.yyyy}",
+        ({ } b, { } e) => $"{b:dd.MM.yyyy} – {e:dd.MM.yyyy}",
+    };
+
+    protected override async Task OnParametersSetAsync() => await LadenAsync();
+
+    private async Task LadenAsync()
+    {
+        var ergebnis = await Api.FreizeitAsync(Slug, Id);
+
+        if (!ergebnis.Gelungen)
+        {
+            _fehler = ergebnis.Fehler;
+            return;
+        }
+
+        _freizeit = ergebnis.Wert;
+        _name = _freizeit!.Name;
+        _ort = _freizeit.Ort ?? string.Empty;
+        _beginn = _freizeit.Beginn?.ToDateTime(TimeOnly.MinValue);
+        _ende = _freizeit.Ende?.ToDateTime(TimeOnly.MinValue);
+        _status = _freizeit.Status;
+
+        var team = await Api.TeamAsync(Slug, Id);
+        _team = team.Wert ?? [];
+    }
+
+    private async Task SpeichernAsync()
+    {
+        _speichert = true;
+        _eckdatenFehler = null;
+        _meldung = null;
+
+        var ergebnis = await Api.FreizeitAendernAsync(Slug, Id, new FreizeitAendern(
+            _name.Trim(),
+            _beginn is { } b ? DateOnly.FromDateTime(b) : null,
+            _ende is { } e ? DateOnly.FromDateTime(e) : null,
+            string.IsNullOrWhiteSpace(_ort) ? null : _ort.Trim(),
+            _status));
+
+        _speichert = false;
+
+        if (!ergebnis.Gelungen)
+        {
+            _eckdatenFehler = ergebnis.Fehler;
+            return;
+        }
+
+        _meldung = "Gespeichert.";
+        await LadenAsync();
+    }
+
+    private void EinladungOeffnen()
+    {
+        _einladungsMail = string.Empty;
+        _einladungsRolle = FreizeitRolle.Mitarbeiter;
+        _einladungsFehler = null;
+        _link = null;
+        _einladungOffen = true;
+    }
+
+    private async Task EinladenAsync()
+    {
+        _einladungsFehler = null;
+
+        var ergebnis = await Api.TeamEinladenAsync(Slug, Id, new EinladungAnlegen(
+            _einladungsMail.Trim(), Einladungsziel.Freizeit, null, _einladungsRolle, Id));
+
+        if (!ergebnis.Gelungen)
+        {
+            _einladungsFehler = ergebnis.Fehler;
+            return;
+        }
+
+        _link = ergebnis.Wert!.Link;
+    }
+
+    private async Task EinladungSchliessen()
+    {
+        _einladungOffen = false;
+        await LadenAsync();
+    }
+
+    private async Task EntfernenAsync(Guid nutzerId)
+    {
+        await Api.TeamEntfernenAsync(Slug, Id, nutzerId);
+        await LadenAsync();
+    }
+
+    private async Task LoeschenAsync()
+    {
+        var ergebnis = await Api.FreizeitLoeschenAsync(Slug, Id);
+
+        _loeschenOffen = false;
+
+        if (ergebnis.Gelungen)
+        {
+            Navigation.NavigateTo($"/o/{Slug}");
+        }
+        else
+        {
+            _fehler = ergebnis.Fehler;
+        }
+    }
+}

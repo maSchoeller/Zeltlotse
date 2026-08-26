@@ -1,0 +1,190 @@
+@page "/o/{Slug}/team"
+@inject ZeltlotseApi Api
+
+<PageTitle>Mitglieder · Zeltlotse</PageTitle>
+
+<div class="zl-seite">
+    <div class="zl-kopfbereich">
+        <h1>Mitglieder</h1>
+        <div style="display:flex; gap:var(--zl-space-3)">
+            <a class="zl-knopf zl-knopf--sekundaer" href="@($"/o/{Slug}")">Freizeiten</a>
+            <button type="button" class="zl-knopf zl-knopf--primaer" @onclick="EinladungOeffnen">
+                Person einladen
+            </button>
+        </div>
+    </div>
+
+    @if (_fehler is not null)
+    {
+        <div class="zl-meldung zl-meldung--fehler">@_fehler</div>
+    }
+
+    @if (_einladungen.Count > 0)
+    {
+        <section class="zl-abschnitt">
+            <h2>Offene Einladungen</h2>
+            <p class="zl-klein zl-gedaempft">
+                Diese Links wurden erzeugt, aber noch nicht eingelöst. Aus Sicherheitsgründen lässt
+                sich ein Link nicht erneut anzeigen — erzeuge notfalls eine neue Einladung.
+            </p>
+
+            <div class="zl-tabelle-huelle zl-liste" style="margin-top:var(--zl-space-3)">
+                <table class="zl-tabelle">
+                    <thead>
+                        <tr>
+                            <th>E-Mail</th>
+                            <th>Ziel</th>
+                            <th>Gültig bis</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var einladung in _einladungen)
+                        {
+                            <tr>
+                                <td>@einladung.EMail</td>
+                                <td>@einladung.Beschreibung</td>
+                                <td>@einladung.GueltigBis.ToLocalTime().ToString("dd.MM.yyyy")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+
+    <section class="zl-abschnitt">
+        @if (_mitglieder.Count == 0 && !_laedt)
+        {
+            <div class="zl-leer">
+                <p>Außer dir gehört noch niemand zu dieser Organisation.</p>
+            </div>
+        }
+        else
+        {
+            <div class="zl-tabelle-huelle zl-liste">
+                <table class="zl-tabelle">
+                    <thead>
+                        <tr>
+                            <th>E-Mail</th>
+                            <th>Rolle</th>
+                            <th>Dabei seit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var mitglied in _mitglieder)
+                        {
+                            <tr>
+                                <td>@mitglied.EMail</td>
+                                <td>
+                                    <span class="zl-abzeichen">
+                                        @(mitglied.Rolle == OrgRolle.OrgAdmin ? "Organisationsleitung" : "Mitglied")
+                                    </span>
+                                </td>
+                                <td>@mitglied.SeitAm.ToLocalTime().ToString("dd.MM.yyyy")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+
+@if (_dialogOffen)
+{
+    <Dialog Titel="Person einladen" BeimSchliessen="DialogSchliessen">
+        <Inhalt>
+            @if (_link is null)
+            {
+                <div class="zl-feld">
+                    <label for="mail">E-Mail-Adresse</label>
+                    <input id="mail" type="email" @bind="_mail" @bind:event="oninput" />
+                    <div class="zl-hilfe">
+                        Die Person wird Mitglied der Organisation. Zu einer Freizeit ordnest du sie
+                        in der Freizeit selbst zu.
+                    </div>
+                </div>
+
+                @if (_dialogFehler is not null)
+                {
+                    <div class="zl-meldung zl-meldung--fehler">@_dialogFehler</div>
+                }
+
+                <div class="zl-dialog-fuss">
+                    <button type="button" class="zl-knopf zl-knopf--sekundaer" @onclick="DialogSchliessen">
+                        Abbrechen
+                    </button>
+                    <button type="button" class="zl-knopf zl-knopf--primaer"
+                            disabled="@string.IsNullOrWhiteSpace(_mail)" @onclick="EinladenAsync">
+                        Link erzeugen
+                    </button>
+                </div>
+            }
+            else
+            {
+                <Einladungslink Link="@_link" BeimSchliessen="DialogSchliessen" />
+            }
+        </Inhalt>
+    </Dialog>
+}
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    private List<MitgliedDto> _mitglieder = [];
+    private List<OffeneEinladungDto> _einladungen = [];
+    private bool _laedt = true;
+    private string? _fehler;
+
+    private bool _dialogOffen;
+    private string _mail = string.Empty;
+    private string? _dialogFehler;
+    private string? _link;
+
+    protected override async Task OnParametersSetAsync() => await LadenAsync();
+
+    private async Task LadenAsync()
+    {
+        _laedt = true;
+
+        var mitglieder = await Api.MitgliederAsync(Slug);
+        _mitglieder = mitglieder.Wert ?? [];
+        _fehler = mitglieder.Fehler;
+
+        var einladungen = await Api.OffeneEinladungenAsync(Slug);
+        _einladungen = einladungen.Wert ?? [];
+
+        _laedt = false;
+    }
+
+    private void EinladungOeffnen()
+    {
+        _mail = string.Empty;
+        _dialogFehler = null;
+        _link = null;
+        _dialogOffen = true;
+    }
+
+    private async Task DialogSchliessen()
+    {
+        _dialogOffen = false;
+        await LadenAsync();
+    }
+
+    private async Task EinladenAsync()
+    {
+        _dialogFehler = null;
+
+        var ergebnis = await Api.EinladenAsync(Slug, new EinladungAnlegen(
+            _mail.Trim(), Einladungsziel.Organisation, OrgRolle.Mitglied, null, null));
+
+        if (!ergebnis.Gelungen)
+        {
+            _dialogFehler = ergebnis.Fehler;
+            return;
+        }
+
+        _link = ergebnis.Wert!.Link;
+    }
+}

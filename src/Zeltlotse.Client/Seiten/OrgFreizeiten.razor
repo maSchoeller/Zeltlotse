@@ -1,0 +1,198 @@
+@page "/o/{Slug}"
+@inject ZeltlotseApi Api
+@inject NavigationManager Navigation
+
+<PageTitle>Freizeiten · Zeltlotse</PageTitle>
+
+<div class="zl-seite">
+    <div class="zl-kopfbereich">
+        <h1>Freizeiten</h1>
+
+        @if (_organisation?.EigeneRolle == OrgRolle.OrgAdmin)
+        {
+            <div style="display:flex; gap:var(--zl-space-3); flex-wrap:wrap">
+                <a class="zl-knopf zl-knopf--sekundaer" href="@($"/o/{Slug}/team")">Mitglieder</a>
+                <a class="zl-knopf zl-knopf--sekundaer" href="@($"/o/{Slug}/papierkorb")">Papierkorb</a>
+                <button type="button" class="zl-knopf zl-knopf--primaer" @onclick="DialogOeffnen">
+                    Freizeit anlegen
+                </button>
+            </div>
+        }
+    </div>
+
+    @if (_organisation?.LoeschungBeantragtAm is { } beantragt)
+    {
+        <div class="zl-meldung zl-meldung--warnung">
+            <div>
+                Die Löschung dieser Organisation ist am @beantragt.ToLocalTime().ToString("dd.MM.yyyy")
+                beantragt. Der Betreiber führt sie aus.
+                <button type="button" class="zl-knopf zl-knopf--text" @onclick="AntragZuruecknehmen">
+                    Antrag zurücknehmen
+                </button>
+            </div>
+        </div>
+    }
+
+    @if (_fehler is not null)
+    {
+        <div class="zl-meldung zl-meldung--fehler">@_fehler</div>
+    }
+
+    <FreizeitListe Freizeiten="_freizeiten" Laedt="_laedt"
+                   LeerText="Noch keine Freizeit angelegt. Ein Name genügt zum Anfangen." />
+
+    @if (_organisation?.EigeneRolle == OrgRolle.OrgAdmin)
+    {
+        <div class="zl-abschnitt" style="text-align:right">
+            <a class="zl-knopf zl-knopf--gefahr" href="@($"/o/{Slug}/loeschen")">
+                Diese Organisation löschen lassen
+            </a>
+        </div>
+    }
+</div>
+
+@if (_dialogOffen)
+{
+    <Dialog Titel="Freizeit anlegen" BeimSchliessen="DialogSchliessen" FokusBeimAufrufer="true">
+        <Inhalt>
+            @if (_dialogFehler is not null)
+            {
+                <div class="zl-meldung zl-meldung--fehler">@_dialogFehler</div>
+            }
+
+            <div class="zl-feld">
+                <label for="name">Name</label>
+                <input id="name" @ref="_nameFeld" @bind="_name" @bind:event="oninput"
+                       @onkeydown="BeiTaste" placeholder="Sommerfreizeit 2027" />
+            </div>
+
+            <div class="zl-feld">
+                <label>Zeitraum (optional)</label>
+                <div class="zl-feldreihe">
+                    <input type="date" aria-label="Beginn" @bind="_beginn" />
+                    <input type="date" aria-label="Ende" @bind="_ende" />
+                </div>
+            </div>
+
+            <div class="zl-feld">
+                <label for="ort">Ort (optional)</label>
+                <input id="ort" @bind="_ort" />
+            </div>
+
+            <div class="zl-dialog-fuss">
+                <button type="button" class="zl-knopf zl-knopf--sekundaer" @onclick="DialogSchliessen">
+                    Abbrechen
+                </button>
+                <button type="button" class="zl-knopf zl-knopf--primaer"
+                        disabled="@(_speichert || string.IsNullOrWhiteSpace(_name))"
+                        @onclick="Anlegen">
+                    @(_speichert ? "Einen Moment …" : "Anlegen")
+                </button>
+            </div>
+        </Inhalt>
+    </Dialog>
+}
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    private OrganisationDto? _organisation;
+    private List<FreizeitDto> _freizeiten = [];
+    private bool _laedt = true;
+    private string? _fehler;
+
+    private bool _dialogOffen;
+    private bool _speichert;
+    private string? _dialogFehler;
+    private ElementReference _nameFeld;
+    private bool _fokusSetzen;
+
+    private string _name = string.Empty;
+    private string _ort = string.Empty;
+    private DateTime? _beginn;
+    private DateTime? _ende;
+
+    protected override async Task OnParametersSetAsync() => await LadenAsync();
+
+    protected override async Task OnAfterRenderAsync(bool ersteAnzeige)
+    {
+        if (_fokusSetzen && _dialogOffen)
+        {
+            _fokusSetzen = false;
+            await _nameFeld.FocusAsync();
+        }
+    }
+
+    private async Task LadenAsync()
+    {
+        _laedt = true;
+
+        var organisation = await Api.OrganisationAsync(Slug);
+
+        if (!organisation.Gelungen)
+        {
+            _fehler = organisation.Fehler;
+            _laedt = false;
+            return;
+        }
+
+        _organisation = organisation.Wert;
+
+        var freizeiten = await Api.FreizeitenAsync(Slug);
+        _freizeiten = freizeiten.Wert ?? [];
+        _fehler = freizeiten.Fehler;
+        _laedt = false;
+    }
+
+    private void DialogOeffnen()
+    {
+        _name = string.Empty;
+        _ort = string.Empty;
+        _beginn = null;
+        _ende = null;
+        _dialogFehler = null;
+        _dialogOffen = true;
+        _fokusSetzen = true;
+    }
+
+    private void DialogSchliessen() => _dialogOffen = false;
+
+    /// <summary>Enter im Namensfeld legt an — der kürzeste Weg zum Ziel.</summary>
+    private async Task BeiTaste(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_name))
+        {
+            await Anlegen();
+        }
+    }
+
+    private async Task Anlegen()
+    {
+        _speichert = true;
+        _dialogFehler = null;
+
+        var ergebnis = await Api.FreizeitAnlegenAsync(Slug, new FreizeitAnlegen(
+            _name.Trim(),
+            _beginn is { } b ? DateOnly.FromDateTime(b) : null,
+            _ende is { } e ? DateOnly.FromDateTime(e) : null,
+            string.IsNullOrWhiteSpace(_ort) ? null : _ort.Trim()));
+
+        _speichert = false;
+
+        if (!ergebnis.Gelungen)
+        {
+            _dialogFehler = ergebnis.Fehler;
+            return;
+        }
+
+        _dialogOffen = false;
+        await LadenAsync();
+    }
+
+    private async Task AntragZuruecknehmen()
+    {
+        await Api.LoeschantragZuruecknehmenAsync(Slug);
+        await LadenAsync();
+    }
+}

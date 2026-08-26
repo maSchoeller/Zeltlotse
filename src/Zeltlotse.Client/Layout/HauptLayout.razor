@@ -1,0 +1,213 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject Sitzung Sitzung
+@inject NavigationManager Navigation
+
+@if (!_geprueft)
+{
+    <div class="zl-mitte">
+        <div class="zl-karte">
+            <div class="zl-marke">Zeltlotse</div>
+            <p class="zl-gedaempft">Einen Moment …</p>
+        </div>
+    </div>
+}
+else if (!Sitzung.IstAngemeldet)
+{
+    @Body
+}
+else
+{
+    <header class="zl-kopfzeile">
+        <a class="zl-kopfzeile-marke" href="/">Zeltlotse</a>
+
+        <div class="zl-kopfzeile-mitte">
+            @if (Sitzung.Nutzer!.Organisationen.Count == 1)
+            {
+                <span class="zl-kopfzeile-org">@Sitzung.Nutzer.Organisationen[0].Name</span>
+            }
+            else if (Sitzung.Nutzer.Organisationen.Count > 1)
+            {
+                <div class="zl-wechsler">
+                    <button type="button" class="zl-wechsler-knopf" @onclick="WechslerUmschalten"
+                            aria-expanded="@(_wechslerOffen ? "true" : "false")">
+                        @(AktuelleOrganisation?.Name ?? "Organisation wählen")
+                        <span aria-hidden="true">▾</span>
+                    </button>
+
+                    @if (_wechslerOffen)
+                    {
+                        <ul class="zl-wechsler-liste">
+                            @foreach (var organisation in Sitzung.Nutzer.Organisationen)
+                            {
+                                <li>
+                                    <button type="button"
+                                            class="@(organisation.Slug == AktuellerSlug ? "zl-gewaehlt" : null)"
+                                            @onclick="() => Wechseln(organisation.Slug)">
+                                        @organisation.Name
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="zl-wechsler zl-kopfzeile-konto">
+            <button type="button" class="zl-initialen" @onclick="KontoUmschalten"
+                    title="@Sitzung.Nutzer.EMail" aria-label="Konto">
+                @Initialen
+            </button>
+
+            @if (_kontoOffen)
+            {
+                <ul class="zl-wechsler-liste zl-wechsler-liste--rechts">
+                    @if (Sitzung.Nutzer.IstGlobalAdmin)
+                    {
+                        <li><button type="button" @onclick="@(() => Gehe("/verwaltung/organisationen"))">Verwaltung</button></li>
+                    }
+                    <li><button type="button" @onclick="@(() => Gehe("/konto"))">Kennwort ändern</button></li>
+                    <li><button type="button" @onclick="Abmelden">Abmelden</button></li>
+                </ul>
+            }
+        </div>
+    </header>
+
+    <main>
+        @Body
+    </main>
+}
+
+@code {
+    private bool _geprueft;
+    private bool _wechslerOffen;
+    private bool _kontoOffen;
+
+    private static readonly string[] OeffentlicheWege =
+        ["/anmelden", "/einrichtung", "/einladung"];
+
+    private string? AktuellerSlug
+    {
+        get
+        {
+            var pfad = Navigation.ToBaseRelativePath(Navigation.Uri);
+
+            if (!pfad.StartsWith("o/", StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            var rest = pfad[2..];
+            var ende = rest.IndexOf('/');
+
+            return ende < 0 ? rest : rest[..ende];
+        }
+    }
+
+    private OrganisationDto? AktuelleOrganisation
+        => Sitzung.Nutzer?.Organisationen.FirstOrDefault(o => o.Slug == AktuellerSlug);
+
+    private string Initialen
+    {
+        get
+        {
+            var email = Sitzung.Nutzer?.EMail ?? "?";
+
+            return email.Length >= 2 ? email[..2].ToUpperInvariant() : email.ToUpperInvariant();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Sitzung.Geaendert += Aktualisieren;
+        Navigation.LocationChanged += BeiWegwechsel;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool ersteAnzeige)
+    {
+        if (!ersteAnzeige)
+        {
+            return;
+        }
+
+        await Sitzung.WiederherstellenAsync();
+
+        _geprueft = true;
+        Umleiten();
+        StateHasChanged();
+    }
+
+    private void BeiWegwechsel(object? absender, LocationChangedEventArgs e)
+    {
+        _wechslerOffen = false;
+        _kontoOffen = false;
+
+        if (_geprueft)
+        {
+            Umleiten();
+        }
+
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Wer nicht angemeldet ist, landet auf der Anmeldung — außer auf den
+    /// Wegen, die es ohne Konto geben muss.
+    /// </summary>
+    private void Umleiten()
+    {
+        if (Sitzung.IstAngemeldet)
+        {
+            return;
+        }
+
+        var pfad = "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
+
+        if (OeffentlicheWege.Any(weg => pfad.StartsWith(weg, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        Navigation.NavigateTo("/anmelden");
+    }
+
+    private void WechslerUmschalten()
+    {
+        _wechslerOffen = !_wechslerOffen;
+        _kontoOffen = false;
+    }
+
+    private void KontoUmschalten()
+    {
+        _kontoOffen = !_kontoOffen;
+        _wechslerOffen = false;
+    }
+
+    private void Wechseln(string slug)
+    {
+        _wechslerOffen = false;
+        Navigation.NavigateTo($"/o/{slug}");
+    }
+
+    private void Gehe(string ziel)
+    {
+        _kontoOffen = false;
+        Navigation.NavigateTo(ziel);
+    }
+
+    private async Task Abmelden()
+    {
+        _kontoOffen = false;
+        await Sitzung.AbmeldenAsync();
+        Navigation.NavigateTo("/anmelden");
+    }
+
+    private void Aktualisieren() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Sitzung.Geaendert -= Aktualisieren;
+        Navigation.LocationChanged -= BeiWegwechsel;
+    }
+}

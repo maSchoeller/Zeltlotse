@@ -1,0 +1,82 @@
+@page "/o/{Slug}/papierkorb"
+@inject ZeltlotseApi Api
+
+<PageTitle>Papierkorb · Zeltlotse</PageTitle>
+
+<div class="zl-seite">
+    <div class="zl-kopfbereich">
+        <h1>Papierkorb</h1>
+        <a class="zl-knopf zl-knopf--sekundaer" href="@($"/o/{Slug}")">Freizeiten</a>
+    </div>
+
+    <p class="zl-gedaempft">
+        Gelöschte Freizeiten bleiben 30 Tage hier. Danach werden sie ohne Zutun endgültig entfernt.
+    </p>
+
+    @if (_fehler is not null)
+    {
+        <div class="zl-meldung zl-meldung--fehler">@_fehler</div>
+    }
+
+    @if (_laedt)
+    {
+        <div class="zl-liste" style="padding:var(--zl-space-3)">
+            <div class="zl-platzhalter" style="margin-bottom:0"></div>
+        </div>
+    }
+    else if (_eintraege.Count == 0)
+    {
+        <div class="zl-leer">
+            <p>Der Papierkorb ist leer.</p>
+        </div>
+    }
+    else
+    {
+        <div class="zl-liste">
+            @foreach (var eintrag in _eintraege)
+            {
+                <div class="zl-zeile zl-zeile--still">
+                    <span>
+                        <span class="zl-zeile-titel">@eintrag.Name</span><br />
+                        <span class="zl-klein zl-gedaempft">
+                            Gelöscht am @eintrag.GeloeschtAm.ToLocalTime().ToString("dd.MM.yyyy")
+                            · noch @Math.Max(eintrag.VerbleibendeTage, 0) Tage
+                        </span>
+                    </span>
+                    <button type="button" class="zl-knopf zl-knopf--sekundaer"
+                            @onclick="() => WiederherstellenAsync(eintrag.Id)">
+                        Wiederherstellen
+                    </button>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    private List<PapierkorbEintragDto> _eintraege = [];
+    private bool _laedt = true;
+    private string? _fehler;
+
+    protected override async Task OnParametersSetAsync() => await LadenAsync();
+
+    private async Task LadenAsync()
+    {
+        _laedt = true;
+
+        var ergebnis = await Api.PapierkorbAsync(Slug);
+        _eintraege = ergebnis.Wert ?? [];
+        _fehler = ergebnis.Fehler;
+
+        _laedt = false;
+    }
+
+    private async Task WiederherstellenAsync(Guid id)
+    {
+        await Api.WiederherstellenAsync(Slug, id);
+        await LadenAsync();
+    }
+}

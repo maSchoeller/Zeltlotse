@@ -1,0 +1,92 @@
+@inject NavigationManager Navigation
+
+@if (Laedt)
+{
+    <div class="zl-liste" style="padding: var(--zl-space-3)">
+        <div class="zl-platzhalter"></div>
+        <div class="zl-platzhalter"></div>
+        <div class="zl-platzhalter" style="margin-bottom:0"></div>
+    </div>
+}
+else if (Freizeiten.Count == 0)
+{
+    <div class="zl-leer">
+        <p>@LeerText</p>
+        @LeerAktion
+    </div>
+}
+else
+{
+    <div class="zl-liste">
+        @foreach (var freizeit in Freizeiten)
+        {
+            <button type="button"
+                    class="@Zeilenklasse(freizeit)"
+                    @onclick="() => Oeffnen(freizeit)">
+                <span>
+                    <span class="zl-zeile-titel">@freizeit.Name</span><br />
+                    <span class="zl-klein zl-gedaempft">@Untertitel(freizeit)</span>
+                </span>
+                <span class="@(freizeit.Status == FreizeitStatus.Offen
+                    ? "zl-abzeichen zl-abzeichen--offen" : "zl-abzeichen")">
+                    @(freizeit.Status == FreizeitStatus.Offen ? "Offen" : "Geschlossen")
+                </span>
+            </button>
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public IReadOnlyList<FreizeitDto> Freizeiten { get; set; } = [];
+
+    [Parameter]
+    public bool Laedt { get; set; }
+
+    /// <summary>Auf der Startseite steht die Organisation dabei, in der Organisation nicht.</summary>
+    [Parameter]
+    public bool MitOrganisation { get; set; }
+
+    [Parameter]
+    public string LeerText { get; set; } = "Hier ist noch nichts.";
+
+    [Parameter]
+    public RenderFragment? LeerAktion { get; set; }
+
+    private static string Zeilenklasse(FreizeitDto freizeit)
+        => freizeit.Status == FreizeitStatus.Geschlossen
+            ? "zl-zeile zl-zeile--geschlossen"
+            : "zl-zeile";
+
+    /// <summary>Fehlendes wird weggelassen statt als Strich angezeigt.</summary>
+    private string Untertitel(FreizeitDto freizeit)
+    {
+        var teile = new List<string>();
+
+        if (MitOrganisation)
+        {
+            teile.Add(freizeit.OrganisationName);
+        }
+
+        teile.Add(Zeitraum(freizeit));
+
+        if (!string.IsNullOrWhiteSpace(freizeit.Ort))
+        {
+            teile.Add(freizeit.Ort);
+        }
+
+        return string.Join(" · ", teile);
+    }
+
+    private static string Zeitraum(FreizeitDto freizeit)
+        => (freizeit.Beginn, freizeit.Ende) switch
+        {
+            (null, null) => "Zeitraum offen",
+            ({ } beginn, null) => $"ab {beginn:dd.MM.yyyy}",
+            (null, { } ende) => $"bis {ende:dd.MM.yyyy}",
+            ({ } beginn, { } ende) => $"{beginn:dd.MM.} – {ende:dd.MM.yyyy}",
+        };
+
+    private void Oeffnen(FreizeitDto freizeit)
+        => Navigation.NavigateTo($"/o/{freizeit.OrganisationSlug}/f/{freizeit.Id}");
+}

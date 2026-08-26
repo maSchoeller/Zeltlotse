@@ -1,0 +1,91 @@
+@page "/konto"
+@inject ZeltlotseApi Api
+@inject Sitzung Sitzung
+
+<PageTitle>Konto · Zeltlotse</PageTitle>
+
+<div class="zl-seite" style="max-width:560px">
+    <div class="zl-kopfbereich">
+        <h1>Dein Konto</h1>
+    </div>
+
+    <div class="zl-karte">
+        <dl class="zl-daten">
+            <dt>E-Mail</dt>
+            <dd>@Sitzung.Nutzer?.EMail</dd>
+        </dl>
+    </div>
+
+    <section class="zl-abschnitt zl-karte">
+        <h2>Kennwort ändern</h2>
+
+        @if (_meldung is not null)
+        {
+            <div class="zl-meldung zl-meldung--erfolg">@_meldung</div>
+        }
+
+        @if (_fehler is not null)
+        {
+            <div class="zl-meldung zl-meldung--fehler">@_fehler</div>
+        }
+
+        <EditForm Model="@this" OnValidSubmit="Absenden">
+            <div class="zl-feld" style="margin-top:var(--zl-space-4)">
+                <label for="alt">Bisheriges Kennwort</label>
+                <input id="alt" type="password" autocomplete="current-password" @bind="_alt" />
+            </div>
+
+            <div class="zl-feld">
+                <label for="neu">Neues Kennwort</label>
+                <input id="neu" type="password" autocomplete="new-password" @bind="_neu" />
+                <div class="zl-hilfe">Mindestens 10 Zeichen, mit Groß-, Kleinbuchstaben und Ziffer.</div>
+            </div>
+
+            <div class="zl-feld">
+                <label for="wiederholung">Neues Kennwort wiederholen</label>
+                <input id="wiederholung" type="password" autocomplete="new-password"
+                       @bind="_wiederholung" />
+            </div>
+
+            <button type="submit" class="zl-knopf zl-knopf--primaer" disabled="@_laeuft">
+                @(_laeuft ? "Einen Moment …" : "Kennwort ändern")
+            </button>
+        </EditForm>
+    </section>
+</div>
+
+@code {
+    private string _alt = string.Empty;
+    private string _neu = string.Empty;
+    private string _wiederholung = string.Empty;
+    private string? _fehler;
+    private string? _meldung;
+    private bool _laeuft;
+
+    private async Task Absenden()
+    {
+        _fehler = null;
+        _meldung = null;
+
+        if (_neu != _wiederholung)
+        {
+            _fehler = "Die beiden neuen Kennwörter stimmen nicht überein.";
+            return;
+        }
+
+        _laeuft = true;
+
+        var ergebnis = await Api.KennwortAendernAsync(_alt, _neu);
+
+        _laeuft = false;
+
+        if (!ergebnis.Gelungen)
+        {
+            _fehler = ergebnis.Fehler;
+            return;
+        }
+
+        _alt = _neu = _wiederholung = string.Empty;
+        _meldung = "Dein Kennwort ist geändert.";
+    }
+}

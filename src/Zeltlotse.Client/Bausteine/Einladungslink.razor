@@ -1,0 +1,49 @@
+@inject IJSRuntime JS
+
+@* Ohne Mailversand ist das Kopieren dieses Links die eigentliche Funktion —
+   entsprechend groß und eindeutig ist er dargestellt. *@
+
+<div class="zl-meldung zl-meldung--erfolg">
+    Gib diesen Link persönlich weiter. Er ist 14 Tage gültig und funktioniert genau einmal.
+</div>
+
+<div class="zl-linkfeld">@Link</div>
+
+<div class="zl-dialog-fuss">
+    @if (_kopiert)
+    {
+        <span class="zl-gedaempft" style="align-self:center">Kopiert.</span>
+    }
+    <button type="button" class="zl-knopf zl-knopf--sekundaer" @onclick="Kopieren">
+        Link kopieren
+    </button>
+    <button type="button" class="zl-knopf zl-knopf--primaer" @onclick="BeimSchliessen">
+        Fertig
+    </button>
+</div>
+
+@code {
+    private bool _kopiert;
+
+    [Parameter, EditorRequired]
+    public string Link { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback BeimSchliessen { get; set; }
+
+    private async Task Kopieren()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", Link);
+            _kopiert = true;
+        }
+        catch (JSException)
+        {
+            // Manche Browser verweigern die Zwischenablage ohne Nutzergeste in
+            // diesem Kontext — der Link steht sichtbar da und lässt sich von
+            // Hand markieren.
+            _kopiert = false;
+        }
+    }
+}

@@ -1,0 +1,84 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@* Kleiner Dialog: fängt den Fokus, schließt auf Esc, gibt den Fokus zurück. *@
+
+<div class="zl-schleier" @onclick="Schliessen">
+    <div class="@Klasse" role="dialog" aria-modal="true" aria-label="@Titel" tabindex="-1"
+         @ref="_panel" @onkeydown="BeiTaste" @onclick:stopPropagation="true">
+        <div class="zl-dialog-kopf">
+            <h2>@Titel</h2>
+            <button type="button" class="zl-knopf zl-knopf--text" @onclick="Schliessen"
+                    aria-label="Schließen">✕</button>
+        </div>
+
+        @Inhalt
+    </div>
+</div>
+
+@code {
+    private ElementReference _panel;
+
+    [Parameter, EditorRequired]
+    public string Titel { get; set; } = string.Empty;
+
+    [Parameter]
+    public RenderFragment? Inhalt { get; set; }
+
+    [Parameter]
+    public EventCallback BeimSchliessen { get; set; }
+
+    /// <summary>Breiter Dialog für Inhalte wie einen Einladungslink.</summary>
+    [Parameter]
+    public bool Breit { get; set; }
+
+    /// <summary>
+    /// Der Aufrufer setzt den Fokus selbst — etwa auf das erste Eingabefeld.
+    /// Ohne das würde der Dialog ihn an sich ziehen und die Eingabe verlangt
+    /// einen zusätzlichen Tastendruck.
+    /// </summary>
+    [Parameter]
+    public bool FokusBeimAufrufer { get; set; }
+
+    private string Klasse => Breit ? "zl-dialog zl-dialog--breit" : "zl-dialog";
+
+    /// <summary>
+    /// Bewusst vor dem ersten Rendern: Danach hat der Aufrufer den Fokus
+    /// bereits in sein erstes Feld gesetzt, und gemerkt würde das Feld, das
+    /// gleich mit dem Dialog verschwindet.
+    /// </summary>
+    protected override Task OnInitializedAsync()
+        => JS.InvokeVoidAsync("zeltlotseDialog.merkeFokus").AsTask();
+
+    protected override async Task OnAfterRenderAsync(bool ersteAnzeige)
+    {
+        if (!ersteAnzeige)
+        {
+            return;
+        }
+
+        if (!FokusBeimAufrufer)
+        {
+            // Ohne diesen Griff bliebe der Fokus hinter dem Dialog stehen.
+            await _panel.FocusAsync();
+        }
+    }
+
+    private Task BeiTaste(KeyboardEventArgs e)
+        => e.Key == "Escape" ? Schliessen() : Task.CompletedTask;
+
+    private Task Schliessen() => BeimSchliessen.InvokeAsync();
+
+    /// <summary>Gibt den Fokus dorthin zurück, wo er vor dem Öffnen war.</summary>
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("zeltlotseDialog.stelleFokusHer");
+        }
+        catch (JSDisconnectedException)
+        {
+            // Seite wird gerade verlassen — dann gibt es nichts mehr zu fokussieren.
+        }
+    }
+}

@@ -1,0 +1,72 @@
+@page "/anmelden"
+@layout HauptLayout
+@inject Sitzung Sitzung
+@inject ZeltlotseApi Api
+@inject NavigationManager Navigation
+
+<PageTitle>Anmelden · Zeltlotse</PageTitle>
+
+<div class="zl-mitte">
+    <div class="zl-karte">
+        <div class="zl-marke">Zeltlotse</div>
+        <h1 class="zl-titel">Anmelden</h1>
+
+        @if (_einrichtungNoetig)
+        {
+            <div class="zl-meldung">
+                <div>
+                    Zeltlotse ist noch nicht eingerichtet.
+                    <a href="/einrichtung">Jetzt einrichten</a>
+                </div>
+            </div>
+        }
+
+        @if (_fehler is not null)
+        {
+            <div class="zl-meldung zl-meldung--fehler">@_fehler</div>
+        }
+
+        <EditForm Model="@this" OnValidSubmit="Absenden">
+            <div class="zl-feld">
+                <label for="email">E-Mail-Adresse</label>
+                <input id="email" type="email" autocomplete="username" @bind="_email" />
+            </div>
+
+            <div class="zl-feld">
+                <label for="kennwort">Kennwort</label>
+                <input id="kennwort" type="password" autocomplete="current-password" @bind="_kennwort" />
+            </div>
+
+            <button type="submit" class="zl-knopf zl-knopf--primaer" disabled="@_laeuft"
+                    style="width:100%">
+                @(_laeuft ? "Einen Moment …" : "Anmelden")
+            </button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private string _email = string.Empty;
+    private string _kennwort = string.Empty;
+    private string? _fehler;
+    private bool _laeuft;
+    private bool _einrichtungNoetig;
+
+    protected override async Task OnInitializedAsync()
+        => _einrichtungNoetig = await Api.EinrichtungNoetigAsync();
+
+    private async Task Absenden()
+    {
+        _laeuft = true;
+        _fehler = null;
+
+        _fehler = await Sitzung.AnmeldenAsync(_email.Trim(), _kennwort);
+
+        _laeuft = false;
+
+        if (_fehler is null)
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+}

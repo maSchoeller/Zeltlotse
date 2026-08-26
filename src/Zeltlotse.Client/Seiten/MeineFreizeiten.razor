@@ -1,0 +1,73 @@
+@page "/"
+@inject ZeltlotseApi Api
+@inject Sitzung Sitzung
+@inject NavigationManager Navigation
+
+<PageTitle>Meine Freizeiten · Zeltlotse</PageTitle>
+
+<div class="zl-seite">
+    <div class="zl-kopfbereich">
+        <h1>Meine Freizeiten</h1>
+
+        @if (EinzigeVerwaltete is { } organisation)
+        {
+            <a class="zl-knopf zl-knopf--primaer" href="@($"/o/{organisation.Slug}")">
+                Zur Organisation
+            </a>
+        }
+    </div>
+
+    @if (_fehler is not null)
+    {
+        <div class="zl-meldung zl-meldung--fehler">@_fehler</div>
+    }
+
+    <FreizeitListe Freizeiten="_freizeiten"
+                   Laedt="_laedt"
+                   MitOrganisation="true"
+                   LeerText="@LeerText">
+        <LeerAktion>
+            @if (EinzigeVerwaltete is { } organisation)
+            {
+                <a class="zl-knopf zl-knopf--primaer" href="@($"/o/{organisation.Slug}")">
+                    Freizeit anlegen
+                </a>
+            }
+        </LeerAktion>
+    </FreizeitListe>
+</div>
+
+@code {
+    private List<FreizeitDto> _freizeiten = [];
+    private bool _laedt = true;
+    private string? _fehler;
+
+    /// <summary>
+    /// Nur wenn genau eine Organisation verwaltet wird, ist der Weg eindeutig —
+    /// sonst führt der Wechsler in der Kopfzeile weiter.
+    /// </summary>
+    private OrganisationDto? EinzigeVerwaltete
+    {
+        get
+        {
+            var verwaltete = Sitzung.Nutzer?.Organisationen
+                .Where(o => o.EigeneRolle == OrgRolle.OrgAdmin)
+                .ToList() ?? [];
+
+            return verwaltete.Count == 1 ? verwaltete[0] : null;
+        }
+    }
+
+    private string LeerText => EinzigeVerwaltete is null
+        ? "Du bist noch keiner Freizeit zugeordnet. Sobald dich jemand zu einer Freizeit hinzufügt, erscheint sie hier."
+        : "Noch keine Freizeit angelegt. Fang mit der ersten an — ein Name genügt.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var ergebnis = await Api.MeineFreizeitenAsync();
+
+        _freizeiten = ergebnis.Wert ?? [];
+        _fehler = ergebnis.Fehler;
+        _laedt = false;
+    }
+}

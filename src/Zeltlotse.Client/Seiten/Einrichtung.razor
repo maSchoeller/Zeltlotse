@@ -1,0 +1,99 @@
+@page "/einrichtung"
+@layout HauptLayout
+@inject Sitzung Sitzung
+@inject ZeltlotseApi Api
+@inject NavigationManager Navigation
+
+<PageTitle>Einrichten · Zeltlotse</PageTitle>
+
+<div class="zl-mitte">
+    <div class="zl-karte">
+        <div class="zl-marke">Zeltlotse</div>
+
+        @if (_geprueft && !_noetig)
+        {
+            <h1 class="zl-titel">Zeltlotse ist bereits eingerichtet.</h1>
+            <p class="zl-gedaempft">
+                Hier gibt es nichts mehr zu tun. Melde dich mit deinem Konto an.
+            </p>
+            <a class="zl-knopf zl-knopf--primaer" href="/anmelden">Zur Anmeldung</a>
+        }
+        else if (!_geprueft)
+        {
+            <p class="zl-gedaempft">Einen Moment …</p>
+        }
+        else
+        {
+            <h1 class="zl-titel">Zeltlotse einrichten</h1>
+            <p class="zl-gedaempft">
+                Lege das Konto des Betreibers an. Danach verschwindet diese Seite dauerhaft.
+            </p>
+
+            @if (_fehler is not null)
+            {
+                <div class="zl-meldung zl-meldung--fehler">@_fehler</div>
+            }
+
+            <EditForm Model="@this" OnValidSubmit="Absenden">
+                <div class="zl-feld">
+                    <label for="email">E-Mail-Adresse</label>
+                    <input id="email" type="email" autocomplete="username" @bind="_email" />
+                </div>
+
+                <div class="zl-feld">
+                    <label for="kennwort">Kennwort</label>
+                    <input id="kennwort" type="password" autocomplete="new-password" @bind="_kennwort" />
+                    <div class="zl-hilfe">Mindestens 10 Zeichen, mit Groß-, Kleinbuchstaben und Ziffer.</div>
+                </div>
+
+                <div class="zl-feld">
+                    <label for="wiederholung">Kennwort wiederholen</label>
+                    <input id="wiederholung" type="password" autocomplete="new-password"
+                           @bind="_wiederholung" />
+                </div>
+
+                <button type="submit" class="zl-knopf zl-knopf--primaer" disabled="@_laeuft"
+                        style="width:100%">
+                    @(_laeuft ? "Einen Moment …" : "Einrichten")
+                </button>
+            </EditForm>
+        }
+    </div>
+</div>
+
+@code {
+    private string _email = string.Empty;
+    private string _kennwort = string.Empty;
+    private string _wiederholung = string.Empty;
+    private string? _fehler;
+    private bool _laeuft;
+    private bool _noetig;
+    private bool _geprueft;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _noetig = await Api.EinrichtungNoetigAsync();
+        _geprueft = true;
+    }
+
+    private async Task Absenden()
+    {
+        if (_kennwort != _wiederholung)
+        {
+            _fehler = "Die beiden Kennwörter stimmen nicht überein.";
+            return;
+        }
+
+        _laeuft = true;
+        _fehler = null;
+
+        _fehler = await Sitzung.EinrichtenAsync(_email.Trim(), _kennwort);
+
+        _laeuft = false;
+
+        if (_fehler is null)
+        {
+            Navigation.NavigateTo("/verwaltung/organisationen");
+        }
+    }
+}

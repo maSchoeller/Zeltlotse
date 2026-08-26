@@ -1,0 +1,558 @@
+/* Zeltlotse — Umsetzung von design-system.md. Jeder Abstand kommt aus der Skala. */
+
+:root {
+    --zl-primary: #29447B;
+    --zl-primary-hover: color-mix(in srgb, var(--zl-primary) 88%, black);
+    --zl-primary-tint: #EAECF2;
+    --zl-primary-tint-strong: #CAD0DE;
+
+    --zl-canvas: #F5F6F8;
+    --zl-surface: #FFFFFF;
+    --zl-surface-quiet: #EEF1F4;
+    --zl-border: #D8DCE2;
+
+    --zl-text: #000000;
+    --zl-text-secondary: #474F60;
+    --zl-text-on-primary: #FFFFFF;
+
+    --zl-success: #518471;
+    --zl-warning: #DC9018;
+    --zl-error: #B61231;
+    --zl-success-tint: #EDF3F1;
+    --zl-warning-tint: #FBF4E8;
+    --zl-error-tint: #FBECEF;
+
+    --zl-radius-control: 10px;
+    --zl-radius-card: 12px;
+
+    --zl-space-1: 4px;
+    --zl-space-2: 8px;
+    --zl-space-3: 12px;
+    --zl-space-4: 16px;
+    --zl-space-5: 24px;
+    --zl-space-6: 32px;
+    --zl-space-7: 40px;
+
+    --zl-font: "Sarabun", "Segoe UI", system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background: var(--zl-canvas);
+    color: var(--zl-text);
+    font-family: var(--zl-font);
+    font-size: 15px;
+    line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+}
+
+h1 {
+    font-size: 28px;
+    line-height: 36px;
+    font-weight: 700;
+    margin: 0;
+}
+
+h2 {
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 600;
+    margin: 0;
+}
+
+h3 {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+    margin: 0;
+}
+
+a {
+    color: var(--zl-primary);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+:focus-visible {
+    outline: 3px solid var(--zl-primary);
+    outline-offset: 2px;
+}
+
+/* ---------- Grundraster ---------- */
+
+.zl-seite {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--zl-space-6) var(--zl-space-7) var(--zl-space-7);
+}
+
+.zl-kopfbereich {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--zl-space-4);
+    margin-bottom: var(--zl-space-5);
+    flex-wrap: wrap;
+}
+
+.zl-abschnitt + .zl-abschnitt {
+    margin-top: var(--zl-space-6);
+}
+
+.zl-karte {
+    background: var(--zl-surface);
+    border: 1px solid var(--zl-border);
+    border-radius: var(--zl-radius-card);
+    padding: var(--zl-space-5);
+}
+
+.zl-gedaempft {
+    color: var(--zl-text-secondary);
+}
+
+.zl-klein {
+    font-size: 13px;
+    line-height: 20px;
+}
+
+/* ---------- Bedienelemente ---------- */
+
+.zl-knopf {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--zl-space-2);
+    min-height: 40px;
+    padding: 0 var(--zl-space-4);
+    border-radius: var(--zl-radius-control);
+    border: 1px solid transparent;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.zl-knopf--primaer {
+    background: var(--zl-primary);
+    color: var(--zl-text-on-primary);
+}
+
+.zl-knopf--primaer:hover:not(:disabled) {
+    background: var(--zl-primary-hover);
+}
+
+.zl-knopf--sekundaer {
+    background: var(--zl-surface);
+    border-color: var(--zl-border);
+    color: var(--zl-text);
+}
+
+.zl-knopf--sekundaer:hover:not(:disabled) {
+    border-color: var(--zl-primary-tint-strong);
+    background: var(--zl-primary-tint);
+}
+
+.zl-knopf--text {
+    background: none;
+    color: var(--zl-primary);
+    padding: 0 var(--zl-space-2);
+}
+
+.zl-knopf--text:hover:not(:disabled) {
+    text-decoration: underline;
+}
+
+.zl-knopf--gefahr {
+    background: none;
+    color: var(--zl-error);
+    padding: 0 var(--zl-space-2);
+}
+
+.zl-knopf:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.zl-feld {
+    display: block;
+    margin-bottom: var(--zl-space-4);
+}
+
+.zl-feld > label {
+    display: block;
+    font-size: 13px;
+    line-height: 20px;
+    font-weight: 600;
+    margin-bottom: var(--zl-space-1);
+}
+
+.zl-feld input,
+.zl-feld select {
+    width: 100%;
+    min-height: 40px;
+    padding: 0 var(--zl-space-3);
+    border: 1px solid var(--zl-border);
+    border-radius: var(--zl-radius-control);
+    background: var(--zl-surface);
+    font: inherit;
+    color: var(--zl-text);
+}
+
+.zl-feld input:focus,
+.zl-feld select:focus {
+    border-color: var(--zl-primary);
+}
+
+.zl-feld .zl-hilfe {
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--zl-text-secondary);
+    margin-top: var(--zl-space-1);
+}
+
+.zl-feldreihe {
+    display: flex;
+    gap: var(--zl-space-3);
+}
+
+.zl-feldreihe > * {
+    flex: 1;
+}
+
+/* ---------- Meldungen ---------- */
+
+.zl-meldung {
+    display: flex;
+    gap: var(--zl-space-3);
+    padding: var(--zl-space-3) var(--zl-space-4);
+    border-radius: var(--zl-radius-control);
+    border-left: 3px solid var(--zl-border);
+    background: var(--zl-surface-quiet);
+    margin-bottom: var(--zl-space-4);
+}
+
+.zl-meldung--fehler {
+    border-left-color: var(--zl-error);
+    background: var(--zl-error-tint);
+}
+
+.zl-meldung--warnung {
+    border-left-color: var(--zl-warning);
+    background: var(--zl-warning-tint);
+}
+
+.zl-meldung--erfolg {
+    border-left-color: var(--zl-success);
+    background: var(--zl-success-tint);
+}
+
+/* ---------- Listen und Tabellen ---------- */
+
+.zl-liste {
+    background: var(--zl-surface);
+    border: 1px solid var(--zl-border);
+    border-radius: var(--zl-radius-card);
+    overflow: hidden;
+}
+
+.zl-zeile {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--zl-space-4);
+    width: 100%;
+    min-height: 48px;
+    padding: var(--zl-space-3) var(--zl-space-5);
+    border: none;
+    border-top: 1px solid var(--zl-border);
+    background: var(--zl-surface);
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.zl-zeile:first-child {
+    border-top: none;
+}
+
+.zl-zeile:hover {
+    background: var(--zl-primary-tint);
+}
+
+.zl-zeile--still {
+    cursor: default;
+}
+
+.zl-zeile--still:hover {
+    background: var(--zl-surface);
+}
+
+.zl-zeile--geschlossen .zl-zeile-titel {
+    color: var(--zl-text-secondary);
+}
+
+.zl-zeile-titel {
+    font-weight: 600;
+}
+
+.zl-tabelle-huelle {
+    overflow-x: auto;
+}
+
+table.zl-tabelle {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--zl-surface);
+}
+
+table.zl-tabelle th {
+    text-align: left;
+    font-size: 13px;
+    line-height: 20px;
+    font-weight: 600;
+    padding: var(--zl-space-3) var(--zl-space-4);
+    border-bottom: 1px solid var(--zl-border);
+    white-space: nowrap;
+}
+
+table.zl-tabelle td {
+    padding: var(--zl-space-3) var(--zl-space-4);
+    border-bottom: 1px solid var(--zl-border);
+    vertical-align: middle;
+}
+
+table.zl-tabelle tr.zl-beantragt {
+    background: var(--zl-warning-tint);
+}
+
+.zl-abzeichen {
+    display: inline-block;
+    padding: 2px var(--zl-space-3);
+    border-radius: 999px;
+    font-size: 13px;
+    line-height: 20px;
+    font-weight: 600;
+    background: var(--zl-surface-quiet);
+    color: var(--zl-text-secondary);
+    white-space: nowrap;
+}
+
+.zl-abzeichen--offen {
+    background: var(--zl-primary-tint);
+    color: var(--zl-primary);
+}
+
+/* ---------- Leere und ladende Zustände ---------- */
+
+.zl-leer {
+    background: var(--zl-surface);
+    border: 1px dashed var(--zl-border);
+    border-radius: var(--zl-radius-card);
+    padding: var(--zl-space-6);
+    text-align: center;
+}
+
+.zl-leer p {
+    margin: 0 0 var(--zl-space-4);
+    color: var(--zl-text-secondary);
+}
+
+.zl-platzhalter {
+    height: 48px;
+    background: var(--zl-surface-quiet);
+    border-radius: var(--zl-radius-control);
+    margin-bottom: var(--zl-space-2);
+}
+
+/* ---------- Dialog ---------- */
+
+.zl-schleier {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: var(--zl-space-7) var(--zl-space-4);
+    z-index: 50;
+}
+
+.zl-dialog {
+    background: var(--zl-surface);
+    border-radius: var(--zl-radius-card);
+    width: 100%;
+    max-width: 480px;
+    padding: var(--zl-space-5);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.zl-dialog--breit {
+    max-width: 640px;
+}
+
+.zl-dialog-kopf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--zl-space-5);
+    gap: var(--zl-space-4);
+}
+
+.zl-dialog-fuss {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--zl-space-3);
+    margin-top: var(--zl-space-5);
+}
+
+/* ---------- Anmeldung ---------- */
+
+.zl-mitte {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--zl-space-4);
+}
+
+.zl-mitte .zl-karte {
+    width: 100%;
+    max-width: 420px;
+}
+
+.zl-marke {
+    font-weight: 700;
+    font-size: 20px;
+    line-height: 28px;
+    color: var(--zl-primary);
+    margin-bottom: var(--zl-space-2);
+}
+
+/* ---------- Schmale Bildschirme ---------- */
+
+@media (max-width: 768px) {
+    .zl-seite {
+        padding: var(--zl-space-4);
+    }
+
+    .zl-zeile {
+        padding: var(--zl-space-3) var(--zl-space-4);
+    }
+
+    .zl-feldreihe {
+        flex-direction: column;
+    }
+}
+
+/* Grobe Zeigegeräte: Trefferfläche mindestens 44px. */
+@media (pointer: coarse) {
+    .zl-knopf {
+        min-height: 44px;
+    }
+
+    .zl-feld input,
+    .zl-feld select {
+        min-height: 44px;
+    }
+}
+
+/* ---------- Weitere Bausteine ---------- */
+
+.zl-titel {
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 700;
+    margin: 0 0 var(--zl-space-3);
+}
+
+.zl-zweispaltig {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--zl-space-5);
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .zl-zweispaltig {
+        grid-template-columns: 1fr;
+    }
+}
+
+dl.zl-daten {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--zl-space-2) var(--zl-space-5);
+    margin: var(--zl-space-4) 0 0;
+}
+
+dl.zl-daten dt {
+    font-size: 13px;
+    line-height: 24px;
+    font-weight: 600;
+    color: var(--zl-text-secondary);
+}
+
+dl.zl-daten dd {
+    margin: 0;
+}
+
+ul.zl-teamliste {
+    list-style: none;
+    margin: var(--zl-space-4) 0 0;
+    padding: 0;
+}
+
+ul.zl-teamliste li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--zl-space-3);
+    min-height: 48px;
+    border-top: 1px solid var(--zl-border);
+    padding: var(--zl-space-2) 0;
+}
+
+ul.zl-teamliste li:first-child {
+    border-top: none;
+}
+
+ul.zl-teamliste .zl-abzeichen {
+    margin-left: var(--zl-space-2);
+}
+
+.zl-linkfeld {
+    padding: var(--zl-space-3);
+    border: 1px solid var(--zl-border);
+    border-radius: var(--zl-radius-control);
+    background: var(--zl-surface-quiet);
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 13px;
+    line-height: 20px;
+    word-break: break-all;
+    user-select: all;
+}
+
+.zl-abschnitt ul {
+    margin: var(--zl-space-3) 0 0;
+    padding-left: var(--zl-space-5);
+}
+
+.zl-karte > ul {
+    margin: var(--zl-space-3) 0 0;
+    padding-left: var(--zl-space-5);
+}

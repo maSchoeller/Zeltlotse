@@ -1,0 +1,339 @@
+@page "/verwaltung/organisationen"
+@inject ZeltlotseApi Api
+
+<PageTitle>Organisationen · Zeltlotse</PageTitle>
+
+<div class="zl-seite">
+    <div class="zl-kopfbereich">
+        <h1>Organisationen</h1>
+        <div style="display:flex; gap:var(--zl-space-3)">
+            <a class="zl-knopf zl-knopf--sekundaer" href="/verwaltung/konten">Konten</a>
+            <button type="button" class="zl-knopf zl-knopf--primaer" @onclick="AnlegenOeffnen">
+                Organisation aufnehmen
+            </button>
+        </div>
+    </div>
+
+    @if (_fehler is not null)
+    {
+        <div class="zl-meldung zl-meldung--fehler">@_fehler</div>
+    }
+
+    @if (_hinweis is not null)
+    {
+        <div class="zl-meldung zl-meldung--erfolg">@_hinweis</div>
+    }
+
+    @if (_laedt)
+    {
+        <div class="zl-liste" style="padding:var(--zl-space-3)">
+            <div class="zl-platzhalter"></div>
+            <div class="zl-platzhalter" style="margin-bottom:0"></div>
+        </div>
+    }
+    else if (_organisationen.Count == 0)
+    {
+        <div class="zl-leer">
+            <p>Noch keine Organisation aufgenommen. Fang mit der ersten Gemeinde an.</p>
+            <button type="button" class="zl-knopf zl-knopf--primaer" @onclick="AnlegenOeffnen">
+                Organisation aufnehmen
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="zl-tabelle-huelle zl-liste">
+            <table class="zl-tabelle">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Adresse</th>
+                        <th>Organisationsleitung</th>
+                        <th>Mitglieder</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var organisation in _organisationen)
+                    {
+                        <tr class="@(organisation.LoeschungBeantragtAm is null ? null : "zl-beantragt")">
+                            <td>
+                                @organisation.Name
+                                @if (organisation.LoeschungBeantragtAm is { } beantragt)
+                                {
+                                    <br />
+                                    <span class="zl-klein zl-gedaempft">
+                                        Löschung beantragt am @beantragt.ToLocalTime().ToString("dd.MM.yyyy")
+                                    </span>
+                                }
+                            </td>
+                            <td class="zl-klein zl-gedaempft">/o/@organisation.Slug</td>
+                            <td>
+                                @if (organisation.Organisationsleitung is { } leitung)
+                                {
+                                    @leitung
+                                }
+                                else
+                                {
+                                    <span class="zl-gedaempft">noch niemand</span>
+                                }
+                            </td>
+                            <td>@organisation.AnzahlMitglieder</td>
+                            <td style="text-align:right; white-space:nowrap">
+                                <button type="button" class="zl-knopf zl-knopf--text"
+                                        @onclick="() => LeitungOeffnen(organisation)">
+                                    Leitung einladen
+                                </button>
+                                @if (organisation.LoeschungBeantragtAm is not null)
+                                {
+                                    <button type="button" class="zl-knopf zl-knopf--gefahr"
+                                            @onclick="() => LoeschenOeffnen(organisation)">
+                                        Löschung ausführen
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@if (_anlegenOffen)
+{
+    <Dialog Titel="Organisation aufnehmen" BeimSchliessen="() => _anlegenOffen = false" FokusBeimAufrufer="true">
+        <Inhalt>
+            <div class="zl-feld">
+                <label for="orgname">Name</label>
+                <input id="orgname" @ref="_nameFeld" @bind="_name" @bind:event="oninput"
+                       placeholder="Ev. Kirchengemeinde Musterstadt" />
+                <div class="zl-hilfe">
+                    @if (string.IsNullOrWhiteSpace(_name))
+                    {
+                        <span>Die Adresse entsteht aus dem Namen und ist danach unveränderlich.</span>
+                    }
+                    else
+                    {
+                        <span>Wird zu <strong>/o/@_vorschau</strong> — danach unveränderlich.</span>
+                    }
+                </div>
+            </div>
+
+            @if (_dialogFehler is not null)
+            {
+                <div class="zl-meldung zl-meldung--fehler">@_dialogFehler</div>
+            }
+
+            <div class="zl-dialog-fuss">
+                <button type="button" class="zl-knopf zl-knopf--sekundaer"
+                        @onclick="() => _anlegenOffen = false">Abbrechen</button>
+                <button type="button" class="zl-knopf zl-knopf--primaer"
+                        disabled="@string.IsNullOrWhiteSpace(_name)" @onclick="AnlegenAsync">
+                    Aufnehmen
+                </button>
+            </div>
+        </Inhalt>
+    </Dialog>
+}
+
+@if (_leitungFuer is not null)
+{
+    <Dialog Titel="@($"Leitung für {_leitungFuer.Name} einladen")"
+            BeimSchliessen="LeitungSchliessen">
+        <Inhalt>
+            @if (_link is null)
+            {
+                <div class="zl-feld">
+                    <label for="leitungsmail">E-Mail-Adresse</label>
+                    <input id="leitungsmail" type="email" @bind="_leitungsMail" @bind:event="oninput" />
+                    <div class="zl-hilfe">
+                        Diese Person wird Organisationsleitung und verwaltet Mitglieder und
+                        Freizeiten selbst.
+                    </div>
+                </div>
+
+                @if (_dialogFehler is not null)
+                {
+                    <div class="zl-meldung zl-meldung--fehler">@_dialogFehler</div>
+                }
+
+                <div class="zl-dialog-fuss">
+                    <button type="button" class="zl-knopf zl-knopf--sekundaer"
+                            @onclick="LeitungSchliessen">Abbrechen</button>
+                    <button type="button" class="zl-knopf zl-knopf--primaer"
+                            disabled="@string.IsNullOrWhiteSpace(_leitungsMail)"
+                            @onclick="LeitungEinladenAsync">Link erzeugen</button>
+                </div>
+            }
+            else
+            {
+                <Einladungslink Link="@_link" BeimSchliessen="LeitungSchliessen" />
+            }
+        </Inhalt>
+    </Dialog>
+}
+
+@if (_loeschenFuer is not null)
+{
+    <Dialog Titel="Löschung ausführen" BeimSchliessen="() => _loeschenFuer = null">
+        <Inhalt>
+            <p>
+                <strong>@_loeschenFuer.Name</strong> wird mit allen Freizeiten, Zuordnungen und
+                Einladungen entfernt. Nach 30 Tagen ist das endgültig.
+            </p>
+
+            <div class="zl-feld">
+                <label for="bestaetigung">Tippe zur Bestätigung den Namen ab</label>
+                <input id="bestaetigung" @bind="_bestaetigung" @bind:event="oninput" />
+            </div>
+
+            @if (_dialogFehler is not null)
+            {
+                <div class="zl-meldung zl-meldung--fehler">@_dialogFehler</div>
+            }
+
+            <div class="zl-dialog-fuss">
+                <button type="button" class="zl-knopf zl-knopf--sekundaer"
+                        @onclick="() => _loeschenFuer = null">Abbrechen</button>
+                <button type="button" class="zl-knopf zl-knopf--gefahr"
+                        disabled="@(_bestaetigung.Trim() != _loeschenFuer.Name)"
+                        @onclick="LoeschenAsync">Endgültig löschen</button>
+            </div>
+        </Inhalt>
+    </Dialog>
+}
+
+@code {
+    private List<OrganisationVerwaltungDto> _organisationen = [];
+    private bool _laedt = true;
+    private string? _fehler;
+    private string? _hinweis;
+
+    private bool _anlegenOffen;
+    private string _name = string.Empty;
+    private string _vorschau = string.Empty;
+    private string? _dialogFehler;
+    private ElementReference _nameFeld;
+    private bool _fokusSetzen;
+
+    private OrganisationVerwaltungDto? _leitungFuer;
+    private string _leitungsMail = string.Empty;
+    private string? _link;
+
+    private OrganisationVerwaltungDto? _loeschenFuer;
+    private string _bestaetigung = string.Empty;
+
+    protected override async Task OnInitializedAsync() => await LadenAsync();
+
+    protected override async Task OnAfterRenderAsync(bool ersteAnzeige)
+    {
+        if (_fokusSetzen)
+        {
+            _fokusSetzen = false;
+            await _nameFeld.FocusAsync();
+        }
+
+        // Die Adressvorschau kommt vom Server, damit sie exakt der späteren
+        // Erzeugung entspricht statt sie im Client nachzubauen.
+        if (_anlegenOffen && !string.IsNullOrWhiteSpace(_name))
+        {
+            var vorschau = await Api.SlugVorschauAsync(_name);
+
+            if (vorschau.Wert is { } wert && wert.Slug != _vorschau)
+            {
+                _vorschau = wert.Slug;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task LadenAsync()
+    {
+        _laedt = true;
+
+        var ergebnis = await Api.OrganisationenAsync();
+        _organisationen = ergebnis.Wert ?? [];
+        _fehler = ergebnis.Fehler;
+
+        _laedt = false;
+    }
+
+    private void AnlegenOeffnen()
+    {
+        _name = string.Empty;
+        _vorschau = string.Empty;
+        _dialogFehler = null;
+        _anlegenOffen = true;
+        _fokusSetzen = true;
+    }
+
+    private async Task AnlegenAsync()
+    {
+        _dialogFehler = null;
+
+        var ergebnis = await Api.OrganisationAnlegenAsync(_name.Trim());
+
+        if (!ergebnis.Gelungen)
+        {
+            _dialogFehler = ergebnis.Fehler;
+            return;
+        }
+
+        _anlegenOffen = false;
+        _hinweis = $"{ergebnis.Wert!.Name} ist aufgenommen. Lade jetzt die Organisationsleitung ein.";
+
+        await LadenAsync();
+    }
+
+    private void LeitungOeffnen(OrganisationVerwaltungDto organisation)
+    {
+        _leitungFuer = organisation;
+        _leitungsMail = string.Empty;
+        _dialogFehler = null;
+        _link = null;
+    }
+
+    private async Task LeitungSchliessen()
+    {
+        _leitungFuer = null;
+        await LadenAsync();
+    }
+
+    private async Task LeitungEinladenAsync()
+    {
+        _dialogFehler = null;
+
+        var ergebnis = await Api.LeitungEinladenAsync(_leitungFuer!.Id, _leitungsMail.Trim());
+
+        if (!ergebnis.Gelungen)
+        {
+            _dialogFehler = ergebnis.Fehler;
+            return;
+        }
+
+        _link = ergebnis.Wert!.Link;
+        _hinweis = null;
+    }
+
+    private void LoeschenOeffnen(OrganisationVerwaltungDto organisation)
+    {
+        _loeschenFuer = organisation;
+        _bestaetigung = string.Empty;
+        _dialogFehler = null;
+    }
+
+    private async Task LoeschenAsync()
+    {
+        var ergebnis = await Api.LoeschungAusfuehrenAsync(_loeschenFuer!.Id);
+
+        if (!ergebnis.Gelungen)
+        {
+            _dialogFehler = ergebnis.Fehler;
+            return;
+        }
+
+        _loeschenFuer = null;
+        await LadenAsync();
+    }
+}

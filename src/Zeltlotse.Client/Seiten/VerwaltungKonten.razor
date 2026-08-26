@@ -1,0 +1,108 @@
+@page "/verwaltung/konten"
+@inject ZeltlotseApi Api
+
+<PageTitle>Konten · Zeltlotse</PageTitle>
+
+<div class="zl-seite">
+    <div class="zl-kopfbereich">
+        <h1>Konten</h1>
+        <a class="zl-knopf zl-knopf--sekundaer" href="/verwaltung/organisationen">Organisationen</a>
+    </div>
+
+    <p class="zl-gedaempft">
+        Hier stehen die Konten der Plattform. Zu welchen Organisationen jemand gehört, steht
+        bewusst nicht dabei — das ist Sache der jeweiligen Organisation.
+    </p>
+
+    @if (_fehler is not null)
+    {
+        <div class="zl-meldung zl-meldung--fehler">@_fehler</div>
+    }
+
+    @if (_laedt)
+    {
+        <div class="zl-liste" style="padding:var(--zl-space-3)">
+            <div class="zl-platzhalter" style="margin-bottom:0"></div>
+        </div>
+    }
+    else
+    {
+        <div class="zl-tabelle-huelle zl-liste">
+            <table class="zl-tabelle">
+                <thead>
+                    <tr>
+                        <th>E-Mail</th>
+                        <th>Zustand</th>
+                        <th>Zuletzt angemeldet</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var konto in _konten)
+                    {
+                        <tr>
+                            <td>
+                                @konto.EMail
+                                @if (konto.IstGlobalAdmin)
+                                {
+                                    <span class="zl-abzeichen">Betreiber</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="@(konto.Gesperrt ? "zl-abzeichen" : "zl-abzeichen zl-abzeichen--offen")">
+                                    @(konto.Gesperrt ? "Gesperrt" : "Aktiv")
+                                </span>
+                            </td>
+                            <td>
+                                @(konto.LetzteAnmeldung is { } zeit
+                                    ? zeit.ToLocalTime().ToString("dd.MM.yyyy")
+                                    : "noch nie")
+                            </td>
+                            <td style="text-align:right">
+                                @if (!konto.IstGlobalAdmin)
+                                {
+                                    <button type="button" class="zl-knopf zl-knopf--text"
+                                            @onclick="() => SperreUmschaltenAsync(konto)">
+                                        @(konto.Gesperrt ? "Entsperren" : "Sperren")
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private List<KontoDto> _konten = [];
+    private bool _laedt = true;
+    private string? _fehler;
+
+    protected override async Task OnInitializedAsync() => await LadenAsync();
+
+    private async Task LadenAsync()
+    {
+        _laedt = true;
+
+        var ergebnis = await Api.KontenAsync();
+        _konten = ergebnis.Wert ?? [];
+        _fehler = ergebnis.Fehler;
+
+        _laedt = false;
+    }
+
+    private async Task SperreUmschaltenAsync(KontoDto konto)
+    {
+        var ergebnis = await Api.SperreAsync(konto.Id, !konto.Gesperrt);
+
+        if (!ergebnis.Gelungen)
+        {
+            _fehler = ergebnis.Fehler;
+            return;
+        }
+
+        await LadenAsync();
+    }
+}
