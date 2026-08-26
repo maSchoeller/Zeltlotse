@@ -1,0 +1,21 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.5.0">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zeltlotse.Server\Zeltlotse.Server.csproj" />
+    <ProjectReference Include="..\Zeltlotse.Client\Zeltlotse.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.5.3" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AspireUseCliBundle>true</AspireUseCliBundle>
+    <UserSecretsId>c0402e8d-2cd7-4114-861f-d6a2e2e25e9b</UserSecretsId>
+  </PropertyGroup>
+
+</Project>
