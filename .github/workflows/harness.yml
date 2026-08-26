@@ -1,0 +1,15 @@
+name: harness
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Line budget
+        run: pwsh -NoProfile -File ./.claude/check-budget.ps1
+      - name: Harness self-references
+        run: pwsh -NoProfile -File ./.claude/check-references.ps1
