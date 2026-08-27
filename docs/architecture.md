@@ -3,7 +3,7 @@
 Dieses Dokument ist das jeweils aktuelle Bild des Systems. Jeder Lauf schreibt
 seine Veränderung hierher zurück; es beschreibt nie einen Wunschzustand.
 
-**Stand:** Lauf 2026-08-26-zeltlotse-grundgeruest (Bootstrap)
+**Stand:** Lauf 2026-08-26-zeltlotse-grundgeruest
 
 ## Überblick
 
@@ -65,6 +65,22 @@ Neuladen der Seite holt sich ein frisches Zugriffstoken über das Cookie.
 Rollen sind additiv, es gilt das jeweils weitergehende Recht. Zwei
 Zuordnungstabellen (Organisation, Freizeit), GlobalAdmin als Kennzeichen am
 Nutzer. Es gibt keinen Durchgriff von oben: Der Betreiber sieht keine Inhalte.
+
+## Die eine Ausnahme
+
+Eine Einladung wird eingelöst, bevor jemand angemeldet ist — es gibt also keine
+Organisationsliste, aus der sich die Row-Level-Security speisen könnte, und die
+Datenbank verweigert selbst die Einladung, die geprüft werden soll.
+
+Dafür öffnet `SystemDatenbank` eine eigene, kurzlebige Verbindung ohne
+Mandantenschranke. Sie gilt für genau drei Zugriffe: das Nachschlagen der
+Einladung, das Anlegen der Freizeitzuordnung und das Abhaken der Einladung. Die
+laufende Anfrage behält ihren Schutz.
+
+Zweite Ausnahme, in der Richtlinie selbst: Der Betreiber gehört zu keiner
+Organisation, muss aber Leitungen einladen. Allein die Einladungstabelle kennt
+dafür ein zweites Recht (`app.betreiber`). Freizeiten und Zuordnungen bleiben
+ihm auch auf Datenbankebene verschlossen.
 
 ## Noch nicht entschieden
 
