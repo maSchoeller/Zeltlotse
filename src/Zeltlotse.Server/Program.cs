@@ -39,11 +39,16 @@ if (!string.IsNullOrWhiteSpace(clientUrsprung))
 builder.Services.AddSingleton(token);
 builder.Services.AddSingleton(einladung);
 
+var verbindung = builder.Configuration.GetConnectionString("zeltlotse")
+    ?? throw new InvalidOperationException("ConnectionStrings:zeltlotse fehlt.");
+
 builder.Services.AddDbContext<ZeltlotseDbContext>((dienste, optionen) =>
 {
-    optionen.UseNpgsql(builder.Configuration.GetConnectionString("zeltlotse"));
+    optionen.UseNpgsql(verbindung);
     optionen.AddInterceptors(dienste.GetRequiredService<MandantInterceptor>());
 });
+
+builder.Services.AddSingleton(new SystemDatenbank(verbindung));
 
 builder.Services
     .AddPersistenz()

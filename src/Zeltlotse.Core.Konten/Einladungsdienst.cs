@@ -21,7 +21,7 @@ public sealed class EinladungsEinstellungen
 
 internal sealed class Einladungsdienst(
     ZeltlotseDbContext datenbank,
-    MandantKontext mandant,
+    SystemDatenbank system,
     UserManager<Nutzer> nutzerverwaltung,
     EinladungsEinstellungen einstellungen)
     : IEinladungen
@@ -71,9 +71,9 @@ internal sealed class Einladungsdienst(
 
     public async Task<EinladungVorschauDto?> VorschauAsync(string klartext, CancellationToken abbruch)
     {
-        Systemkontext();
+        await using var ohneSchranke = system.Oeffnen();
 
-        var einladung = await GueltigeEinladungAsync(klartext, abbruch);
+        var einladung = await GueltigeEinladungAsync(ohneSchranke, klartext, abbruch);
 
         if (einladung is null)
         {
@@ -91,9 +91,11 @@ internal sealed class Einladungsdienst(
     public async Task<(Nutzer? Nutzer, string? Fehler)> EinloesenAsync(
         EinladungEinloesen anfrage, CancellationToken abbruch)
     {
-        Systemkontext();
+        // Nur die Einladung selbst und ihre Folgezeilen laufen ohne Schranke;
+        // Konto und Organisationsmitgliedschaft tragen ohnehin keine.
+        await using var ohneSchranke = system.Oeffnen();
 
-        var einladung = await GueltigeEinladungAsync(anfrage.Token, abbruch);
+        var einladung = await GueltigeEinladungAsync(ohneSchranke, anfrage.Token, abbruch);
 
         if (einladung is null)
         {
@@ -120,17 +122,19 @@ internal sealed class Einladungsdienst(
             }
         }
 
-        await ZuordnenAsync(einladung, nutzer.Id, abbruch);
+        await ZuordnenAsync(ohneSchranke, einladung, nutzer.Id, abbruch);
 
         einladung.EingeloestAm = DateTimeOffset.UtcNow;
         nutzer.LetzteAnmeldung = DateTimeOffset.UtcNow;
 
+        await ohneSchranke.SaveChangesAsync(abbruch);
         await datenbank.SaveChangesAsync(abbruch);
 
         return (nutzer, null);
     }
 
-    private async Task ZuordnenAsync(Einladung einladung, Guid nutzerId, CancellationToken abbruch)
+    private async Task ZuordnenAsync(
+        ZeltlotseDbContext ohneSchranke, Einladung einladung, Guid nutzerId, CancellationToken abbruch)
     {
         var vorhanden = await datenbank.OrgMitgliedschaften
             .FirstOrDefaultAsync(m => m.NutzerId == nutzerId
@@ -157,13 +161,13 @@ internal sealed class Einladungsdienst(
             return;
         }
 
-        var zuordnung = await datenbank.FreizeitZuordnungen
+        var zuordnung = await ohneSchranke.FreizeitZuordnungen
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(z => z.NutzerId == nutzerId && z.FreizeitId == freizeitId, abbruch);
 
         if (zuordnung is null)
         {
-            datenbank.FreizeitZuordnungen.Add(new FreizeitZuordnung
+            ohneSchranke.FreizeitZuordnungen.Add(new FreizeitZuordnung
             {
                 NutzerId = nutzerId,
                 FreizeitId = freizeitId,
@@ -177,23 +181,16 @@ internal sealed class Einladungsdienst(
         }
     }
 
-    private Task<Einladung?> GueltigeEinladungAsync(string klartext, CancellationToken abbruch)
+    private static Task<Einladung?> GueltigeEinladungAsync(
+        ZeltlotseDbContext ohneSchranke, string klartext, CancellationToken abbruch)
     {
         var hash = TokenDienst.Hash(klartext);
 
-        return datenbank.Einladungen
+        return ohneSchranke.Einladungen
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(e => e.TokenHash == hash
                 && e.EingeloestAm == null
                 && e.GueltigBis > DateTimeOffset.UtcNow, abbruch);
     }
 
-    /// <summary>
-    /// Einlösen und Vorschau laufen ohne Anmeldung — es gibt also keine
-    /// Organisationsliste, aus der sich die Row-Level-Security speisen könnte.
-    /// Genau für diese beiden Wege schaltet der Dienst in den Systemkontext.
-    /// Er ist von außen nicht auslösbar: Ohne gültigen Einmal-Token endet der
-    /// Weg unmittelbar danach.
-    /// </summary>
-    private void Systemkontext() => mandant.Wartung = true;
 }
