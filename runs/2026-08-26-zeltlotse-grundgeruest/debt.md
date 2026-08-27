@@ -66,3 +66,17 @@
   Seitenüberlauf, Elementgrenzen, Kopfhöhe, Trefferflächen, Tabellenscroll bei
   1280px und 375px. Für den nächsten Lauf: Falls Screenshots verfügbar sind,
   zusätzlich optisch prüfen.
+
+## Retro-Ergebnis (2026-08-27)
+
+- **Behoben im Retro:** Der Bypass der Mandantenschranke beim Einlösen einer
+  Einladung gilt nur noch für drei Zugriffe statt für die ganze Anfrage.
+- **Behoben im Lauf:** fehlendes CSS-Bundle, Globalisierungsdaten, Dialogfokus,
+  fehlende Screenshots (jetzt über `tools/Zeltlotse.Screenshots`).
+- **Als Learning ins Preset `dotnet-cloud`:** die beiden stillen Startfehler von
+  Blazor WebAssembly und das Sprachverhalten nativer Datumsfelder.
+- **Als bekannte Schuld ins Wurzel-`debt.md`:** neun Einträge — Einrichtungsseite,
+  Bearer-Token, Startmigration, Dunkelblau, kein Mailversand, Domainbedarf,
+  weiches Löschen, Betreiberrecht auf Einladungen, Enter-Beobachtung.
+- **Nicht übernommen:** die Entwurfsabweichungen; sie stehen in `design.md` und
+  `docs/architecture.md` und sind damit Teil des Bildes, nicht offene Schuld.
