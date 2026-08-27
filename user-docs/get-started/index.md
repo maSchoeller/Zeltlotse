@@ -59,10 +59,15 @@ Es gibt zwei Wege, und sie führen an verschiedene Orte:
 
 ![Mitglieder](../bilder/mitglieder.png)
 
-In beiden Fällen erzeugt Zeltlotse einen Link. **Kopiere ihn und gib ihn selbst
-weiter** — Zeltlotse verschickt keine E-Mails. Der Link erscheint nur ein
+In beiden Fällen erzeugt Zeltlotse einen Link. **Kopiere ihn sofort und gib ihn
+selbst weiter** — Zeltlotse verschickt keine E-Mails. Der Link erscheint nur ein
 einziges Mal; danach lässt er sich aus Sicherheitsgründen nicht erneut anzeigen.
-Ist er verloren, erzeuge einfach eine neue Einladung.
+Ist er verloren gegangen, findest du die Einladung unter „Offene Einladungen"
+und klickst dort auf **„Neuen Link erzeugen"** — der alte verfällt dabei.
+
+Wenn jemand **bereits zur Organisation gehört** und nur in eine Freizeit soll,
+brauchst du gar keine Einladung: In der Freizeit selbst steht unter „Team" das
+Feld **„Mitglied hinzufügen"** mit allen, die noch nicht dabei sind.
 
 ## 5. Etwas versehentlich gelöscht?
 

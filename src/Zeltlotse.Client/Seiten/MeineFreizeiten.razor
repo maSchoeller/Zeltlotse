@@ -9,9 +9,13 @@
     <div class="zl-kopfbereich">
         <h1>Meine Freizeiten</h1>
 
-        @if (EinzigeVerwaltete is { } organisation)
+        @if (Sitzung.Nutzer?.IstGlobalAdmin == true)
         {
-            <a class="zl-knopf zl-knopf--primaer" href="@($"/o/{organisation.Slug}")">
+            <a class="zl-knopf zl-knopf--primaer" href="/verwaltung/organisationen">Zur Verwaltung</a>
+        }
+        else if (EinzigeOrganisation is { } organisation)
+        {
+            <a class="zl-knopf zl-knopf--sekundaer" href="@($"/o/{organisation.Slug}")">
                 Zur Organisation
             </a>
         }
@@ -27,7 +31,13 @@
                    MitOrganisation="true"
                    LeerText="@LeerText">
         <LeerAktion>
-            @if (EinzigeVerwaltete is { } organisation)
+            @if (Sitzung.Nutzer?.IstGlobalAdmin == true)
+            {
+                <a class="zl-knopf zl-knopf--primaer" href="/verwaltung/organisationen">
+                    Zur Verwaltung
+                </a>
+            }
+            else if (EinzigeVerwaltete is { } organisation)
             {
                 <a class="zl-knopf zl-knopf--primaer" href="@($"/o/{organisation.Slug}")">
                     Freizeit anlegen
@@ -58,9 +68,15 @@
         }
     }
 
-    private string LeerText => EinzigeVerwaltete is null
-        ? "Du bist noch keiner Freizeit zugeordnet. Sobald dich jemand zu einer Freizeit hinzufügt, erscheint sie hier."
-        : "Noch keine Freizeit angelegt. Fang mit der ersten an — ein Name genügt.";
+    /// <summary>Bei genau einer Zugehörigkeit ist der Weg dorthin eindeutig.</summary>
+    private OrganisationDto? EinzigeOrganisation
+        => Sitzung.Nutzer?.Organisationen.Count == 1 ? Sitzung.Nutzer.Organisationen[0] : null;
+
+    private string LeerText => Sitzung.Nutzer?.IstGlobalAdmin == true
+        ? "Als Betreiber gehörst du zu keiner Organisation — deshalb steht hier nichts. Deine Arbeit liegt in der Verwaltung."
+        : EinzigeVerwaltete is null
+            ? "Du bist noch keiner Freizeit zugeordnet. Sobald dich jemand zu einer Freizeit hinzufügt, erscheint sie hier."
+            : "Noch keine Freizeit angelegt. Fang mit der ersten an — ein Name genügt.";
 
     protected override async Task OnInitializedAsync()
     {

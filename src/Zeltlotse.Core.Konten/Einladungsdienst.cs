@@ -35,6 +35,7 @@ internal sealed class Einladungsdienst(
             .OrderBy(e => e.GueltigBis)
             .Select(e => new OffeneEinladungDto(
                 e.Id,
+                e.Name,
                 e.EMail,
                 e.Ziel == Einladungsziel.Freizeit ? "Freizeit" : "Organisation",
                 e.GueltigBis))
@@ -49,6 +50,7 @@ internal sealed class Einladungsdienst(
         {
             Id = Guid.NewGuid(),
             TenantId = organisationId,
+            Name = anfrage.Name.Trim(),
             EMail = anfrage.EMail.Trim(),
             Ziel = anfrage.Ziel,
             OrgRolle = anfrage.OrgRolle ?? OrgRolle.Mitglied,
@@ -64,6 +66,7 @@ internal sealed class Einladungsdienst(
 
         return new EinladungErzeugtDto(
             einladung.Id,
+            einladung.Name,
             einladung.EMail,
             $"{einstellungen.Basisadresse.TrimEnd('/')}/einladung/{klartext}",
             einladung.GueltigBis);
@@ -85,7 +88,7 @@ internal sealed class Einladungsdienst(
             .Select(o => o.Name)
             .FirstOrDefaultAsync(abbruch);
 
-        return new EinladungVorschauDto(einladung.EMail, name ?? string.Empty);
+        return new EinladungVorschauDto(einladung.Name, einladung.EMail, name ?? string.Empty);
     }
 
     public async Task<(Nutzer? Nutzer, string? Fehler)> EinloesenAsync(
@@ -109,6 +112,7 @@ internal sealed class Einladungsdienst(
             nutzer = new Nutzer
             {
                 Id = Guid.NewGuid(),
+                Name = einladung.Name,
                 UserName = einladung.EMail,
                 Email = einladung.EMail,
                 ErstelltAm = DateTimeOffset.UtcNow,

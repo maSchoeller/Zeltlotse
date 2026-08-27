@@ -237,6 +237,7 @@ a:hover {
 
 .zl-meldung {
     display: flex;
+    align-items: flex-start;
     gap: var(--zl-space-3);
     padding: var(--zl-space-3) var(--zl-space-4);
     border-radius: var(--zl-radius-control);
@@ -245,9 +246,23 @@ a:hover {
     margin-bottom: var(--zl-space-4);
 }
 
+.zl-meldung > span[aria-hidden] {
+    /* Das Symbol bleibt schwarz: Gruen und Orange erreichen als Schriftfarbe
+       die noetigen Kontraste nicht. Die Bedeutung tragen Rand und Flaeche. */
+    flex: none;
+    font-weight: 700;
+    line-height: 24px;
+    color: var(--zl-text);
+}
+
 .zl-meldung--fehler {
     border-left-color: var(--zl-error);
     background: var(--zl-error-tint);
+}
+
+.zl-meldung--fehler > span[aria-hidden] {
+    /* Als einzige Statusfarbe trägt Rot genug Kontrast für Schrift (6,7:1). */
+    color: var(--zl-error);
 }
 
 .zl-meldung--warnung {
@@ -307,7 +322,21 @@ a:hover {
 }
 
 .zl-zeile-titel {
+    font-size: 16px;
+    line-height: 24px;
     font-weight: 600;
+}
+
+/* Die eben angelegte Freizeit — kurz sichtbar, damit man sie wiederfindet. */
+.zl-zeile--neu {
+    background: var(--zl-primary-tint);
+    box-shadow: inset 3px 0 0 var(--zl-primary);
+    animation: zl-verklingen 3s ease-out forwards;
+}
+
+@keyframes zl-verklingen {
+    0%, 60% { background: var(--zl-primary-tint); }
+    100% { background: var(--zl-surface); }
 }
 
 .zl-tabelle-huelle {
@@ -462,16 +491,18 @@ table.zl-tabelle tr.zl-beantragt {
     }
 }
 
-/* Grobe Zeigegeräte: Trefferfläche mindestens 44px. */
+/* Grobe Zeigegeräte: Trefferfläche mindestens 44×44px — in beiden Richtungen. */
 @media (pointer: coarse) {
     .zl-knopf {
         min-height: 44px;
+        min-width: 44px;
     }
 
     .zl-feld input,
     .zl-feld select {
         min-height: 44px;
     }
+
 }
 
 /* ---------- Weitere Bausteine ---------- */

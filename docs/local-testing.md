@@ -43,12 +43,31 @@ gemeldete Adresse der Oberfläche:
 Nur in der Umgebung `Development` vorhanden, per Seed angelegt. Diese Konten
 existieren produktiv nicht und dürfen dort nie entstehen.
 
-| Konto | Kennwort | Rolle |
-|---|---|---|
-| `betreiber@zeltlotse.local` | `Entwicklung!1` | GlobalAdmin |
-| `leitung@zeltlotse.local` | `Entwicklung!1` | OrgAdmin der Beispielorganisation |
-| `freizeit@zeltlotse.local` | `Entwicklung!1` | Freizeitleitung |
-| `team@zeltlotse.local` | `Entwicklung!1` | Freizeitmitarbeiter |
+Kennwort überall: `Entwicklung!1`
 
-> Die Konten entstehen mit der Identity-Scheibe in Phase 3. Bis dahin ist der
-> Weg über die Einrichtungsseite der einzige.
+| Konto | Name | Rolle |
+|---|---|---|
+| `betreiber@zeltlotse.local` | Bea Betreiber | GlobalAdmin, gehört zu keiner Organisation |
+| `leitung@zeltlotse.local` | Lena Leitner | Organisationsleitung Musterstadt |
+| `freizeit@zeltlotse.local` | Frieder Falk | Freizeitleitung Sommerfreizeit, dazu Mitglied im Bezirksjugendwerk |
+| `team@zeltlotse.local` | Timo Teichmann | Mitarbeit Sommerfreizeit |
+
+## Zurücksetzen
+
+Die Entwicklungsdaten entstehen nur in einer leeren Datenbank. Wer sie
+verschmutzt hat und einen sauberen Stand braucht — etwa für reproduzierbare
+Bilder oder eine Prüfung — löscht den Datenträger:
+
+```powershell
+docker volume rm zeltlotse.apphost-3c34764b2f-postgres-data
+```
+
+Beim nächsten `./run-local.ps1` migriert und seedet die Anwendung neu.
+
+## Bilder für die Anleitung
+
+```bash
+dotnet run --project tools/Zeltlotse.Screenshots
+```
+
+Erwartet eine laufende Anwendung und schreibt nach `user-docs/bilder/`.

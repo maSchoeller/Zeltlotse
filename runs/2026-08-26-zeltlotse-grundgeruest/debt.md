@@ -80,3 +80,34 @@
   weiches Löschen, Betreiberrecht auf Einladungen, Enter-Beobachtung.
 - **Nicht übernommen:** die Entwurfsabweichungen; sie stehen in `design.md` und
   `docs/architecture.md` und sind damit Teil des Bildes, nicht offene Schuld.
+
+## Aus dem unabhängigen Smoke-Test (2026-08-27)
+
+Alle elf Abnahmekriterien bestanden. Behoben wurden die gefundenen Abweichungen:
+
+- Absage bei fehlendem Zugriff ersetzt jetzt die Seite, statt in eine normal
+  gerenderte Seite eingeblendet zu werden (Knöpfe ins Nichts, Leertexte mit
+  falschen Behauptungen über fremde Organisationen).
+- Fehlende Rolle und fehlende Zugehörigkeit haben getrennte Begründungen —
+  serverseitig 403 gegen 404, in der Oberfläche zwei verschiedene Seiten.
+- „Antrag zurücknehmen" erscheint nur noch der Organisationsleitung und meldet
+  Fehler, statt schweigend nichts zu tun.
+- Dialoge fangen den Fokus (Tab bleibt drin), sperren den Hintergrund gegen
+  Scrollen und geben den Fokus beim Schließen zurück.
+- Trefferflächen bei Fingerbedienung durchgängig mindestens 44×44px; der
+  Override für die Initialen musste ins isolierte Komponenten-CSS, weil dieses
+  die globale Vorgabe schlägt.
+- Auswahlbalken im Organisationswechsler, Kartentitel 16px, Symbole in
+  Meldungen, Begründung an deaktivierten Schaltflächen, neu angelegte Freizeit
+  oben und kurz hervorgehoben.
+- Anmelde-, Einrichtungs- und Einladungsseite stehen immer auf leerem Grund.
+- Der Betreiber landet nach der Anmeldung in der Verwaltung statt auf einer
+  Startseite, die für ihn definitionsgemäß leer ist.
+- Einladungsseite warnt, wenn gerade jemand anderes angemeldet ist.
+
+Offen geblieben (bewusst):
+
+- 2026-08-27 — Der Kaltstart der WebAssembly-Oberfläche dauert beim ersten
+  Aufruf spürbar; Platzhalter erscheinen erst ab 300ms und werden dabei oft
+  übersprungen. Vorabladen oder ein serverseitig gerendertes Gerüst wären die
+  Antwort — beides ist ein eigener Lauf wert.

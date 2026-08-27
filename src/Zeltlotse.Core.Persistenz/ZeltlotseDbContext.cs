@@ -72,6 +72,7 @@ public sealed class ZeltlotseDbContext(
         {
             e.ToTable("nutzer");
             e.HasIndex(n => n.NormalizedEmail).IsUnique();
+            e.Property(n => n.Name).HasMaxLength(120);
         });
 
         builder.Entity<Organisation>(e =>
@@ -120,6 +121,7 @@ public sealed class ZeltlotseDbContext(
         builder.Entity<Einladung>(e =>
         {
             e.ToTable("einladung");
+            e.Property(i => i.Name).HasMaxLength(120);
             e.Property(i => i.EMail).HasMaxLength(256);
             e.Property(i => i.TokenHash).HasMaxLength(64);
             e.HasIndex(i => i.TokenHash);

@@ -26,6 +26,15 @@ public sealed class Organisationsaufloeser(
         fehler = "Diese Seite gehört zu einer Organisation, zu der du nicht gehörst.",
     });
 
+    /// <summary>
+    /// Der Nutzer gehört zur Organisation, aber seine Rolle reicht nicht. Der
+    /// Unterschied zu <see cref="KeinZugriff"/> ist wichtig: Wer eine falsche
+    /// Begründung liest, sucht den Fehler an der falschen Stelle.
+    /// </summary>
+    public static IResult KeineBerechtigung => Results.Json(
+        new { fehler = "Dafür fehlt dir die Berechtigung in dieser Organisation." },
+        statusCode: StatusCodes.Status403Forbidden);
+
     public async Task<Organisationstreffer?> AufloesenAsync(string slug, CancellationToken abbruch)
     {
         var angemeldet = kontext.HttpContext?.User;

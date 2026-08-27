@@ -36,6 +36,11 @@
 
             <EditForm Model="@this" OnValidSubmit="Absenden">
                 <div class="zl-feld">
+                    <label for="name">Dein Name</label>
+                    <input id="name" autocomplete="name" @bind="_name" />
+                </div>
+
+                <div class="zl-feld">
                     <label for="email">E-Mail-Adresse</label>
                     <input id="email" type="email" autocomplete="username" @bind="_email" />
                 </div>
@@ -62,6 +67,7 @@
 </div>
 
 @code {
+    private string _name = string.Empty;
     private string _email = string.Empty;
     private string _kennwort = string.Empty;
     private string _wiederholung = string.Empty;
@@ -87,7 +93,7 @@
         _laeuft = true;
         _fehler = null;
 
-        _fehler = await Sitzung.EinrichtenAsync(_email.Trim(), _kennwort);
+        _fehler = await Sitzung.EinrichtenAsync(_name.Trim(), _email.Trim(), _kennwort);
 
         _laeuft = false;
 

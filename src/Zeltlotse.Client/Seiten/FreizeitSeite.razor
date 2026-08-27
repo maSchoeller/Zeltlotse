@@ -4,19 +4,20 @@
 
 <PageTitle>@(_freizeit?.Name ?? "Freizeit") · Zeltlotse</PageTitle>
 
-<div class="zl-seite">
-    @if (_fehler is not null)
-    {
-        <div class="zl-meldung zl-meldung--fehler">@_fehler</div>
-        <a class="zl-knopf zl-knopf--sekundaer" href="/">Zur Startseite</a>
-    }
-    else if (_freizeit is null)
-    {
+@if (_problem != Zugriffsproblem.Keins)
+{
+    <Sperrseite Problem="_problem" />
+}
+else if (_freizeit is null)
+{
+    <div class="zl-seite">
         <div class="zl-platzhalter" style="width:40%; height:36px"></div>
         <div class="zl-platzhalter"></div>
-    }
-    else
-    {
+    </div>
+}
+else
+{
+    <div class="zl-seite">
         <div class="zl-kopfbereich">
             <h1>@_freizeit.Name</h1>
             <a class="zl-knopf zl-knopf--text" href="@($"/o/{Slug}")">Alle Freizeiten</a>
@@ -24,7 +25,18 @@
 
         @if (_meldung is not null)
         {
-            <div class="zl-meldung zl-meldung--erfolg">@_meldung</div>
+            <div class="zl-meldung zl-meldung--erfolg">
+                <span aria-hidden="true">✓</span>
+                <div>@_meldung</div>
+            </div>
+        }
+
+        @if (_fehler is not null)
+        {
+            <div class="zl-meldung zl-meldung--fehler">
+                <span aria-hidden="true">✕</span>
+                <div>@_fehler</div>
+            </div>
         }
 
         <div class="zl-zweispaltig">
@@ -61,7 +73,10 @@
 
                     @if (_eckdatenFehler is not null)
                     {
-                        <div class="zl-meldung zl-meldung--fehler">@_eckdatenFehler</div>
+                        <div class="zl-meldung zl-meldung--fehler">
+                            <span aria-hidden="true">✕</span>
+                            <div>@_eckdatenFehler</div>
+                        </div>
                     }
 
                     <button type="button" class="zl-knopf zl-knopf--primaer" disabled="@_speichert"
@@ -75,7 +90,7 @@
                         <dt>Zeitraum</dt>
                         <dd>@Zeitraum</dd>
                         <dt>Ort</dt>
-                        <dd>@(_freizeit.Ort ?? "—")</dd>
+                        <dd>@(_freizeit.Ort ?? "nicht eingetragen")</dd>
                         <dt>Status</dt>
                         <dd>@(_freizeit.Status == FreizeitStatus.Offen ? "Offen" : "Geschlossen")</dd>
                     </dl>
@@ -98,10 +113,12 @@
                         {
                             <li>
                                 <span>
-                                    @person.EMail
+                                    @person.Name
                                     <span class="zl-abzeichen">
                                         @(person.Rolle == FreizeitRolle.Leitung ? "Leitung" : "Mitarbeit")
                                     </span>
+                                    <br />
+                                    <span class="zl-klein zl-gedaempft">@person.EMail</span>
                                 </span>
                                 @if (_freizeit.DarfVerwalten)
                                 {
@@ -117,10 +134,44 @@
 
                 @if (_freizeit.DarfVerwalten)
                 {
-                    <button type="button" class="zl-knopf zl-knopf--sekundaer"
-                            style="margin-top:var(--zl-space-4)" @onclick="EinladungOeffnen">
-                        Person einladen
-                    </button>
+                    <div style="margin-top:var(--zl-space-5)">
+                        @if (_kandidaten.Count > 0)
+                        {
+                            <div class="zl-feld">
+                                <label for="kandidat">Mitglied hinzufügen</label>
+                                <div class="zl-feldreihe">
+                                    <select id="kandidat" @bind="_gewaehlterKandidat">
+                                        <option value="">Person wählen …</option>
+                                        @foreach (var kandidat in _kandidaten)
+                                        {
+                                            <option value="@kandidat.NutzerId">
+                                                @kandidat.Name (@kandidat.EMail)
+                                            </option>
+                                        }
+                                    </select>
+                                    <select aria-label="Rolle" @bind="_kandidatenRolle">
+                                        <option value="@FreizeitRolle.Mitarbeiter">Mitarbeit</option>
+                                        <option value="@FreizeitRolle.Leitung">Leitung</option>
+                                    </select>
+                                </div>
+                                <div class="zl-hilfe">
+                                    Menschen, die bereits zur Organisation gehören — ohne Umweg
+                                    über eine Einladung.
+                                </div>
+                            </div>
+
+                            <button type="button" class="zl-knopf zl-knopf--sekundaer"
+                                    disabled="@string.IsNullOrEmpty(_gewaehlterKandidat)"
+                                    @onclick="KandidatHinzufuegenAsync">
+                                Hinzufügen
+                            </button>
+                        }
+
+                        <button type="button" class="zl-knopf zl-knopf--text"
+                                @onclick="EinladungOeffnen">
+                            Neue Person einladen
+                        </button>
+                    </div>
                 }
             </section>
         </div>
@@ -133,15 +184,20 @@
                 </button>
             </div>
         }
-    }
-</div>
+    </div>
+}
 
 @if (_einladungOffen)
 {
-    <Dialog Titel="Person einladen" BeimSchliessen="() => _einladungOffen = false">
+    <Dialog Titel="Neue Person einladen" BeimSchliessen="EinladungSchliessen">
         <Inhalt>
             @if (_link is null)
             {
+                <div class="zl-feld">
+                    <label for="einladungsname">Name</label>
+                    <input id="einladungsname" @bind="_einladungsName" @bind:event="oninput" />
+                </div>
+
                 <div class="zl-feld">
                     <label for="einladungsmail">E-Mail-Adresse</label>
                     <input id="einladungsmail" type="email" @bind="_einladungsMail" @bind:event="oninput" />
@@ -157,14 +213,23 @@
 
                 @if (_einladungsFehler is not null)
                 {
-                    <div class="zl-meldung zl-meldung--fehler">@_einladungsFehler</div>
+                    <div class="zl-meldung zl-meldung--fehler">
+                        <span aria-hidden="true">✕</span>
+                        <div>@_einladungsFehler</div>
+                    </div>
                 }
 
                 <div class="zl-dialog-fuss">
+                    @if (!EinladungVollstaendig)
+                    {
+                        <span class="zl-klein zl-gedaempft" style="align-self:center; margin-right:auto">
+                            Name und E-Mail werden gebraucht.
+                        </span>
+                    }
                     <button type="button" class="zl-knopf zl-knopf--sekundaer"
-                            @onclick="() => _einladungOffen = false">Abbrechen</button>
+                            @onclick="EinladungSchliessen">Abbrechen</button>
                     <button type="button" class="zl-knopf zl-knopf--primaer"
-                            disabled="@string.IsNullOrWhiteSpace(_einladungsMail)"
+                            disabled="@(!EinladungVollstaendig)"
                             @onclick="EinladenAsync">Link erzeugen</button>
                 </div>
             }
@@ -205,10 +270,12 @@
 
     private FreizeitDto? _freizeit;
     private List<FreizeitTeamDto> _team = [];
+    private List<KandidatDto> _kandidaten = [];
     private string? _fehler;
     private string? _meldung;
     private string? _eckdatenFehler;
     private bool _speichert;
+    private Zugriffsproblem _problem;
 
     private string _name = string.Empty;
     private string _ort = string.Empty;
@@ -216,12 +283,19 @@
     private DateTime? _ende;
     private FreizeitStatus _status;
 
+    private string _gewaehlterKandidat = string.Empty;
+    private FreizeitRolle _kandidatenRolle = FreizeitRolle.Mitarbeiter;
+
     private bool _einladungOffen;
     private bool _loeschenOffen;
+    private string _einladungsName = string.Empty;
     private string _einladungsMail = string.Empty;
     private FreizeitRolle _einladungsRolle = FreizeitRolle.Mitarbeiter;
     private string? _einladungsFehler;
     private string? _link;
+
+    private bool EinladungVollstaendig
+        => !string.IsNullOrWhiteSpace(_einladungsName) && !string.IsNullOrWhiteSpace(_einladungsMail);
 
     private string Zeitraum => (_freizeit?.Beginn, _freizeit?.Ende) switch
     {
@@ -235,11 +309,13 @@
 
     private async Task LadenAsync()
     {
+        _problem = Zugriffsproblem.Keins;
+
         var ergebnis = await Api.FreizeitAsync(Slug, Id);
 
         if (!ergebnis.Gelungen)
         {
-            _fehler = ergebnis.Fehler;
+            _problem = ergebnis.Gesperrt ? ergebnis.Problem : Zugriffsproblem.FremdeOrganisation;
             return;
         }
 
@@ -252,6 +328,12 @@
 
         var team = await Api.TeamAsync(Slug, Id);
         _team = team.Wert ?? [];
+
+        if (_freizeit.DarfVerwalten)
+        {
+            var kandidaten = await Api.KandidatenAsync(Slug, Id);
+            _kandidaten = kandidaten.Wert ?? [];
+        }
     }
 
     private async Task SpeichernAsync()
@@ -279,8 +361,33 @@
         await LadenAsync();
     }
 
+    private async Task KandidatHinzufuegenAsync()
+    {
+        if (!Guid.TryParse(_gewaehlterKandidat, out var nutzerId))
+        {
+            return;
+        }
+
+        _fehler = null;
+
+        var ergebnis = await Api.TeamHinzufuegenAsync(
+            Slug, Id, new TeamZuordnung(nutzerId, _kandidatenRolle));
+
+        if (!ergebnis.Gelungen)
+        {
+            _fehler = ergebnis.Fehler;
+            return;
+        }
+
+        _gewaehlterKandidat = string.Empty;
+        _kandidatenRolle = FreizeitRolle.Mitarbeiter;
+
+        await LadenAsync();
+    }
+
     private void EinladungOeffnen()
     {
+        _einladungsName = string.Empty;
         _einladungsMail = string.Empty;
         _einladungsRolle = FreizeitRolle.Mitarbeiter;
         _einladungsFehler = null;
@@ -293,7 +400,8 @@
         _einladungsFehler = null;
 
         var ergebnis = await Api.TeamEinladenAsync(Slug, Id, new EinladungAnlegen(
-            _einladungsMail.Trim(), Einladungsziel.Freizeit, null, _einladungsRolle, Id));
+            _einladungsName.Trim(), _einladungsMail.Trim(), Einladungsziel.Freizeit,
+            null, _einladungsRolle, Id));
 
         if (!ergebnis.Gelungen)
         {

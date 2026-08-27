@@ -32,7 +32,7 @@ public class AbnahmeTests(DatenbankFixture datenbank)
         Assert.False(await fabrik.Angemeldet().GetFromJsonAsync<bool>("/api/einrichtung/noetig"));
 
         var zweiter = await fabrik.Angemeldet().PostAsJsonAsync(
-            "/api/einrichtung", new EinrichtungAnfrage("dritter@zeltlotse.local", Kennwort));
+            "/api/einrichtung", new EinrichtungAnfrage("Dritter", "dritter@zeltlotse.local", Kennwort));
 
         Assert.Equal(HttpStatusCode.Conflict, zweiter.StatusCode);
     }
@@ -278,6 +278,108 @@ public class AbnahmeTests(DatenbankFixture datenbank)
         Assert.Equal("Gerade gelöscht", Assert.Single(papierkorb!).Name);
     }
 
+    /// <summary>
+    /// Fehlende Zugehörigkeit und fehlende Rolle sind zwei verschiedene Dinge.
+    /// Wer eine falsche Begründung liest, sucht den Fehler an der falschen
+    /// Stelle — und die Oberfläche zeigt sonst „gehört dir nicht" an jemanden,
+    /// der sehr wohl dazugehört.
+    /// </summary>
+    [Fact]
+    public async Task Fehlende_Rolle_antwortet_anders_als_fehlende_Zugehoerigkeit()
+    {
+        await using var fabrik = await FabrikAsync();
+        var szene = await SzenarioAsync(fabrik);
+
+        var freizeit = await FreizeitAnlegenAsync(szene.Leitung, szene.Slug, "Mit Team");
+        var mitarbeiter = await MitarbeiterAsync(fabrik, szene, freizeit.Id);
+
+        // Gehört zur Organisation, hat aber nicht die Rolle dafür.
+        var ohneRolle = await mitarbeiter.GetAsync($"/api/o/{szene.Slug}/mitglieder");
+
+        // Gehört gar nicht dazu.
+        var fremde = await OrganisationAnlegenAsync(szene.Betreiber, "Fremdes Werk");
+        var ohneZugehoerigkeit = await mitarbeiter.GetAsync($"/api/o/{fremde.Slug}/mitglieder");
+
+        Assert.Equal(HttpStatusCode.Forbidden, ohneRolle.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, ohneZugehoerigkeit.StatusCode);
+    }
+
+    /// <summary>
+    /// Szenario S4: Zwei der drei Mitarbeiter gehören bereits zur Organisation.
+    /// Ohne diesen Weg bräuchten sie eine Einladung für etwas, das ein Klick
+    /// sein sollte.
+    /// </summary>
+    [Fact]
+    public async Task Bestehende_Mitglieder_lassen_sich_ohne_Einladung_zuordnen()
+    {
+        await using var fabrik = await FabrikAsync();
+        var szene = await SzenarioAsync(fabrik);
+
+        var erste = await FreizeitAnlegenAsync(szene.Leitung, szene.Slug, "Erste");
+        await MitarbeiterAsync(fabrik, szene, erste.Id);
+
+        var zweite = await FreizeitAnlegenAsync(szene.Leitung, szene.Slug, "Zweite");
+
+        var kandidaten = await szene.Leitung.GetFromJsonAsync<List<KandidatDto>>(
+            $"/api/o/{szene.Slug}/freizeiten/{zweite.Id}/kandidaten");
+
+        var timo = Assert.Single(kandidaten!, k => k.EMail == "team@zeltlotse.local");
+        Assert.Equal("Timo Teichmann", timo.Name);
+
+        (await szene.Leitung.PostAsJsonAsync(
+            $"/api/o/{szene.Slug}/freizeiten/{zweite.Id}/team",
+            new TeamZuordnung(timo.NutzerId, FreizeitRolle.Mitarbeiter)))
+            .EnsureSuccessStatusCode();
+
+        var team = await szene.Leitung.GetFromJsonAsync<List<FreizeitTeamDto>>(
+            $"/api/o/{szene.Slug}/freizeiten/{zweite.Id}/team");
+
+        Assert.Equal("Timo Teichmann", Assert.Single(team!).Name);
+
+        // Wer im Team ist, taucht nicht noch einmal als Vorschlag auf.
+        var danach = await szene.Leitung.GetFromJsonAsync<List<KandidatDto>>(
+            $"/api/o/{szene.Slug}/freizeiten/{zweite.Id}/kandidaten");
+
+        Assert.DoesNotContain(danach!, k => k.NutzerId == timo.NutzerId);
+    }
+
+    /// <summary>
+    /// Ein verlorener Einladungslink lässt sich nicht wieder anzeigen — der
+    /// Klartext existiert genau einmal. Stattdessen wird die alte Einladung
+    /// entwertet und eine neue ausgegeben.
+    /// </summary>
+    [Fact]
+    public async Task Einladung_neu_erzeugen_entwertet_die_alte()
+    {
+        await using var fabrik = await FabrikAsync();
+        var szene = await SzenarioAsync(fabrik);
+
+        var erzeugt = await szene.Leitung.PostAsJsonAsync(
+            $"/api/o/{szene.Slug}/einladungen",
+            new EinladungAnlegen("Neue Person", "neu@zeltlotse.local",
+                Einladungsziel.Organisation, null, null, null));
+
+        erzeugt.EnsureSuccessStatusCode();
+        var alte = await erzeugt.Content.ReadFromJsonAsync<EinladungErzeugtDto>();
+        var alterToken = alte!.Link[(alte.Link.LastIndexOf('/') + 1)..];
+
+        var erneuert = await szene.Leitung.PostAsync(
+            $"/api/o/{szene.Slug}/einladungen/{alte.Id}/erneuern", null);
+
+        erneuert.EnsureSuccessStatusCode();
+        var neue = await erneuert.Content.ReadFromJsonAsync<EinladungErzeugtDto>();
+
+        Assert.NotEqual(alte.Link, neue!.Link);
+        Assert.Equal("Neue Person", neue.Name);
+
+        var alterVersuch = await fabrik.Angemeldet().GetAsync($"/api/einladungen/{alterToken}");
+        Assert.Equal(HttpStatusCode.NotFound, alterVersuch.StatusCode);
+
+        var neuerToken = neue.Link[(neue.Link.LastIndexOf('/') + 1)..];
+        var neuerVersuch = await fabrik.Angemeldet().GetAsync($"/api/einladungen/{neuerToken}");
+        neuerVersuch.EnsureSuccessStatusCode();
+    }
+
     // ---------- Aufbau ----------
 
     private async Task<ZeltlotseFabrik> FabrikAsync()
@@ -301,7 +403,7 @@ public class AbnahmeTests(DatenbankFixture datenbank)
 
         var einladung = await betreiber.PostAsJsonAsync(
             $"/api/verwaltung/organisationen/{organisation.Id}/leitung",
-            new EinladungAnlegen("leitung@zeltlotse.local", Einladungsziel.Organisation, null, null, null));
+            new EinladungAnlegen("Lena Leitner", "leitung@zeltlotse.local", Einladungsziel.Organisation, null, null, null));
 
         einladung.EnsureSuccessStatusCode();
         var erzeugt = await einladung.Content.ReadFromJsonAsync<EinladungErzeugtDto>();
@@ -327,7 +429,8 @@ public class AbnahmeTests(DatenbankFixture datenbank)
         var einladung = await szene.Leitung.PostAsJsonAsync(
             $"/api/o/{szene.Slug}/freizeiten/{freizeitId}/einladungen",
             new EinladungAnlegen(
-                "team@zeltlotse.local", Einladungsziel.Freizeit, null, FreizeitRolle.Mitarbeiter, freizeitId));
+                "Timo Teichmann", "team@zeltlotse.local", Einladungsziel.Freizeit,
+                null, FreizeitRolle.Mitarbeiter, freizeitId));
 
         einladung.EnsureSuccessStatusCode();
         var erzeugt = await einladung.Content.ReadFromJsonAsync<EinladungErzeugtDto>();

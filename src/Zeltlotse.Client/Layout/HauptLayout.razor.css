@@ -131,3 +131,16 @@
         justify-content: flex-start;
     }
 }
+
+/* Bei Fingerbedienung mindestens 44×44px. Die Regel muss hier stehen: Das
+   isolierte Komponenten-CSS schlägt die globale Vorgabe. */
+@media (pointer: coarse) {
+    .zl-initialen {
+        width: 44px;
+        height: 44px;
+    }
+
+    .zl-wechsler-knopf {
+        min-height: 44px;
+    }
+}

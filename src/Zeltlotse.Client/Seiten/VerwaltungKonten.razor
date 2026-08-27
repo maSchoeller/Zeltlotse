@@ -31,6 +31,7 @@
             <table class="zl-tabelle">
                 <thead>
                     <tr>
+                        <th>Name</th>
                         <th>E-Mail</th>
                         <th>Zustand</th>
                         <th>Zuletzt angemeldet</th>
@@ -42,12 +43,13 @@
                     {
                         <tr>
                             <td>
-                                @konto.EMail
+                                @konto.Name
                                 @if (konto.IstGlobalAdmin)
                                 {
                                     <span class="zl-abzeichen">Betreiber</span>
                                 }
                             </td>
+                            <td class="zl-gedaempft">@konto.EMail</td>
                             <td>
                                 <span class="@(konto.Gesperrt ? "zl-abzeichen" : "zl-abzeichen zl-abzeichen--offen")">
                                     @(konto.Gesperrt ? "Gesperrt" : "Aktiv")

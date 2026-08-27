@@ -8,7 +8,7 @@
         <div class="zl-platzhalter" style="margin-bottom:0"></div>
     </div>
 }
-else if (Freizeiten.Count == 0)
+else if (Sortiert.Count == 0)
 {
     <div class="zl-leer">
         <p>@LeerText</p>
@@ -18,7 +18,7 @@ else if (Freizeiten.Count == 0)
 else
 {
     <div class="zl-liste">
-        @foreach (var freizeit in Freizeiten)
+        @foreach (var freizeit in Sortiert)
         {
             <button type="button"
                     class="@Zeilenklasse(freizeit)"
@@ -47,16 +47,36 @@ else
     [Parameter]
     public bool MitOrganisation { get; set; }
 
+    /// <summary>Die eben angelegte Freizeit — steht oben und ist kurz hinterlegt.</summary>
+    [Parameter]
+    public Guid? Hervorgehoben { get; set; }
+
     [Parameter]
     public string LeerText { get; set; } = "Hier ist noch nichts.";
 
     [Parameter]
     public RenderFragment? LeerAktion { get; set; }
 
-    private static string Zeilenklasse(FreizeitDto freizeit)
-        => freizeit.Status == FreizeitStatus.Geschlossen
-            ? "zl-zeile zl-zeile--geschlossen"
-            : "zl-zeile";
+    private List<FreizeitDto> Sortiert => Hervorgehoben is { } id
+        ? [.. Freizeiten.Where(f => f.Id == id), .. Freizeiten.Where(f => f.Id != id)]
+        : [.. Freizeiten];
+
+    private string Zeilenklasse(FreizeitDto freizeit)
+    {
+        var klassen = "zl-zeile";
+
+        if (freizeit.Status == FreizeitStatus.Geschlossen)
+        {
+            klassen += " zl-zeile--geschlossen";
+        }
+
+        if (freizeit.Id == Hervorgehoben)
+        {
+            klassen += " zl-zeile--neu";
+        }
+
+        return klassen;
+    }
 
     /// <summary>Fehlendes wird weggelassen statt als Strich angezeigt.</summary>
     private string Untertitel(FreizeitDto freizeit)
@@ -84,7 +104,7 @@ else
             (null, null) => "Zeitraum offen",
             ({ } beginn, null) => $"ab {beginn:dd.MM.yyyy}",
             (null, { } ende) => $"bis {ende:dd.MM.yyyy}",
-            ({ } beginn, { } ende) => $"{beginn:dd.MM.} – {ende:dd.MM.yyyy}",
+            ({ } beginn, { } ende) => $"{beginn:dd.MM.}–{ende:dd.MM.yyyy}",
         };
 
     private void Oeffnen(FreizeitDto freizeit)

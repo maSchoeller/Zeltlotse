@@ -28,8 +28,14 @@ public sealed record FreizeitDto(
 
 public sealed record FreizeitTeamDto(
     Guid NutzerId,
+    string Name,
     string EMail,
     FreizeitRolle Rolle);
+
+/// <summary>Ein Mitglied der Organisation, das noch nicht im Team dieser Freizeit ist.</summary>
+public sealed record KandidatDto(Guid NutzerId, string Name, string EMail);
+
+public sealed record TeamZuordnung(Guid NutzerId, FreizeitRolle Rolle);
 
 public sealed record PapierkorbEintragDto(
     Guid Id,

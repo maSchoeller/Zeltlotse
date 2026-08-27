@@ -47,7 +47,7 @@ public sealed class ZeltlotseFabrik(string verbindung) : WebApplicationFactory<P
     public async Task<string> EinrichtenAsync(string email, string kennwort)
     {
         var antwort = await Angemeldet().PostAsJsonAsync(
-            "/api/einrichtung", new EinrichtungAnfrage(email, kennwort));
+            "/api/einrichtung", new EinrichtungAnfrage("Bea Betreiber", email, kennwort));
 
         antwort.EnsureSuccessStatusCode();
 

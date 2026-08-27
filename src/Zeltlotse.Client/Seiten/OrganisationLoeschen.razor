@@ -4,6 +4,12 @@
 
 <PageTitle>Löschung beantragen · Zeltlotse</PageTitle>
 
+@if (_problem != Zugriffsproblem.Keins)
+{
+    <Sperrseite Problem="_problem" Slug="@Slug" />
+}
+else
+{
 <div class="zl-seite" style="max-width:720px">
     <div class="zl-kopfbereich">
         <h1>Diese Organisation löschen lassen</h1>
@@ -48,6 +54,7 @@
         </div>
     }
 </div>
+}
 
 @code {
     [Parameter]
@@ -55,12 +62,30 @@
 
     private OrganisationDto? _organisation;
     private string? _fehler;
+    private Zugriffsproblem _problem;
 
     protected override async Task OnParametersSetAsync() => await LadenAsync();
 
     private async Task LadenAsync()
     {
+        _problem = Zugriffsproblem.Keins;
+
         var ergebnis = await Api.OrganisationAsync(Slug);
+
+        if (!ergebnis.Gelungen && ergebnis.Gesperrt)
+        {
+            _problem = ergebnis.Problem;
+            return;
+        }
+
+        // Wer die Organisation sehen darf, sie aber nicht leitet, hat hier
+        // nichts zu suchen.
+        if (ergebnis.Wert?.EigeneRolle != OrgRolle.OrgAdmin)
+        {
+            _problem = Zugriffsproblem.FehlendeRolle;
+            return;
+        }
+
         _organisation = ergebnis.Wert;
         _fehler = ergebnis.Fehler;
     }

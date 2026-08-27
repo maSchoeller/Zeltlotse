@@ -85,7 +85,7 @@ public static class KontenErweiterungen
 
         var konten = await datenbank.Users
             .OrderBy(n => n.Email)
-            .Select(n => new KontoDto(n.Id, n.Email ?? string.Empty, n.IstGlobalAdmin,
+            .Select(n => new KontoDto(n.Id, n.Name, n.Email ?? string.Empty, n.IstGlobalAdmin,
                 n.Gesperrt, n.LetzteAnmeldung))
             .ToListAsync(abbruch);
 
@@ -168,6 +168,7 @@ public static class KontenErweiterungen
         var nutzer = new Nutzer
         {
             Id = Guid.NewGuid(),
+            Name = anfrage.Name.Trim(),
             UserName = anfrage.EMail,
             Email = anfrage.EMail,
             IstGlobalAdmin = true,
@@ -279,7 +280,8 @@ public static class KontenErweiterungen
             .ToListAsync(abbruch);
 
         return Results.Ok(new AngemeldeterNutzerDto(
-            nutzer.Id, nutzer.Email ?? string.Empty, nutzer.IstGlobalAdmin, organisationen));
+            nutzer.Id, nutzer.Name, nutzer.Email ?? string.Empty,
+            nutzer.IstGlobalAdmin, organisationen));
     }
 
     private static async Task<IResult> VorschauAsync(

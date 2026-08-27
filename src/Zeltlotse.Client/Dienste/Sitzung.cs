@@ -60,10 +60,10 @@ public sealed class Sitzung(HttpClient http)
         return null;
     }
 
-    public async Task<string?> EinrichtenAsync(string email, string kennwort)
+    public async Task<string?> EinrichtenAsync(string name, string email, string kennwort)
     {
         var antwort = await SendenAsync(HttpMethod.Post, "/api/einrichtung",
-            new EinrichtungAnfrage(email, kennwort));
+            new EinrichtungAnfrage(name, email, kennwort));
 
         if (!antwort.IsSuccessStatusCode)
         {

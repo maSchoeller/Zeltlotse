@@ -1,0 +1,35 @@
+@* Ersetzt die Seite vollständig. Eine Absage, die mitten in einer normal
+   gerenderten Seite steht, lässt Knöpfe und Leertexte stehen, die etwas über
+   fremde Daten behaupten — und führt in Sackgassen. *@
+
+<div class="zl-seite" style="max-width:640px">
+    <h1>@Ueberschrift</h1>
+
+    <p class="zl-gedaempft" style="margin-top:var(--zl-space-4)">@Erklaerung</p>
+
+    <div style="display:flex; gap:var(--zl-space-3); margin-top:var(--zl-space-5)">
+        <a class="zl-knopf zl-knopf--primaer" href="/">Zur Startseite</a>
+
+        @if (Problem == Zugriffsproblem.FehlendeRolle && Slug is not null)
+        {
+            <a class="zl-knopf zl-knopf--sekundaer" href="@($"/o/{Slug}")">Zur Organisation</a>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Zugriffsproblem Problem { get; set; }
+
+    /// <summary>Nur gesetzt, wenn die Organisation bekannt und erlaubt ist.</summary>
+    [Parameter]
+    public string? Slug { get; set; }
+
+    private string Ueberschrift => Problem == Zugriffsproblem.FehlendeRolle
+        ? "Dafür fehlt dir die Berechtigung."
+        : "Diese Seite gehört nicht zu dir.";
+
+    private string Erklaerung => Problem == Zugriffsproblem.FehlendeRolle
+        ? "Du gehörst zu dieser Organisation, aber diese Ansicht ist der Organisationsleitung vorbehalten. Wenn du sie brauchst, frag jemanden aus der Leitung."
+        : "Diese Seite gehört zu einer Organisation, zu der du nicht gehörst.";
+}

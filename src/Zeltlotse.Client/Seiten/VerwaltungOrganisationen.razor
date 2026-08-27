@@ -145,6 +145,11 @@
             @if (_link is null)
             {
                 <div class="zl-feld">
+                    <label for="leitungsname">Name</label>
+                    <input id="leitungsname" @bind="_leitungsName" @bind:event="oninput" />
+                </div>
+
+                <div class="zl-feld">
                     <label for="leitungsmail">E-Mail-Adresse</label>
                     <input id="leitungsmail" type="email" @bind="_leitungsMail" @bind:event="oninput" />
                     <div class="zl-hilfe">
@@ -162,7 +167,8 @@
                     <button type="button" class="zl-knopf zl-knopf--sekundaer"
                             @onclick="LeitungSchliessen">Abbrechen</button>
                     <button type="button" class="zl-knopf zl-knopf--primaer"
-                            disabled="@string.IsNullOrWhiteSpace(_leitungsMail)"
+                            disabled="@(string.IsNullOrWhiteSpace(_leitungsMail)
+                                || string.IsNullOrWhiteSpace(_leitungsName))"
                             @onclick="LeitungEinladenAsync">Link erzeugen</button>
                 </div>
             }
@@ -218,6 +224,7 @@
     private bool _fokusSetzen;
 
     private OrganisationVerwaltungDto? _leitungFuer;
+    private string _leitungsName = string.Empty;
     private string _leitungsMail = string.Empty;
     private string? _link;
 
@@ -289,6 +296,7 @@
     private void LeitungOeffnen(OrganisationVerwaltungDto organisation)
     {
         _leitungFuer = organisation;
+        _leitungsName = string.Empty;
         _leitungsMail = string.Empty;
         _dialogFehler = null;
         _link = null;
@@ -304,7 +312,8 @@
     {
         _dialogFehler = null;
 
-        var ergebnis = await Api.LeitungEinladenAsync(_leitungFuer!.Id, _leitungsMail.Trim());
+        var ergebnis = await Api.LeitungEinladenAsync(
+            _leitungFuer!.Id, _leitungsName.Trim(), _leitungsMail.Trim());
 
         if (!ergebnis.Gelungen)
         {

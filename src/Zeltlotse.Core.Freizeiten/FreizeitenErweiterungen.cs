@@ -30,6 +30,7 @@ public static class FreizeitenErweiterungen
         gruppe.MapPut("/freizeiten/{id:guid}", AendernAsync);
         gruppe.MapDelete("/freizeiten/{id:guid}", LoeschenAsync);
         gruppe.MapGet("/freizeiten/{id:guid}/team", TeamAsync);
+        gruppe.MapGet("/freizeiten/{id:guid}/kandidaten", KandidatenAsync);
         gruppe.MapPost("/freizeiten/{id:guid}/team", TeamHinzufuegenAsync);
         gruppe.MapDelete("/freizeiten/{id:guid}/team/{nutzerId:guid}", TeamEntfernenAsync);
         gruppe.MapPost("/freizeiten/{id:guid}/einladungen", TeamEinladenAsync);
@@ -114,9 +115,14 @@ public static class FreizeitenErweiterungen
     {
         var treffer = await aufloeser.AufloesenAsync(slug, abbruch);
 
-        if (treffer is null || !treffer.Rechte.DarfVerwalten)
+        if (treffer is null)
         {
             return Organisationsaufloeser.KeinZugriff;
+        }
+
+        if (!treffer.Rechte.DarfVerwalten)
+        {
+            return Organisationsaufloeser.KeineBerechtigung;
         }
 
         if (Pruefen(anfrage.Name, anfrage.Beginn, anfrage.Ende) is { } fehler)
@@ -272,9 +278,14 @@ public static class FreizeitenErweiterungen
     {
         var treffer = await aufloeser.AufloesenAsync(slug, abbruch);
 
-        if (treffer is null || !treffer.Rechte.DarfVerwalten)
+        if (treffer is null)
         {
             return Organisationsaufloeser.KeinZugriff;
+        }
+
+        if (!treffer.Rechte.DarfVerwalten)
+        {
+            return Organisationsaufloeser.KeineBerechtigung;
         }
 
         var jetzt = DateTimeOffset.UtcNow;
@@ -301,9 +312,14 @@ public static class FreizeitenErweiterungen
     {
         var treffer = await aufloeser.AufloesenAsync(slug, abbruch);
 
-        if (treffer is null || !treffer.Rechte.DarfVerwalten)
+        if (treffer is null)
         {
             return Organisationsaufloeser.KeinZugriff;
+        }
+
+        if (!treffer.Rechte.DarfVerwalten)
+        {
+            return Organisationsaufloeser.KeineBerechtigung;
         }
 
         var freizeit = await datenbank.Freizeiten
@@ -342,17 +358,23 @@ public static class FreizeitenErweiterungen
         var team = await datenbank.FreizeitZuordnungen
             .Where(z => z.FreizeitId == id)
             .OrderByDescending(z => z.Rolle)
-            .ThenBy(z => z.Nutzer!.Email)
-            .Select(z => new FreizeitTeamDto(z.NutzerId, z.Nutzer!.Email ?? string.Empty, z.Rolle))
+            .ThenBy(z => z.Nutzer!.Name)
+            .Select(z => new FreizeitTeamDto(
+                z.NutzerId, z.Nutzer!.Name, z.Nutzer.Email ?? string.Empty, z.Rolle))
             .ToListAsync(abbruch);
 
         return Results.Ok(team);
     }
 
-    private static async Task<IResult> TeamHinzufuegenAsync(
+    /// <summary>
+    /// Mitglieder der Organisation, die noch nicht im Team dieser Freizeit
+    /// sind. Ohne diese Liste bliebe der Weg aus Szenario S4 versperrt:
+    /// Menschen, die längst zur Organisation gehören, bräuchten sonst eine
+    /// Einladung, um in eine Freizeit zu kommen.
+    /// </summary>
+    private static async Task<IResult> KandidatenAsync(
         string slug,
         Guid id,
-        FreizeitTeamDto anfrage,
         ClaimsPrincipal angemeldet,
         Organisationsaufloeser aufloeser,
         IBerechtigung berechtigung,
@@ -361,11 +383,52 @@ public static class FreizeitenErweiterungen
     {
         var treffer = await aufloeser.AufloesenAsync(slug, abbruch);
 
-        if (treffer is null
-            || !(await berechtigung.FuerFreizeitAsync(angemeldet.NutzerId(), id, abbruch))
-                .DarfTeamVerwalten)
+        if (treffer is null)
         {
             return Organisationsaufloeser.KeinZugriff;
+        }
+
+        if (!(await berechtigung.FuerFreizeitAsync(angemeldet.NutzerId(), id, abbruch))
+            .DarfTeamVerwalten)
+        {
+            return Organisationsaufloeser.KeineBerechtigung;
+        }
+
+        var imTeam = await datenbank.FreizeitZuordnungen
+            .Where(z => z.FreizeitId == id)
+            .Select(z => z.NutzerId)
+            .ToListAsync(abbruch);
+
+        var kandidaten = await datenbank.OrgMitgliedschaften
+            .Where(m => m.OrganisationId == treffer.Organisation.Id && !imTeam.Contains(m.NutzerId))
+            .OrderBy(m => m.Nutzer!.Name)
+            .Select(m => new KandidatDto(m.NutzerId, m.Nutzer!.Name, m.Nutzer.Email ?? string.Empty))
+            .ToListAsync(abbruch);
+
+        return Results.Ok(kandidaten);
+    }
+
+    private static async Task<IResult> TeamHinzufuegenAsync(
+        string slug,
+        Guid id,
+        TeamZuordnung anfrage,
+        ClaimsPrincipal angemeldet,
+        Organisationsaufloeser aufloeser,
+        IBerechtigung berechtigung,
+        ZeltlotseDbContext datenbank,
+        CancellationToken abbruch)
+    {
+        var treffer = await aufloeser.AufloesenAsync(slug, abbruch);
+
+        if (treffer is null)
+        {
+            return Organisationsaufloeser.KeinZugriff;
+        }
+
+        if (!(await berechtigung.FuerFreizeitAsync(angemeldet.NutzerId(), id, abbruch))
+            .DarfTeamVerwalten)
+        {
+            return Organisationsaufloeser.KeineBerechtigung;
         }
 
         var istMitglied = await datenbank.OrgMitgliedschaften

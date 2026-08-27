@@ -18,15 +18,17 @@ public sealed record AnmeldungAnfrage(string EMail, string Kennwort);
 /// </summary>
 public sealed record AnmeldungAntwort(string Zugriffstoken, int GueltigSekunden);
 
-public sealed record EinrichtungAnfrage(string EMail, string Kennwort);
+public sealed record EinrichtungAnfrage(string Name, string EMail, string Kennwort);
 
 public sealed record AngemeldeterNutzerDto(
     Guid Id,
+    string Name,
     string EMail,
     bool IstGlobalAdmin,
     IReadOnlyList<OrganisationDto> Organisationen);
 
 public sealed record EinladungAnlegen(
+    string Name,
     string EMail,
     Einladungsziel Ziel,
     OrgRolle? OrgRolle,
@@ -36,22 +38,25 @@ public sealed record EinladungAnlegen(
 /// <summary>Der Klartext-Token existiert genau hier, genau einmal.</summary>
 public sealed record EinladungErzeugtDto(
     Guid Id,
+    string Name,
     string EMail,
     string Link,
     DateTimeOffset GueltigBis);
 
 public sealed record OffeneEinladungDto(
     Guid Id,
+    string Name,
     string EMail,
     string Beschreibung,
     DateTimeOffset GueltigBis);
 
 public sealed record EinladungEinloesen(string Token, string Kennwort);
 
-public sealed record EinladungVorschauDto(string EMail, string OrganisationName);
+public sealed record EinladungVorschauDto(string Name, string EMail, string OrganisationName);
 
 public sealed record KontoDto(
     Guid Id,
+    string Name,
     string EMail,
     bool IstGlobalAdmin,
     bool Gesperrt,

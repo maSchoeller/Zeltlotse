@@ -66,7 +66,10 @@
 
         if (_fehler is null)
         {
-            Navigation.NavigateTo("/");
+            // Der Betreiber gehört zu keiner Organisation — die Startseite wäre
+            // für ihn immer leer.
+            Navigation.NavigateTo(
+                Sitzung.Nutzer?.IstGlobalAdmin == true ? "/verwaltung/organisationen" : "/");
         }
     }
 }

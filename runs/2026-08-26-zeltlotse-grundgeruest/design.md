@@ -128,31 +128,44 @@ schließt er, die neue Freizeit erscheint oben in der Liste und ist kurz mit
 
 ### Freizeit `/o/{slug}/f/{id}`
 
-Überschrift ist der Name, direkt an Ort und Stelle bearbeitbar (Klick auf den
-Namen macht ihn zum Feld). Darunter zwei Karten nebeneinander, unter 900px
+Überschrift ist der Name. Darunter zwei Karten nebeneinander, unter 900px
 untereinander:
 
-- **Eckdaten** — Zeitraum, Ort, Status. Jede Zeile einzeln bearbeitbar; wer nur
-  Leserecht hat, sieht dieselbe Karte ohne Bearbeitungsflächen.
-- **Team** — Liste der zugeordneten Personen mit Rolle. Freizeitleitung und
-  OrgAdmin sehen „Person hinzufügen": ein Feld, das bestehende Mitglieder der
-  Organisation vorschlägt, und darunter „Neue Person einladen".
+- **Eckdaten** — Name, Zeitraum, Ort, Status als eine Maske mit einem
+  „Speichern"; wer nur Leserecht hat, sieht dieselben Angaben als Liste ohne
+  Bearbeitungsflächen.
+- **Team** — Liste der zugeordneten Personen mit Name, Rolle und E-Mail. Die
+  Freizeitleitung sieht darunter **„Mitglied hinzufügen"**: eine Auswahl der
+  Organisationsmitglieder, die noch nicht im Team sind, mit Rollenwahl — und
+  daneben „Neue Person einladen" für alle, die es noch nicht gibt.
 
-Der Statuswechsel Offen/Geschlossen ist eine Umschaltfläche in der
-Eckdaten-Karte, nicht in einem Menü versteckt. Löschen liegt als tertiäre Aktion
-unten rechts, in `--zl-error`, mit einer Rückfrage, die den Namen nennt und die
-30 Tage erwähnt.
+Löschen liegt als tertiäre Aktion unten rechts, in `--zl-error`, mit einer
+Rückfrage, die den Namen nennt und die 30 Tage erwähnt.
+
+> **Korrigiert am 2026-08-27.** Ursprünglich war die Überschrift an Ort und
+> Stelle bearbeitbar, jede Zeile einzeln speicherbar und der Status eine
+> Umschaltfläche. Gebaut ist eine Sammelmaske; die drei Punkte tun dasselbe und
+> die Entscheidung fiel für weniger Zustand in der Oberfläche. Der vierte Punkt
+> — die Auswahl bestehender Mitglieder — war dagegen kein Geschmack, sondern
+> eine Lücke: Ohne sie ist Szenario S4 nicht gehbar. Sie wurde nachgebaut.
 
 ### Mitglieder `/o/{slug}/team`
 
-Tabelle: Name, E-Mail, Rolle, Beitritt. Offene Einladungen stehen oben
-abgesetzt, mit verbleibender Gültigkeit und einer Schaltfläche „Link kopieren".
-Denn es gibt keinen Mailversand — der Link **muss** kopierbar sein. Das ist die
-eigentliche Funktion dieses Bildschirms, keine Nebensache.
+Tabelle: Name, E-Mail, Rolle, Beitritt.
 
 Beim Einladen erscheint der Link sofort in einem Dialog, groß, mit
 Kopier-Rückmeldung. Der Dialog sagt klar: „Gib diesen Link persönlich weiter. Er
 ist 14 Tage gültig und funktioniert genau einmal."
+
+Offene Einladungen stehen oben abgesetzt, mit verbleibender Gültigkeit und der
+Aktion **„Neuen Link erzeugen"**.
+
+> **Korrigiert am 2026-08-27.** Ursprünglich stand hier „Link kopieren" als
+> „eigentliche Funktion dieses Bildschirms". Das widerspricht Teil 2: Vom Token
+> liegt nur der Hash in der Datenbank, der Klartext existiert genau einmal. Ein
+> verlorener Link lässt sich deshalb nicht wieder anzeigen — stattdessen wird
+> die alte Einladung entwertet und eine neue ausgegeben. Sicherheit vor
+> Bequemlichkeit; die Entscheidung ist bewusst gefallen.
 
 ### Papierkorb `/o/{slug}/papierkorb`
 
@@ -195,9 +208,18 @@ dabei ihre Breite behält.
 Arbeitsfläche: „Das hat nicht geklappt. Versuche es noch einmal." plus
 Wiederholen. Keine technischen Meldungen, keine roten Flächen.
 
-**Kein Zugriff.** Wer eine Adresse öffnet, für die ihm die Zuordnung fehlt,
-bekommt „Diese Seite gehört zu einer Organisation, zu der du nicht gehörst." mit
-Link zur Startseite — nie eine Andeutung, ob es die Organisation gibt.
+**Kein Zugriff.** Die Absage **ersetzt die Seite vollständig** — sie wird nie in
+eine normal gerenderte Seite eingeblendet. Sonst bleiben Knöpfe stehen, die ins
+Nichts führen, und Leertexte, die etwas über fremde Daten behaupten.
+
+Zwei Fälle, zwei Begründungen:
+
+- **Fremde Organisation** — „Diese Seite gehört zu einer Organisation, zu der du
+  nicht gehörst.", nur mit Link zur Startseite. Nie eine Andeutung, ob es die
+  Organisation gibt.
+- **Fehlende Rolle** — wer dazugehört, aber die Rolle nicht hat, liest das auch
+  so und bekommt zusätzlich den Weg zurück in seine Organisation. Eine falsche
+  Begründung schickt Menschen auf die Suche an der falschen Stelle.
 
 **Abgelaufene Sitzung.** Schlägt die Erneuerung fehl, landet man auf `/anmelden`
 mit dem Hinweis „Deine Sitzung ist abgelaufen" und kehrt nach der Anmeldung
@@ -242,12 +264,12 @@ ist das billiger als drei Migrationsstände, die auseinanderlaufen.
 ## Datenmodell
 
 ```
-Nutzer             Id, EMail, IstGlobalAdmin, Gesperrt, ... (Identity)
+Nutzer             Id, Name, EMail, IstGlobalAdmin, Gesperrt, ... (Identity)
 Organisation       Id, Name, Slug (eindeutig), GeloeschtAm?, LoeschungBeantragtAm?
 OrgMitgliedschaft  NutzerId, OrganisationId, Rolle: OrgAdmin | Mitglied
 Freizeit           Id, TenantId, Name, Beginn?, Ende?, Ort?, Status, GeloeschtAm?
 FreizeitZuordnung  NutzerId, FreizeitId, Rolle: Leitung | Mitarbeiter
-Einladung          Id, TenantId, EMail, Rolle, Ziel, TokenHash, GueltigBis, EingeloestAm?
+Einladung          Id, TenantId, Name, EMail, Rolle, Ziel, TokenHash, GueltigBis, EingeloestAm?
 ```
 
 `Beginn` und `Ende` sind `DateOnly` — eine Freizeit hat Tage, keine Uhrzeiten.

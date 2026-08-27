@@ -33,6 +33,7 @@ public static class OrganisationenErweiterungen
         organisation.MapGet("/mitglieder", MitgliederAsync);
         organisation.MapGet("/einladungen", EinladungenAsync);
         organisation.MapPost("/einladungen", EinladenAsync);
+        organisation.MapPost("/einladungen/{id:guid}/erneuern", EinladungErneuernAsync);
         organisation.MapPost("/loeschantrag", LoeschantragAsync);
         organisation.MapDelete("/loeschantrag", LoeschantragZuruecknehmenAsync);
 
@@ -200,15 +201,21 @@ public static class OrganisationenErweiterungen
     {
         var treffer = await aufloeser.AufloesenAsync(slug, abbruch);
 
-        if (treffer is null || !treffer.Rechte.DarfVerwalten)
+        if (treffer is null)
         {
             return Organisationsaufloeser.KeinZugriff;
         }
 
+        if (!treffer.Rechte.DarfVerwalten)
+        {
+            return Organisationsaufloeser.KeineBerechtigung;
+        }
+
         var mitglieder = await datenbank.OrgMitgliedschaften
             .Where(m => m.OrganisationId == treffer.Organisation.Id)
-            .OrderBy(m => m.Nutzer!.Email)
-            .Select(m => new MitgliedDto(m.NutzerId, m.Nutzer!.Email ?? string.Empty, m.Rolle, m.SeitAm))
+            .OrderBy(m => m.Nutzer!.Name).ThenBy(m => m.Nutzer!.Email)
+            .Select(m => new MitgliedDto(
+                m.NutzerId, m.Nutzer!.Name, m.Nutzer.Email ?? string.Empty, m.Rolle, m.SeitAm))
             .ToListAsync(abbruch);
 
         return Results.Ok(mitglieder);
@@ -222,9 +229,14 @@ public static class OrganisationenErweiterungen
     {
         var treffer = await aufloeser.AufloesenAsync(slug, abbruch);
 
-        if (treffer is null || !treffer.Rechte.DarfVerwalten)
+        if (treffer is null)
         {
             return Organisationsaufloeser.KeinZugriff;
+        }
+
+        if (!treffer.Rechte.DarfVerwalten)
+        {
+            return Organisationsaufloeser.KeineBerechtigung;
         }
 
         return Results.Ok(await einladungen.OffeneAsync(treffer.Organisation.Id, abbruch));
@@ -240,9 +252,14 @@ public static class OrganisationenErweiterungen
     {
         var treffer = await aufloeser.AufloesenAsync(slug, abbruch);
 
-        if (treffer is null || !treffer.Rechte.DarfVerwalten)
+        if (treffer is null)
         {
             return Organisationsaufloeser.KeinZugriff;
+        }
+
+        if (!treffer.Rechte.DarfVerwalten)
+        {
+            return Organisationsaufloeser.KeineBerechtigung;
         }
 
         // Der OrgAdmin kann keine weiteren OrgAdmins ernennen — das bleibt
@@ -257,6 +274,50 @@ public static class OrganisationenErweiterungen
             treffer.Organisation.Id, angemeldet.NutzerId(), bereinigt, abbruch));
     }
 
+    /// <summary>
+    /// Der Klartext eines Einladungstokens existiert genau einmal — ein
+    /// verlorener Link lässt sich nicht wieder anzeigen. Statt ihn zu lagern,
+    /// wird die alte Einladung entwertet und eine neue ausgegeben.
+    /// </summary>
+    private static async Task<IResult> EinladungErneuernAsync(
+        string slug,
+        Guid id,
+        ClaimsPrincipal angemeldet,
+        Organisationsaufloeser aufloeser,
+        ZeltlotseDbContext datenbank,
+        IEinladungen einladungen,
+        CancellationToken abbruch)
+    {
+        var treffer = await aufloeser.AufloesenAsync(slug, abbruch);
+
+        if (treffer is null)
+        {
+            return Organisationsaufloeser.KeinZugriff;
+        }
+
+        if (!treffer.Rechte.DarfVerwalten)
+        {
+            return Organisationsaufloeser.KeineBerechtigung;
+        }
+
+        var alte = await datenbank.Einladungen
+            .FirstOrDefaultAsync(e => e.Id == id && e.EingeloestAm == null, abbruch);
+
+        if (alte is null)
+        {
+            return Results.NotFound();
+        }
+
+        var vorlage = new EinladungAnlegen(
+            alte.Name, alte.EMail, alte.Ziel, alte.OrgRolle, alte.FreizeitRolle, alte.FreizeitId);
+
+        datenbank.Einladungen.Remove(alte);
+        await datenbank.SaveChangesAsync(abbruch);
+
+        return Results.Ok(await einladungen.ErstellenAsync(
+            treffer.Organisation.Id, angemeldet.NutzerId(), vorlage, abbruch));
+    }
+
     private static async Task<IResult> LoeschantragAsync(
         string slug,
         Organisationsaufloeser aufloeser,
@@ -265,9 +326,14 @@ public static class OrganisationenErweiterungen
     {
         var treffer = await aufloeser.AufloesenAsync(slug, abbruch);
 
-        if (treffer is null || !treffer.Rechte.DarfVerwalten)
+        if (treffer is null)
         {
             return Organisationsaufloeser.KeinZugriff;
+        }
+
+        if (!treffer.Rechte.DarfVerwalten)
+        {
+            return Organisationsaufloeser.KeineBerechtigung;
         }
 
         treffer.Organisation.LoeschungBeantragtAm ??= DateTimeOffset.UtcNow;
@@ -284,9 +350,14 @@ public static class OrganisationenErweiterungen
     {
         var treffer = await aufloeser.AufloesenAsync(slug, abbruch);
 
-        if (treffer is null || !treffer.Rechte.DarfVerwalten)
+        if (treffer is null)
         {
             return Organisationsaufloeser.KeinZugriff;
+        }
+
+        if (!treffer.Rechte.DarfVerwalten)
+        {
+            return Organisationsaufloeser.KeineBerechtigung;
         }
 
         treffer.Organisation.LoeschungBeantragtAm = null;

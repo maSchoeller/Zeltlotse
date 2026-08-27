@@ -12,6 +12,12 @@ namespace Zeltlotse.Core.Persistenz;
 /// </summary>
 public sealed class Nutzer : IdentityUser<Guid>
 {
+    /// <summary>
+    /// Anzeigename. Eine Liste aus lauter E-Mail-Adressen beantwortet die
+    /// Frage nicht, wer da eigentlich steht.
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
     public bool IstGlobalAdmin { get; set; }
 
     public bool Gesperrt { get; set; }
@@ -108,6 +114,8 @@ public sealed class Einladung
     public Guid Id { get; set; }
 
     public Guid TenantId { get; set; }
+
+    public required string Name { get; set; }
 
     public required string EMail { get; set; }
 

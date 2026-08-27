@@ -12,8 +12,10 @@
         </div>
     </div>
 }
-else if (!Sitzung.IstAngemeldet)
+else if (!Sitzung.IstAngemeldet || IstOeffentlicherWeg)
 {
+    @* Anmeldung, Einrichtung und Einladung stehen bewusst auf leerem Grund —
+       auch für jemanden, der schon angemeldet ist. *@
     @Body
 }
 else
@@ -24,14 +26,16 @@ else
         <div class="zl-kopfzeile-mitte">
             @if (Sitzung.Nutzer!.Organisationen.Count == 1)
             {
-                <span class="zl-kopfzeile-org">@Sitzung.Nutzer.Organisationen[0].Name</span>
+                <a class="zl-kopfzeile-org" href="@($"/o/{Sitzung.Nutzer.Organisationen[0].Slug}")">
+                    @Sitzung.Nutzer.Organisationen[0].Name
+                </a>
             }
             else if (Sitzung.Nutzer.Organisationen.Count > 1)
             {
                 <div class="zl-wechsler">
                     <button type="button" class="zl-wechsler-knopf" @onclick="WechslerUmschalten"
                             aria-expanded="@(_wechslerOffen ? "true" : "false")">
-                        @(AktuelleOrganisation?.Name ?? "Organisation wählen")
+                        @(AktuelleOrganisation?.Name ?? "Organisationen")
                         <span aria-hidden="true">▾</span>
                     </button>
 
@@ -108,10 +112,32 @@ else
     private OrganisationDto? AktuelleOrganisation
         => Sitzung.Nutzer?.Organisationen.FirstOrDefault(o => o.Slug == AktuellerSlug);
 
+    private bool IstOeffentlicherWeg
+    {
+        get
+        {
+            var pfad = "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
+
+            return OeffentlicheWege.Any(
+                weg => pfad.StartsWith(weg, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
     private string Initialen
     {
         get
         {
+            var name = Sitzung.Nutzer?.Name;
+
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                var teile = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                return teile.Length >= 2
+                    ? $"{teile[0][0]}{teile[^1][0]}".ToUpperInvariant()
+                    : teile[0][..Math.Min(2, teile[0].Length)].ToUpperInvariant();
+            }
+
             var email = Sitzung.Nutzer?.EMail ?? "?";
 
             return email.Length >= 2 ? email[..2].ToUpperInvariant() : email.ToUpperInvariant();

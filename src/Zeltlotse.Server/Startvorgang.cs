@@ -45,10 +45,14 @@ public static class Startvorgang
             return;
         }
 
-        var betreiber = await AnlegenAsync(nutzerverwaltung, "betreiber@zeltlotse.local", kennwort, true);
-        var leitung = await AnlegenAsync(nutzerverwaltung, "leitung@zeltlotse.local", kennwort, false);
-        var freizeitleitung = await AnlegenAsync(nutzerverwaltung, "freizeit@zeltlotse.local", kennwort, false);
-        var team = await AnlegenAsync(nutzerverwaltung, "team@zeltlotse.local", kennwort, false);
+        var betreiber = await AnlegenAsync(
+            nutzerverwaltung, "Bea Betreiber", "betreiber@zeltlotse.local", kennwort, true);
+        var leitung = await AnlegenAsync(
+            nutzerverwaltung, "Lena Leitner", "leitung@zeltlotse.local", kennwort, false);
+        var freizeitleitung = await AnlegenAsync(
+            nutzerverwaltung, "Frieder Falk", "freizeit@zeltlotse.local", kennwort, false);
+        var team = await AnlegenAsync(
+            nutzerverwaltung, "Timo Teichmann", "team@zeltlotse.local", kennwort, false);
 
         var organisation = new Organisation
         {
@@ -135,11 +139,12 @@ public static class Startvorgang
         };
 
     private static async Task<Nutzer> AnlegenAsync(
-        UserManager<Nutzer> verwaltung, string email, string kennwort, bool globalAdmin)
+        UserManager<Nutzer> verwaltung, string name, string email, string kennwort, bool globalAdmin)
     {
         var nutzer = new Nutzer
         {
             Id = Guid.NewGuid(),
+            Name = name,
             UserName = email,
             Email = email,
             IstGlobalAdmin = globalAdmin,

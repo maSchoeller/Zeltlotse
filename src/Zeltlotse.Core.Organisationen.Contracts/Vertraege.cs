@@ -29,6 +29,7 @@ public sealed record OrganisationVerwaltungDto(
 
 public sealed record MitgliedDto(
     Guid NutzerId,
+    string Name,
     string EMail,
     OrgRolle Rolle,
     DateTimeOffset SeitAm);

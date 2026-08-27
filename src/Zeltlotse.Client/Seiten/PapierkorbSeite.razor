@@ -3,6 +3,12 @@
 
 <PageTitle>Papierkorb · Zeltlotse</PageTitle>
 
+@if (_problem != Zugriffsproblem.Keins)
+{
+    <Sperrseite Problem="_problem" Slug="@Slug" />
+}
+else
+{
 <div class="zl-seite">
     <div class="zl-kopfbereich">
         <h1>Papierkorb</h1>
@@ -27,7 +33,10 @@
     else if (_eintraege.Count == 0)
     {
         <div class="zl-leer">
-            <p>Der Papierkorb ist leer.</p>
+            <p>
+                Der Papierkorb ist leer — hier landen gelöschte Freizeiten und warten 30 Tage
+                darauf, dass du sie zurückholst.
+            </p>
         </div>
     }
     else
@@ -52,6 +61,7 @@
         </div>
     }
 </div>
+}
 
 @code {
     [Parameter]
@@ -60,6 +70,7 @@
     private List<PapierkorbEintragDto> _eintraege = [];
     private bool _laedt = true;
     private string? _fehler;
+    private Zugriffsproblem _problem;
 
     protected override async Task OnParametersSetAsync() => await LadenAsync();
 
@@ -67,7 +78,17 @@
     {
         _laedt = true;
 
+        _problem = Zugriffsproblem.Keins;
+
         var ergebnis = await Api.PapierkorbAsync(Slug);
+
+        if (!ergebnis.Gelungen && ergebnis.Gesperrt)
+        {
+            _problem = ergebnis.Problem;
+            _laedt = false;
+            return;
+        }
+
         _eintraege = ergebnis.Wert ?? [];
         _fehler = ergebnis.Fehler;
 

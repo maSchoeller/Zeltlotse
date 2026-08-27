@@ -6,14 +6,29 @@ using Zeltlotse.Core.Organisationen.Contracts;
 
 namespace Zeltlotse.Client.Dienste;
 
+/// <summary>
+/// Warum ein Zugriff nicht ging. Fehlende Zugehörigkeit und fehlende Rolle
+/// sind verschiedene Dinge — wer die falsche Begründung liest, sucht den Fehler
+/// an der falschen Stelle.
+/// </summary>
+public enum Zugriffsproblem
+{
+    Keins = 0,
+    FremdeOrganisation = 1,
+    FehlendeRolle = 2,
+}
+
 /// <summary>Ergebnis eines Aufrufs: Wert oder Fehlertext, nie beides.</summary>
-public sealed record Ergebnis<T>(T? Wert, string? Fehler)
+public sealed record Ergebnis<T>(T? Wert, string? Fehler, Zugriffsproblem Problem = Zugriffsproblem.Keins)
 {
     public bool Gelungen => Fehler is null;
 
+    public bool Gesperrt => Problem != Zugriffsproblem.Keins;
+
     public static Ergebnis<T> Gut(T? wert) => new(wert, null);
 
-    public static Ergebnis<T> Schlecht(string fehler) => new(default, fehler);
+    public static Ergebnis<T> Schlecht(string fehler, Zugriffsproblem problem = Zugriffsproblem.Keins)
+        => new(default, fehler, problem);
 }
 
 /// <summary>
@@ -47,8 +62,15 @@ public sealed class ZeltlotseApi(HttpClient http, Sitzung sitzung)
     public Task<Ergebnis<List<FreizeitTeamDto>>> TeamAsync(string slug, Guid id)
         => HolenAsync<List<FreizeitTeamDto>>($"/api/o/{slug}/freizeiten/{id}/team");
 
-    public Task<Ergebnis<bool>> TeamHinzufuegenAsync(string slug, Guid id, FreizeitTeamDto person)
+    public Task<Ergebnis<bool>> TeamHinzufuegenAsync(string slug, Guid id, TeamZuordnung person)
         => OhneInhaltAsync(HttpMethod.Post, $"/api/o/{slug}/freizeiten/{id}/team", person);
+
+    public Task<Ergebnis<List<KandidatDto>>> KandidatenAsync(string slug, Guid id)
+        => HolenAsync<List<KandidatDto>>($"/api/o/{slug}/freizeiten/{id}/kandidaten");
+
+    public Task<Ergebnis<EinladungErzeugtDto>> EinladungErneuernAsync(string slug, Guid id)
+        => SendenAsync<EinladungErzeugtDto>(
+            HttpMethod.Post, $"/api/o/{slug}/einladungen/{id}/erneuern", null);
 
     public Task<Ergebnis<bool>> TeamEntfernenAsync(string slug, Guid id, Guid nutzerId)
         => OhneInhaltAsync(HttpMethod.Delete, $"/api/o/{slug}/freizeiten/{id}/team/{nutzerId}", null);
@@ -90,11 +112,12 @@ public sealed class ZeltlotseApi(HttpClient http, Sitzung sitzung)
         => SendenAsync<OrganisationVerwaltungDto>(
             HttpMethod.Post, "/api/verwaltung/organisationen", new OrganisationAnlegen(name));
 
-    public Task<Ergebnis<EinladungErzeugtDto>> LeitungEinladenAsync(Guid id, string email)
+    public Task<Ergebnis<EinladungErzeugtDto>> LeitungEinladenAsync(Guid id, string name, string email)
         => SendenAsync<EinladungErzeugtDto>(
             HttpMethod.Post,
             $"/api/verwaltung/organisationen/{id}/leitung",
-            new EinladungAnlegen(email, Einladungsziel.Organisation, OrgRolle.OrgAdmin, null, null));
+            new EinladungAnlegen(name, email, Einladungsziel.Organisation,
+                OrgRolle.OrgAdmin, null, null));
 
     public Task<Ergebnis<bool>> LoeschungAusfuehrenAsync(Guid id)
         => OhneInhaltAsync(
@@ -131,7 +154,7 @@ public sealed class ZeltlotseApi(HttpClient http, Sitzung sitzung)
 
         if (!antwort.IsSuccessStatusCode)
         {
-            return Ergebnis<T>.Schlecht(await FehlertextAsync(antwort));
+            return Ergebnis<T>.Schlecht(await FehlertextAsync(antwort), Problem(antwort));
         }
 
         if (antwort.StatusCode == HttpStatusCode.NoContent)
@@ -149,7 +172,7 @@ public sealed class ZeltlotseApi(HttpClient http, Sitzung sitzung)
 
         return antwort.IsSuccessStatusCode
             ? Ergebnis<bool>.Gut(true)
-            : Ergebnis<bool>.Schlecht(await FehlertextAsync(antwort));
+            : Ergebnis<bool>.Schlecht(await FehlertextAsync(antwort), Problem(antwort));
     }
 
     private async Task<HttpResponseMessage> MitErneuerungAsync(
@@ -180,6 +203,13 @@ public sealed class ZeltlotseApi(HttpClient http, Sitzung sitzung)
 
         return await http.SendAsync(sitzung.Vorbereiten(verfahren, pfad, rumpf));
     }
+
+    private static Zugriffsproblem Problem(HttpResponseMessage antwort) => antwort.StatusCode switch
+    {
+        HttpStatusCode.NotFound => Zugriffsproblem.FremdeOrganisation,
+        HttpStatusCode.Forbidden => Zugriffsproblem.FehlendeRolle,
+        _ => Zugriffsproblem.Keins,
+    };
 
     private static async Task<string> FehlertextAsync(HttpResponseMessage antwort)
     {

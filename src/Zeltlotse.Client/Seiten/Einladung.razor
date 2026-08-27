@@ -27,9 +27,20 @@
         {
             <h1 class="zl-titel">Willkommen bei @_vorschau.OrganisationName</h1>
             <p class="zl-gedaempft">
-                Du bist als <strong>@_vorschau.EMail</strong> eingeladen. Vergib ein Kennwort —
-                danach bist du angemeldet.
+                Die Einladung gilt <strong>@_vorschau.Name</strong> (@_vorschau.EMail). Vergib ein
+                Kennwort — danach bist du angemeldet.
             </p>
+
+            @if (Sitzung.IstAngemeldet && Sitzung.Nutzer!.EMail != _vorschau.EMail)
+            {
+                <div class="zl-meldung zl-meldung--warnung">
+                    <span aria-hidden="true">!</span>
+                    <div>
+                        Du bist gerade als <strong>@Sitzung.Nutzer.EMail</strong> angemeldet. Wenn
+                        du fortfährst, wirst du zu @_vorschau.Name.
+                    </div>
+                </div>
+            }
 
             @if (_fehler is not null)
             {

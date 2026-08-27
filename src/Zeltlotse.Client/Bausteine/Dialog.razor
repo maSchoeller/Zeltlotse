@@ -9,7 +9,7 @@
         <div class="zl-dialog-kopf">
             <h2>@Titel</h2>
             <button type="button" class="zl-knopf zl-knopf--text" @onclick="Schliessen"
-                    aria-label="Schließen">✕</button>
+                    aria-label="Schließen" style="min-width:44px">✕</button>
         </div>
 
         @Inhalt
@@ -48,7 +48,7 @@
     /// gleich mit dem Dialog verschwindet.
     /// </summary>
     protected override Task OnInitializedAsync()
-        => JS.InvokeVoidAsync("zeltlotseDialog.merkeFokus").AsTask();
+        => JS.InvokeVoidAsync("zeltlotseDialog.oeffnen").AsTask();
 
     protected override async Task OnAfterRenderAsync(bool ersteAnzeige)
     {
@@ -69,12 +69,15 @@
 
     private Task Schliessen() => BeimSchliessen.InvokeAsync();
 
-    /// <summary>Gibt den Fokus dorthin zurück, wo er vor dem Öffnen war.</summary>
+    /// <summary>
+    /// Hebt die Fokusfalle auf, gibt den Hintergrund zum Scrollen frei und
+    /// setzt den Fokus dorthin zurück, wo er vor dem Öffnen war.
+    /// </summary>
     public async ValueTask DisposeAsync()
     {
         try
         {
-            await JS.InvokeVoidAsync("zeltlotseDialog.stelleFokusHer");
+            await JS.InvokeVoidAsync("zeltlotseDialog.schliessen");
         }
         catch (JSDisconnectedException)
         {
