@@ -38,3 +38,19 @@ A handler that intercepts a status code must know the case where that code is
 the right answer, or it inverts its meaning — a 401 answering "is anyone signed
 in?" is not an expired session. And "no success" has two shapes, a status code
 and an exception: a stub returning only status codes tests one of them.
+
+## Blazor WebAssembly — two silent starts
+
+Both fail without a compiler error and without a failing test; only running the
+app in a browser shows them.
+
+- `index.html` must link `<Product>.styles.css` beside the global stylesheet.
+  Without it every `.razor.css` is dead weight: components render unstyled while
+  the global sheet still applies, so the page looks plausible and is wrong.
+- A non-invariant culture needs
+  `<BlazorWebAssemblyLoadAllGlobalizationData>true</...>` in the client csproj,
+  or `new CultureInfo("de-DE")` throws during startup and the app never boots.
+
+Native `<input type="date">` renders its placeholder in the *browser's*
+language, not the page culture — screenshot tooling must launch the browser
+with `--lang`, or German docs show `mm/dd/yyyy`.
