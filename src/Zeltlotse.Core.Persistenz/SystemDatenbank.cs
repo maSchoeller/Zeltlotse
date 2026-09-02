@@ -18,13 +18,29 @@ namespace Zeltlotse.Core.Persistenz;
 /// </summary>
 public sealed class SystemDatenbank(string verbindungszeichenfolge)
 {
-    public ZeltlotseDbContext Oeffnen()
+    /// <summary>
+    /// Kein Interceptor — die Ausnahme wird hier direkt und einmalig gesetzt,
+    /// statt über <see cref="MandantInterceptor"/>. Anders als PostgreSQL
+    /// kennt SQL Server keinen automatischen Bypass für privilegierte
+    /// Verbindungen; die Richtlinie muss die Ausnahme deshalb explizit über
+    /// dieselbe Sitzungsvariable erkennen, mit der auch die
+    /// Betreiber-Ausnahme arbeitet.
+    /// </summary>
+    public async Task<ZeltlotseDbContext> OeffnenAsync()
     {
         var optionen = new DbContextOptionsBuilder<ZeltlotseDbContext>()
-            .UseNpgsql(verbindungszeichenfolge)
+            .UseSqlServer(verbindungszeichenfolge)
             .Options;
 
-        // Kein Interceptor: keine Rollenumstellung, keine Sitzungsvariablen.
-        return new ZeltlotseDbContext(optionen, new MandantKontext { Wartung = true });
+        var kontext = new ZeltlotseDbContext(optionen, new MandantKontext { Wartung = true });
+
+        var verbindung = kontext.Database.GetDbConnection();
+        await verbindung.OpenAsync();
+
+        await using var befehl = verbindung.CreateCommand();
+        befehl.CommandText = "EXEC sp_set_session_context @key = N'system_bypass', @value = 1, @read_only = 1";
+        await befehl.ExecuteNonQueryAsync();
+
+        return kontext;
     }
 }

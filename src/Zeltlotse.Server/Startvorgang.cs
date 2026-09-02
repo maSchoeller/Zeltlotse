@@ -10,10 +10,12 @@ namespace Zeltlotse.Server;
 public static class Startvorgang
 {
     /// <summary>
-    /// Migriert die Datenbank beim Hochfahren. Trägt bei genau einer Instanz;
-    /// bei mehreren wäre das ein Wettlauf — siehe debt.md.
+    /// Nur die Migration, ohne Kestrel zu starten — der Weg für den
+    /// Migrations-Job im Deploy-Workflow. Läuft einmalig, bevor die neue
+    /// Server-Revision Datenverkehr bekommt; siehe design.md des Laufs
+    /// 2026-09-02-azure-produktivbetrieb.
     /// </summary>
-    public static async Task VorbereitenAsync(WebApplication app)
+    public static async Task MigrierenAsync(WebApplication app)
     {
         using var bereich = app.Services.CreateScope();
 
@@ -22,6 +24,27 @@ public static class Startvorgang
 
         var datenbank = bereich.ServiceProvider.GetRequiredService<ZeltlotseDbContext>();
         await datenbank.Database.MigrateAsync();
+    }
+
+    /// <summary>
+    /// Außerhalb der Produktion (Entwicklung, Tests) migriert eine einzelne
+    /// Instanz sich selbst beim Hochfahren — bequem und ohne Wettlauf-Risiko,
+    /// weil dort nie mehr als eine Instanz gleichzeitig startet. Produktiv
+    /// migriert stattdessen ausschließlich <see cref="MigrierenAsync"/> als
+    /// eigener Deploy-Schritt (siehe dort).
+    /// </summary>
+    public static async Task VorbereitenAsync(WebApplication app)
+    {
+        using var bereich = app.Services.CreateScope();
+
+        var mandant = bereich.ServiceProvider.GetRequiredService<MandantKontext>();
+        mandant.Wartung = true;
+
+        if (!app.Environment.IsProduction())
+        {
+            var datenbank = bereich.ServiceProvider.GetRequiredService<ZeltlotseDbContext>();
+            await datenbank.Database.MigrateAsync();
+        }
 
         if (app.Environment.IsDevelopment())
         {

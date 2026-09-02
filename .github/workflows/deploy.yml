@@ -1,0 +1,148 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bind-custom-domain:
+        description: >
+          Custom-Domain-Bindung anlegen. Erst auf true stellen, nachdem beim
+          ersten Deploy die DNS-Einträge gesetzt wurden — siehe design.md,
+          Abschnitt "Sequenzierung".
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: read
+  packages: write
+
+jobs:
+  build-and-test:
+    uses: ./.github/workflows/build.yml
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Bei ghcr.io anmelden
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Server-Image bauen und pushen
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/Zeltlotse.Server/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/zeltlotse-server:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/zeltlotse-server:latest
+
+      - name: Client für die Produktion veröffentlichen
+        run: |
+          echo "{\"Api\": \"https://api.${{ vars.DOMAIN_NAME }}\"}" \
+            > src/Zeltlotse.Client/wwwroot/appsettings.json
+          dotnet publish src/Zeltlotse.Client/Zeltlotse.Client.csproj \
+            -c Release -o "${{ runner.temp }}/client-publish"
+
+      - name: Bei Azure anmelden (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Infrastruktur ausrollen (Bicep)
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az deployment sub create \
+              --location germanywestcentral \
+              --template-file infra/main.bicep \
+              --parameters \
+                domainName="${{ vars.DOMAIN_NAME }}" \
+                sqlAadAdminObjectId="${{ vars.SQL_AAD_ADMIN_OBJECT_ID }}" \
+                sqlAadAdminLogin="${{ vars.SQL_AAD_ADMIN_LOGIN }}" \
+                serverImage="ghcr.io/${{ github.repository_owner }}/zeltlotse-server:${{ github.sha }}" \
+                ghcrUsername="${{ github.actor }}" \
+                ghcrToken="${{ secrets.GITHUB_TOKEN }}" \
+                jwtSigningKey="${{ secrets.JWT_SIGNING_KEY }}" \
+                bindCustomDomain="${{ github.event.inputs.bind-custom-domain || 'false' }}"
+
+      # Verbindet sich einmal pro Deploy als AAD-Administrator, um die
+      # Managed Identity als Datenbankbenutzer bekannt zu machen — ohne das
+      # kann sich die Server-Identität nicht per Active-Directory-Managed-
+      # Identity-Auth anmelden. Idempotent (IF NOT EXISTS).
+      #
+      # ACHTUNG: Der Weg, den Azure-AD-Zugriffstoken an sqlcmd zu übergeben,
+      # ist beim ersten echten Deploy gegen die reale Datenbank zu
+      # verifizieren — siehe debt.md dieses Laufs.
+      - name: Datenbankrechte für die Server-Identität setzen
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            ACCESS_TOKEN=$(az account get-access-token --resource https://database.windows.net --query accessToken -o tsv)
+            SQL_SERVER=$(az deployment group show -g zeltlotse-produktion -n sql --query properties.outputs.serverName.value -o tsv)
+
+            sqlcmd -S "${SQL_SERVER}.database.windows.net" -d zeltlotse \
+              --authentication-method="ActiveDirectoryAccessToken" -P "$ACCESS_TOKEN" \
+              -Q "IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'zeltlotse-server-identity')
+                  BEGIN
+                      CREATE USER [zeltlotse-server-identity] FROM EXTERNAL PROVIDER;
+                      ALTER ROLE db_datareader ADD MEMBER [zeltlotse-server-identity];
+                      ALTER ROLE db_datawriter ADD MEMBER [zeltlotse-server-identity];
+                      ALTER ROLE db_ddladmin ADD MEMBER [zeltlotse-server-identity];
+                  END"
+
+      - name: Migration ausführen
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az containerapp job start --name zeltlotse-migration --resource-group zeltlotse-produktion
+
+            # az containerapp job start kehrt zurück, sobald die Ausführung
+            # gestartet ist, nicht wenn sie fertig ist — deshalb aktiv auf
+            # den Endzustand warten und bei Fehlschlag abbrechen.
+            for i in $(seq 1 30); do
+              STATUS=$(az containerapp job execution list \
+                --name zeltlotse-migration --resource-group zeltlotse-produktion \
+                --query "[0].properties.status" -o tsv)
+
+              if [ "$STATUS" = "Succeeded" ]; then
+                exit 0
+              fi
+
+              if [ "$STATUS" = "Failed" ]; then
+                echo "Migration fehlgeschlagen — Deploy bricht ab, alte Version bleibt aktiv."
+                exit 1
+              fi
+
+              sleep 10
+            done
+
+            echo "Migration hat nach 5 Minuten nicht abgeschlossen."
+            exit 1
+
+      - name: Client zu Azure Static Web Apps ausrollen
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: ${{ runner.temp }}/client-publish
+          output_location: ""
+          skip_app_build: true

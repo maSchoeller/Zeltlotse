@@ -1,0 +1,19 @@
+name: cleanup-images
+
+on:
+  schedule:
+    - cron: "0 3 * * 1" # montags, 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Alte zeltlotse-server-Images aufräumen
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: zeltlotse-server
+          package-type: container
+          min-versions-to-keep: 10

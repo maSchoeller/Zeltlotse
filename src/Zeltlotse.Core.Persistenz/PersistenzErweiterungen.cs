@@ -28,7 +28,7 @@ public sealed class EntwurfszeitFabrik : IDesignTimeDbContextFactory<ZeltlotseDb
     public ZeltlotseDbContext CreateDbContext(string[] argumente)
     {
         var optionen = new DbContextOptionsBuilder<ZeltlotseDbContext>()
-            .UseNpgsql("Host=localhost;Database=zeltlotse;Username=postgres;Password=entwurfszeit")
+            .UseSqlServer("Server=localhost;Database=zeltlotse;User Id=sa;Password=Entwurfszeit!1;TrustServerCertificate=true")
             .Options;
 
         return new ZeltlotseDbContext(optionen, new MandantKontext { Wartung = true });

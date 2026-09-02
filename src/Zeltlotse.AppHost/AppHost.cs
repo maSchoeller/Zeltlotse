@@ -1,6 +1,6 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var datenbank = builder.AddPostgres("postgres")
+var datenbank = builder.AddSqlServer("sqlserver")
     .WithDataVolume()
     .AddDatabase("zeltlotse");
 
