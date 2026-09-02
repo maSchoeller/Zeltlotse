@@ -74,7 +74,7 @@ internal sealed class Einladungsdienst(
 
     public async Task<EinladungVorschauDto?> VorschauAsync(string klartext, CancellationToken abbruch)
     {
-        await using var ohneSchranke = system.Oeffnen();
+        await using var ohneSchranke = await system.OeffnenAsync();
 
         var einladung = await GueltigeEinladungAsync(ohneSchranke, klartext, abbruch);
 
@@ -96,7 +96,7 @@ internal sealed class Einladungsdienst(
     {
         // Nur die Einladung selbst und ihre Folgezeilen laufen ohne Schranke;
         // Konto und Organisationsmitgliedschaft tragen ohnehin keine.
-        await using var ohneSchranke = system.Oeffnen();
+        await using var ohneSchranke = await system.OeffnenAsync();
 
         var einladung = await GueltigeEinladungAsync(ohneSchranke, anfrage.Token, abbruch);
 

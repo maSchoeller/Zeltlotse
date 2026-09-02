@@ -3,22 +3,27 @@
 Dieses Dokument ist das jeweils aktuelle Bild des Systems. Jeder Lauf schreibt
 seine Veränderung hierher zurück; es beschreibt nie einen Wunschzustand.
 
-**Stand:** Lauf 2026-08-26-zeltlotse-grundgeruest
+**Stand:** Lauf 2026-09-02-azure-produktivbetrieb
 
 ## Überblick
 
 Eine mandantenfähige Webanwendung für die Freizeitplanung christlicher Träger.
 Ein Träger ist ein Mandant; unter ihm leben Freizeiten. Getrennte Auslieferung
-von Oberfläche und Schnittstelle, orchestriert durch .NET Aspire.
+von Oberfläche und Schnittstelle. Lokal orchestriert durch .NET Aspire;
+produktiv auf Azure Container Apps (Germany West Central), automatisiert über
+eine GitHub Action bei jedem Push auf `main`.
 
 ```
 Browser
   │
   ├── app.zeltlotse.de   Zeltlotse.Client        Blazor WebAssembly, eigenständig
-  │                                              (lokal: Aspire-DevServer)
+  │                                              (Azure Static Web App)
   └── api.zeltlotse.de   Zeltlotse.Server        ASP.NET Core Minimal API
-                              │
-                              └── PostgreSQL     eine Datenbank, alle Mandanten
+                              │                   (Container App)
+                              └── Azure SQL Database
+                                  eine Datenbank, alle Mandanten
+                                  (Serverless, dauerhafter Free-Tier,
+                                   AAD-only-Auth statt Passwort)
 ```
 
 Beide Adressen liegen unter derselben registrierbaren Domain. Dadurch gilt das
@@ -29,7 +34,7 @@ und ist von den Beschränkungen für Drittanbieter-Cookies nicht betroffen.
 
 | Projekt | Rolle |
 |---|---|
-| `Zeltlotse.AppHost` | Aspire-Orchestrierung: Postgres, Server, Client |
+| `Zeltlotse.AppHost` | Aspire-Orchestrierung: SQL Server, Server, Client |
 | `Zeltlotse.ServiceDefaults` | Telemetrie, Health Checks, Service Discovery, Resilienz |
 | `Zeltlotse.Server` | Schnittstelle, Autorisierung, Datenzugriff |
 | `Zeltlotse.Client` | Blazor-WebAssembly-Oberfläche |
@@ -48,8 +53,11 @@ Eine Datenbank für alle Mandanten. Jede mandantenbehaftete Tabelle trägt eine
 `TenantId`. Zwei voneinander unabhängige Netze:
 
 1. **EF-Core-Query-Filter** — der Regelfall im Anwendungscode.
-2. **Row-Level-Security in PostgreSQL** — greift auch dann, wenn jemand den
-   Filter umgeht oder vergisst.
+2. **Row-Level-Security in Azure SQL** (`CREATE SECURITY POLICY` mit einer
+   `SCHEMABINDING`-Prädikatfunktion über `SESSION_CONTEXT`) — greift auch
+   dann, wenn jemand den Filter umgeht oder vergisst. Fachlich identisch zur
+   ursprünglichen PostgreSQL-Umsetzung, seit Lauf
+   2026-09-02-azure-produktivbetrieb auf SQL-Server-Syntax portiert.
 
 Der Mandant wird aus dem Pfad `/o/{slug}` gelesen und gegen die Zuordnungen des
 angemeldeten Nutzers geprüft, bevor irgendeine Abfrage läuft.

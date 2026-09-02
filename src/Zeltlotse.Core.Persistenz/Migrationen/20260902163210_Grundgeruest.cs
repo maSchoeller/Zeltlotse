@@ -1,6 +1,5 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -16,10 +15,10 @@ namespace Zeltlotse.Core.Persistenz.Migrationen
                 name: "AspNetRoles",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    NormalizedName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    ConcurrencyStamp = table.Column<string>(type: "text", nullable: true)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    NormalizedName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -30,25 +29,26 @@ namespace Zeltlotse.Core.Persistenz.Migrationen
                 name: "nutzer",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    IstGlobalAdmin = table.Column<bool>(type: "boolean", nullable: false),
-                    Gesperrt = table.Column<bool>(type: "boolean", nullable: false),
-                    ErstelltAm = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    LetzteAnmeldung = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    NormalizedEmail = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    EmailConfirmed = table.Column<bool>(type: "boolean", nullable: false),
-                    PasswordHash = table.Column<string>(type: "text", nullable: true),
-                    SecurityStamp = table.Column<string>(type: "text", nullable: true),
-                    ConcurrencyStamp = table.Column<string>(type: "text", nullable: true),
-                    PhoneNumber = table.Column<string>(type: "text", nullable: true),
-                    PhoneNumberConfirmed = table.Column<bool>(type: "boolean", nullable: false),
-                    TwoFactorEnabled = table.Column<bool>(type: "boolean", nullable: false),
-                    LockoutEnd = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    LockoutEnabled = table.Column<bool>(type: "boolean", nullable: false),
-                    AccessFailedCount = table.Column<int>(type: "integer", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
+                    IstGlobalAdmin = table.Column<bool>(type: "bit", nullable: false),
+                    Gesperrt = table.Column<bool>(type: "bit", nullable: false),
+                    ErstelltAm = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    LetzteAnmeldung = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    NormalizedEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SecurityStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PhoneNumberConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    LockoutEnd = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    LockoutEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    AccessFailedCount = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -59,12 +59,12 @@ namespace Zeltlotse.Core.Persistenz.Migrationen
                 name: "organisation",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    Slug = table.Column<string>(type: "character varying(60)", maxLength: 60, nullable: false),
-                    ErstelltAm = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    LoeschungBeantragtAm = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    GeloeschtAm = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Slug = table.Column<string>(type: "nvarchar(60)", maxLength: 60, nullable: false),
+                    ErstelltAm = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    LoeschungBeantragtAm = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    GeloeschtAm = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -75,11 +75,11 @@ namespace Zeltlotse.Core.Persistenz.Migrationen
                 name: "AspNetRoleClaims",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    RoleId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ClaimType = table.Column<string>(type: "text", nullable: true),
-                    ClaimValue = table.Column<string>(type: "text", nullable: true)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    RoleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ClaimType = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ClaimValue = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -96,11 +96,11 @@ namespace Zeltlotse.Core.Persistenz.Migrationen
                 name: "AspNetUserClaims",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ClaimType = table.Column<string>(type: "text", nullable: true),
-                    ClaimValue = table.Column<string>(type: "text", nullable: true)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ClaimType = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ClaimValue = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -117,10 +117,10 @@ namespace Zeltlotse.Core.Persistenz.Migrationen
                 name: "AspNetUserLogins",
                 columns: table => new
                 {
-                    LoginProvider = table.Column<string>(type: "text", nullable: false),
-                    ProviderKey = table.Column<string>(type: "text", nullable: false),
-                    ProviderDisplayName = table.Column<string>(type: "text", nullable: true),
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false)
+                    LoginProvider = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ProviderKey = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ProviderDisplayName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -137,8 +137,8 @@ namespace Zeltlotse.Core.Persistenz.Migrationen
                 name: "AspNetUserRoles",
                 columns: table => new
                 {
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    RoleId = table.Column<Guid>(type: "uuid", nullable: false)
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RoleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -161,10 +161,10 @@ namespace Zeltlotse.Core.Persistenz.Migrationen
                 name: "AspNetUserTokens",
                 columns: table => new
                 {
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    LoginProvider = table.Column<string>(type: "text", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    Value = table.Column<string>(type: "text", nullable: true)
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    LoginProvider = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Value = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -181,11 +181,11 @@ namespace Zeltlotse.Core.Persistenz.Migrationen
                 name: "erneuerungstoken",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    NutzerId = table.Column<Guid>(type: "uuid", nullable: false),
-                    TokenHash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    GueltigBis = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    VerwendetAm = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    NutzerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TokenHash = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
+                    GueltigBis = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    VerwendetAm = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -202,17 +202,18 @@ namespace Zeltlotse.Core.Persistenz.Migrationen
                 name: "einladung",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: false),
-                    EMail = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
-                    Ziel = table.Column<int>(type: "integer", nullable: false),
-                    OrgRolle = table.Column<int>(type: "integer", nullable: false),
-                    FreizeitRolle = table.Column<int>(type: "integer", nullable: true),
-                    FreizeitId = table.Column<Guid>(type: "uuid", nullable: true),
-                    TokenHash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    GueltigBis = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    EingeloestAm = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    ErstelltVon = table.Column<Guid>(type: "uuid", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
+                    EMail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    Ziel = table.Column<int>(type: "int", nullable: false),
+                    OrgRolle = table.Column<int>(type: "int", nullable: false),
+                    FreizeitRolle = table.Column<int>(type: "int", nullable: true),
+                    FreizeitId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    TokenHash = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
+                    GueltigBis = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    EingeloestAm = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    ErstelltVon = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -229,15 +230,15 @@ namespace Zeltlotse.Core.Persistenz.Migrationen
                 name: "freizeit",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
                     Beginn = table.Column<DateOnly>(type: "date", nullable: true),
                     Ende = table.Column<DateOnly>(type: "date", nullable: true),
-                    Ort = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    Status = table.Column<int>(type: "integer", nullable: false),
-                    ErstelltAm = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    GeloeschtAm = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                    Ort = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    ErstelltAm = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    GeloeschtAm = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -254,10 +255,10 @@ namespace Zeltlotse.Core.Persistenz.Migrationen
                 name: "org_mitgliedschaft",
                 columns: table => new
                 {
-                    NutzerId = table.Column<Guid>(type: "uuid", nullable: false),
-                    OrganisationId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Rolle = table.Column<int>(type: "integer", nullable: false),
-                    SeitAm = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                    NutzerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OrganisationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Rolle = table.Column<int>(type: "int", nullable: false),
+                    SeitAm = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -280,10 +281,10 @@ namespace Zeltlotse.Core.Persistenz.Migrationen
                 name: "freizeit_zuordnung",
                 columns: table => new
                 {
-                    NutzerId = table.Column<Guid>(type: "uuid", nullable: false),
-                    FreizeitId = table.Column<Guid>(type: "uuid", nullable: false),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Rolle = table.Column<int>(type: "integer", nullable: false)
+                    NutzerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    FreizeitId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Rolle = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -311,7 +312,8 @@ namespace Zeltlotse.Core.Persistenz.Migrationen
                 name: "RoleNameIndex",
                 table: "AspNetRoles",
                 column: "NormalizedName",
-                unique: true);
+                unique: true,
+                filter: "[NormalizedName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetUserClaims_UserId",
@@ -368,13 +370,15 @@ namespace Zeltlotse.Core.Persistenz.Migrationen
                 name: "EmailIndex",
                 table: "nutzer",
                 column: "NormalizedEmail",
-                unique: true);
+                unique: true,
+                filter: "[NormalizedEmail] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
                 table: "nutzer",
                 column: "NormalizedUserName",
-                unique: true);
+                unique: true,
+                filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_org_mitgliedschaft_OrganisationId",

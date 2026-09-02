@@ -1,21 +1,19 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
-using Testcontainers.PostgreSql;
+using Testcontainers.MsSql;
 using Zeltlotse.Core.Persistenz;
 
 namespace Zeltlotse.Server.Integration.Tests;
 
 /// <summary>
-/// Eine echte PostgreSQL je Testlauf. Row-Level-Security und Migrationen lassen
+/// Ein echtes SQL Server je Testlauf. Row-Level-Security und Migrationen lassen
 /// sich gegen keine In-Memory-Datenbank prüfen — genau dort läge sonst die
 /// Lücke, die niemand bemerkt.
 /// </summary>
 public sealed class DatenbankFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder()
-        .WithImage("postgres:17-alpine")
-        .WithDatabase("zeltlotse")
-        .Build();
+    private readonly MsSqlContainer _container =
+        new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
 
     public string Verbindungszeichenfolge => _container.GetConnectionString();
 
@@ -38,18 +36,18 @@ public sealed class DatenbankFixture : IAsyncLifetime
     {
         var name = $"zl_{Guid.NewGuid():N}";
 
-        await using (var verbindung = new NpgsqlConnection(Verbindungszeichenfolge))
+        await using (var verbindung = new SqlConnection(Verbindungszeichenfolge))
         {
             await verbindung.OpenAsync();
 
             await using var befehl = verbindung.CreateCommand();
-            befehl.CommandText = $"CREATE DATABASE {name}";
+            befehl.CommandText = $"CREATE DATABASE [{name}]";
             await befehl.ExecuteNonQueryAsync();
         }
 
-        return new NpgsqlConnectionStringBuilder(Verbindungszeichenfolge)
+        return new SqlConnectionStringBuilder(Verbindungszeichenfolge)
         {
-            Database = name,
+            InitialCatalog = name,
         }.ConnectionString;
     }
 
@@ -57,7 +55,7 @@ public sealed class DatenbankFixture : IAsyncLifetime
     public ZeltlotseDbContext Kontext(MandantKontext mandant, string? verbindung = null)
     {
         var optionen = new DbContextOptionsBuilder<ZeltlotseDbContext>()
-            .UseNpgsql(verbindung ?? Verbindungszeichenfolge)
+            .UseSqlServer(verbindung ?? Verbindungszeichenfolge)
             .AddInterceptors(new MandantInterceptor(mandant))
             .Options;
 

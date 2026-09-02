@@ -3,7 +3,7 @@
 ## Voraussetzungen
 
 - .NET SDK 10.0.100 (durch `global.json` festgelegt)
-- Docker Desktop — der AppHost startet PostgreSQL als Container
+- Docker Desktop — der AppHost startet SQL Server als Container
 - Node.js — nur für die Playwright-Browser nötig
 
 ## Starten
@@ -12,7 +12,7 @@
 ./run-local.ps1
 ```
 
-Der Aspire-AppHost bringt PostgreSQL, Schnittstelle und Oberfläche hoch und
+Der Aspire-AppHost bringt SQL Server, Schnittstelle und Oberfläche hoch und
 öffnet sein Dashboard. Die Adressen der einzelnen Dienste stehen dort — sie
 wechseln zwischen Läufen, also immer im Dashboard nachsehen statt Ports zu raten.
 
@@ -22,7 +22,7 @@ wechseln zwischen Läufen, also immer im Dashboard nachsehen statt Ports zu rate
 dotnet test
 ```
 
-Läuft die gesamte Solution. Integrationstests starten ihre eigene PostgreSQL
+Läuft die gesamte Solution. Integrationstests starten ihr eigenes SQL Server
 über Testcontainers; dafür muss Docker laufen. Es wird keine bereits laufende
 Datenbank benutzt und keine bestehende verändert.
 
@@ -59,7 +59,8 @@ verschmutzt hat und einen sauberen Stand braucht — etwa für reproduzierbare
 Bilder oder eine Prüfung — löscht den Datenträger:
 
 ```powershell
-docker volume rm zeltlotse.apphost-3c34764b2f-postgres-data
+docker volume ls --filter name=sqlserver-data
+docker volume rm <gefundener Name>
 ```
 
 Beim nächsten `./run-local.ps1` migriert und seedet die Anwendung neu.

@@ -44,7 +44,7 @@ var verbindung = builder.Configuration.GetConnectionString("zeltlotse")
 
 builder.Services.AddDbContext<ZeltlotseDbContext>((dienste, optionen) =>
 {
-    optionen.UseNpgsql(verbindung);
+    optionen.UseSqlServer(verbindung);
     optionen.AddInterceptors(dienste.GetRequiredService<MandantInterceptor>());
 });
 
@@ -91,6 +91,12 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(regel =>
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
+
+if (args.Contains("--migrate-only"))
+{
+    await Startvorgang.MigrierenAsync(app);
+    return;
+}
 
 await Startvorgang.VorbereitenAsync(app);
 
