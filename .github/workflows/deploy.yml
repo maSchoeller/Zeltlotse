@@ -96,7 +96,11 @@ jobs:
       # Verbindet sich einmal pro Deploy als AAD-Administrator, um die
       # Managed Identity als Datenbankbenutzer bekannt zu machen — ohne das
       # kann sich die Server-Identität nicht per Active-Directory-Managed-
-      # Identity-Auth anmelden. Idempotent (IF NOT EXISTS).
+      # Identity-Auth anmelden. DROP+CREATE statt eines Namens-Existenz-Checks:
+      # ein per Name aufgelöster CREATE USER (ohne WITH OBJECT_ID) kann sich
+      # falsch binden ("Login failed for user '<token-identified principal>'"
+      # trotz erfolgreichem CREATE) — DROP+CREATE mit fester Objekt-ID heilt
+      # das bei jedem Deploy selbst.
       #
       # Ein fertiges Zugriffstoken übergibt man sqlcmd schlicht über
       # "-G -P <token>" (ab sqlcmd v17.8) — nicht über
@@ -121,20 +125,18 @@ jobs:
         run: |
           ACCESS_TOKEN=$(az account get-access-token --resource https://database.windows.net --query accessToken -o tsv)
           SQL_SERVER=$(az deployment group show -g zeltlotse-produktion -n sql --query properties.outputs.serverName.value -o tsv)
+          SERVER_IDENTITY_PRINCIPAL_ID=$(az identity show --name zeltlotse-server-identity --resource-group zeltlotse-produktion --query principalId -o tsv)
 
           /tmp/sqlcmd -S "${SQL_SERVER}.database.windows.net" -d zeltlotse -G -P "$ACCESS_TOKEN" \
-            -Q "IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'zeltlotse-server-identity')
-                BEGIN
-                    CREATE USER [zeltlotse-server-identity] FROM EXTERNAL PROVIDER;
-                    ALTER ROLE db_datareader ADD MEMBER [zeltlotse-server-identity];
-                    ALTER ROLE db_datawriter ADD MEMBER [zeltlotse-server-identity];
-                    ALTER ROLE db_ddladmin ADD MEMBER [zeltlotse-server-identity];
-                END;
-                IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'Marvin Schoeller')
-                BEGIN
-                    CREATE USER [Marvin Schoeller] FROM EXTERNAL PROVIDER WITH OBJECT_ID = '${{ vars.HUMAN_ADMIN_OBJECT_ID }}';
-                    ALTER ROLE db_owner ADD MEMBER [Marvin Schoeller];
-                END"
+            -Q "DROP USER IF EXISTS [zeltlotse-server-identity];
+                CREATE USER [zeltlotse-server-identity] FROM EXTERNAL PROVIDER WITH OBJECT_ID = '$SERVER_IDENTITY_PRINCIPAL_ID';
+                ALTER ROLE db_datareader ADD MEMBER [zeltlotse-server-identity];
+                ALTER ROLE db_datawriter ADD MEMBER [zeltlotse-server-identity];
+                ALTER ROLE db_ddladmin ADD MEMBER [zeltlotse-server-identity];
+
+                DROP USER IF EXISTS [Marvin Schoeller];
+                CREATE USER [Marvin Schoeller] FROM EXTERNAL PROVIDER WITH OBJECT_ID = '${{ vars.HUMAN_ADMIN_OBJECT_ID }}';
+                ALTER ROLE db_owner ADD MEMBER [Marvin Schoeller];"
 
       - name: Migration ausführen
         run: |
