@@ -5,8 +5,8 @@ param ghcrToken string
 @secure()
 param jwtSigningKey string
 
-@description('Muss weltweit eindeutig sein — Key-Vault-Namen teilen sich einen globalen Namensraum.')
-param vaultName string = 'zeltlotse-kv-${uniqueString(resourceGroup().id)}'
+@description('Muss weltweit eindeutig sein — Key-Vault-Namen teilen sich einen globalen Namensraum und sind auf 24 Zeichen begrenzt.')
+param vaultName string = 'zl-kv-${uniqueString(resourceGroup().id)}'
 
 var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
 
