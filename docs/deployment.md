@@ -21,6 +21,36 @@ Entscheidungen: `runs/2026-09-02-azure-produktivbetrieb/design.md`.
      "audiences": ["api://AzureADTokenExchange"]
    }'
    ```
+   **Zwei Stolpersteine, die beim ersten echten Durchlauf aufgetreten sind:**
+   - `az role assignment create` kann direkt nach dem Anlegen einer brandneuen
+     Subscription mit `MissingSubscription` fehlschlagen (RBAC braucht
+     manchmal ein paar Minuten Vorlauf — bei uns half auch Warten nicht;
+     ein direkter REST-Aufruf (`az rest --method put --url
+     https://management.azure.com/subscriptions/<id>/providers/Microsoft.Authorization/roleAssignments/<neue-guid>?api-version=2022-04-01
+     --body '{"properties": {"roleDefinitionId": "…/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c", "principalId": "<sp-object-id>", "principalType": "ServicePrincipal"}}'`)
+     funktionierte dagegen sofort.
+   - Der tatsächliche OIDC-Subject-Claim hängt davon ab, ob der Deploy-Job ein
+     GitHub-Environment nutzt (`environment: production` in `deploy.yml`
+     führt zu `repo:<owner>/<repo>:environment:production` statt
+     `ref:refs/heads/main`) und kann je nach Repo-Konfiguration
+     Konto-/Repo-IDs enthalten (bei uns z.B.
+     `repo:maSchoeller@56505280/Zeltlotse@1347668021:environment:production`).
+     Den exakten Wert liefert die Fehlermeldung eines fehlgeschlagenen
+     `azure/login`-Schritts ("Federated token details") — dort abschreiben
+     und die Federated Credential per `az ad app federated-credential update`
+     darauf korrigieren.
+   - **Contributor reicht nicht für die Key-Vault-Rollenzuweisung im
+     Bicep-Template** (Contributor darf per Definition keine
+     `Microsoft.Authorization/roleAssignments` schreiben). Zusätzlich
+     `User Access Administrator`, beschränkt auf die Resource Group
+     `zeltlotse-produktion`, zuweisen — das geht erst, nachdem die Resource
+     Group existiert (also nach dem ersten, an dieser Stelle
+     fehlschlagenden Deploy-Versuch):
+     ```bash
+     az rest --method put \
+       --url "https://management.azure.com/subscriptions/<subscription-id>/resourceGroups/zeltlotse-produktion/providers/Microsoft.Authorization/roleAssignments/<neue-guid>?api-version=2022-04-01" \
+       --body '{"properties": {"roleDefinitionId": "/subscriptions/<subscription-id>/providers/Microsoft.Authorization/roleDefinitions/18d7d88d-d35e-4fb5-a5c3-7773c20a72d9", "principalId": "<sp-object-id>", "principalType": "ServicePrincipal"}}'
+     ```
 3. **GitHub-Repo-Variablen** (Settings → Secrets and variables → Actions →
    Variables) setzen: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`,
    `AZURE_SUBSCRIPTION_ID`, `DOMAIN_NAME` (z.B. `zeltlotse.de`),
