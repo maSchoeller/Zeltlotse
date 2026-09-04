@@ -51,6 +51,22 @@ Entscheidungen: `runs/2026-09-02-azure-produktivbetrieb/design.md`.
        --url "https://management.azure.com/subscriptions/<subscription-id>/resourceGroups/zeltlotse-produktion/providers/Microsoft.Authorization/roleAssignments/<neue-guid>?api-version=2022-04-01" \
        --body '{"properties": {"roleDefinitionId": "/subscriptions/<subscription-id>/providers/Microsoft.Authorization/roleDefinitions/18d7d88d-d35e-4fb5-a5c3-7773c20a72d9", "principalId": "<sp-object-id>", "principalType": "ServicePrincipal"}}'
      ```
+   - **Der SQL-Server braucht eine eigene System-Identität mit der
+     Azure-AD-Rolle "Directory Readers" (Verzeichnisleser).** Ohne sie kann
+     Azure SQL keine Azure-AD-Objekte nachschlagen und jedes
+     `CREATE USER … FROM EXTERNAL PROVIDER` schlägt mit
+     `Msg 33134: Principal '…' could not be resolved. Error message:
+     'Server identity is not configured...'` fehl — auch wenn der
+     Administrator und die Objekt-ID stimmen. Bicep kann die Rolle nicht
+     vergeben (Verzeichnisrolle, keine Azure-RBAC-Rolle), deshalb einmalig
+     per Microsoft-Graph-Aufruf nachziehen (die Rollen-ID
+     `88d8e3e3-8f55-4a1e-953a-9b9898b8876b` ist die feste, tenant-weite ID
+     für "Directory Readers"):
+     ```bash
+     PRINCIPAL_ID=$(az sql server show --name <server-name> --resource-group zeltlotse-produktion --query identity.principalId -o tsv)
+     az rest --method post --url "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments" \
+       --body "{\"principalId\": \"$PRINCIPAL_ID\", \"roleDefinitionId\": \"88d8e3e3-8f55-4a1e-953a-9b9898b8876b\", \"directoryScopeId\": \"/\"}"
+     ```
    - **Der SQL-Administrator muss die GitHub-Actions-App selbst sein, nicht
      ein Mensch.** Ursprünglich stand hier das menschliche Konto, aber die
      Anmeldung im Deploy-Workflow läuft als die App — deren Zugriffstoken

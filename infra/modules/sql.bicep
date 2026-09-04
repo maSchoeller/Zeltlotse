@@ -7,9 +7,18 @@ param sqlAadAdminLogin string
 @description('Muss weltweit eindeutig sein — Azure SQL Server-Namen teilen sich einen globalen Namensraum.')
 param serverName string = 'zeltlotse-sql-${uniqueString(subscription().id)}'
 
+// System-Identität des Servers selbst — ohne sie kann Azure SQL keine
+// Azure-AD-Objekte (Benutzer, Gruppen, Anwendungen) nachschlagen, um
+// CREATE USER … FROM EXTERNAL PROVIDER aufzulösen. Braucht zusätzlich die
+// Azure-AD-Rolle "Directory Readers", die Bicep nicht vergeben kann (das
+// ist eine Verzeichnisrolle, keine Azure-RBAC-Rolle) — einmalig per
+// Microsoft-Graph-Aufruf zugewiesen, siehe docs/deployment.md.
 resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
   name: serverName
   location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     administrators: {
       administratorType: 'ActiveDirectory'
