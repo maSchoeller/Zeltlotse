@@ -103,11 +103,14 @@ module server 'modules/container-app-server.bicep' = {
   }
 }
 
+// Azure Static Web Apps ist in Germany West Central nicht verfügbar
+// (Stand dieses Laufs: nur centralus, eastus2, westus2, westeurope,
+// eastasia) — West Europe liegt geografisch am nächsten.
 module staticWebApp 'modules/static-web-app.bicep' = {
   scope: resourceGroup
   name: 'static-web-app'
   params: {
-    location: location
+    location: 'westeurope'
     domainName: domainName
     bindCustomDomain: bindCustomDomain
   }
