@@ -74,82 +74,81 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
+      # Läuft direkt auf dem Runner statt im minimalen azure-cli-Docker-Image
+      # (dem u.a. tar und sqlcmd fehlen) — azure/login meldet die
+      # CLI-Installation des Runners selbst an, das reicht für alle
+      # folgenden az-Aufrufe.
       - name: Infrastruktur ausrollen (Bicep)
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            az deployment sub create \
-              --location germanywestcentral \
-              --template-file infra/main.bicep \
-              --parameters \
-                domainName="${{ vars.DOMAIN_NAME }}" \
-                sqlAadAdminObjectId="${{ vars.SQL_AAD_ADMIN_OBJECT_ID }}" \
-                sqlAadAdminLogin="${{ vars.SQL_AAD_ADMIN_LOGIN }}" \
-                serverImage="${{ steps.image.outputs.server }}:${{ github.sha }}" \
-                ghcrUsername="${{ github.actor }}" \
-                ghcrToken="${{ secrets.GITHUB_TOKEN }}" \
-                jwtSigningKey="${{ secrets.JWT_SIGNING_KEY }}" \
-                bindCustomDomain="${{ github.event.inputs.bind-custom-domain || 'false' }}"
+        run: |
+          az deployment sub create \
+            --location germanywestcentral \
+            --template-file infra/main.bicep \
+            --parameters \
+              domainName="${{ vars.DOMAIN_NAME }}" \
+              sqlAadAdminObjectId="${{ vars.SQL_AAD_ADMIN_OBJECT_ID }}" \
+              sqlAadAdminLogin="${{ vars.SQL_AAD_ADMIN_LOGIN }}" \
+              serverImage="${{ steps.image.outputs.server }}:${{ github.sha }}" \
+              ghcrUsername="${{ github.actor }}" \
+              ghcrToken="${{ secrets.GITHUB_TOKEN }}" \
+              jwtSigningKey="${{ secrets.JWT_SIGNING_KEY }}" \
+              bindCustomDomain="${{ github.event.inputs.bind-custom-domain || 'false' }}"
 
       # Verbindet sich einmal pro Deploy als AAD-Administrator, um die
       # Managed Identity als Datenbankbenutzer bekannt zu machen — ohne das
       # kann sich die Server-Identität nicht per Active-Directory-Managed-
       # Identity-Auth anmelden. Idempotent (IF NOT EXISTS).
       #
-      # Das azure-cli-Image bringt kein sqlcmd mit, deshalb wird das
-      # offizielle go-sqlcmd-Release direkt heruntergeladen. Ein fertiges
-      # Zugriffstoken übergibt man ihm schlicht über "-G -P <token>" (ab
-      # sqlcmd v17.8) — nicht über --authentication-method, das dafür keinen
-      # passenden Wert kennt (nur Default/Managed Identity/Service Principal
-      # u.ä., aber kein "fertiges Token einfach so entgegennehmen").
+      # Ein fertiges Zugriffstoken übergibt man sqlcmd schlicht über
+      # "-G -P <token>" (ab sqlcmd v17.8) — nicht über
+      # --authentication-method, das dafür keinen passenden Wert kennt (nur
+      # Default/Managed Identity/Service Principal u.ä., aber kein "fertiges
+      # Token einfach so entgegennehmen").
+      - name: sqlcmd installieren
+        run: |
+          curl -sL https://github.com/microsoft/go-sqlcmd/releases/download/v1.10.0/sqlcmd-linux-amd64.tar.bz2 -o /tmp/sqlcmd.tar.bz2
+          tar xjf /tmp/sqlcmd.tar.bz2 -C /tmp
+          chmod +x /tmp/sqlcmd
+
       - name: Datenbankrechte für die Server-Identität setzen
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            curl -sL https://github.com/microsoft/go-sqlcmd/releases/download/v1.10.0/sqlcmd-linux-amd64.tar.bz2 -o /tmp/sqlcmd.tar.bz2
-            tar xjf /tmp/sqlcmd.tar.bz2 -C /tmp
-            chmod +x /tmp/sqlcmd
+        run: |
+          ACCESS_TOKEN=$(az account get-access-token --resource https://database.windows.net --query accessToken -o tsv)
+          SQL_SERVER=$(az deployment group show -g zeltlotse-produktion -n sql --query properties.outputs.serverName.value -o tsv)
 
-            ACCESS_TOKEN=$(az account get-access-token --resource https://database.windows.net --query accessToken -o tsv)
-            SQL_SERVER=$(az deployment group show -g zeltlotse-produktion -n sql --query properties.outputs.serverName.value -o tsv)
-
-            /tmp/sqlcmd -S "${SQL_SERVER}.database.windows.net" -d zeltlotse -G -P "$ACCESS_TOKEN" \
-              -Q "IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'zeltlotse-server-identity')
-                  BEGIN
-                      CREATE USER [zeltlotse-server-identity] FROM EXTERNAL PROVIDER;
-                      ALTER ROLE db_datareader ADD MEMBER [zeltlotse-server-identity];
-                      ALTER ROLE db_datawriter ADD MEMBER [zeltlotse-server-identity];
-                      ALTER ROLE db_ddladmin ADD MEMBER [zeltlotse-server-identity];
-                  END"
+          /tmp/sqlcmd -S "${SQL_SERVER}.database.windows.net" -d zeltlotse -G -P "$ACCESS_TOKEN" \
+            -Q "IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'zeltlotse-server-identity')
+                BEGIN
+                    CREATE USER [zeltlotse-server-identity] FROM EXTERNAL PROVIDER;
+                    ALTER ROLE db_datareader ADD MEMBER [zeltlotse-server-identity];
+                    ALTER ROLE db_datawriter ADD MEMBER [zeltlotse-server-identity];
+                    ALTER ROLE db_ddladmin ADD MEMBER [zeltlotse-server-identity];
+                END"
 
       - name: Migration ausführen
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            az containerapp job start --name zeltlotse-migration --resource-group zeltlotse-produktion
+        run: |
+          az containerapp job start --name zeltlotse-migration --resource-group zeltlotse-produktion
 
-            # az containerapp job start kehrt zurück, sobald die Ausführung
-            # gestartet ist, nicht wenn sie fertig ist — deshalb aktiv auf
-            # den Endzustand warten und bei Fehlschlag abbrechen.
-            for i in $(seq 1 30); do
-              STATUS=$(az containerapp job execution list \
-                --name zeltlotse-migration --resource-group zeltlotse-produktion \
-                --query "[0].properties.status" -o tsv)
+          # az containerapp job start kehrt zurück, sobald die Ausführung
+          # gestartet ist, nicht wenn sie fertig ist — deshalb aktiv auf
+          # den Endzustand warten und bei Fehlschlag abbrechen.
+          for i in $(seq 1 30); do
+            STATUS=$(az containerapp job execution list \
+              --name zeltlotse-migration --resource-group zeltlotse-produktion \
+              --query "[0].properties.status" -o tsv)
 
-              if [ "$STATUS" = "Succeeded" ]; then
-                exit 0
-              fi
+            if [ "$STATUS" = "Succeeded" ]; then
+              exit 0
+            fi
 
-              if [ "$STATUS" = "Failed" ]; then
-                echo "Migration fehlgeschlagen — Deploy bricht ab, alte Version bleibt aktiv."
-                exit 1
-              fi
+            if [ "$STATUS" = "Failed" ]; then
+              echo "Migration fehlgeschlagen — Deploy bricht ab, alte Version bleibt aktiv."
+              exit 1
+            fi
 
-              sleep 10
-            done
+            sleep 10
+          done
 
-            echo "Migration hat nach 5 Minuten nicht abgeschlossen."
-            exit 1
+          echo "Migration hat nach 5 Minuten nicht abgeschlossen."
+          exit 1
 
       - name: Client zu Azure Static Web Apps ausrollen
         uses: Azure/static-web-apps-deploy@v1
