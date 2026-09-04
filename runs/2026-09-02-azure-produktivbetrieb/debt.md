@@ -27,13 +27,14 @@
 - 2026-09-02 — Kein automatischer Rollback bei fehlgeschlagener Migration
   während des Deploys; Abbruch, alte Version bleibt aktiv, manuelle Behebung.
   Bewusst so entschieden, siehe requirements.md (Nicht-Ziele).
-- 2026-09-02 — `deploy.yml`s Schritt "Datenbankrechte für die Server-Identität
-  setzen" übergibt den Azure-AD-Zugriffstoken per
-  `--authentication-method="ActiveDirectoryAccessToken" -P "$ACCESS_TOKEN"`
-  an `sqlcmd`. Dieses Muster ist aus Microsoft-Dokumentation für verwandte
-  Szenarien abgeleitet, aber nicht gegen eine echte Azure-SQL-Instanz
-  getestet (keine reale Subscription in diesem Lauf verfügbar) — beim
-  allerersten echten Deploy verifizieren und bei Bedarf korrigieren.
+- 2026-09-04 — **Beim echten Erstdeploy behoben:** `deploy.yml`s Schritt
+  "Datenbankrechte für die Server-Identität setzen" scheiterte zweifach: das
+  `azure-cli`-Image bringt kein `sqlcmd` mit (jetzt per Direct-Download des
+  offiziellen go-sqlcmd-Release behoben), und
+  `--authentication-method="ActiveDirectoryAccessToken"` existiert als Wert
+  gar nicht — ein fertiges Zugriffstoken übergibt man stattdessen schlicht
+  über `-G -P "<token>"` (ab sqlcmd v17.8). Gegen die echte Azure-SQL-Instanz
+  bestätigt.
 - 2026-09-02 — Kein Warnmechanismus, wenn das kostenlose SQL-Kontingent
   (100.000 vCore-Sekunden/Monat) aufgebraucht ist; die Datenbank pausiert
   dann automatisch bis zum nächsten Monat. Bewusst in Kauf genommenes Risiko
