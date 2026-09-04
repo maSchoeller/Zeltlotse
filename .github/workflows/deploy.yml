@@ -133,6 +133,8 @@ jobs:
                 ALTER ROLE db_datareader ADD MEMBER [zeltlotse-server-identity];
                 ALTER ROLE db_datawriter ADD MEMBER [zeltlotse-server-identity];
                 ALTER ROLE db_ddladmin ADD MEMBER [zeltlotse-server-identity];
+                GRANT ALTER ANY SECURITY POLICY TO [zeltlotse-server-identity];
+                GRANT ALTER ANY SCHEMA TO [zeltlotse-server-identity];
 
                 DROP USER IF EXISTS [Marvin Schoeller];
                 CREATE USER [Marvin Schoeller] FROM EXTERNAL PROVIDER WITH OBJECT_ID = '${{ vars.HUMAN_ADMIN_OBJECT_ID }}';
