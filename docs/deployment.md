@@ -51,11 +51,27 @@ Entscheidungen: `runs/2026-09-02-azure-produktivbetrieb/design.md`.
        --url "https://management.azure.com/subscriptions/<subscription-id>/resourceGroups/zeltlotse-produktion/providers/Microsoft.Authorization/roleAssignments/<neue-guid>?api-version=2022-04-01" \
        --body '{"properties": {"roleDefinitionId": "/subscriptions/<subscription-id>/providers/Microsoft.Authorization/roleDefinitions/18d7d88d-d35e-4fb5-a5c3-7773c20a72d9", "principalId": "<sp-object-id>", "principalType": "ServicePrincipal"}}'
      ```
+   - **Der SQL-Administrator muss die GitHub-Actions-App selbst sein, nicht
+     ein Mensch.** Ursprünglich stand hier das menschliche Konto, aber die
+     Anmeldung im Deploy-Workflow läuft als die App — deren Zugriffstoken
+     wurde beim `sqlcmd`-Schritt mit "Login failed for user
+     '\<token-identified principal\>'" abgewiesen, weil die App selbst
+     keine Datenbankrechte hatte und auch nicht Administrator war. Die App
+     als `principalType: 'Application'` (nicht `'User'`) zum SQL-AAD-Admin
+     zu machen, löst das; der Mensch bekommt stattdessen einen eigenen
+     `db_owner`-Zugang über den `sqlcmd`-Schritt in `deploy.yml`
+     (`CREATE USER … FROM EXTERNAL PROVIDER WITH OBJECT_ID = '…'` — das
+     `WITH OBJECT_ID` umgeht Unsicherheiten beim genauen UPN-Format von
+     Gastkonten).
 3. **GitHub-Repo-Variablen** (Settings → Secrets and variables → Actions →
    Variables) setzen: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`,
    `AZURE_SUBSCRIPTION_ID`, `DOMAIN_NAME` (z.B. `zeltlotse.de`),
    `SQL_AAD_ADMIN_OBJECT_ID`, `SQL_AAD_ADMIN_LOGIN` (Objekt-ID und
-   Anzeigename des Azure-AD-Kontos, das die Datenbank verwalten darf).
+   Anzeigename der **GitHub-Actions-App selbst**, nicht eines Menschen — der
+   Deploy-Workflow muss laufend Rechte an neue Identitäten vergeben können,
+   das geht nur als SQL-Administrator), `HUMAN_ADMIN_OBJECT_ID` (Objekt-ID
+   des menschlichen Verwalters — bekommt einen vollwertigen
+   Datenbankzugang über `db_owner`, siehe Schritt 5).
 4. **GitHub-Repo-Secrets** setzen: `JWT_SIGNING_KEY` (mindestens 32 zufällige
    Zeichen, z.B. `openssl rand -base64 32`) und
    `AZURE_STATIC_WEB_APPS_API_TOKEN` (entsteht erst nach dem ersten

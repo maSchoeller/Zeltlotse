@@ -109,7 +109,15 @@ jobs:
           tar xjf /tmp/sqlcmd.tar.bz2 -C /tmp
           chmod +x /tmp/sqlcmd
 
-      - name: Datenbankrechte für die Server-Identität setzen
+      # Der SQL-Administrator ist die GitHub-Actions-App selbst (siehe
+      # sql.bicep) — nur so kann der Deploy-Workflow laufend Rechte an neue
+      # Identitäten vergeben. Der zweite Block richtet zusätzlich einen
+      # vollwertigen Datenbankzugang für den menschlichen Verwalter ein
+      # (SQL_AAD_ADMIN_OBJECT_ID/-LOGIN aus requirements.md sind jetzt die
+      # der App; der Mensch bekommt seinen Zugang hier, nicht über die
+      # Server-Admin-Rolle). WITH OBJECT_ID vermeidet Unsicherheiten beim
+      # genauen UPN-Format von Gastkonten.
+      - name: Datenbankrechte für die Server-Identität und den Verwalter setzen
         run: |
           ACCESS_TOKEN=$(az account get-access-token --resource https://database.windows.net --query accessToken -o tsv)
           SQL_SERVER=$(az deployment group show -g zeltlotse-produktion -n sql --query properties.outputs.serverName.value -o tsv)
@@ -121,6 +129,11 @@ jobs:
                     ALTER ROLE db_datareader ADD MEMBER [zeltlotse-server-identity];
                     ALTER ROLE db_datawriter ADD MEMBER [zeltlotse-server-identity];
                     ALTER ROLE db_ddladmin ADD MEMBER [zeltlotse-server-identity];
+                END;
+                IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'Marvin Schoeller')
+                BEGIN
+                    CREATE USER [Marvin Schoeller] FROM EXTERNAL PROVIDER WITH OBJECT_ID = '${{ vars.HUMAN_ADMIN_OBJECT_ID }}';
+                    ALTER ROLE db_owner ADD MEMBER [Marvin Schoeller];
                 END"
 
       - name: Migration ausführen

@@ -1,4 +1,6 @@
 param location string
+
+@description('Objekt-ID der Azure-AD-Anwendung/Managed Identity, die als SQL-Administrator verwaltet — hier die GitHub-Actions-App, weil der Deploy-Workflow selbst laufend Rechte an neue Identitäten vergeben muss.')
 param sqlAadAdminObjectId string
 param sqlAadAdminLogin string
 
@@ -11,7 +13,7 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
   properties: {
     administrators: {
       administratorType: 'ActiveDirectory'
-      principalType: 'User'
+      principalType: 'Application'
       login: sqlAadAdminLogin
       sid: sqlAadAdminObjectId
       azureADOnlyAuthentication: true
