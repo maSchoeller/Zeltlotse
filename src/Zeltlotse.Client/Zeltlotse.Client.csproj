@@ -4,7 +4,15 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <!-- Bewusst ohne OverrideHtmlAssetPlaceholders: index.html referenziert
+         _framework/blazor.webassembly.js als schlichten, unveränderten
+         Pfad statt der Platzhalter-Schreibweise
+         (_framework/blazor.webassembly#[.{fingerprint}].js), die dieses
+         Flag voraussetzt. Mit dem Flag würde die Datei trotzdem
+         umbenannt, der Verweis in index.html aber nicht mitkorrigiert —
+         auf einem reinen statischen Host wie Azure Static Web Apps (ohne
+         ASP.NET-Core-Auflösung) bricht das den Start der Anwendung. Siehe
+         https://learn.microsoft.com/aspnet/core/blazor/host-and-deploy/webassembly/#publish-without-an-html-document -->
     <!-- Die Oberfläche ist deutsch: Datumsangaben brauchen echte
          Kulturdaten, nicht die invariante Kultur. -->
     <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
