@@ -89,12 +89,25 @@ Entscheidungen: `runs/2026-09-02-azure-produktivbetrieb/design.md`.
    des menschlichen Verwalters — bekommt einen vollwertigen
    Datenbankzugang über `db_owner`, siehe Schritt 5).
 4. **GitHub-Repo-Secrets** setzen: `JWT_SIGNING_KEY` (mindestens 32 zufällige
-   Zeichen, z.B. `openssl rand -base64 32`) und
+   Zeichen, z.B. `openssl rand -base64 32`),
+   `GHCR_PULL_TOKEN` (ein GitHub Personal Access Token, Scope nur
+   `read:packages`, ohne oder mit sehr langem Ablaufdatum — erstellt unter
+   [github.com/settings/tokens/new](https://github.com/settings/tokens/new);
+   GitHub erlaubt das nur über die Weboberfläche, nicht per API) und
    `AZURE_STATIC_WEB_APPS_API_TOKEN` (entsteht erst nach dem ersten
    erfolgreichen Deploy, siehe Schritt 6 — bis dahin schlägt nur der
    Client-Rollout-Schritt fehl, der Rest der Pipeline läuft bereits durch).
    `JWT_SIGNING_KEY` landet beim Deploy in Azure Key Vault, nicht als
    Klartext in der Container App.
+
+   **Warum `GHCR_PULL_TOKEN` statt des eingebauten `GITHUB_TOKEN`:** Das
+   eingebaute Token gilt nur für die Laufzeit des jeweiligen Workflow-Laufs.
+   Es reicht zum Bauen und Pushen des Images im selben Lauf, aber Container
+   Apps zieht das Image später erneut (z.B. nach Skalierung auf 0 Instanzen)
+   mit dem in Key Vault gespeicherten Wert — dann ist `GITHUB_TOKEN` längst
+   abgelaufen und der Container bleibt mit `ImagePullBackOff` hängen. Beim
+   ersten echten Deploy lief der Server deshalb zunächst erfolgreich, fiel
+   aber nach dem ersten Herunterskalieren auf 0 aus.
 5. **Ersten Deploy anstoßen** (Push auf `main`, oder `workflow_dispatch` mit
    `bind-custom-domain: false`). Erzeugt Resource Group, Container Apps,
    SQL-Datenbank, Key Vault und die Static Web App — noch ohne eigene

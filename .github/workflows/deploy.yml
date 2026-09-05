@@ -78,6 +78,14 @@ jobs:
       # (dem u.a. tar und sqlcmd fehlen) — azure/login meldet die
       # CLI-Installation des Runners selbst an, das reicht für alle
       # folgenden az-Aufrufe.
+      #
+      # ghcrToken: bewusst GHCR_PULL_TOKEN (ein langlebiges Personal Access
+      # Token, Scope nur read:packages), nicht das eingebaute GITHUB_TOKEN.
+      # GITHUB_TOKEN gilt nur für die Laufzeit dieses einen Workflow-Laufs —
+      # das reicht zum Bauen/Pushen des Images hier im selben Lauf, aber
+      # Container Apps zieht das Image später erneut (z.B. nach
+      # Skalierung auf 0 Instanzen) mit dem in Key Vault gespeicherten
+      # Wert, dann ist GITHUB_TOKEN längst abgelaufen (ImagePullBackOff).
       - name: Infrastruktur ausrollen (Bicep)
         run: |
           az deployment sub create \
@@ -89,7 +97,7 @@ jobs:
               sqlAadAdminLogin="${{ vars.SQL_AAD_ADMIN_LOGIN }}" \
               serverImage="${{ steps.image.outputs.server }}:${{ github.sha }}" \
               ghcrUsername="${{ github.actor }}" \
-              ghcrToken="${{ secrets.GITHUB_TOKEN }}" \
+              ghcrToken="${{ secrets.GHCR_PULL_TOKEN }}" \
               jwtSigningKey="${{ secrets.JWT_SIGNING_KEY }}" \
               bindCustomDomain="${{ github.event.inputs.bind-custom-domain || 'false' }}"
 

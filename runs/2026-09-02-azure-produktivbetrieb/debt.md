@@ -54,3 +54,13 @@
   diese eine Ressource beschränkt, kein Subscription-weiter Zugriff — einzige
   Ausnahme vom sonst durchgängigen "kein gespeichertes Azure-Geheimnis"-Prinzip
   dieser Infrastruktur.
+- 2026-09-05 — **Beim echten Erstdeploy entdeckt und behoben:** Der Server
+  benutzte anfangs das eingebaute, kurzlebige `GITHUB_TOKEN` als
+  ghcr.io-Registry-Passwort. Das reichte für den ersten Image-Pull beim
+  Deploy selbst, lief aber ins `ImagePullBackOff`, sobald der Container nach
+  Skalierung auf 0 Instanzen das Image erneut ziehen musste — das Token war
+  da längst abgelaufen. Ersetzt durch `GHCR_PULL_TOKEN`, ein langlebiges
+  GitHub Personal Access Token (Scope nur `read:packages`), manuell vom
+  Nutzer erstellt (GitHub erlaubt PAT-Erstellung nur über die
+  Weboberfläche). Zweite, bewusste Ausnahme vom OIDC-Prinzip neben dem
+  Static-Web-Apps-Token.
