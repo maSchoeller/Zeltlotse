@@ -64,3 +64,12 @@
   Nutzer erstellt (GitHub erlaubt PAT-Erstellung nur über die
   Weboberfläche). Zweite, bewusste Ausnahme vom OIDC-Prinzip neben dem
   Static-Web-Apps-Token.
+- 2026-09-05 — **Beim echten Erstdeploy entdeckt und behoben:** Der Client
+  lud nach dem Deploy nicht (blieb bei "Wird geladen" hängen).
+  `OverrideHtmlAssetPlaceholders` (aus dem Grundgerüst-Lauf übernommen)
+  fingerprintet `_framework/blazor.webassembly.js` standardmäßig, aber
+  `index.html` referenziert den schlichten Namen ohne Platzhalter-Syntax —
+  auf einem reinen statischen Host (Azure Static Web Apps, keine
+  ASP.NET-Core-Auflösung) landete die Anfrage im SPA-Fallback und bekam
+  `index.html` mit falschem MIME-Typ zurück. Property laut
+  Microsoft-Empfehlung für Standalone-Deployments entfernt.
