@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zeltlotse Designrichtungen</title>
+<style>
+/* =========================================================
+   Rahmenseite (neutral, damit die drei Richtungen wirken)
+   Seite:   #EEF0F2  Text: #1B1F24  Sekundär: #4A525C
+   ========================================================= */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#EEF0F2;color:#1B1F24;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.45}
+.page-head{padding:28px 24px 8px;max-width:1500px;margin:0 auto}
+.page-head h1{font-size:26px;font-weight:700;letter-spacing:-.01em}
+.page-head p{color:#4A525C;margin-top:6px;max-width:820px;font-size:15px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;padding:20px 24px 48px;max-width:1500px;margin:0 auto;align-items:start}
+@media (max-width:1380px){.grid{grid-template-columns:1fr;max-width:860px}}
+@media (max-width:480px){.grid{padding:16px}.page-head{padding:20px 16px 4px}}
+.dir{border-radius:14px;padding:22px 20px 26px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.dir-label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.dir h2{font-size:24px;line-height:1.2}
+.rationale{font-size:15px;max-width:60ch}
+.swatches{display:flex;flex-wrap:wrap;gap:6px}
+.sw{display:flex;align-items:center;gap:6px;font:12px/1 ui-monospace,Consolas,monospace;padding:4px 8px 4px 4px;border-radius:6px;background:rgba(255,255,255,.7);color:#1B1F24}
+.sw i{width:16px;height:16px;border-radius:4px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+.cap{font-size:12px;font-weight:600;color:#4A525C;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.stage{display:flex;justify-content:center}
+
+/* Telefonrahmen */
+.phone{width:375px;max-width:100%;border-radius:44px;padding:12px;background:#15181C;box-shadow:0 18px 40px rgba(0,0,0,.18)}
+.screen{border-radius:34px;overflow:hidden;display:flex;flex-direction:column;min-height:780px}
+.statusbar{display:flex;justify-content:space-between;padding:12px 26px 6px;font-size:13px;font-weight:600}
+.scroll{flex:1;display:flex;flex-direction:column}
+
+/* Browserrahmen (760px, verkleinert) */
+.bwrap{display:flex;justify-content:center}
+.browser{width:760px;zoom:.54;border-radius:12px;overflow:hidden;box-shadow:0 14px 34px rgba(0,0,0,.16);background:#fff;flex:none}
+@media (max-width:1380px){.browser{zoom:1}}
+@media (max-width:860px){.browser{zoom:.8}}
+@media (max-width:640px){.browser{zoom:.55}}
+@media (max-width:440px){.browser{zoom:.44}}
+.bbar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#E4E7EB;border-bottom:1px solid #D0D5DB}
+.dots{display:flex;gap:6px}.dots i{width:11px;height:11px;border-radius:50%;background:#C3C9D0;display:block}
+.url{flex:1;background:#fff;border-radius:7px;padding:5px 12px;font-size:13px;color:#4A525C}
+.variant{display:flex;justify-content:center}
+svg{display:block}
+
+/* =========================================================
+   A) RUHIG & AUFGERÄUMT – „gutes Notizbuch“
+   Papier      #FAF8F4   Fläche     #FFFFFF
+   Tinte       #1F2A2E   Sekundär   #5B6468 (5.6:1 auf Papier)
+   Linie       #E3DFD7   Akzent     #2F6F6A Salbei-Petrol (5.5:1)
+   Akzent hell #E6EFEC   Notfall    #A33A35 (6.1:1), Fläche #F8ECEA
+   Ampel: grün #3D7A4F  gelb #9A6B12  rot #A33A35
+   Schrift: Überschriften Serif (Iowan/Charter/Georgia), Text system-ui 400
+   Form: Radius 6–10 px, Haarlinien statt Kästen, viel Weißraum
+   ========================================================= */
+.dir-a{background:#F6F3EC}
+.dir-a .dir-label{color:#2F6F6A}
+.dir-a h2{font-family:"Iowan Old Style","Charter","Georgia",serif;font-weight:500;color:#1F2A2E}
+.A{--paper:#FAF8F4;--ink:#1F2A2E;--muted:#5B6468;--line:#E3DFD7;--acc:#2F6F6A;--acc-l:#E6EFEC;--sos:#A33A35;--sos-l:#F8ECEA;
+  background:var(--paper);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px}
+.A .serif{font-family:"Iowan Old Style","Charter","Georgia",serif;font-weight:500}
+.A .top{padding:14px 24px 18px}
+.A .eyebrow{font-size:12px;color:var(--muted);letter-spacing:.04em}
+.A .title{font-size:26px;line-height:1.15;margin-top:4px}
+.A .sos{margin:0 24px;display:flex;align-items:center;justify-content:space-between;border:1px solid #E2C3BF;background:var(--sos-l);color:var(--sos);border-radius:10px;padding:12px 16px;font-weight:600;min-height:48px}
+.A .sos small{font-weight:400;color:#7A3A35;font-size:13px}
+.A .search{margin:18px 24px 6px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--ink);padding:10px 2px;color:var(--muted)}
+.A section{padding:18px 24px 4px}
+.A h3{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+.A .row{display:flex;gap:16px;padding:12px 0;border-top:1px solid var(--line)}
+.A .row:last-child{border-bottom:1px solid var(--line)}
+.A .time{width:48px;font-variant-numeric:tabular-nums;color:var(--muted);font-size:14px;padding-top:1px}
+.A .now .time{color:var(--acc);font-weight:600}
+.A .what b{font-weight:600}
+.A .what span{display:block;color:var(--muted);font-size:13px}
+.A .tag{font-size:11px;color:var(--acc);border:1px solid #BCD3CD;border-radius:20px;padding:1px 8px;margin-left:6px;vertical-align:2px}
+.A .task{display:flex;gap:12px;align-items:flex-start;padding:10px 0}
+.A .box{width:20px;height:20px;border:1.5px solid var(--ink);border-radius:5px;flex:none;margin-top:1px}
+.A .box.done{background:var(--acc);border-color:var(--acc);position:relative}
+.A .box.done::after{content:"";position:absolute;left:6px;top:2px;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.A .task.d{color:var(--muted)}.A .task.d b{text-decoration:line-through;font-weight:400}
+.A .task span{display:block;font-size:13px;color:var(--muted)}
+.A .msg{border-left:2px solid var(--acc);padding:2px 0 2px 14px}
+.A .msg .who{font-size:13px;color:var(--muted)}
+.A .msg p{margin-top:3px}
+.A .hint{margin:14px 24px 0;font-size:14px;color:var(--acc);display:flex;align-items:center;gap:8px}
+.A .hint i{width:7px;height:7px;border-radius:50%;background:var(--acc);display:inline-block}
+.A .nav{margin-top:auto;display:flex;justify-content:space-around;border-top:1px solid var(--line);padding:12px 8px 22px;background:#fff}
+.A .nav a{font-size:12px;color:var(--muted);text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:56px;min-height:44px;justify-content:center}
+.A .nav a.on{color:var(--ink);font-weight:600}
+.A .nav a.on::before{content:"";width:18px;height:2px;background:var(--acc);border-radius:2px}
+.A .nav a:not(.on)::before{content:"";width:18px;height:2px}
+/* A – Cockpit */
+.A.cockpit{padding:0;font-size:15px}
+.A .ch{display:flex;justify-content:space-between;align-items:flex-end;padding:28px 36px 18px;border-bottom:1px solid var(--line)}
+.A .ch .title{font-size:28px}
+.A .tabs{display:flex;gap:22px;font-size:14px;color:var(--muted)}
+.A .tabs .on{color:var(--ink);border-bottom:2px solid var(--acc);padding-bottom:4px}
+.A .cg{display:grid;grid-template-columns:1.1fr 1fr;gap:0 44px;padding:26px 36px 34px}
+.A .cg h3{margin-top:4px}
+.A .big{font-size:40px;line-height:1}
+.A .big small{font-size:16px;color:var(--muted);font-family:system-ui,sans-serif}
+.A .bar{height:8px;background:#ECE8E0;border-radius:4px;margin:12px 0 6px;overflow:hidden}
+.A .bar i{display:block;height:100%;background:var(--acc);border-radius:4px}
+.A .meta{font-size:13px;color:var(--muted)}
+.A .warn{display:flex;gap:12px;padding:11px 0;border-top:1px solid var(--line);font-size:15px}
+.A .warn:last-child{border-bottom:1px solid var(--line)}
+.A .warn i{width:8px;height:8px;border-radius:50%;margin-top:7px;flex:none}
+.A .warn span{display:block;font-size:13px;color:var(--muted)}
+.A .brow{display:grid;grid-template-columns:110px 1fr 70px;gap:12px;align-items:center;padding:7px 0;font-size:14px}
+.A .brow .bar{margin:0;height:6px}
+.A .brow em{font-style:normal;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.A .steps li{list-style:none;padding:9px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between}
+.A .steps li span{color:var(--muted);font-size:13px}
+
+/* =========================================================
+   B) FREUNDLICH & JUGENDLICH – Lagerfeuer und Wiese
+   Grund       #FFF6EA Sand     Karte    #FFFFFF
+   Text        #2B2118 Rinde    Sekundär #6B5646 (6.3:1 auf Sand)
+   Glut        #C2410C (5.0:1 auf Weiß) – Hauptakzent, Buttons
+   Glut hell   #FFE3CC          Wald     #2D6A4F (6.4:1) – erledigt, „gut“
+   Wald hell   #DDF0E4          Nacht    #23395B – Kopfbereich, weiße Schrift 11:1
+   Himmel hell #E3ECFA          Notfall  #B42318 (6.6:1), Fläche #FFE4E0
+   Ampel: grün #2D6A4F  gelb #B7791F→Text #7A4E0B  rot #B42318
+   Schrift: gerundet (ui-rounded/SF Rounded/Nunito/Segoe UI), 700–800 Titel
+   Form: Radius 18–24 px, Pillen, Karten mit weichem Schatten, Farbflächen
+   ========================================================= */
+.dir-b{background:#FCEBD6}
+.dir-b .dir-label{color:#C2410C}
+.dir-b h2{font-family:ui-rounded,"SF Pro Rounded","Nunito","Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;font-weight:800;color:#2B2118}
+.B{--sand:#FFF6EA;--ink:#2B2118;--muted:#6B5646;--glut:#C2410C;--glut-l:#FFE3CC;--wald:#2D6A4F;--wald-l:#DDF0E4;--nacht:#23395B;--sky:#E3ECFA;--sos:#B42318;--sos-l:#FFE4E0;
+  background:var(--sand);color:var(--ink);font-family:ui-rounded,"SF Pro Rounded","Nunito","Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;font-size:15px}
+.B .hero{background:var(--nacht);color:#fff;padding:10px 20px 54px;border-radius:0 0 28px 28px;position:relative}
+.B .hero .statusbar{padding:2px 6px 10px;color:#fff}
+.B .hero .day{display:inline-block;background:#FFD7A8;color:#5A2A06;font-weight:800;font-size:12px;border-radius:20px;padding:4px 10px}
+.B .hero .title{font-size:25px;font-weight:800;margin-top:8px;line-height:1.1}
+.B .hero .sub{color:#D3DDEE;font-size:14px;margin-top:3px}
+.B .hero .stars{position:absolute;right:22px;top:46px}
+.B .search{margin:-28px 16px 0;position:relative;background:#fff;border-radius:22px;padding:14px 18px;display:flex;gap:10px;align-items:center;color:var(--muted);box-shadow:0 6px 18px rgba(43,33,24,.12)}
+.B .sosrow{display:flex;gap:10px;margin:14px 16px 0}
+.B .sos{flex:1;display:flex;align-items:center;gap:10px;background:var(--sos-l);color:var(--sos);font-weight:800;border-radius:20px;padding:12px 16px;min-height:52px}
+.B .sos .ic{width:30px;height:30px;border-radius:50%;background:var(--sos);color:#fff;display:grid;place-items:center;font-size:17px;font-weight:900}
+.B .sos small{display:block;font-weight:600;color:#8A2B20;font-size:12px}
+.B .card{background:#fff;border-radius:22px;margin:14px 16px 0;padding:16px;box-shadow:0 2px 0 rgba(43,33,24,.06)}
+.B h3{font-size:16px;font-weight:800;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.B h3 a{font-size:13px;color:var(--glut);text-decoration:none;font-weight:700}
+.B .prog{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.B .pc{border-radius:18px;padding:12px}
+.B .pc.now{background:var(--glut-l)}
+.B .pc.next{background:var(--sky)}
+.B .pc .lab{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.B .pc.now .lab{color:#9A3412}.B .pc.next .lab{color:#23395B}
+.B .pc .t{font-size:22px;font-weight:800;margin-top:2px}
+.B .pc b{display:block;font-weight:700;line-height:1.25}
+.B .pc span{font-size:12px;color:var(--muted)}
+.B .task{display:flex;align-items:center;gap:12px;padding:9px 0}
+.B .chk{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--glut);flex:none}
+.B .chk.done{background:var(--wald);border-color:var(--wald);position:relative}
+.B .chk.done::after{content:"";position:absolute;left:7px;top:3px;width:6px;height:11px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg)}
+.B .task.d b{color:var(--muted);text-decoration:line-through;font-weight:600}
+.B .task b{font-weight:700}
+.B .task span{display:block;font-size:12px;color:var(--muted)}
+.B .msg{display:flex;gap:10px}
+.B .av{width:38px;height:38px;border-radius:50%;background:#F4B183;color:#5A2A06;font-weight:800;display:grid;place-items:center;flex:none}
+.B .bubble{background:var(--sand);border-radius:4px 18px 18px 18px;padding:10px 12px;font-size:14px}
+.B .bubble .who{font-size:12px;font-weight:800;color:var(--muted)}
+.B .pill{display:inline-flex;align-items:center;gap:8px;margin:14px 16px 0;background:var(--wald);color:#fff;border-radius:22px;padding:9px 14px;font-weight:700;font-size:14px;align-self:flex-start}
+.B .pill i{width:20px;height:20px;border-radius:50%;background:#fff;color:var(--wald);font-style:normal;font-size:12px;font-weight:900;display:grid;place-items:center}
+.B .nav{margin:auto 12px 14px;margin-top:auto;background:#fff;border-radius:26px;display:flex;justify-content:space-around;padding:8px;box-shadow:0 4px 16px rgba(43,33,24,.12)}
+.B .navspace{height:16px}
+.B .nav a{font-size:11px;font-weight:700;color:var(--muted);text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 8px;border-radius:18px;min-width:56px;min-height:48px;justify-content:center}
+.B .nav a.on{background:var(--glut-l);color:#9A3412}
+/* B – Cockpit */
+.B.cockpit{display:grid;grid-template-columns:190px 1fr;min-height:560px}
+.B .side{background:var(--nacht);color:#fff;padding:22px 14px;display:flex;flex-direction:column;gap:4px}
+.B .logo{font-weight:800;font-size:18px;padding:0 10px 16px;display:flex;align-items:center;gap:8px}
+.B .side a{color:#D3DDEE;text-decoration:none;padding:10px 12px;border-radius:14px;font-weight:700;font-size:14px}
+.B .side a.on{background:#FFD7A8;color:#5A2A06}
+.B .main{padding:22px 24px 26px}
+.B .main .hi{font-size:24px;font-weight:800}
+.B .main .hi span{display:block;font-size:14px;font-weight:600;color:var(--muted)}
+.B .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+.B .cgrid .card{margin:0}
+.B .bigb{font-size:36px;font-weight:800;line-height:1}
+.B .bigb small{font-size:16px;color:var(--muted);font-weight:700}
+.B .tb{height:16px;background:#F3E6D6;border-radius:10px;margin:12px 0 6px;overflow:hidden;display:flex}
+.B .tb i{display:block;height:100%}
+.B .lg{display:flex;gap:12px;font-size:12px;color:var(--muted);font-weight:600}
+.B .lg b{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+.B .w{display:flex;gap:10px;align-items:center;padding:9px 10px;border-radius:14px;margin-bottom:6px;font-weight:700;font-size:14px}
+.B .w .dot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:900;font-size:13px;flex:none}
+.B .w span{display:block;font-weight:600;font-size:12px;color:var(--muted)}
+.B .w .go{margin-left:auto;color:var(--glut);font-size:13px;white-space:nowrap}
+.B .brow{display:grid;grid-template-columns:96px 1fr 44px;gap:10px;align-items:center;font-size:13px;font-weight:700;margin-top:8px}
+.B .brow .tb{height:12px;margin:0}
+.B .brow em{font-style:normal;text-align:right}
+.B .step{display:flex;gap:10px;align-items:center;padding:7px 0;font-weight:700;font-size:14px}
+.B .step .n{width:24px;height:24px;border-radius:50%;background:var(--glut-l);color:#9A3412;display:grid;place-items:center;font-size:12px;font-weight:900;flex:none}
+.B .step span{font-weight:600;color:var(--muted);font-size:12px;margin-left:auto;white-space:nowrap}
+.B .w>div{flex:1}
+
+/* =========================================================
+   C) ROBUST & PRAKTISCH – wie Outdoor-Ausrüstung
+   Grund   #FFFFFF          Text    #0B0B0B (20:1)
+   Rahmen  #0B0B0B 2–3 px   Fläche  #F1F1EE
+   Signal  #FFD400 Warngelb (Text immer #0B0B0B, 15:1)
+   Notfall #C8102E Signalrot, weiße Schrift 5.9:1
+   Erledigt #1B6E3A (6.4:1)   Sekundär #3D3D3D (11:1)
+   Ampel: grün #1B6E3A  gelb #FFD400 (+Schraffur)  rot #C8102E
+   Schrift: Bahnschrift/DIN/Arial Narrow – Großbuchstaben-Labels, 700
+   Form: Radius 2–4 px, dicke Rahmen, Zielflächen ≥ 56 px, kein Schatten
+   ========================================================= */
+.dir-c{background:#E6E6E1}
+.dir-c .dir-label{color:#0B0B0B;background:#FFD400;align-self:flex-start;padding:3px 8px;border-radius:2px}
+.dir-c h2{font-family:Bahnschrift,"DIN Alternate","DIN 2014","Arial Narrow",system-ui,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.01em}
+.C{--ink:#0B0B0B;--sub:#3D3D3D;--y:#FFD400;--sos:#C8102E;--ok:#1B6E3A;--bg2:#F1F1EE;
+  background:#fff;color:var(--ink);font-family:Bahnschrift,"DIN Alternate","DIN 2014","Arial Narrow",system-ui,sans-serif;font-size:17px}
+.C .head{background:var(--ink);color:#fff;padding:4px 16px 14px}
+.C .head .statusbar{padding:6px 6px 10px;color:#fff}
+.C .head .row1{display:flex;justify-content:space-between;align-items:flex-end;gap:8px}
+.C .title{font-size:24px;font-weight:700;text-transform:uppercase;line-height:1.05}
+.C .daybox{background:var(--y);color:var(--ink);font-weight:700;padding:6px 10px;border-radius:2px;text-align:center;line-height:1;flex:none}
+.C .daybox b{display:block;font-size:26px}
+.C .daybox span{font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.C .sos{display:flex;align-items:center;justify-content:center;gap:12px;background:var(--sos);color:#fff;font-weight:700;font-size:19px;text-transform:uppercase;letter-spacing:.04em;min-height:60px;margin:12px 12px 0;border-radius:4px;border:3px solid var(--ink)}
+.C .sos small{font-size:13px;text-transform:none;letter-spacing:0;font-weight:400}
+.C .search{margin:10px 12px 0;border:3px solid var(--ink);border-radius:4px;min-height:56px;display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--sub);font-size:17px}
+.C .lbl{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;padding:16px 14px 6px;display:flex;justify-content:space-between}
+.C .lbl span{color:var(--sub);letter-spacing:.02em;text-transform:none;font-weight:400}
+.C .blk{margin:0 12px;border:3px solid var(--ink);border-radius:4px}
+.C .pr{display:grid;grid-template-columns:76px 1fr;min-height:64px;border-bottom:2px solid var(--ink)}
+.C .pr:last-child{border-bottom:0}
+.C .pr .tm{display:grid;place-items:center;font-size:22px;font-weight:700;border-right:2px solid var(--ink)}
+.C .pr.now .tm{background:var(--y)}
+.C .pr .ds{padding:9px 12px;line-height:1.2}
+.C .pr .ds b{font-size:18px;display:block}
+.C .pr .ds span{font-size:14px;color:var(--sub)}
+.C .tk{display:flex;align-items:center;gap:14px;min-height:60px;padding:8px 12px;border-bottom:2px solid var(--ink)}
+.C .tk:last-child{border-bottom:0}
+.C .cb{width:32px;height:32px;border:3px solid var(--ink);border-radius:2px;flex:none}
+.C .cb.done{background:var(--ok);border-color:var(--ok);position:relative}
+.C .cb.done::after{content:"";position:absolute;left:8px;top:2px;width:8px;height:15px;border:solid #fff;border-width:0 4px 4px 0;transform:rotate(45deg)}
+.C .tk.d b{text-decoration:line-through;color:var(--sub);font-weight:400}
+.C .tk span{display:block;font-size:14px;color:var(--sub)}
+.C .msg{padding:12px;font-size:16px}
+.C .msg .who{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.C .alert{margin:12px 12px 0;background:var(--y);border:3px solid var(--ink);border-radius:4px;min-height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-weight:700}
+.C .nav{margin-top:auto;display:grid;grid-template-columns:repeat(5,1fr);border-top:3px solid var(--ink);background:#fff;padding-bottom:14px}
+.C .nav a{min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink);text-decoration:none}
+.C .nav a.on{background:var(--ink);color:var(--y)}
+/* C – Cockpit */
+.C.cockpit{font-size:16px}
+.C .ctop{background:var(--ink);color:#fff;display:flex;justify-content:space-between;align-items:center;padding:16px 22px}
+.C .ctop .title{font-size:26px}
+.C .ctop .ph{background:var(--y);color:var(--ink);font-weight:700;text-transform:uppercase;font-size:13px;letter-spacing:.08em;padding:6px 10px;border-radius:2px}
+.C .cmenu{display:flex;border-bottom:3px solid var(--ink)}
+.C .cmenu a{padding:12px 18px;font-weight:700;text-transform:uppercase;font-size:13px;letter-spacing:.08em;color:var(--ink);text-decoration:none;border-right:2px solid var(--ink)}
+.C .cmenu a.on{background:var(--y)}
+.C .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:18px 22px 24px}
+.C .panel{border:3px solid var(--ink);border-radius:4px}
+.C .panel h4{background:var(--bg2);border-bottom:3px solid var(--ink);padding:9px 12px;font-size:13px;text-transform:uppercase;letter-spacing:.1em}
+.C .pb{padding:12px}
+.C .bign{font-size:44px;font-weight:700;line-height:1}
+.C .bign small{font-size:18px;color:var(--sub)}
+.C .seg{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin:12px 0 6px}
+.C .seg i{height:22px;background:var(--bg2);border:2px solid var(--ink)}
+.C .seg i.f{background:var(--ink)}
+.C .wl{display:flex;align-items:center;gap:12px;min-height:56px;padding:6px 12px;border-bottom:2px solid var(--ink);font-weight:700}
+.C .wl:last-child{border-bottom:0}
+.C .wl .sq{width:28px;height:28px;border:2px solid var(--ink);display:grid;place-items:center;font-weight:700;flex:none;border-radius:2px}
+.C .wl span{display:block;font-weight:400;font-size:14px;color:var(--sub)}
+.C .wl .arr{margin-left:auto;font-size:20px}
+.C .tl{display:grid;grid-template-columns:110px 1fr 58px;gap:10px;align-items:center;min-height:40px;font-weight:700}
+.C .tbar{height:20px;border:2px solid var(--ink);position:relative;background:#fff}
+.C .tbar i{position:absolute;left:0;top:0;bottom:0}
+.C .tl em{font-style:normal;text-align:right;font-size:14px;padding:2px 4px;border-radius:2px}
+.C .hatch{background:repeating-linear-gradient(45deg,#FFD400 0 6px,#E0B800 6px 9px)}
+.C .st{display:flex;gap:12px;align-items:center;min-height:48px;border-bottom:2px solid var(--ink);padding:0 12px;font-weight:700}
+.C .st:last-child{border-bottom:0}
+.C .st .n{background:var(--ink);color:var(--y);width:26px;height:26px;display:grid;place-items:center;border-radius:2px;flex:none}
+.C .st span{white-space:nowrap;margin-left:auto;font-weight:400;font-size:14px;color:var(--sub)}
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <h1>Zeltlotse – drei Designrichtungen zur Auswahl</h1>
+  <p>Jede Richtung zeigt dieselben zwei Bildschirme: die Startseite für Jonas am dritten Lagertag (Telefon) und das Leitungs-Cockpit für Miriam und Tobias in der Vorbereitung (Browser, verkleinert). Darunter jeweils ein Zustand zum Vergleich.</p>
+</header>
+
+<main class="grid">
+
+<!-- ===================================================== A -->
+<article class="dir dir-a">
+  <div class="dir-label">Richtung A</div>
+  <h2>Ruhig &amp; aufgeräumt</h2>
+  <p class="rationale">Wie ein gutes Notizbuch: viel Weißraum, Haarlinien statt Kästen, eine einzige gedämpfte Akzentfarbe. Nichts drängelt – wer kurz nachschaut, findet in Sekunden, was jetzt dran ist. Der Notfall-Knopf ist klar sichtbar, aber nicht alarmierend.</p>
+  <div class="swatches">
+    <span class="sw"><i style="background:#FAF8F4"></i>#FAF8F4</span>
+    <span class="sw"><i style="background:#1F2A2E"></i>#1F2A2E</span>
+    <span class="sw"><i style="background:#2F6F6A"></i>#2F6F6A</span>
+    <span class="sw"><i style="background:#E3DFD7"></i>#E3DFD7</span>
+    <span class="sw"><i style="background:#A33A35"></i>#A33A35</span>
+  </div>
+
+  <div>
+    <div class="cap">Startseite · Jonas · Tag 3</div>
+    <div class="stage"><div class="phone"><div class="screen A">
+      <div class="statusbar"><span>14:07</span><span>5G ▮▮▮</span></div>
+      <div class="scroll">
+        <div class="top">
+          <div class="eyebrow">Montag, 2. August · Tag 3 von 12</div>
+          <div class="title serif">Zeltlager Kapf 2027</div>
+        </div>
+        <div class="sos"><span>Notfall</span><small>Leitung &amp; Nummern →</small></div>
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6468" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          Person suchen…
+        </div>
+        <div class="hint"><i></i>1 neue Nachricht in „Alle“</div>
+        <section>
+          <h3>Jetzt &amp; als Nächstes</h3>
+          <div class="row now"><div class="time">14:00</div><div class="what"><b>Geländespiel</b><span>Waldstück hinter der Wiese · bis 17:00</span></div></div>
+          <div class="row"><div class="time">18:00</div><div class="what"><b>Abendessen</b><span>Linsen-Dal mit Reis · 2 vegan, 1 glutenfrei</span></div></div>
+        </section>
+        <section>
+          <h3>Meine Aufgaben</h3>
+          <div class="task"><div class="box"></div><div><b>Material Geländespiel prüfen</b><span>Fahnen, Leibchen, Funkgeräte · bis 13:45</span></div></div>
+          <div class="task d"><div class="box done"></div><div><b>Spülplan für heute aushängen</b></div></div>
+        </section>
+        <section>
+          <h3>Kanal Team</h3>
+          <div class="msg"><div class="who">Miriam · vor 12 Min.</div><p>Funkgeräte liegen geladen im Materialzelt. Bitte Kanal 3 nehmen.</p></div>
+        </section>
+        <div style="height:18px"></div>
+        <nav class="nav"><a class="on">Start</a><a>Programm</a><a>Personen</a><a>Kanäle</a><a>Mehr</a></nav>
+      </div>
+    </div></div></div>
+  </div>
+
+  <div>
+    <div class="cap">Zustand: keine offenen Aufgaben</div>
+    <div class="variant"><div class="A" style="width:375px;max-width:100%;border-radius:12px;padding:20px 24px;border:1px solid #E3DFD7">
+      <h3 style="font-size:13px;font-weight:600;color:#5B6468;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Meine Aufgaben</h3>
+      <p class="serif" style="font-size:19px">Alles erledigt.</p>
+      <p style="color:#5B6468;font-size:14px;margin-top:2px">Keine offenen Aufgaben – genieß den Nachmittag.</p>
+    </div></div>
+  </div>
+
+  <div>
+    <div class="cap">Leitungs-Cockpit · Vorbereitung</div>
+    <div class="bwrap"><div class="browser">
+      <div class="bbar"><div class="dots"><i></i><i></i><i></i></div><div class="url">zeltlotse.de/kapf-2027/cockpit</div></div>
+      <div class="A cockpit">
+        <div class="ch">
+          <div><div class="eyebrow">Vorbereitung · Abfahrt Sa, 31. Juli 2027</div><div class="title serif">Zeltlager Kapf 2027</div></div>
+          <div class="tabs"><span class="on">Überblick</span><span>Anmeldungen</span><span>Team</span><span>Finanzen</span></div>
+        </div>
+        <div class="cg">
+          <div>
+            <h3>Anmeldungen</h3>
+            <div class="big serif">42 <small>von 60 Plätzen</small></div>
+            <div class="bar"><i style="width:70%"></i></div>
+            <div class="meta">18 Plätze frei · Anmeldeschluss 15. März</div>
+            <h3 style="margin-top:28px">Zu klären</h3>
+            <div class="warn"><i style="background:#9A6B12"></i><div>3 Freizeitpässe unvollständig<span>Fehlt: Notfallkontakt, Krankenkasse</span></div></div>
+            <div class="warn"><i style="background:#9A6B12"></i><div>Nachweis von Jonas noch nicht geprüft<span>Erweitertes Führungszeugnis</span></div></div>
+            <div class="warn"><i style="background:#9A6B12"></i><div>Schutzkonzept: 4 Mitarbeitende haben noch nicht gelesen</div></div>
+          </div>
+          <div>
+            <h3>Budget · Soll / Ist</h3>
+            <div class="brow"><span>Verpflegung</span><div class="bar"><i style="width:82%;background:#9A6B12"></i></div><em>82 %</em></div>
+            <div class="brow"><span>Material</span><div class="bar"><i style="width:45%;background:#3D7A4F"></i></div><em>45 %</em></div>
+            <div class="brow"><span>Fahrtkosten</span><div class="bar"><i style="width:100%;background:#A33A35"></i></div><em>104 %</em></div>
+            <div class="brow"><span>Programm</span><div class="bar"><i style="width:30%;background:#3D7A4F"></i></div><em>30 %</em></div>
+            <div class="meta" style="margin-top:6px">Gesamt 11.250 € von 18.400 € ausgegeben</div>
+            <h3 style="margin-top:28px">Nächste Schritte</h3>
+            <ul class="steps">
+              <li>Elternabend vorbereiten <span>12. März</span></li>
+              <li>Zuschuss Kreisjugendring beantragen <span>31. März</span></li>
+              <li>Küchenplan an Anna geben <span>April</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</article>
+
+<!-- ===================================================== B -->
+<article class="dir dir-b">
+  <div class="dir-label">Richtung B</div>
+  <h2>Freundlich &amp; jugendlich</h2>
+  <p class="rationale">Lagerfeuer-Stimmung: warmer Sand, Glut-Orange, Waldgrün und ein nachtblauer Kopf. Runde Karten, Pillen und kräftige Titel machen die App einladend – sie fühlt sich nach Freizeit an, nicht nach Verwaltung. Farbflächen ordnen statt Linien.</p>
+  <div class="swatches">
+    <span class="sw"><i style="background:#FFF6EA"></i>#FFF6EA</span>
+    <span class="sw"><i style="background:#23395B"></i>#23395B</span>
+    <span class="sw"><i style="background:#C2410C"></i>#C2410C</span>
+    <span class="sw"><i style="background:#2D6A4F"></i>#2D6A4F</span>
+    <span class="sw"><i style="background:#B42318"></i>#B42318</span>
+  </div>
+
+  <div>
+    <div class="cap">Startseite · Jonas · Tag 3</div>
+    <div class="stage"><div class="phone"><div class="screen B">
+      <div class="hero">
+        <div class="statusbar"><span>14:07</span><span>5G ▮▮▮</span></div>
+        <span class="day">Tag 3 von 12 · Mo, 2. Aug.</span>
+        <div class="title">Zeltlager Kapf 2027</div>
+        <div class="sub">Hallo Jonas! 22 °C, trocken bis abends.</div>
+        <svg class="stars" width="64" height="40" viewBox="0 0 64 40" fill="none"><path d="M10 34 L32 6 L54 34 Z" fill="#2E4A72" stroke="#FFD7A8" stroke-width="2.5" stroke-linejoin="round"/><path d="M32 6 L32 34" stroke="#FFD7A8" stroke-width="2"/><circle cx="56" cy="8" r="2" fill="#FFD7A8"/><circle cx="6" cy="14" r="1.5" fill="#FFD7A8"/></svg>
+      </div>
+      <div class="scroll">
+        <div class="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          Person suchen…
+        </div>
+        <div class="sosrow">
+          <div class="sos"><span class="ic">!</span><span>Notfall<small>Leitung anrufen &amp; Hilfe holen</small></span></div>
+        </div>
+        <div class="card">
+          <h3>Jetzt &amp; als Nächstes <a>Ganzer Tag</a></h3>
+          <div class="prog">
+            <div class="pc now"><div class="lab">Jetzt</div><div class="t">14:00</div><b>Geländespiel</b><span>Wald hinter der Wiese</span></div>
+            <div class="pc next"><div class="lab">Gleich</div><div class="t">18:00</div><b>Abendessen</b><span>Linsen-Dal mit Reis</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Meine Aufgaben <a>1 offen</a></h3>
+          <div class="task"><div class="chk"></div><div><b>Material Geländespiel prüfen</b><span>Fahnen, Leibchen, Funkgeräte</span></div></div>
+          <div class="task d"><div class="chk done"></div><div><b>Spülplan aushängen</b></div></div>
+        </div>
+        <div class="card">
+          <h3>Kanal Team <a>Öffnen</a></h3>
+          <div class="msg"><div class="av">M</div><div class="bubble"><div class="who">Miriam · vor 12 Min.</div>Funkgeräte liegen geladen im Materialzelt. Bitte Kanal 3 nehmen!</div></div>
+        </div>
+        <div class="pill"><i>1</i>Neue Nachricht in „Alle“</div>
+        <div class="navspace"></div>
+        <nav class="nav">
+          <a class="on"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20 L12 4 L21 20 Z"/><path d="M12 4v16"/></svg>Start</a>
+          <a><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Programm</a>
+          <a><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><path d="M16 5a3 3 0 010 6M18 14c2 .6 3 2.8 3 6"/></svg>Personen</a>
+          <a><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>Kanäle</a>
+          <a><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>Mehr</a>
+        </nav>
+      </div>
+    </div></div></div>
+  </div>
+
+  <div>
+    <div class="cap">Zustand: keine offenen Aufgaben</div>
+    <div class="variant"><div class="B" style="width:375px;max-width:100%;border-radius:24px;padding:4px 0 16px">
+      <div class="card" style="display:flex;gap:14px;align-items:center;background:#DDF0E4">
+        <div style="width:44px;height:44px;border-radius:50%;background:#2D6A4F;flex:none;position:relative"><span style="position:absolute;left:15px;top:9px;width:11px;height:19px;border:solid #fff;border-width:0 4px 4px 0;transform:rotate(45deg)"></span></div>
+        <div><b style="font-size:17px;font-weight:800">Keine offenen Aufgaben</b><div style="font-size:13px;color:#2B4A3A;font-weight:600">Stark! Ab ans Lagerfeuer.</div></div>
+      </div>
+    </div></div>
+  </div>
+
+  <div>
+    <div class="cap">Leitungs-Cockpit · Vorbereitung</div>
+    <div class="bwrap"><div class="browser">
+      <div class="bbar"><div class="dots"><i></i><i></i><i></i></div><div class="url">zeltlotse.de/kapf-2027/cockpit</div></div>
+      <div class="B cockpit">
+        <aside class="side">
+          <div class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFD7A8" stroke-width="2.4" stroke-linejoin="round"><path d="M3 20 L12 4 L21 20 Z"/><path d="M12 4v16"/></svg>Zeltlotse</div>
+          <a class="on">Cockpit</a><a>Anmeldungen</a><a>Team</a><a>Programm</a><a>Küche</a><a>Finanzen</a><a>Kanäle</a>
+        </aside>
+        <div class="main">
+          <div class="hi">Hallo Miriam, hallo Tobias! <span>Zeltlager Kapf 2027 · noch 294 Tage bis zur Abfahrt</span></div>
+          <div class="cgrid">
+            <div class="card">
+              <h3>Anmeldungen</h3>
+              <div class="bigb">42 <small>/ 60 Plätze</small></div>
+              <div class="tb"><i style="width:40%;background:#C2410C"></i><i style="width:30%;background:#F08A4B"></i></div>
+              <div class="lg"><span><b style="background:#C2410C"></b>24 Mädchen</span><span><b style="background:#F08A4B"></b>18 Jungen</span><span><b style="background:#F3E6D6"></b>18 frei</span></div>
+            </div>
+            <div class="card">
+              <h3>Budget Soll / Ist</h3>
+              <div class="brow"><span>Verpflegung</span><div class="tb"><i style="width:82%;background:#E0A23A"></i></div><em style="color:#7A4E0B">82 %</em></div>
+              <div class="brow"><span>Material</span><div class="tb"><i style="width:45%;background:#2D6A4F"></i></div><em style="color:#2D6A4F">45 %</em></div>
+              <div class="brow"><span>Fahrt</span><div class="tb"><i style="width:100%;background:#B42318"></i></div><em style="color:#B42318">104 %</em></div>
+            </div>
+            <div class="card">
+              <h3>Achtung <a>3 Punkte</a></h3>
+              <div class="w" style="background:#FFF1DA"><span class="dot" style="background:#B7791F">3</span><div>Freizeitpässe unvollständig<span>Notfallkontakt fehlt</span></div><span class="go">Ansehen</span></div>
+              <div class="w" style="background:#FFF1DA"><span class="dot" style="background:#B7791F">1</span><div>Nachweis von Jonas prüfen<span>Führungszeugnis hochgeladen</span></div><span class="go">Prüfen</span></div>
+              <div class="w" style="background:#FFF1DA"><span class="dot" style="background:#B7791F">4</span><div>Schutzkonzept noch ungelesen<span>Mitarbeitende erinnern</span></div><span class="go">Erinnern</span></div>
+            </div>
+            <div class="card">
+              <h3>Als Nächstes</h3>
+              <div class="step"><span class="n">1</span>Elternabend vorbereiten<span>12. März</span></div>
+              <div class="step"><span class="n">2</span>Zuschuss beantragen<span>31. März</span></div>
+              <div class="step"><span class="n">3</span>Küchenplan mit Anna<span>April</span></div>
+              <div class="step"><span class="n">4</span>Zeltaufbau-Team festlegen<span>Mai</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</article>
+
+<!-- ===================================================== C -->
+<article class="dir dir-c">
+  <div class="dir-label">Richtung C</div>
+  <h2>Robust &amp; praktisch</h2>
+  <p class="rationale">Wie gutes Outdoor-Werkzeug: Schwarz auf Weiß, Warngelb für „jetzt wichtig“, dicke Rahmen und große Tippflächen ab 56 Pixel. Auch in praller Sonne, mit nassen Fingern oder Handschuhen lesbar und bedienbar. Ampeln haben zusätzlich Muster, damit sie nicht nur über Farbe funktionieren.</p>
+  <div class="swatches">
+    <span class="sw"><i style="background:#FFFFFF"></i>#FFFFFF</span>
+    <span class="sw"><i style="background:#0B0B0B"></i>#0B0B0B</span>
+    <span class="sw"><i style="background:#FFD400"></i>#FFD400</span>
+    <span class="sw"><i style="background:#C8102E"></i>#C8102E</span>
+    <span class="sw"><i style="background:#1B6E3A"></i>#1B6E3A</span>
+  </div>
+
+  <div>
+    <div class="cap">Startseite · Jonas · Tag 3</div>
+    <div class="stage"><div class="phone"><div class="screen C">
+      <div class="head">
+        <div class="statusbar"><span>14:07</span><span>5G ▮▮▮</span></div>
+        <div class="row1">
+          <div><div style="font-size:13px;color:#D9D9D9;text-transform:uppercase;letter-spacing:.08em">Mo, 2. August</div><div class="title">Zeltlager<br>Kapf 2027</div></div>
+          <div class="daybox"><b>3</b><span>Tag / 12</span></div>
+        </div>
+      </div>
+      <div class="scroll">
+        <div class="sos">Notfall <small>Leitung &amp; Nummern</small></div>
+        <div class="search">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0B0B0B" stroke-width="3"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          Person suchen…
+        </div>
+        <div class="alert">1 neue Nachricht in „Alle“ <span>→</span></div>
+        <div class="lbl">Programm <span>jetzt / als Nächstes</span></div>
+        <div class="blk">
+          <div class="pr now"><div class="tm">14:00</div><div class="ds"><b>Geländespiel</b><span>Wald hinter der Wiese · bis 17:00</span></div></div>
+          <div class="pr"><div class="tm">18:00</div><div class="ds"><b>Abendessen</b><span>Linsen-Dal mit Reis</span></div></div>
+        </div>
+        <div class="lbl">Meine Aufgaben <span>1 offen</span></div>
+        <div class="blk">
+          <div class="tk"><div class="cb"></div><div><b>Material Geländespiel prüfen</b><span>Fahnen, Leibchen, Funk</span></div></div>
+          <div class="tk d"><div class="cb done"></div><div><b>Spülplan aushängen</b></div></div>
+        </div>
+        <div class="lbl">Kanal Team <span>vor 12 Min.</span></div>
+        <div class="blk"><div class="msg"><div class="who">Miriam</div>Funkgeräte geladen im Materialzelt. Kanal 3.</div></div>
+        <div style="height:14px"></div>
+        <nav class="nav">
+          <a class="on"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="miter"><path d="M3 20 L12 4 L21 20 Z"/></svg>Start</a>
+          <a><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="3" y="5" width="18" height="16"/><path d="M3 10h18"/></svg>Programm</a>
+          <a><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.5 3.5-7 8-7s8 2.5 8 7"/></svg>Personen</a>
+          <a><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="miter"><path d="M3 4h18v12H9l-6 5z"/></svg>Kanäle</a>
+          <a><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Mehr</a>
+        </nav>
+      </div>
+    </div></div></div>
+  </div>
+
+  <div>
+    <div class="cap">Zustand: keine offenen Aufgaben</div>
+    <div class="variant"><div class="C" style="width:375px;max-width:100%;background:transparent">
+      <div class="lbl" style="padding-top:0">Meine Aufgaben <span>0 offen</span></div>
+      <div class="blk" style="background:#fff"><div class="tk"><div class="cb done"></div><div><b style="text-decoration:none;color:#0B0B0B;font-weight:700">Keine offenen Aufgaben</b><span>Alles erledigt – nichts zu tun.</span></div></div></div>
+    </div></div>
+  </div>
+
+  <div>
+    <div class="cap">Leitungs-Cockpit · Vorbereitung</div>
+    <div class="bwrap"><div class="browser">
+      <div class="bbar"><div class="dots"><i></i><i></i><i></i></div><div class="url">zeltlotse.de/kapf-2027/cockpit</div></div>
+      <div class="C cockpit">
+        <div class="ctop"><div class="title">Zeltlager Kapf 2027 · Cockpit</div><span class="ph">Vorbereitung</span></div>
+        <nav class="cmenu"><a class="on">Überblick</a><a>Anmeldungen</a><a>Team</a><a>Finanzen</a><a>Programm</a></nav>
+        <div class="cgrid">
+          <div class="panel"><h4>Anmeldungen</h4><div class="pb">
+            <div class="bign">42<small> / 60</small></div>
+            <div class="seg"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i><i></i></div>
+            <div style="font-size:14px;color:#3D3D3D">18 frei · Anmeldeschluss 15. März</div>
+          </div></div>
+          <div class="panel"><h4>Budget Soll / Ist</h4><div class="pb">
+            <div class="tl"><span>Verpflegung</span><div class="tbar"><i class="hatch" style="width:82%"></i></div><em style="background:#FFD400">82 %</em></div>
+            <div class="tl"><span>Material</span><div class="tbar"><i style="width:45%;background:#1B6E3A"></i></div><em>45 %</em></div>
+            <div class="tl"><span>Fahrt</span><div class="tbar"><i style="width:100%;background:#C8102E"></i></div><em style="background:#C8102E;color:#fff">104 %</em></div>
+          </div></div>
+          <div class="panel"><h4>Warnhinweise · 3</h4>
+            <div class="wl"><span class="sq" style="background:#FFD400">3</span><div>Freizeitpässe unvollständig<span>Notfallkontakt fehlt</span></div><span class="arr">→</span></div>
+            <div class="wl"><span class="sq" style="background:#FFD400">!</span><div>Nachweis von Jonas ungeprüft<span>Führungszeugnis</span></div><span class="arr">→</span></div>
+            <div class="wl"><span class="sq" style="background:#FFD400">4</span><div>Schutzkonzept ungelesen<span>4 Mitarbeitende</span></div><span class="arr">→</span></div>
+          </div>
+          <div class="panel"><h4>Nächste Schritte</h4>
+            <div class="st"><span class="n">1</span>Elternabend vorbereiten<span>12.03.</span></div>
+            <div class="st"><span class="n">2</span>Zuschuss beantragen<span>31.03.</span></div>
+            <div class="st"><span class="n">3</span>Küchenplan mit Anna<span>April</span></div>
+            <div class="st"><span class="n">4</span>Zeltaufbau-Team<span>Mai</span></div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</article>
+
+</main>
+</body>
+</html>

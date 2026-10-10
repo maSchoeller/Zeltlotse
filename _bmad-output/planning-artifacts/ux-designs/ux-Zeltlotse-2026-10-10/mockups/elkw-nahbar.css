@@ -1,0 +1,77 @@
+@charset "utf-8";
+/* ==========================================================================
+   ELKW Design – Stil „nahbar“  (<html data-stil="nahbar">)
+   Nach elkw-tokens.css, elkw-components.css (und elkw-app.css) laden.
+   Gleiche Farbwelten und Schrift wie „klassisch“, andere Haltung:
+   - warmer Grundton aus der Farbwelt (Abstufung 10 %) statt kaltem Grau
+   - weiße Flächen auf dem Grundton, kaum Rahmen
+   - Rundungen des Gemeindebaukastens (12 / 6 / 8 px)
+   - große Überschriften und Zahlen in Sarabun Light, Betonung in SemiBold (Wortmarke)
+   - Tabellen nur mit waagerechten Haarlinien (wie im Druck)
+   Weiterhin: keine Schatten, keine Verläufe, eine Farbe + Neutraltöne.
+   ========================================================================== */
+
+[data-stil="nahbar"] {
+  --elkw-ground: var(--elkw-akzent-10);        /* Grundton hinter Inhalten */
+  --elkw-light: var(--elkw-akzent-20);         /* Strukturflächen werden zu zarten Farbwelt-Tönen */
+  --elkw-neutral-10: var(--elkw-akzent-10);
+  --elkw-border: var(--elkw-akzent-40);
+  --elkw-table-border: var(--elkw-akzent-20);
+  --elkw-line-on-light: var(--elkw-akzent-40);
+  --elkw-lh: 1.6rem;
+}
+[data-stil="nahbar"][data-dichte="arbeiten"] { --elkw-lh: 1.5rem; --elkw-control-h: 38px; }
+
+/* Typografie: Light für Größe, SemiBold für Betonung */
+[data-stil="nahbar"] h1 { font-weight: 300; letter-spacing: -0.01em; }
+[data-stil="nahbar"] h1 strong, [data-stil="nahbar"] h1 b { font-weight: 600; }
+[data-stil="nahbar"] h2 { font-weight: 600; }
+[data-stil="nahbar"] .elkw-kicker { color: var(--elkw-action); font-weight: 600; letter-spacing: 0.08em; }
+
+/* Flächen: weiße Karten auf dem Grundton, Rahmen nur noch als feine Kante */
+[data-stil="nahbar"] .elkw-app__main,
+[data-stil="nahbar"] .elkw-ground { background: var(--elkw-ground); }
+[data-stil="nahbar"] .elkw-surface,
+[data-stil="nahbar"] .elkw-card,
+[data-stil="nahbar"] .elkw-infobox { background: var(--elkw-white); border-color: transparent; }
+[data-stil="nahbar"] .elkw-ground .elkw-card, [data-stil="nahbar"] .elkw-app__main .elkw-card { border-color: transparent; }
+[data-stil="nahbar"] main:not(.elkw-app__main) .elkw-card { border-color: var(--elkw-akzent-20); }   /* auf Weiß bleibt eine zarte Kante */
+[data-stil="nahbar"] .elkw-panel { background: var(--elkw-white); }
+[data-stil="nahbar"] main:not(.elkw-app__main) .elkw-panel { background: var(--elkw-akzent-10); }
+[data-stil="nahbar"] .elkw-toolbar { background: var(--elkw-white); }
+
+/* Kennzahlen: einzelne weiße Felder, große Light-Zahl in der Farbwelt */
+[data-stil="nahbar"] .elkw-stats { background: transparent; gap: var(--elkw-gap); }
+[data-stil="nahbar"] .elkw-stats > div { background: var(--elkw-white); border-radius: var(--elkw-radius); padding: 1rem 1.25rem; }
+[data-stil="nahbar"] .elkw-stats dd { font-weight: 300; font-size: 2.4rem; color: var(--elkw-action); }
+
+/* Navigation in Anwendungen: weich hinterlegt statt Balken */
+[data-stil="nahbar"] .elkw-app__nav { background: var(--elkw-white); border-right-color: var(--elkw-akzent-20); }
+[data-stil="nahbar"] .elkw-appbar { border-bottom-color: var(--elkw-akzent-20); }
+[data-stil="nahbar"] .elkw-sidenav a { margin: 2px 0.75rem; padding: 0.5rem 0.75rem; border-radius: var(--elkw-radius-btn); }
+[data-stil="nahbar"] .elkw-sidenav a:hover { background: var(--elkw-akzent-10); }
+[data-stil="nahbar"] .elkw-sidenav a[aria-current] { background: var(--elkw-akzent-20); }
+[data-stil="nahbar"] .elkw-sidenav a[aria-current]::before { display: none; }
+
+/* Tabellen: waagerechte Haarlinien, kleiner Versalien-Kopf */
+[data-stil="nahbar"] .elkw-table,
+[data-stil="nahbar"] .elkw-table th,
+[data-stil="nahbar"] .elkw-table td { border-left: 0; border-right: 0; border-top: 0; }
+[data-stil="nahbar"] .elkw-table { border: 0; background: var(--elkw-white); border-radius: var(--elkw-radius); }
+[data-stil="nahbar"] .elkw-table thead th { background: var(--elkw-white); font-weight: 600; font-size: var(--elkw-fs-small); text-transform: uppercase; letter-spacing: 0.06em; }
+[data-stil="nahbar"] .elkw-table td, [data-stil="nahbar"] .elkw-table th { padding: 0.7rem 1rem; }
+[data-stil="nahbar"] .elkw-table tbody tr:last-child td { border-bottom: 0; }
+
+/* Felder, Buttons, Segmente weicher umrandet */
+[data-stil="nahbar"] input:not([type=checkbox]):not([type=radio]), [data-stil="nahbar"] select, [data-stil="nahbar"] textarea { border-color: var(--elkw-akzent-40); }
+[data-stil="nahbar"] .elkw-btn--outline, [data-stil="nahbar"] .elkw-segments button { border-color: var(--elkw-akzent-40); }
+
+/* Aufklapp: Ränder in Farbwelt statt Schwarz */
+[data-stil="nahbar"] .elkw-accordion details { border-color: var(--elkw-akzent-40); }
+
+/* Leer-Zustand: weiße Fläche, damit er sich vom Grundton abhebt */
+[data-stil="nahbar"] .elkw-empty { background: var(--elkw-white); }
+
+/* Meldungen: weißer Kasten ohne graue Kante */
+[data-stil="nahbar"] .elkw-alert { border-color: transparent; }
+[data-stil="nahbar"] main:not(.elkw-app__main) .elkw-alert { border-color: var(--elkw-akzent-20); }

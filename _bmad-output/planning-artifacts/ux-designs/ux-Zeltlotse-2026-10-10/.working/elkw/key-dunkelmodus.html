@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="de" class="elkw" data-farbwelt="09" data-stil="nahbar" data-dichte="arbeiten">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zeltlotse – Key Screen: Dunkelmodus-Prüfung</title>
+<link rel="stylesheet" href="elkw-fonts.css">
+<link rel="stylesheet" href="elkw-tokens.css">
+<link rel="stylesheet" href="elkw-components.css">
+<link rel="stylesheet" href="elkw-app.css">
+<link rel="stylesheet" href="elkw-nahbar.css">
+<style>
+/* =====================================================================
+   Key Screen „Dunkelmodus-Prüfung“ – Handy-Startseite während der Freizeit
+   (Jonas, Tag 3) hell und dunkel nebeneinander, dazu ein Prüfstreifen.
+   Maßgeblich (Spine):
+   - DESIGN.md → Colors → Dunkelmodus (*-dark-Token), Kontrast-Tabelle,
+     Korrigierte Werte (Feldrahmen action, Dachzeile auf Grundton schwarz)
+   - DESIGN.md → Components: Wortmarke, App-Leiste, Notfall-Eintrag (App-Leiste),
+     Notfall-Box, Untere Navigation, Balken mit Statuswort, Status, Meldung, Eingabefeld
+   - EXPERIENCE.md → IA „Startseite der Freizeit wechselt mit der Phase“ (Status „läuft“),
+     Component Patterns: Notfall-Box, Notfall-Eintrag, Schnellsuche, Untere Navigation,
+     Terminliste
+   Nur Anordnung; Farben ausschließlich über ELKW-Variablen bzw. *-dark-Token.
+   ===================================================================== */
+.zl-page { max-width: 1440px; margin: 0 auto; padding: var(--elkw-space-m); }
+.zl-page > h1 { margin: 0 0 var(--elkw-space-xs); }
+.zl-intro { margin: 0 0 var(--elkw-space-m); max-width: 60rem; }
+.zl-screens { display: flex; flex-wrap: wrap; gap: var(--elkw-space-l); align-items: flex-start; }
+.zl-screen { flex: none; width: 375px; max-width: 100%; min-width: 0; }
+.zl-screen > .elkw-kicker { margin-bottom: 0.5rem; }
+.zl-frame { border: 1px solid var(--elkw-border); border-radius: var(--elkw-radius); overflow: hidden; background: var(--elkw-white); }
+.zl-phone { display: flex; flex-direction: column; }
+.zl-phone .elkw-appbar { padding: var(--elkw-header-pad) var(--elkw-space-m); flex-wrap: nowrap; }
+.zl-phone__content { flex: 1; padding: var(--elkw-space-m); }
+.zl-phone__content > * + * { margin-top: var(--elkw-space-m); }
+.zl-phone__content .elkw-hello { margin-bottom: 0; }
+.zl-h1 { font-size: var(--elkw-fs-h1); line-height: var(--elkw-lh-h1); font-weight: 300; letter-spacing: -0.01em; margin: 0; }
+.zl-h1 strong { font-weight: 600; }
+
+/* Wortmarke: reiner Text */
+.zl-wordmark { font-weight: 600; font-size: var(--elkw-fs-h3); line-height: 36px; color: var(--elkw-text); text-decoration: none; white-space: nowrap; }
+/* Notfall-Eintrag in der App-Leiste: Textbutton + rotes Statusquadrat (DESIGN.md Components) */
+.zl-notfall { margin: 0 0 0 auto; padding-top: 0; padding-bottom: 0; font-weight: 600; }
+.zl-notfall .elkw-status { color: inherit; }
+/* Notfall-Button und Navigation mind. 44 px (EXPERIENCE.md Accessibility Floor) */
+.zl-notfallbtn { min-height: 44px; }
+
+/* Untere Navigation */
+.zl-bottomnav > ul { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; }
+.zl-bottomnav a { text-align: center; padding: 0.85rem 0.15rem; font-size: var(--elkw-fs-small); }
+.zl-bottomnav a[aria-current] { font-weight: 600; }
+
+.zl-list { margin: 0; padding: 0; list-style: none; }
+.zl-list > li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.25rem 1rem; padding: 0.6rem 0; border-bottom: 1px solid var(--elkw-light); }
+.zl-list > li:last-child { border-bottom: 0; }
+.zl-list .elkw-choice { margin: 0; }
+.zl-done { text-decoration: line-through; }
+.zl-message { margin: 0.25rem 0 0; }
+.elkw-surface > h2:first-child { margin-bottom: 0.75rem; }
+.zl-more { margin-top: 0.5rem; }
+
+/* Balken mit Statuswort */
+.zl-bars { margin: 0; padding: 0; list-style: none; }
+.zl-bars > li { padding: 0.65rem 0; border-bottom: 1px solid var(--elkw-light); }
+.zl-bars > li:last-child { border-bottom: 0; }
+.zl-bars__head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 1rem; }
+.zl-bars__head strong { font-weight: 600; }
+.zl-num { font-variant-numeric: tabular-nums; }
+.zl-bar { height: 0.75rem; margin: 0.35rem 0; background: var(--elkw-light); }
+.zl-bar > span { display: block; height: 100%; background: var(--elkw-akzent); }
+.zl-bar--warnung > span { background: var(--elkw-status-warnung); }
+.zl-bar--fehler > span { background: var(--elkw-status-fehler); }
+
+.zl-check { margin-top: var(--elkw-space-m); }
+.zl-check .elkw-actions { margin-top: 0.5rem; }
+.zl-statusrow { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin: 0.5rem 0 0; padding: 0; list-style: none; }
+
+/* Korrigierte Werte für WCAG 2.2 AA (DESIGN.md → Colors → Korrigierte Werte) */
+.elkw input:not([type=checkbox]):not([type=radio]), .elkw select, .elkw textarea { border-color: var(--elkw-action); }
+.elkw-ground .elkw-hello .elkw-kicker { color: var(--elkw-text); }
+
+/* ===== Dunkelmodus: *-dark-Token aus DESIGN.md, auf einen Container begrenzt =====
+   In der App gilt das per @media (prefers-color-scheme: dark) auf :root. */
+.zl-dark {
+  color-scheme: dark;
+  /* Flächen und Kanten */
+  --elkw-ground: #0F1719;         /* ground-dark */
+  --elkw-white: #1D2A2E;          /* surface-dark: eine Stufe heller als der Grund */
+  --elkw-light: #2B3F44;          /* light-dark: Strukturfläche, Balkenspur */
+  --elkw-neutral-10: #253539;     /* neutral-10-dark: Hover, Inline-Bestätigung */
+  --elkw-border: #668E97;         /* border-dark: sichtbare Kante an Cards */
+  --elkw-table-border: #2B3F44;   /* table-border-dark */
+  --elkw-line-on-light: #668E97;  /* line-on-light-dark */
+  /* Akzent-Stufen (im Dunkeln umgekehrt: 10 = dunkelste Stufe) */
+  --elkw-akzent-10: #0F1719;
+  --elkw-akzent-20: #2B3F44;      /* Avatar-Fläche */
+  --elkw-akzent-40: #668E97;
+  --elkw-akzent-60: #83B4BF;
+  --elkw-akzent-80: #ADCDD4;
+  --elkw-akzent: #83B4BF;         /* akzent-dark: Balkenfüllung */
+  --elkw-on-akzent: #0E1A1D;
+  --elkw-contrast: #83B4BF;       /* contrast-dark (unverändert) */
+  --elkw-on-contrast: #000000;
+  /* Text und Bedienung */
+  --elkw-text: #EAF2F4;           /* text-dark */
+  --elkw-dunkelgrau: #ADCDD4;     /* text-muted-dark */
+  --elkw-primary: #255F6C;        /* primary-dark */
+  --elkw-on-primary: #FFFFFF;
+  --elkw-action: #83B4BF;         /* action-dark */
+  --elkw-on-action: #0E1A1D;      /* on-action-dark */
+  --elkw-neutral-40: #5C616B;     /* neutral-40-dark */
+  --elkw-neutral-60: #A3A7B1;     /* neutral-60-dark = status-offen-dark */
+  --elkw-focus: #FFFF00;          /* focus-dark */
+  /* Statusfarben im Dunkeln */
+  --elkw-status-fehler: #FF6B81;  /* status-fehler-dark: aufgehelltes Rot */
+  --elkw-status-warnung: #DC9018; /* status-warnung-dark (unverändert) */
+  --elkw-status-erfolg: #7DB39E;  /* status-erfolg-dark */
+  --elkw-status-hinweis: #83B4BF; /* status-hinweis-dark = action-dark */
+  --elkw-error: #FF6B6B;          /* error-field-dark */
+  color: var(--elkw-text);
+}
+/* Im Dunkeln tragen Flächen, Cards und Meldungen immer eine sichtbare Kante (border-dark) */
+.zl-dark .elkw-surface, .zl-dark .elkw-card, .zl-dark .elkw-alert { border-color: var(--elkw-border) !important; }
+
+/* Einordnung (Präsentation, nicht Produkt) */
+.zl-caption { margin-top: var(--elkw-space-l); padding: var(--elkw-space-m); border: 1px solid var(--elkw-border); border-radius: var(--elkw-radius); max-width: 1200px; }
+.zl-caption h2 { margin-top: 0; }
+.zl-caption ul { margin: 0.25rem 0 0; padding-left: 1.2rem; }
+@media (max-width: 420px) { .zl-page { padding: var(--elkw-space-m) 1rem; } }
+</style>
+</head>
+<body>
+<a class="elkw-skiplink" href="#inhalt">Zum Inhalt springen</a>
+<div class="zl-page">
+  <h1>Zeltlotse – Dunkelmodus-Prüfung</h1>
+  <p class="zl-intro">Handy-Startseite während der Freizeit (Zeltlager Kapf 2027, Tag&nbsp;3, Ansicht Jonas) einmal mit den hellen ELKW-Werten und einmal mit den dunklen Zeltlotse-Token. Darunter je ein Prüfstreifen mit Balken, Status, Links, Knöpfen und Fehlerfeld. Der Dunkelmodus folgt in der App der Geräteeinstellung; hier ist er fest auf einen Rahmen gesetzt.</p>
+
+  <div class="zl-screens" id="inhalt" role="main">
+    <!-- ================= HELL ================= -->
+    <section class="zl-screen" aria-labelledby="hell-label">
+      <p class="elkw-kicker" id="hell-label">Hell · Handy, 375&nbsp;px · Startseite „läuft“</p>
+      <div class="zl-frame zl-phone">
+        <header class="elkw-appbar">
+          <a class="zl-wordmark" href="#">Zeltlotse</a>
+          <span class="elkw-appbar__name">Zeltlager Kapf 2027</span>
+          <a class="elkw-btn elkw-btn--text elkw-btn--noarrow zl-notfall" href="#"><span class="elkw-status elkw-status--fehler">Notfall</span></a>
+        </header>
+        <div class="zl-phone__content elkw-ground">
+          <div class="elkw-hello"><div>
+            <p class="elkw-kicker">Tag 3 · Dienstag, 3.&nbsp;August</p>
+            <h2 class="zl-h1">Hallo, <strong>Jonas</strong></h2>
+            <p>Das Geländespiel läuft, eine Aufgabe ist noch offen.</p>
+          </div></div>
+          <section class="elkw-alert" style="--status: var(--elkw-status-fehler)" aria-labelledby="h-nf">
+            <span class="elkw-alert__title" id="h-nf">Im Notfall:</span>
+            <p>Notfallplan, Notrufnummern und wer heute Dienst hat – ein Tipp entfernt.</p>
+            <a class="elkw-btn elkw-btn--block zl-notfallbtn" href="#">Notfallhilfe öffnen</a>
+            <p class="small">Direkt anrufen: <a class="elkw-link" href="tel:112">Notruf 112</a></p>
+          </section>
+          <div class="elkw-field">
+            <label for="h-suche">Schnellsuche</label>
+            <input id="h-suche" type="search" placeholder="Person suchen …">
+          </div>
+          <section class="elkw-surface" aria-labelledby="h-jetzt">
+            <h2 id="h-jetzt">Jetzt und als Nächstes</h2>
+            <ul class="elkw-eventlist">
+              <li><div class="elkw-eventlist__body">
+                <p class="elkw-kicker">Jetzt · 14:00&nbsp;Uhr</p>
+                <h3>Geländespiel</h3>
+                <p class="small" style="margin:0"><span class="elkw-status elkw-status--aktiv">Läuft</span> · Treffpunkt Fahnenmast</p>
+              </div></li>
+              <li><div class="elkw-eventlist__body">
+                <p class="elkw-kicker">Als Nächstes · 18:00&nbsp;Uhr</p>
+                <h3>Abendessen – Linsen-Dal</h3>
+                <p class="small" style="margin:0">Essenszelt</p>
+              </div></li>
+            </ul>
+            <a class="elkw-btn elkw-btn--text zl-more" href="#">Ganzer Tagesplan</a>
+          </section>
+          <section class="elkw-surface" aria-labelledby="h-aufg">
+            <h2 id="h-aufg">Meine Aufgaben</h2>
+            <ul class="zl-list">
+              <li><label class="elkw-choice"><input type="checkbox"> Material Geländespiel prüfen</label><span class="elkw-status elkw-status--offen">Offen</span></li>
+              <li><label class="elkw-choice"><input type="checkbox" checked> <span class="zl-done">Zelt&nbsp;4 Heringe nachzählen</span></label><span class="elkw-status elkw-status--erfolg">Erledigt</span></li>
+            </ul>
+            <a class="elkw-btn elkw-btn--text zl-more" href="#">Schaden melden</a>
+          </section>
+          <section class="elkw-surface" aria-labelledby="h-kanal">
+            <h2 id="h-kanal">Kanal „Team“</h2>
+            <ul class="elkw-people">
+              <li><span class="elkw-avatar" aria-hidden="true">MK</span>
+                <div class="elkw-people__who"><strong>Miriam</strong><span>heute, 13:42&nbsp;Uhr</span></div></li>
+            </ul>
+            <p class="zl-message">Nach dem Geländespiel bitte alle Fahnen zurück in Kiste&nbsp;3.</p>
+            <a class="elkw-btn elkw-btn--text zl-more" href="#">Zum Kanal „Team“</a>
+          </section>
+        </div>
+        <nav class="elkw-nav elkw-bg-1 zl-bottomnav" aria-label="Hauptbereiche (hell)">
+          <ul>
+            <li><a href="#" aria-current="page">Start</a></li>
+            <li><a href="#">Programm</a></li>
+            <li><a href="#">Personen</a></li>
+            <li><a href="#">Kanäle</a></li>
+            <li><a href="#">Mehr</a></li>
+          </ul>
+        </nav>
+      </div>
+
+      <section class="elkw-surface zl-check" aria-labelledby="h-check">
+        <h2 id="h-check">Prüfstreifen hell</h2>
+        <ul class="zl-bars">
+          <li><div class="zl-bars__head"><strong>Unterkunft</strong><span class="zl-num">2.400&nbsp;€ von 4.800&nbsp;€</span></div>
+            <div class="zl-bar" aria-hidden="true"><span style="width:50%"></span></div>
+            <span class="elkw-status elkw-status--erfolg small">Im Plan</span></li>
+          <li><div class="zl-bars__head"><strong>Programm</strong><span class="zl-num">840&nbsp;€ von 900&nbsp;€</span></div>
+            <div class="zl-bar zl-bar--warnung" aria-hidden="true"><span style="width:93%"></span></div>
+            <span class="elkw-status elkw-status--warnung small">Knapp · 60&nbsp;€ übrig</span></li>
+          <li><div class="zl-bars__head"><strong>Fahrt</strong><span class="zl-num">1.320&nbsp;€ von 1.200&nbsp;€</span></div>
+            <div class="zl-bar zl-bar--fehler" aria-hidden="true"><span style="width:100%"></span></div>
+            <span class="elkw-status elkw-status--fehler small">Überschritten · 120&nbsp;€ über Plan</span></li>
+        </ul>
+        <ul class="zl-statusrow small">
+          <li><span class="elkw-status elkw-status--offen">Eingegangen</span></li>
+          <li><span class="elkw-status elkw-status--aktiv">Läuft</span></li>
+          <li><span class="elkw-status elkw-status--erfolg">Bestätigt</span></li>
+          <li><span class="elkw-status elkw-status--warnung">Stimmt das noch?</span></li>
+          <li><span class="elkw-status elkw-status--fehler">Abgesagt</span></li>
+        </ul>
+        <p class="small" style="margin:0.75rem 0 0">Link: <a class="elkw-link" href="#">Vertrauensseite</a></p>
+        <div class="elkw-actions">
+          <a class="elkw-btn" href="#">Weiter</a>
+          <button class="elkw-btn elkw-btn--outline elkw-btn--noarrow" type="button">Nein</button>
+        </div>
+        <div class="elkw-field" style="margin-top:0.75rem">
+          <label for="h-geb" class="elkw-required">Geburtsdatum</label>
+          <input id="h-geb" type="text" aria-invalid="true" aria-describedby="h-geb-err">
+          <span class="elkw-field-error" id="h-geb-err">Fehler: Geburtsdatum fehlt.</span>
+        </div>
+      </section>
+    </section>
+
+    <!-- ================= DUNKEL ================= -->
+    <section class="zl-screen" aria-labelledby="dunkel-label">
+      <p class="elkw-kicker" id="dunkel-label">Dunkel · Handy, 375&nbsp;px · Startseite „läuft“</p>
+      <div class="zl-dark">
+      <div class="zl-frame zl-phone">
+        <header class="elkw-appbar">
+          <a class="zl-wordmark" href="#">Zeltlotse</a>
+          <span class="elkw-appbar__name">Zeltlager Kapf 2027</span>
+          <a class="elkw-btn elkw-btn--text elkw-btn--noarrow zl-notfall" href="#"><span class="elkw-status elkw-status--fehler">Notfall</span></a>
+        </header>
+        <div class="zl-phone__content elkw-ground">
+          <div class="elkw-hello"><div>
+            <p class="elkw-kicker">Tag 3 · Dienstag, 3.&nbsp;August</p>
+            <h2 class="zl-h1">Hallo, <strong>Jonas</strong></h2>
+            <p>Das Geländespiel läuft, eine Aufgabe ist noch offen.</p>
+          </div></div>
+          <section class="elkw-alert" style="--status: var(--elkw-status-fehler)" aria-labelledby="d-nf">
+            <span class="elkw-alert__title" id="d-nf">Im Notfall:</span>
+            <p>Notfallplan, Notrufnummern und wer heute Dienst hat – ein Tipp entfernt.</p>
+            <a class="elkw-btn elkw-btn--block zl-notfallbtn" href="#">Notfallhilfe öffnen</a>
+            <p class="small">Direkt anrufen: <a class="elkw-link" href="tel:112">Notruf 112</a></p>
+          </section>
+          <div class="elkw-field">
+            <label for="d-suche">Schnellsuche</label>
+            <input id="d-suche" type="search" placeholder="Person suchen …">
+          </div>
+          <section class="elkw-surface" aria-labelledby="d-jetzt">
+            <h2 id="d-jetzt">Jetzt und als Nächstes</h2>
+            <ul class="elkw-eventlist">
+              <li><div class="elkw-eventlist__body">
+                <p class="elkw-kicker">Jetzt · 14:00&nbsp;Uhr</p>
+                <h3>Geländespiel</h3>
+                <p class="small" style="margin:0"><span class="elkw-status elkw-status--aktiv">Läuft</span> · Treffpunkt Fahnenmast</p>
+              </div></li>
+              <li><div class="elkw-eventlist__body">
+                <p class="elkw-kicker">Als Nächstes · 18:00&nbsp;Uhr</p>
+                <h3>Abendessen – Linsen-Dal</h3>
+                <p class="small" style="margin:0">Essenszelt</p>
+              </div></li>
+            </ul>
+            <a class="elkw-btn elkw-btn--text zl-more" href="#">Ganzer Tagesplan</a>
+          </section>
+          <section class="elkw-surface" aria-labelledby="d-aufg">
+            <h2 id="d-aufg">Meine Aufgaben</h2>
+            <ul class="zl-list">
+              <li><label class="elkw-choice"><input type="checkbox"> Material Geländespiel prüfen</label><span class="elkw-status elkw-status--offen">Offen</span></li>
+              <li><label class="elkw-choice"><input type="checkbox" checked> <span class="zl-done">Zelt&nbsp;4 Heringe nachzählen</span></label><span class="elkw-status elkw-status--erfolg">Erledigt</span></li>
+            </ul>
+            <a class="elkw-btn elkw-btn--text zl-more" href="#">Schaden melden</a>
+          </section>
+          <section class="elkw-surface" aria-labelledby="d-kanal">
+            <h2 id="d-kanal">Kanal „Team“</h2>
+            <ul class="elkw-people">
+              <li><span class="elkw-avatar" aria-hidden="true">MK</span>
+                <div class="elkw-people__who"><strong>Miriam</strong><span>heute, 13:42&nbsp;Uhr</span></div></li>
+            </ul>
+            <p class="zl-message">Nach dem Geländespiel bitte alle Fahnen zurück in Kiste&nbsp;3.</p>
+            <a class="elkw-btn elkw-btn--text zl-more" href="#">Zum Kanal „Team“</a>
+          </section>
+        </div>
+        <nav class="elkw-nav elkw-bg-1 zl-bottomnav" aria-label="Hauptbereiche (dunkel)">
+          <ul>
+            <li><a href="#" aria-current="page">Start</a></li>
+            <li><a href="#">Programm</a></li>
+            <li><a href="#">Personen</a></li>
+            <li><a href="#">Kanäle</a></li>
+            <li><a href="#">Mehr</a></li>
+          </ul>
+        </nav>
+      </div>
+
+      <section class="elkw-surface zl-check" aria-labelledby="d-check">
+        <h2 id="d-check">Prüfstreifen dunkel</h2>
+        <ul class="zl-bars">
+          <li><div class="zl-bars__head"><strong>Unterkunft</strong><span class="zl-num">2.400&nbsp;€ von 4.800&nbsp;€</span></div>
+            <div class="zl-bar" aria-hidden="true"><span style="width:50%"></span></div>
+            <span class="elkw-status elkw-status--erfolg small">Im Plan</span></li>
+          <li><div class="zl-bars__head"><strong>Programm</strong><span class="zl-num">840&nbsp;€ von 900&nbsp;€</span></div>
+            <div class="zl-bar zl-bar--warnung" aria-hidden="true"><span style="width:93%"></span></div>
+            <span class="elkw-status elkw-status--warnung small">Knapp · 60&nbsp;€ übrig</span></li>
+          <li><div class="zl-bars__head"><strong>Fahrt</strong><span class="zl-num">1.320&nbsp;€ von 1.200&nbsp;€</span></div>
+            <div class="zl-bar zl-bar--fehler" aria-hidden="true"><span style="width:100%"></span></div>
+            <span class="elkw-status elkw-status--fehler small">Überschritten · 120&nbsp;€ über Plan</span></li>
+        </ul>
+        <ul class="zl-statusrow small">
+          <li><span class="elkw-status elkw-status--offen">Eingegangen</span></li>
+          <li><span class="elkw-status elkw-status--aktiv">Läuft</span></li>
+          <li><span class="elkw-status elkw-status--erfolg">Bestätigt</span></li>
+          <li><span class="elkw-status elkw-status--warnung">Stimmt das noch?</span></li>
+          <li><span class="elkw-status elkw-status--fehler">Abgesagt</span></li>
+        </ul>
+        <p class="small" style="margin:0.75rem 0 0">Link: <a class="elkw-link" href="#">Vertrauensseite</a></p>
+        <div class="elkw-actions">
+          <a class="elkw-btn" href="#">Weiter</a>
+          <button class="elkw-btn elkw-btn--outline elkw-btn--noarrow" type="button">Nein</button>
+        </div>
+        <div class="elkw-field" style="margin-top:0.75rem">
+          <label for="d-geb" class="elkw-required">Geburtsdatum</label>
+          <input id="d-geb" type="text" aria-invalid="true" aria-describedby="d-geb-err">
+          <span class="elkw-field-error" id="d-geb-err">Fehler: Geburtsdatum fehlt.</span>
+        </div>
+      </section>
+      </div>
+    </section>
+  </div>
+
+  <aside class="zl-caption" aria-labelledby="cap-t">
+    <h2 id="cap-t">Gemessene Kontraste im Dunkelmodus (WCAG-Formel, neue *-dark-Token)</h2>
+    <ul class="small">
+      <li><strong>Text:</strong> Text auf Fläche 13,01:1, auf Grundton 16,00:1, auf Strukturfläche/Avatar 9,75:1 · Nebentext 8,76:1 · Links/Textbuttons 6,50:1 auf Fläche, 7,99:1 auf Grundton · Button-Schrift 7,81:1 · Weiß auf unterer Navigation 7,16:1, Fokus-Gelb 6,67:1.</li>
+      <li><strong>Statusfarben auf Fläche:</strong> Fehler-Rot (aufgehellt, #FF6B81) <strong>5,39:1</strong> (auf Grundton 6,63:1) · Warnung 5,65:1 · Erfolg 6,19:1 · Offen 6,13:1 · Fehler-Feldrahmen 5,32:1.</li>
+      <li><strong>Balken gegen Spur:</strong> Akzent 4,87:1 · Rot („Überschritten“) <strong>4,04:1</strong> · Orange 4,24:1 · Erfolg 4,65:1.</li>
+      <li><strong>Flächen:</strong> Fläche eine Stufe heller als der Grundton (1,23:1), dazu eine sichtbare Kante border-dark: <strong>5,08:1</strong> gegen Grundton, 4,13:1 gegen Fläche (auch Outline-Button „Nein“).</li>
+      <li>Werte und Tabelle: DESIGN.md → Colors → Dunkelmodus.</li>
+    </ul>
+  </aside>
+</div>
+</body>
+</html>

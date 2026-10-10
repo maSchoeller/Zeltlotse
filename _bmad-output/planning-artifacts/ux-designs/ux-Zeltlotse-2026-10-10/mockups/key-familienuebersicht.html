@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="de" class="elkw" data-farbwelt="09" data-stil="nahbar" data-dichte="arbeiten">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zeltlotse – Key Screen: Familienübersicht</title>
+<link rel="stylesheet" href="elkw-fonts.css">
+<link rel="stylesheet" href="elkw-tokens.css">
+<link rel="stylesheet" href="elkw-components.css">
+<link rel="stylesheet" href="elkw-app.css">
+<link rel="stylesheet" href="elkw-nahbar.css">
+<style>
+/* =====================================================================
+   Key Screen „Familienübersicht“ – Startseite der Eltern (Sabine), Handy und Laptop
+   Maßgeblich (Spine):
+   - EXPERIENCE.md → IA „Einstieg nach Rolle“ (Eltern → Familienübersicht), Flächen: Familienübersicht,
+     Elterninfo, Freizeitpass ausfüllen
+   - EXPERIENCE.md → Key Flows NS-1 Schritt 7 + Fehlerpfad „Absage“, NS-2 (Stimmt das noch?, Einsicht bis)
+   - EXPERIENCE.md → State Patterns: Anmeldung eingegangen / bestätigt; Veraltete Angabe;
+     Freizeitpass fehlt; Freigabefenster läuft
+   - EXPERIENCE.md → Component Patterns: Status, Button (Pfeil = Ansichtswechsel), Begrüßung;
+     Voice and Tone („Hallo, Sabine“, „Stimmt das noch?“, „Freizeitpass fehlt noch“)
+   - DESIGN.md → Components: Card, Status, Wortmarke, App-Leiste; Layout & Spacing Handy/Laptop
+   Platzhalter (nicht im PRD): Name von Pauls Schwester („Marie“), Datum „Einsicht bis“, Datum der Ansicht.
+   ===================================================================== */
+.zl-page { max-width: 1440px; margin: 0 auto; padding: var(--elkw-space-m); }
+.zl-page > h1 { margin: 0 0 var(--elkw-space-xs); }
+.zl-intro { margin: 0 0 var(--elkw-space-m); max-width: 60rem; }
+.zl-screens { display: flex; flex-wrap: wrap; gap: var(--elkw-space-l); align-items: flex-start; }
+.zl-screen { min-width: 0; }
+.zl-screen--phone { flex: none; width: 375px; max-width: 100%; }
+.zl-screen--browser { flex: 1 1 640px; max-width: 1000px; }
+.zl-screen > .elkw-kicker { margin-bottom: 0.5rem; }
+.zl-frame { border: 1px solid var(--elkw-border); border-radius: var(--elkw-radius); overflow: hidden; background: var(--elkw-white); }
+.zl-phone .elkw-appbar { padding: var(--elkw-header-pad) var(--elkw-space-m); flex-wrap: nowrap; }
+.zl-content { padding: var(--elkw-space-m); }
+.zl-content > * + * { margin-top: var(--elkw-space-m); }
+.zl-content .elkw-hello { margin-bottom: 0; }
+.zl-browser__address { padding: 0.35rem var(--elkw-space-m); font-size: var(--elkw-fs-small); background: var(--elkw-neutral-10); border-bottom: 1px solid var(--elkw-light); }
+.zl-browser .zl-content { padding: var(--elkw-space-l); }
+.zl-h1 { font-size: var(--elkw-fs-h1); line-height: var(--elkw-lh-h1); font-weight: 300; letter-spacing: -0.01em; margin: 0; }
+.zl-h1 strong { font-weight: 600; }
+.zl-wordmark { font-weight: 600; font-size: var(--elkw-fs-h3); line-height: 36px; color: var(--elkw-text); text-decoration: none; white-space: nowrap; }
+.zl-user { margin-left: auto; font-size: var(--elkw-fs-small); }
+
+/* Card je Kind: Card der Bibliothek, Innenabstand der Dichte „Arbeiten“ */
+.zl-kid .elkw-card__body { padding: var(--elkw-box-pad); }
+.zl-kid .elkw-card__title { margin: 0 0 0.5rem; padding: 0; font-size: var(--elkw-fs-h2); }
+.zl-kid h4 { margin: 0; font-size: var(--elkw-fs); font-weight: 600; }
+.zl-row { padding: 0.75rem 0; border-top: 1px solid var(--elkw-light); }
+.zl-row p { margin: 0.25rem 0 0; }
+.zl-row .elkw-btn { margin-top: 0.5rem; }
+.zl-row:last-child { padding-bottom: 0; }
+.elkw-surface > h3:first-child { margin-bottom: 0.75rem; }
+.zl-doclist { margin: 0; padding-left: 1.2rem; }
+.zl-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--elkw-gap); align-items: start; }
+@media (max-width: 1023px) { .zl-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Korrigierte Werte für WCAG 2.2 AA (DESIGN.md → Colors → Korrigierte Werte) */
+.elkw-ground .elkw-hello .elkw-kicker { color: var(--elkw-text); }
+@media (max-width: 420px) { .zl-page { padding: var(--elkw-space-m) 1rem; } }
+</style>
+</head>
+<body>
+<a class="elkw-skiplink" href="#inhalt">Zum Inhalt springen</a>
+<div class="zl-page">
+  <h1>Zeltlotse – Familienübersicht</h1>
+  <p class="zl-intro">Startseite nach dem Login für Sabine (Rolle Eltern): je Kind eine Card mit seinen Freizeiten, dem Anmeldestatus und dem Hinweis zum Freizeitpass. Paul ist bestätigt, sein Freizeitpass hat Angaben vom letzten Jahr; für seine Schwester ist die Anmeldung eingegangen.</p>
+
+  <div class="zl-screens" id="inhalt" role="main">
+
+    <!-- ============ Handy ============ -->
+    <section class="zl-screen zl-screen--phone" aria-labelledby="f1-label">
+      <p class="elkw-kicker" id="f1-label">Handy, 375&nbsp;px · Familienübersicht</p>
+      <div class="zl-frame zl-phone">
+        <header class="elkw-appbar">
+          <a class="zl-wordmark" href="#">Zeltlotse</a>
+          <span class="zl-user">Sabine</span>
+        </header>
+        <div class="zl-content elkw-ground">
+          <div class="elkw-hello"><div>
+            <p class="elkw-kicker">Familienübersicht</p>
+            <h2 class="zl-h1" tabindex="-1">Hallo, <strong>Sabine</strong></h2>
+            <p>Zwei Punkte sind offen.</p>
+          </div></div>
+
+          <article class="elkw-card zl-kid" aria-labelledby="p-paul">
+            <div class="elkw-card__body">
+              <h3 class="elkw-card__title" id="p-paul">Paul</h3>
+              <div class="zl-row">
+                <h4>Zeltlager Kapf 2027</h4>
+                <p class="small">1. bis 8.&nbsp;August 2027</p>
+                <p><span class="elkw-status elkw-status--erfolg">Bestätigt</span></p>
+              </div>
+              <div class="zl-row">
+                <h4>Freizeitpass</h4>
+                <p><span class="elkw-status elkw-status--warnung">Stimmt das noch?</span></p>
+                <p class="small">2 Angaben sind älter als 12&nbsp;Monate. Einsicht der Freizeit bis 8.&nbsp;Nov. 2027.</p>
+                <a class="elkw-btn" href="#">Freizeitpass prüfen</a>
+              </div>
+              <div class="zl-row">
+                <p class="small">Absagen nur über die Leitung: <a class="elkw-link" href="mailto:">Mail an die Leitung</a> · <a class="elkw-link" href="tel:">Leitung anrufen</a></p>
+              </div>
+            </div>
+          </article>
+
+          <article class="elkw-card zl-kid" aria-labelledby="p-marie">
+            <div class="elkw-card__body">
+              <h3 class="elkw-card__title" id="p-marie">Marie</h3>
+              <div class="zl-row">
+                <h4>Zeltlager Kapf 2027</h4>
+                <p class="small">1. bis 8.&nbsp;August 2027</p>
+                <p><span class="elkw-status elkw-status--offen">Eingegangen</span> · Die Leitung meldet sich in Kürze.</p>
+              </div>
+              <div class="zl-row">
+                <h4>Freizeitpass</h4>
+                <p><span class="elkw-status elkw-status--warnung">Freizeitpass fehlt noch</span></p>
+                <a class="elkw-btn" href="#">Freizeitpass ausfüllen</a>
+              </div>
+            </div>
+          </article>
+
+          <section class="elkw-surface" aria-labelledby="p-info">
+            <h3 id="p-info">Elterninfo Zeltlager Kapf 2027</h3>
+            <ul class="zl-doclist">
+              <li><a class="elkw-link" href="#">Infobrief</a></li>
+              <li><a class="elkw-link" href="#">Packliste</a></li>
+              <li><a class="elkw-link" href="#">Notfallnummern der Freizeit</a></li>
+            </ul>
+          </section>
+
+          <section class="elkw-surface" aria-labelledby="p-fam">
+            <h3 id="p-fam">Familienkonto</h3>
+            <p style="margin:0">Ein zweiter Elternteil kann die Angaben der Kinder mitpflegen.</p>
+            <a class="elkw-btn elkw-btn--text" href="#">Zweiten Elternteil hinzufügen</a>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Laptop ============ -->
+    <section class="zl-screen zl-screen--browser" aria-labelledby="f2-label">
+      <p class="elkw-kicker" id="f2-label">Laptop, ca. 1000&nbsp;px · Familienübersicht</p>
+      <div class="zl-frame zl-browser">
+        <div class="zl-browser__address" aria-hidden="true">zeltlotse.de/familie</div>
+        <header class="elkw-appbar">
+          <a class="zl-wordmark" href="#">Zeltlotse</a>
+          <div class="elkw-appbar__end"><span class="elkw-appbar__user">Sabine</span></div>
+        </header>
+        <div class="zl-content elkw-ground">
+          <div class="elkw-hello"><div>
+            <p class="elkw-kicker">Familienübersicht</p>
+            <h2 class="zl-h1">Hallo, <strong>Sabine</strong></h2>
+            <p>Zwei Punkte sind offen.</p>
+          </div></div>
+          <div class="zl-grid">
+            <article class="elkw-card zl-kid" aria-labelledby="l-paul">
+              <div class="elkw-card__body">
+                <h3 class="elkw-card__title" id="l-paul">Paul</h3>
+                <div class="zl-row">
+                  <h4>Zeltlager Kapf 2027</h4>
+                  <p class="small">1. bis 8.&nbsp;August 2027</p>
+                  <p><span class="elkw-status elkw-status--erfolg">Bestätigt</span></p>
+                </div>
+                <div class="zl-row">
+                  <h4>Freizeitpass</h4>
+                  <p><span class="elkw-status elkw-status--warnung">Stimmt das noch?</span></p>
+                  <p class="small">2 Angaben sind älter als 12&nbsp;Monate. Einsicht der Freizeit bis 8.&nbsp;Nov. 2027.</p>
+                  <a class="elkw-btn" href="#">Freizeitpass prüfen</a>
+                </div>
+                <div class="zl-row">
+                  <p class="small">Absagen nur über die Leitung: <a class="elkw-link" href="mailto:">Mail an die Leitung</a> · <a class="elkw-link" href="tel:">Leitung anrufen</a></p>
+                </div>
+              </div>
+            </article>
+            <article class="elkw-card zl-kid" aria-labelledby="l-marie">
+              <div class="elkw-card__body">
+                <h3 class="elkw-card__title" id="l-marie">Marie</h3>
+                <div class="zl-row">
+                  <h4>Zeltlager Kapf 2027</h4>
+                  <p class="small">1. bis 8.&nbsp;August 2027</p>
+                  <p><span class="elkw-status elkw-status--offen">Eingegangen</span> · Die Leitung meldet sich in Kürze.</p>
+                </div>
+                <div class="zl-row">
+                  <h4>Freizeitpass</h4>
+                  <p><span class="elkw-status elkw-status--warnung">Freizeitpass fehlt noch</span></p>
+                  <a class="elkw-btn" href="#">Freizeitpass ausfüllen</a>
+                </div>
+              </div>
+            </article>
+            <section class="elkw-surface" aria-labelledby="l-info">
+              <h3 id="l-info">Elterninfo Zeltlager Kapf 2027</h3>
+              <ul class="zl-doclist">
+                <li><a class="elkw-link" href="#">Infobrief</a></li>
+                <li><a class="elkw-link" href="#">Packliste</a></li>
+                <li><a class="elkw-link" href="#">Notfallnummern der Freizeit</a></li>
+              </ul>
+            </section>
+            <section class="elkw-surface" aria-labelledby="l-fam">
+              <h3 id="l-fam">Familienkonto</h3>
+              <p style="margin:0">Ein zweiter Elternteil kann die Angaben der Kinder mitpflegen.</p>
+              <a class="elkw-btn elkw-btn--text" href="#">Zweiten Elternteil hinzufügen</a>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+</body>
+</html>

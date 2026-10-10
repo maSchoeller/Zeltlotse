@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="de" class="elkw" data-farbwelt="09" data-stil="nahbar" data-dichte="arbeiten">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zeltlotse – ELKW-Stil: Farbwelten und Stile</title>
+<link rel="stylesheet" href="elkw-fonts.css">
+<link rel="stylesheet" href="elkw-tokens.css">
+<link rel="stylesheet" href="elkw-components.css">
+<link rel="stylesheet" href="elkw-app.css">
+<link rel="stylesheet" href="elkw-nahbar.css">
+<style>
+/* ===== Nur Anordnung (keine neuen Gestaltungsmittel): Farben ausschließlich über ELKW-Variablen ===== */
+.zl-page { max-width: 1440px; margin: 0 auto; padding: var(--elkw-space-m); }
+.zl-page > h1 { margin: 0 0 var(--elkw-space-s); }
+.zl-switch { align-items: center; }
+.zl-switch .elkw-segments { margin: 0; }
+.zl-switch__label { font-size: var(--elkw-fs-small); font-weight: 600; margin-right: 0.25rem; }
+.zl-switch__group { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+
+.zl-screens { display: flex; gap: var(--elkw-space-l); align-items: flex-start; }
+.zl-screen { min-width: 0; }
+.zl-screen--phone { flex: none; width: 375px; }
+.zl-screen--browser { flex: 1 1 auto; max-width: 1000px; }
+.zl-screen > .elkw-kicker { margin-bottom: 0.5rem; }
+
+/* Gerätrahmen: 1 px Rahmen in der Rahmenfarbe der Bibliothek */
+.zl-frame { border: 1px solid var(--elkw-border); border-radius: var(--elkw-radius); overflow: hidden; background: var(--elkw-white); }
+.zl-phone { display: flex; flex-direction: column; height: 780px; }
+.zl-phone .elkw-appbar { padding: var(--elkw-header-pad) var(--elkw-space-m); }
+.zl-phone__content { flex: 1; overflow-y: auto; padding: var(--elkw-space-m); }
+.zl-phone__content > * + * { margin-top: var(--elkw-space-m); }
+.zl-phone__content .elkw-hello { margin-bottom: 0; }
+
+/* Wortmarke Zeltlotse: reiner Text in Sarabun (SemiBold wie Zeile 1 der Wortmarke) */
+.zl-wordmark { font-weight: 600; font-size: var(--elkw-fs-h3); line-height: 36px; color: var(--elkw-text); text-decoration: none; white-space: nowrap; }
+
+/* Untere Navigation: Navigationsleiste (.elkw-nav auf primary-Fläche), fünf gleich breite Punkte */
+.zl-bottomnav { flex: none; }
+.zl-bottomnav > ul { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; }
+.zl-bottomnav a { text-align: center; padding: 0.85rem 0.15rem; font-size: var(--elkw-fs-small); }
+.zl-bottomnav a[aria-current] { font-weight: 600; }
+
+/* Aufgaben- und Schrittlisten */
+.zl-list { margin: 0; padding: 0; list-style: none; }
+.zl-list > li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.25rem 1rem; padding: 0.6rem 0; border-bottom: 1px solid var(--elkw-light); }
+.zl-list > li:last-child { border-bottom: 0; }
+.zl-list .elkw-choice { margin: 0; }
+.zl-list__meta { display: block; font-size: var(--elkw-fs-small); padding-left: 1.6rem; width: 100%; }
+.zl-done { text-decoration: line-through; }
+
+.zl-message { margin: 0.25rem 0 0; }
+.elkw-surface > h2:first-child { margin-bottom: 0.75rem; }
+.zl-more { margin-top: 0.5rem; }
+
+/* Zahlen als Balken: Spur = Strukturfläche, Füllung = Akzentfarbe bzw. Statusfarbe (immer mit Wort) */
+.zl-bars { margin: 0; padding: 0; list-style: none; }
+.zl-bars > li { padding: 0.65rem 0; border-bottom: 1px solid var(--elkw-light); }
+.zl-bars > li:last-child { border-bottom: 0; }
+.zl-bars__head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 1rem; }
+.zl-bars__head strong { font-weight: 600; }
+.zl-num { font-variant-numeric: tabular-nums; }
+.zl-bar { height: 0.75rem; margin: 0.35rem 0; background: var(--elkw-light); }
+.zl-bar > span { display: block; height: 100%; background: var(--elkw-akzent); }
+.zl-bar--warnung > span { background: var(--elkw-status-warnung); }
+.zl-bar--fehler > span { background: var(--elkw-status-fehler); }
+.zl-bar--gross { height: 1.25rem; }
+
+/* Browser-Rahmen */
+.zl-browser__address { padding: 0.35rem var(--elkw-space-m); font-size: var(--elkw-fs-small); background: var(--elkw-neutral-10); border-bottom: 1px solid var(--elkw-light); }
+.zl-browser .elkw-app { height: 860px; }
+.zl-browser .elkw-app__nav { min-height: 0; }
+.zl-browser .elkw-app__main > * + * { margin-top: var(--elkw-space-m); }
+.zl-browser .elkw-app__main .elkw-hello { margin-bottom: 0; }
+.zl-browser .elkw-alert { margin: 0; }
+
+@media (max-width: 1439px) { .zl-screen--browser { max-width: none; } }
+@media (max-width: 1100px) {
+  .zl-screens { flex-direction: column; align-items: stretch; }
+  .zl-screen--phone { width: 100%; max-width: 375px; margin: 0 auto; }
+}
+@media (max-width: 1023px) {
+  .zl-browser .elkw-app { height: auto; min-height: 0; }
+}
+@media (max-width: 420px) {
+  .zl-page { padding: var(--elkw-space-m) 1rem; }
+  .zl-phone { height: auto; }
+}
+</style>
+</head>
+<body>
+<a class="elkw-skiplink" href="#inhalt">Zum Inhalt springen</a>
+<div class="zl-page">
+  <h1>Zeltlotse – ELKW-Stil: Farbwelten und Stile</h1>
+  <section class="elkw-alert elkw-alert--erfolg" aria-labelledby="zl-entscheid">
+    <span class="elkw-alert__title" id="zl-entscheid">Entschieden:</span>
+    <p>Gewählt sind <strong>Farbwelt 09 Blaugrün</strong> und der Stil <strong>„nahbar“</strong> (voreingestellt). Die anderen Optionen bleiben nur zum Vergleich. Bei Widerspruch gelten DESIGN.md und EXPERIENCE.md.</p>
+  </section>
+
+  <!-- Umschalter (nur für diese Vergleichsseite) -->
+  <div class="elkw-toolbar zl-switch" role="group" aria-label="Darstellung umschalten">
+    <div class="zl-switch__group" role="group" aria-labelledby="zl-fw-label">
+      <span class="zl-switch__label" id="zl-fw-label">Farbwelt</span>
+      <div class="elkw-segments" data-attr="farbwelt">
+        <button type="button" data-value="09" aria-pressed="true">09 Blaugrün</button>
+        <button type="button" data-value="07" aria-pressed="false">07 Hellgrün</button>
+        <button type="button" data-value="01" aria-pressed="false">01 Dunkelblau</button>
+        <button type="button" data-value="13" aria-pressed="false">13 Apricot</button>
+      </div>
+    </div>
+    <div class="zl-switch__group" role="group" aria-labelledby="zl-stil-label">
+      <span class="zl-switch__label" id="zl-stil-label">Stil</span>
+      <div class="elkw-segments" data-attr="stil">
+        <button type="button" data-value="" aria-pressed="false">klassisch</button>
+        <button type="button" data-value="nahbar" aria-pressed="true">nahbar</button>
+      </div>
+    </div>
+    <p class="small elkw-toolbar__end" style="margin:0">Einen Dunkelmodus kennt die ELKW-Bibliothek nicht.</p>
+  </div>
+
+  <div class="zl-screens" id="inhalt" role="main">
+
+    <!-- ============ Bildschirm 1: Handy ============ -->
+    <section class="zl-screen zl-screen--phone" aria-labelledby="s1-label">
+      <p class="elkw-kicker" id="s1-label">Bildschirm 1 · Handy, 375&nbsp;px · Startseite während der Freizeit</p>
+      <div class="zl-frame zl-phone">
+        <header class="elkw-appbar">
+          <a class="zl-wordmark" href="#">Zeltlotse</a>
+          <span class="elkw-appbar__name">Zeltlager Kapf 2027</span>
+        </header>
+
+        <div class="zl-phone__content elkw-ground">
+          <div class="elkw-hello">
+            <div>
+              <p class="elkw-kicker">Tag 3 · Dienstag, 3.&nbsp;August</p>
+              <h2 style="font-size:var(--elkw-fs-h1);line-height:var(--elkw-lh-h1);margin:0">Hallo, <strong>Jonas</strong></h2>
+              <p>Das Geländespiel läuft, eine Aufgabe ist noch offen.</p>
+            </div>
+          </div>
+
+          <!-- Notfall: Meldungs-Box mit rotem Balken + Hauptbutton -->
+          <section class="elkw-alert" style="--status: var(--elkw-status-fehler)" aria-labelledby="nf-t">
+            <span class="elkw-alert__title" id="nf-t">Im Notfall:</span>
+            <p>Notfallplan, Notrufnummern und wer heute Dienst hat – ein Tipp entfernt.</p>
+            <a class="elkw-btn elkw-btn--block" href="#">Notfallhilfe öffnen</a>
+            <p class="small">Direkt anrufen: <a class="elkw-link" href="tel:112">Notruf 112</a></p>
+          </section>
+
+          <div class="elkw-field">
+            <label for="ph-suche">Schnellsuche</label>
+            <input id="ph-suche" type="search" placeholder="Person suchen …">
+          </div>
+
+          <section class="elkw-surface" aria-labelledby="jetzt-t">
+            <h2 id="jetzt-t">Jetzt und als Nächstes</h2>
+            <ul class="elkw-eventlist">
+              <li><div class="elkw-eventlist__body">
+                <p class="elkw-kicker">Jetzt · 14:00&nbsp;Uhr</p>
+                <h3>Geländespiel</h3>
+                <p class="small" style="margin:0"><span class="elkw-status elkw-status--aktiv">Läuft</span> · Treffpunkt Fahnenmast</p>
+              </div></li>
+              <li><div class="elkw-eventlist__body">
+                <p class="elkw-kicker">Als Nächstes · 18:00&nbsp;Uhr</p>
+                <h3>Abendessen – Linsen-Dal</h3>
+                <p class="small" style="margin:0">Essenszelt</p>
+              </div></li>
+            </ul>
+            <a class="elkw-btn elkw-btn--text zl-more" href="#">Ganzer Tagesplan</a>
+          </section>
+
+          <section class="elkw-surface" aria-labelledby="aufg-t">
+            <h2 id="aufg-t">Meine Aufgaben</h2>
+            <ul class="zl-list">
+              <li><label class="elkw-choice"><input type="checkbox"> Material Geländespiel prüfen</label><span class="elkw-status elkw-status--offen">Offen</span></li>
+              <li><label class="elkw-choice"><input type="checkbox" checked> <span class="zl-done">Zelt&nbsp;4 Heringe nachzählen</span></label><span class="elkw-status elkw-status--erfolg">Erledigt</span></li>
+            </ul>
+          </section>
+
+          <section class="elkw-surface" aria-labelledby="kanal-t">
+            <h2 id="kanal-t">Kanal „Team“</h2>
+            <ul class="elkw-people">
+              <li><span class="elkw-avatar" aria-hidden="true">MK</span>
+                <div class="elkw-people__who"><strong>Miriam</strong><span>heute, 13:42&nbsp;Uhr</span></div></li>
+            </ul>
+            <p class="zl-message">Nach dem Geländespiel bitte alle Fahnen zurück in Kiste&nbsp;3.</p>
+            <a class="elkw-btn elkw-btn--text zl-more" href="#">1 neue Nachricht in „Alle“</a>
+          </section>
+        </div>
+
+        <nav class="elkw-nav elkw-bg-1 zl-bottomnav" aria-label="Hauptbereiche">
+          <ul>
+            <li><a href="#" aria-current="page">Start</a></li>
+            <li><a href="#">Programm</a></li>
+            <li><a href="#">Personen</a></li>
+            <li><a href="#">Kanäle</a></li>
+            <li><a href="#">Mehr</a></li>
+          </ul>
+        </nav>
+      </div>
+    </section>
+
+    <!-- ============ Bildschirm 2: Browser ============ -->
+    <section class="zl-screen zl-screen--browser" aria-labelledby="s2-label">
+      <p class="elkw-kicker" id="s2-label">Bildschirm 2 · Browser, ca. 1000&nbsp;px · Leitungs-Cockpit in der Vorbereitung</p>
+      <div class="zl-frame zl-browser">
+        <div class="zl-browser__address" aria-hidden="true">zeltlotse.de/kapf-2027/uebersicht</div>
+        <div class="elkw-app">
+          <header class="elkw-app__bar elkw-appbar">
+            <button class="elkw-appbar__toggle" aria-expanded="false" aria-controls="zl-sidenav"><span></span><span></span><span></span><span class="sr-only">Navigation</span></button>
+            <a class="zl-wordmark" href="#">Zeltlotse</a>
+            <span class="elkw-appbar__name">Zeltlager Kapf 2027</span>
+            <div class="elkw-appbar__end">
+              <input type="search" placeholder="Person, Dokument suchen …" aria-label="Suchen">
+              <span class="elkw-appbar__user">Miriam</span>
+            </div>
+          </header>
+
+          <nav class="elkw-app__nav elkw-sidenav" id="zl-sidenav" aria-label="Bereiche der Freizeit">
+            <p class="elkw-kicker elkw-sidenav__group">Zeltlager Kapf 2027</p>
+            <ul>
+              <li><a href="#" aria-current="page">Übersicht</a></li>
+              <li><a href="#">Anmeldungen <span class="elkw-count">42</span></a></li>
+              <li><a href="#">Freizeitpass</a></li>
+              <li><a href="#">Programm</a></li>
+              <li><a href="#">Küche</a></li>
+              <li><a href="#">Finanzen</a></li>
+              <li><a href="#">Dokumente</a></li>
+              <li><a href="#">Kanäle</a></li>
+            </ul>
+          </nav>
+
+          <div class="elkw-app__main">
+            <ol class="elkw-breadcrumb"><li><a href="#">Meine Freizeiten</a></li><li aria-current="page">Zeltlager Kapf 2027</li></ol>
+            <div class="elkw-hello">
+              <div>
+                <p class="elkw-kicker">Samstag, 10.&nbsp;Oktober 2026 · Vorbereitung</p>
+                <h1>Guten Tag, <strong>Miriam und Tobias</strong></h1>
+                <p>Noch 295&nbsp;Tage bis zum Zeltlager. Drei Dinge brauchen eure Aufmerksamkeit.</p>
+              </div>
+            </div>
+
+            <div class="elkw-alert elkw-alert--warnung" role="status">
+              <span class="elkw-alert__title">Achtung: 3 Punkte sind offen</span>
+              <ul>
+                <li><a class="elkw-link" href="#">3 Freizeitpässe unvollständig</a></li>
+                <li><a class="elkw-link" href="#">Nachweis von Jonas noch nicht geprüft</a></li>
+                <li><a class="elkw-link" href="#">Schutzkonzept: 4 Mitarbeitende haben noch nicht gelesen</a></li>
+              </ul>
+            </div>
+
+            <div class="elkw-grid-wide">
+              <div class="elkw-stack">
+                <section class="elkw-surface" aria-labelledby="anm-t">
+                  <h2 id="anm-t">Anmeldungen</h2>
+                  <div class="zl-bars__head"><strong><span class="zl-num">42</span> von <span class="zl-num">60</span> Plätzen belegt</strong><span class="zl-num">70&nbsp;%</span></div>
+                  <div class="zl-bar zl-bar--gross" aria-hidden="true"><span style="width:70%"></span></div>
+                  <p class="small" style="margin:0">18 Plätze frei · Anmeldeschluss 31.&nbsp;Mai 2027</p>
+                  <a class="elkw-btn elkw-btn--text zl-more" href="#">Zu den Anmeldungen</a>
+                </section>
+
+                <section class="elkw-surface" aria-labelledby="bud-t">
+                  <h2 id="bud-t">Budget: Soll und Ist</h2>
+                  <ul class="zl-bars">
+                    <li>
+                      <div class="zl-bars__head"><strong>Unterkunft</strong><span class="zl-num">2.400&nbsp;€ von 4.800&nbsp;€</span></div>
+                      <div class="zl-bar" aria-hidden="true"><span style="width:50%"></span></div>
+                      <span class="elkw-status elkw-status--erfolg small">Im Plan · 50&nbsp;% ausgegeben (Anzahlung)</span>
+                    </li>
+                    <li>
+                      <div class="zl-bars__head"><strong>Verpflegung</strong><span class="zl-num">0&nbsp;€ von 3.600&nbsp;€</span></div>
+                      <div class="zl-bar" aria-hidden="true"><span style="width:0%"></span></div>
+                      <span class="elkw-status elkw-status--offen small">Noch nichts ausgegeben</span>
+                    </li>
+                    <li>
+                      <div class="zl-bars__head"><strong>Programm</strong><span class="zl-num">840&nbsp;€ von 900&nbsp;€</span></div>
+                      <div class="zl-bar zl-bar--warnung" aria-hidden="true"><span style="width:93%"></span></div>
+                      <span class="elkw-status elkw-status--warnung small">Knapp · 93&nbsp;% ausgegeben, 60&nbsp;€ übrig</span>
+                    </li>
+                    <li>
+                      <div class="zl-bars__head"><strong>Fahrt</strong><span class="zl-num">1.320&nbsp;€ von 1.200&nbsp;€</span></div>
+                      <div class="zl-bar zl-bar--fehler" aria-hidden="true"><span style="width:100%"></span></div>
+                      <span class="elkw-status elkw-status--fehler small">Überschritten · 120&nbsp;€ über Plan</span>
+                    </li>
+                  </ul>
+                  <a class="elkw-btn elkw-btn--text zl-more" href="#">Zu den Finanzen</a>
+                </section>
+              </div>
+
+              <section class="elkw-surface" aria-labelledby="next-t">
+                <h2 id="next-t">Nächste Schritte</h2>
+                <ul class="zl-list">
+                  <li><label class="elkw-choice"><input type="checkbox"> Nachweis von Jonas prüfen</label><span class="zl-list__meta">Miriam · bis 17.&nbsp;Oktober</span></li>
+                  <li><label class="elkw-choice"><input type="checkbox"> Angebot für den Bus einholen</label><span class="zl-list__meta">Tobias · bis 24.&nbsp;Oktober</span></li>
+                  <li><label class="elkw-choice"><input type="checkbox"> Erinnerung zum Schutzkonzept senden</label><span class="zl-list__meta">Miriam · bis 31.&nbsp;Oktober</span></li>
+                  <li><label class="elkw-choice"><input type="checkbox"> Elternbrief zur Anmeldung verschicken</label><span class="zl-list__meta">Tobias · bis 14.&nbsp;November</span></li>
+                </ul>
+                <button class="elkw-btn elkw-btn--text elkw-btn--noarrow zl-more" type="button">Schritt hinzufügen</button>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+/* Umschalter Farbwelt / Stil (nur Vergleichsseite) und Navigation aufklappen (App-Rahmen der Bibliothek) */
+document.querySelectorAll('.zl-switch .elkw-segments').forEach(function (g) {
+  g.addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    g.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
+    if (b.dataset.value) document.documentElement.dataset[g.dataset.attr] = b.dataset.value;
+    else delete document.documentElement.dataset[g.dataset.attr];
+  });
+});
+document.querySelectorAll('.elkw-appbar__toggle').forEach(function (b) {
+  b.addEventListener('click', function () { var n = document.getElementById(b.getAttribute('aria-controls')); n.classList.toggle('is-open'); b.setAttribute('aria-expanded', n.classList.contains('is-open')); });
+});
+</script>
+</body>
+</html>

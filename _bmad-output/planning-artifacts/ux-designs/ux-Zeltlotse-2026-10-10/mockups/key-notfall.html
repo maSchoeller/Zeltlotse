@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="de" class="elkw" data-farbwelt="09" data-stil="nahbar" data-dichte="arbeiten">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zeltlotse – Key Screen: Notfall (NS-6)</title>
+<link rel="stylesheet" href="elkw-fonts.css">
+<link rel="stylesheet" href="elkw-tokens.css">
+<link rel="stylesheet" href="elkw-components.css">
+<link rel="stylesheet" href="elkw-app.css">
+<link rel="stylesheet" href="elkw-nahbar.css">
+<style>
+/* =====================================================================
+   Key Screen „Notfall“ – NS-6 am Handy, vier Bildschirme nebeneinander
+   Maßgeblich (Spine):
+   - EXPERIENCE.md → Key Flows NS-6 (Schritte 1–6, Fehlerpfad „Kein Empfang“)
+   - EXPERIENCE.md → Flächen: Notfall: Sicherheitskette, Vorfall-Protokoll, Freizeitpässe/Personen
+   - EXPERIENCE.md → Component Patterns: Notfall-Box, Notfall-Eintrag (App-Leiste), Schnellsuche,
+     Aufklapp (nie für Notfallkontakte), Speicher-Hinweis, Offline-Leiste, Untere Navigation
+   - EXPERIENCE.md → State Patterns: Offline, Offline-Eintrag wartet, Offline vor V6, Gespeichert, Fokus
+   - EXPERIENCE.md → Interaction Primitives: automatisch speichern beim Verlassen des Feldes
+   - DESIGN.md → Components: Notfall-Box (Button blaugrün), Notfall-Eintrag, Offline-Leiste,
+     Speicher-Hinweis, Schnellsuche (Treffer als Personenliste im Inhalt), Details-Liste
+   Platzhalter (nicht im PRD/Spine): Text der Sicherheitskette, Angaben in Leas Freizeitpass.
+   ===================================================================== */
+.zl-page { max-width: 1680px; margin: 0 auto; padding: var(--elkw-space-m); }
+.zl-page > h1 { margin: 0 0 var(--elkw-space-xs); }
+.zl-intro { margin: 0 0 var(--elkw-space-m); max-width: 60rem; }
+.zl-screens { display: flex; flex-wrap: wrap; gap: var(--elkw-space-l); align-items: flex-start; }
+.zl-screen { flex: none; width: 375px; max-width: 100%; min-width: 0; }
+.zl-screen > .elkw-kicker { margin-bottom: 0.5rem; }
+.zl-frame { border: 1px solid var(--elkw-border); border-radius: var(--elkw-radius); overflow: hidden; background: var(--elkw-white); }
+.zl-phone { display: flex; flex-direction: column; }
+.zl-phone .elkw-appbar { padding: var(--elkw-header-pad) var(--elkw-space-m); flex-wrap: nowrap; }
+.zl-phone__content { flex: 1; padding: var(--elkw-space-m); }
+.zl-phone__content > * + * { margin-top: var(--elkw-space-m); }
+.zl-phone__content .elkw-hello { margin-bottom: 0; }
+.zl-h1 { font-size: var(--elkw-fs-h1); line-height: var(--elkw-lh-h1); font-weight: 300; letter-spacing: -0.01em; margin: 0; }
+.zl-h1 strong { font-weight: 600; }
+.zl-head > * { margin: 0; }
+.zl-head > * + * { margin-top: 0.25rem; }
+
+.zl-wordmark { font-weight: 600; font-size: var(--elkw-fs-h3); line-height: 36px; color: var(--elkw-text); text-decoration: none; white-space: nowrap; }
+.zl-notfall { margin: 0 0 0 auto; padding-top: 0; padding-bottom: 0; font-weight: 600; }
+.zl-notfall .elkw-status { color: inherit; }
+.zl-notfall[aria-current] { text-decoration: underline; text-underline-offset: 4px; }
+.zl-notfallbtn { min-height: 44px; }
+/* Darstellung „gerade angetippt“: Fokusrahmen der Bibliothek */
+.zl-tapped { outline: 2px solid var(--elkw-focus); outline-offset: 4px; }
+
+.zl-bottomnav > ul { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; }
+.zl-bottomnav a { text-align: center; padding: 0.85rem 0.15rem; font-size: var(--elkw-fs-small); }
+.zl-bottomnav a[aria-current] { font-weight: 600; }
+
+.elkw-surface > h2:first-child { margin-bottom: 0.75rem; }
+.elkw-surface > p:last-child { margin-bottom: 0; }
+.zl-more { margin-top: 0.5rem; }
+.zl-steps { margin: 0; padding-left: 1.3rem; }
+.zl-steps li + li { margin-top: 0.35rem; }
+.zl-call { white-space: nowrap; font-size: var(--elkw-fs); }
+.zl-hits { margin-top: 0.5rem !important; }
+.zl-hits li { padding: 0.5rem 0; }
+.zl-hits a { color: var(--elkw-text); text-decoration: none; }
+.zl-hits a strong { color: var(--elkw-action); border-bottom: 1px solid; }
+
+/* Offline-Leiste (DESIGN.md Components): schmal, volle Breite, unter der App-Leiste, kein Statusrot */
+.zl-offline { padding: 0.35rem var(--elkw-space-m); background: var(--elkw-light); color: var(--elkw-text); font-size: var(--elkw-fs-small); line-height: 1.5; }
+.zl-offline p { margin: 0; }
+/* Speicher-Hinweis (DESIGN.md Components): kleiner Text am Feld, kein Toast */
+.zl-saved { display: flex; align-items: center; gap: 0.35rem; margin-top: 0.25rem; font-size: var(--elkw-fs-small); color: var(--elkw-dunkelgrau); }
+.zl-saved .elkw-btn { margin: 0; padding: 0; font-size: inherit; line-height: 1.5; }
+.zl-fields > * + * { margin-top: 0.75rem; }
+.zl-textarea { height: 6rem !important; }
+.elkw-fieldset { margin-bottom: 0; }
+.elkw-fieldset legend { font-size: var(--elkw-fs); }
+.elkw-accordion summary { padding: 0.75rem 1rem; }
+.elkw-accordion .elkw-accordion__content { padding: 0.75rem 1rem 1rem; }
+
+/* Korrigierte Werte für WCAG 2.2 AA (DESIGN.md → Colors → Korrigierte Werte) */
+.elkw input:not([type=checkbox]):not([type=radio]), .elkw select, .elkw textarea { border-color: var(--elkw-action); }
+.elkw-ground .elkw-hello .elkw-kicker, .elkw-ground .zl-head .elkw-kicker { color: var(--elkw-text); }
+
+.zl-caption { margin-top: var(--elkw-space-l); padding: var(--elkw-space-m); border: 1px solid var(--elkw-border); border-radius: var(--elkw-radius); max-width: 1200px; }
+.zl-caption ul { margin: 0; padding-left: 1.2rem; }
+@media (max-width: 420px) { .zl-page { padding: var(--elkw-space-m) 1rem; } }
+</style>
+</head>
+<body>
+<a class="elkw-skiplink" href="#inhalt">Zum Inhalt springen</a>
+<div class="zl-page">
+  <h1>Zeltlotse – Notfall (NS-6)</h1>
+  <p class="zl-intro">Mittwochnachmittag, Geländespiel im Wald. Lea (11) ist gestürzt und hat sich am Knie geschnitten. Jonas ist als Erster bei ihr: Notfall-Button, Sicherheitskette, Leas Freizeitpass über die Schnellsuche, Vorfall-Protokoll – zuletzt ohne Empfang.</p>
+
+  <div class="zl-screens" id="inhalt" role="main">
+
+    <!-- ============ 1: Startseite, Notfall-Button ============ -->
+    <section class="zl-screen" aria-labelledby="n1-label">
+      <p class="elkw-kicker" id="n1-label">1 · Startseite · Tipp auf „Notfallhilfe öffnen“</p>
+      <div class="zl-frame zl-phone">
+        <header class="elkw-appbar">
+          <a class="zl-wordmark" href="#">Zeltlotse</a>
+          <span class="elkw-appbar__name">Zeltlager Kapf 2027</span>
+          <a class="elkw-btn elkw-btn--text elkw-btn--noarrow zl-notfall" href="#"><span class="elkw-status elkw-status--fehler">Notfall</span></a>
+        </header>
+        <div class="zl-phone__content elkw-ground">
+          <div class="elkw-hello"><div>
+            <p class="elkw-kicker">Tag 4 · Mittwoch, 4.&nbsp;August</p>
+            <h2 class="zl-h1">Hallo, <strong>Jonas</strong></h2>
+            <p>Das Geländespiel läuft, zwei Aufgaben sind noch offen.</p>
+          </div></div>
+          <section class="elkw-alert" style="--status: var(--elkw-status-fehler)" aria-labelledby="n1-nf">
+            <span class="elkw-alert__title" id="n1-nf">Im Notfall:</span>
+            <p>Notfallplan, Notrufnummern und wer heute Dienst hat – ein Tipp entfernt.</p>
+            <a class="elkw-btn elkw-btn--block zl-notfallbtn zl-tapped" href="#">Notfallhilfe öffnen</a>
+            <p class="small">Direkt anrufen: <a class="elkw-link" href="tel:112">Notruf 112</a></p>
+          </section>
+          <div class="elkw-field">
+            <label for="n1-suche">Schnellsuche</label>
+            <input id="n1-suche" type="search" placeholder="Person suchen …">
+          </div>
+          <section class="elkw-surface" aria-labelledby="n1-jetzt">
+            <h2 id="n1-jetzt">Jetzt und als Nächstes</h2>
+            <ul class="elkw-eventlist">
+              <li><div class="elkw-eventlist__body">
+                <p class="elkw-kicker">Jetzt · 14:00&nbsp;Uhr</p>
+                <h3>Geländespiel</h3>
+                <p class="small" style="margin:0"><span class="elkw-status elkw-status--aktiv">Läuft</span> · Treffpunkt Fahnenmast</p>
+              </div></li>
+              <li><div class="elkw-eventlist__body">
+                <p class="elkw-kicker">Als Nächstes · 18:00&nbsp;Uhr</p>
+                <h3>Abendessen</h3>
+                <p class="small" style="margin:0">Essenszelt</p>
+              </div></li>
+            </ul>
+          </section>
+        </div>
+        <nav class="elkw-nav elkw-bg-1 zl-bottomnav" aria-label="Hauptbereiche">
+          <ul><li><a href="#" aria-current="page">Start</a></li><li><a href="#">Programm</a></li><li><a href="#">Personen</a></li><li><a href="#">Kanäle</a></li><li><a href="#">Mehr</a></li></ul>
+        </nav>
+      </div>
+    </section>
+
+    <!-- ============ 2: Sicherheitskette ============ -->
+    <section class="zl-screen" aria-labelledby="n2-label">
+      <p class="elkw-kicker" id="n2-label">2 · Sicherheitskette · „Betroffene Person suchen“: „Le“</p>
+      <div class="zl-frame zl-phone">
+        <header class="elkw-appbar">
+          <a class="zl-wordmark" href="#">Zeltlotse</a>
+          <span class="elkw-appbar__name">Zeltlager Kapf 2027</span>
+          <a class="elkw-btn elkw-btn--text elkw-btn--noarrow zl-notfall" href="#" aria-current="page"><span class="elkw-status elkw-status--fehler">Notfall</span></a>
+        </header>
+        <div class="zl-phone__content elkw-ground">
+          <div class="zl-head">
+            <p class="elkw-kicker">Notfall · Zeltlager Kapf 2027</p>
+            <h2 class="zl-h1" tabindex="-1">Sicherheitskette</h2>
+          </div>
+          <div class="elkw-surface">
+            <div class="elkw-field">
+              <label for="n2-suche">Betroffene Person suchen</label>
+              <input id="n2-suche" type="search" value="Le" aria-describedby="n2-treffer">
+            </div>
+            <ul class="elkw-people zl-hits" id="n2-treffer" aria-label="Treffer">
+              <li><span class="elkw-avatar" aria-hidden="true">L</span><a href="#" class="elkw-people__who"><strong>Lea</strong><span>11 Jahre · Teilnehmerin</span></a></li>
+            </ul>
+          </div>
+          <section class="elkw-surface" aria-labelledby="n2-tun">
+            <h2 id="n2-tun">Was jetzt zu tun ist</h2>
+            <ol class="zl-steps">
+              <li>Ruhe bewahren, bei der verletzten Person bleiben.</li>
+              <li>Bei Lebensgefahr sofort den Notruf 112 wählen.</li>
+              <li>Leitung anrufen und Bescheid geben.</li>
+              <li>Erste Hilfe leisten und im Vorfall-Protokoll festhalten.</li>
+            </ol>
+          </section>
+          <section class="elkw-surface" aria-labelledby="n2-wen">
+            <h2 id="n2-wen">Wen anrufen</h2>
+            <ul class="elkw-people">
+              <li><div class="elkw-people__who"><strong>Notruf</strong><span>Rettungsdienst und Feuerwehr</span></div><a class="elkw-link zl-call" href="tel:112">112 anrufen</a></li>
+              <li><span class="elkw-avatar" aria-hidden="true">MK</span><div class="elkw-people__who"><strong>Miriam</strong><span>Leitung</span></div><a class="elkw-link zl-call" href="tel:">Anrufen</a></li>
+              <li><span class="elkw-avatar" aria-hidden="true">TS</span><div class="elkw-people__who"><strong>Tobias</strong><span>Leitung</span></div><a class="elkw-link zl-call" href="tel:">Anrufen</a></li>
+              <li><div class="elkw-people__who"><strong>Ansprechperson am Heimatort</strong><span>erreichbar während der ganzen Freizeit</span></div><a class="elkw-link zl-call" href="tel:">Anrufen</a></li>
+            </ul>
+          </section>
+          <a class="elkw-btn elkw-btn--text" href="#">Vorfall-Protokoll</a>
+          <p class="small">Ohne Empfang: den ausgedruckten Notfallordner nutzen.</p>
+        </div>
+        <nav class="elkw-nav elkw-bg-1 zl-bottomnav" aria-label="Hauptbereiche">
+          <ul><li><a href="#">Start</a></li><li><a href="#">Programm</a></li><li><a href="#">Personen</a></li><li><a href="#">Kanäle</a></li><li><a href="#">Mehr</a></li></ul>
+        </nav>
+      </div>
+    </section>
+
+    <!-- ============ 3: Leas Freizeitpass ============ -->
+    <section class="zl-screen" aria-labelledby="n3-label">
+      <p class="elkw-kicker" id="n3-label">3 · Leas Freizeitpass · Notfallangaben ganz oben</p>
+      <div class="zl-frame zl-phone">
+        <header class="elkw-appbar">
+          <a class="zl-wordmark" href="#">Zeltlotse</a>
+          <span class="elkw-appbar__name">Zeltlager Kapf 2027</span>
+          <a class="elkw-btn elkw-btn--text elkw-btn--noarrow zl-notfall" href="#"><span class="elkw-status elkw-status--fehler">Notfall</span></a>
+        </header>
+        <div class="zl-phone__content elkw-ground">
+          <div class="zl-head">
+            <p class="elkw-kicker">Freizeitpass · Teilnehmerin</p>
+            <h2 class="zl-h1" tabindex="-1"><strong>Lea</strong>, 11&nbsp;Jahre</h2>
+          </div>
+          <section class="elkw-surface" aria-labelledby="n3-nf">
+            <h2 id="n3-nf">Notfallangaben</h2>
+            <dl class="elkw-details">
+              <dt>Allergien</dt><dd>Heftpflaster mit Latex – nur latexfreie Pflaster</dd>
+              <dt>Medikamente</dt><dd>Keine</dd>
+              <dt>Notfallkontakte</dt>
+              <dd>Mutter · <a class="elkw-link" href="tel:">Anrufen</a><br>Vater · <a class="elkw-link" href="tel:">Anrufen</a></dd>
+            </dl>
+          </section>
+          <a class="elkw-btn elkw-btn--block zl-notfallbtn" href="#">Vorfall-Protokoll</a>
+          <div class="elkw-accordion">
+            <details><summary>Weitere Angaben</summary>
+              <div class="elkw-accordion__content"><dl class="elkw-details"><dt>Tetanus-Impfung</dt><dd>vorhanden</dd><dt>Schwimmen</dt><dd>kann schwimmen</dd></dl></div>
+            </details>
+            <details><summary>Notizen des Teams</summary>
+              <div class="elkw-accordion__content"><p style="margin:0">Noch keine Notizen.</p></div>
+            </details>
+          </div>
+        </div>
+        <nav class="elkw-nav elkw-bg-1 zl-bottomnav" aria-label="Hauptbereiche">
+          <ul><li><a href="#">Start</a></li><li><a href="#">Programm</a></li><li><a href="#" aria-current="page">Personen</a></li><li><a href="#">Kanäle</a></li><li><a href="#">Mehr</a></li></ul>
+        </nav>
+      </div>
+    </section>
+
+    <!-- ============ 4: Vorfall-Protokoll offline ============ -->
+    <section class="zl-screen" aria-labelledby="n4-label">
+      <p class="elkw-kicker" id="n4-label">4 · Vorfall-Protokoll · ohne Empfang</p>
+      <div class="zl-frame zl-phone">
+        <header class="elkw-appbar">
+          <a class="zl-wordmark" href="#">Zeltlotse</a>
+          <span class="elkw-appbar__name">Zeltlager Kapf 2027</span>
+          <a class="elkw-btn elkw-btn--text elkw-btn--noarrow zl-notfall" href="#"><span class="elkw-status elkw-status--fehler">Notfall</span></a>
+        </header>
+        <div class="zl-offline" role="status"><p>Offline – zuletzt aktualisiert 14:32&nbsp;Uhr · 2 Einträge warten auf Verbindung</p></div>
+        <form class="zl-phone__content elkw-ground" onsubmit="return false" aria-labelledby="n4-h">
+          <div class="zl-head">
+            <p class="elkw-kicker">Vorfall-Protokoll · Mittwoch, 4.&nbsp;August</p>
+            <h2 class="zl-h1" id="n4-h" tabindex="-1">Vorfall: <strong>Lea</strong></h2>
+          </div>
+          <div class="elkw-surface zl-fields">
+            <div class="elkw-field">
+              <label for="n4-was">Was ist passiert?</label>
+              <textarea id="n4-was" class="zl-textarea">Beim Geländespiel im Wald gestürzt, Schnitt am rechten Knie, etwa 2&nbsp;cm. Wunde gereinigt und verbunden.</textarea>
+              <p class="zl-saved" role="status">Gespeichert · <button class="elkw-btn elkw-btn--text elkw-btn--noarrow" type="button">Rückgängig</button></p>
+            </div>
+            <div class="elkw-field">
+              <label for="n4-zeit">Uhrzeit</label>
+              <input id="n4-zeit" type="time" value="14:20">
+            </div>
+          </div>
+          <div class="elkw-surface">
+            <fieldset class="elkw-fieldset zl-fields">
+              <legend>Medikament gegeben</legend>
+              <div class="elkw-field"><label for="n4-med">Welches Medikament (freiwillig)</label><input id="n4-med" type="text"></div>
+              <div class="elkw-field"><label for="n4-medzeit">Wann</label><input id="n4-medzeit" type="time"></div>
+            </fieldset>
+          </div>
+          <div class="elkw-surface">
+            <div class="elkw-field">
+              <label for="n4-ent">Entnahme aus dem Erste-Hilfe-Kasten</label>
+              <input id="n4-ent" type="text" value="2 latexfreie Pflaster, 1 Kompresse" aria-describedby="n4-ent-h">
+              <span class="elkw-hint" id="n4-ent-h">Landet von selbst auf der Schadens- und Verlustliste.</span>
+              <p class="zl-saved" role="status">Gespeichert · <button class="elkw-btn elkw-btn--text elkw-btn--noarrow" type="button">Rückgängig</button></p>
+            </div>
+          </div>
+          <p class="small">Jeder Eintrag ist für die Leitung sofort sichtbar – ohne Senden. Ohne Empfang wartet er verschlüsselt auf dem Gerät und erscheint bei der Leitung, sobald wieder Verbindung da ist.</p>
+        </form>
+        <nav class="elkw-nav elkw-bg-1 zl-bottomnav" aria-label="Hauptbereiche">
+          <ul><li><a href="#">Start</a></li><li><a href="#">Programm</a></li><li><a href="#">Personen</a></li><li><a href="#">Kanäle</a></li><li><a href="#">Mehr</a></li></ul>
+        </nav>
+      </div>
+    </section>
+  </div>
+
+  <aside class="zl-caption" aria-label="Einordnung">
+    <ul class="small">
+      <li>Wege: Startseite → Sicherheitskette 1 Tipp · Schnellsuche → Leas Freizeitpass 2 Schritte · → Vorfall-Protokoll 1 Tipp (NFR-14 eingehalten).</li>
+      <li>Notfallkontakte, Allergien und Medikamente stehen ohne Aufklapp ganz oben; nur Nachrangiges ist aufklappbar.</li>
+      <li>Das Suchfeld „Betroffene Person suchen“ steht ganz oben auf der Sicherheitskette (keine Lupe in der App-Leiste).</li>
+      <li>Vorfall-Protokoll ohne Senden-Knopf: jeder Eintrag ist sofort für die Leitung sichtbar (interne Sichtbarkeit, kein Versand nach außen).</li>
+      <li>Platzhalter: Text der Sicherheitskette, Angaben in Leas Freizeitpass.</li>
+    </ul>
+  </aside>
+</div>
+</body>
+</html>

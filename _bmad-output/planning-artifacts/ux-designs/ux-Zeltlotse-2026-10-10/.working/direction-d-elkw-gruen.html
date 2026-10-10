@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zeltlotse Richtung D</title>
+<style>
+/* =========================================================
+   RICHTUNG D – ELKW-Stil in Grün
+   Übernommen aus dem ELKW-App-Stil (unverändert):
+   - Schrift Sarabun (Stapel: Sarabun → Segoe UI → system-ui), Gewichte 300/400/600/700,
+     keine Großbuchstaben-Titel, wenige Schriftgrößen
+   - Canvas #F5F6F8, Karte #FFFFFF, Rand #D8DCE2, Filter-/Leerfläche #EEF1F4
+   - Text #000000, Sekundärtext ELKW-Dunkelgrau #474F60 (8.2:1 auf Weiß, 7.6:1 auf Canvas)
+   - Radien: Karten 12 px, Eingaben/Buttons 10 px, Pillen 999 px
+   - Abstände 4/8/12/16/24/32/40 px, Rand vor Schatten, Schatten 0 2px 8px rgba(71,79,96,.06)
+   - Eine Primärfarbe pro Ansicht, Auswahl = Primärfarbe + ruhige Tönung
+   GEÄNDERT:
+   - Hausviolett #8D197C → Grün (drei Varianten, siehe unten)
+   - Dunkelviolett #591855 („deep“, starke Anker) → jeweils dunkles Grün
+   - Ausgewählt-Fläche #F3E7F0 → jeweils grüne Tönung
+   - Schmuckfarbe: Das ELKW-Beispiel nutzt 08 Dunkelgrün #518471 – das verschwimmt mit
+     einer grünen Hauptfarbe. Ersetzt durch 13 Apricot #CB957D (offizielle Schmuckfarbe),
+     nur als Marke/Linie/Tönung (#F6ECE6, Schrift darauf #6E3F2A 8.4:1), nie als Textfarbe.
+   Semantik (aus der ELKW-Schmuckfarbentafel abgeleitet):
+   - Notfall/Rot     14 Rot #B61231 (6.4:1 auf Weiß, 5.9:1 auf #FBEDEF), Fläche #FBEDEF, Rand #EBC3CB
+   - Warnung         12 Orange #DC9018 nur als Balken/Marke; Text dazu #8A5A00 (5.9:1)
+   - Im Rahmen       jeweilige Primärfarbe
+   Ampeln immer mit Symbol + Wort (✓ im Rahmen / ! knapp / × drüber), nie nur Farbe.
+
+   D1 Tannengrün (tief)
+     primär  #1E5B3F  (8.0:1 auf Weiß, 7.0:1 auf Tönung)   hover #164A33 (10.2:1)
+     deep    #123526  Tönung/subtil #EAF2ED  Linie #BFD6C9
+   D2 Frisches Mittelgrün
+     primär  #2E7D32  (5.1:1 auf Weiß, 4.7:1 auf Canvas, 4.6:1 auf Tönung)  hover #256A2A (6.6:1)
+     deep    #1B4D1F  Tönung/subtil #EBF5EC  Linie #C3DFC5
+   D3 Petrolgrün (bläulich)
+     primär  #1D6B73  (6.2:1 auf Weiß, 5.4:1 auf Tönung)   hover #16575E (8.2:1)
+     deep    #10393E  Tönung/subtil #E6F1F2  Linie #BCD8DB
+   D1 Dunkelmodus (folgt der Geräteeinstellung)
+     Grund #151A17  Karte #1C221E  Rand #2E3631  Text #E8ECE9  Sekundär #A9B3AD (7.5:1)
+     primär hell #7FC79D (8.1:1 auf Karte; Schrift darauf #151A17 8.9:1)  Tönung #1F3328
+     Notfall Text #F2A8A0 auf #3A1E1F (7.9:1)
+   ========================================================= */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#E9ECEF;color:#000;font-family:"Sarabun","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;line-height:1.45}
+.page-head{padding:32px 24px 8px;max-width:1500px;margin:0 auto}
+.page-head h1{font-size:26px;font-weight:700}
+.page-head p{color:#474F60;margin-top:6px;max-width:860px;font-size:15px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;padding:20px 24px 48px;max-width:1500px;margin:0 auto;align-items:start}
+@media (max-width:1380px){.grid{grid-template-columns:1fr;max-width:860px}}
+@media (max-width:480px){.grid{padding:16px}.page-head{padding:20px 16px 4px}}
+.dir{background:#FFFFFF;border:1px solid #D8DCE2;border-radius:12px;padding:24px 20px 28px;display:flex;flex-direction:column;gap:20px;min-width:0}
+.dir-label{font-size:13px;font-weight:600;color:var(--p)}
+.dir h2{font-size:24px;line-height:1.2;font-weight:700}
+.rationale{font-size:15px;color:#474F60;max-width:60ch}
+.swatches{display:flex;flex-wrap:wrap;gap:6px}
+.sw{display:flex;align-items:center;gap:6px;font:12px/1 ui-monospace,Consolas,monospace;padding:4px 8px 4px 4px;border-radius:999px;background:#F5F6F8;border:1px solid #D8DCE2;color:#000}
+.sw i{width:16px;height:16px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.12)}
+.cap{font-size:13px;font-weight:600;color:#474F60;margin-bottom:8px}
+.stage{display:flex;justify-content:center}
+.phone{width:375px;max-width:100%;border-radius:44px;padding:12px;background:#15181C;box-shadow:0 18px 40px rgba(0,0,0,.18)}
+.screen{border-radius:34px;overflow:hidden;display:flex;flex-direction:column;min-height:800px}
+.statusbar{display:flex;justify-content:space-between;padding:0 6px 10px;font-size:13px;font-weight:600}
+.bwrap{display:flex;justify-content:center}
+.browser{width:760px;zoom:.54;border-radius:12px;overflow:hidden;box-shadow:0 14px 34px rgba(0,0,0,.16);background:#fff;flex:none}
+@media (max-width:1380px){.browser{zoom:1}}
+@media (max-width:860px){.browser{zoom:.8}}
+@media (max-width:640px){.browser{zoom:.55}}
+@media (max-width:440px){.browser{zoom:.44}}
+.bbar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#E4E7EB;border-bottom:1px solid #D0D5DB}
+.dots{display:flex;gap:6px}.dots i{width:11px;height:11px;border-radius:50%;background:#C3C9D0;display:block}
+.url{flex:1;background:#fff;border-radius:7px;padding:5px 12px;font-size:13px;color:#474F60}
+.darkwrap{display:flex;justify-content:center}
+.darkwrap .phone{zoom:.72}
+@media (max-width:1380px){.darkwrap .phone{zoom:1}}
+svg{display:block}
+
+/* Farbvarianten: primär / hover / deep / subtil / Linie */
+.D1{--p:#1E5B3F;--p-h:#164A33;--p-deep:#123526;--p-sub:#EAF2ED;--p-line:#BFD6C9}
+.D2{--p:#2E7D32;--p-h:#256A2A;--p-deep:#1B4D1F;--p-sub:#EBF5EC;--p-line:#C3DFC5}
+.D3{--p:#1D6B73;--p-h:#16575E;--p-deep:#10393E;--p-sub:#E6F1F2;--p-line:#BCD8DB}
+
+/* Gemeinsame ELKW-Oberfläche */
+.E{--canvas:#F5F6F8;--card:#FFFFFF;--line:#D8DCE2;--filter:#EEF1F4;--text:#000000;--muted:#474F60;
+  --acc:#CB957D;--acc-sub:#F6ECE6;--acc-ink:#6E3F2A;
+  --sos:#B61231;--sos-sub:#FBEDEF;--sos-line:#EBC3CB;--sos-ink:#B61231;
+  --warn:#DC9018;--warn-ink:#8A5A00;--warn-sub:#FCF3E4;
+  --shadow:0 2px 8px rgba(71,79,96,.06);
+  background:var(--canvas);color:var(--text);font-family:"Sarabun","Segoe UI",system-ui,-apple-system,sans-serif;font-size:15px}
+.E .scroll{flex:1;display:flex;flex-direction:column}
+.E .top{padding:12px 20px 16px;background:var(--card);border-bottom:1px solid var(--line)}
+.E .eyebrow{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.E .eyebrow::before{content:"";width:16px;height:3px;border-radius:2px;background:var(--acc)}
+.E .title{font-size:24px;font-weight:700;line-height:1.2;margin-top:4px}
+.E .hello{font-size:14px;color:var(--muted);margin-top:2px}
+.E .sos{margin:16px 16px 0;display:flex;align-items:center;gap:12px;background:var(--sos-sub);border:1px solid var(--sos-line);border-radius:10px;padding:10px 14px;min-height:52px;color:var(--sos-ink)}
+.E .sos .ic{width:32px;height:32px;border-radius:50%;background:var(--sos);display:grid;place-items:center;flex:none}
+.E .sos b{font-weight:600;font-size:16px;display:block}
+.E .sos small{display:block;font-size:13px;color:var(--muted)}
+.E .sos .arr{margin-left:auto;font-size:20px}
+.E .search{margin:12px 16px 0;display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:10px;min-height:44px;padding:0 14px;color:var(--muted)}
+.E .hint{margin:12px 16px 0;display:flex;align-items:center;gap:10px;font-size:14px;color:var(--p);background:var(--p-sub);border-radius:10px;padding:9px 14px;min-height:44px;font-weight:600}
+.E .hint i{width:8px;height:8px;border-radius:50%;background:var(--p);flex:none}
+.E .hint span{margin-left:auto;font-weight:400;font-size:18px}
+.E .card{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);margin:12px 16px 0;padding:14px 16px}
+.E h3{font-size:16px;font-weight:600;display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.E h3 a{font-size:13px;font-weight:600;color:var(--p);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.E .row{display:flex;gap:14px;padding:10px;border-radius:10px;align-items:flex-start}
+.E .row+.row{margin-top:2px}
+.E .row.now{background:var(--p-sub);box-shadow:inset 3px 0 0 var(--p)}
+.E .time{width:46px;font-variant-numeric:tabular-nums;font-weight:600;color:var(--muted);padding-top:1px}
+.E .now .time{color:var(--p)}
+.E .what b{font-weight:600}
+.E .what span{display:block;font-size:13px;color:var(--muted)}
+.E .what span.badge{display:inline-block;font-size:12px;font-weight:600;color:#fff;background:var(--p);border-radius:999px;padding:0 8px;margin-left:6px;vertical-align:1px}
+.E .task{display:flex;gap:12px;align-items:flex-start;padding:8px 0}
+.E .task+.task{border-top:1px solid var(--line)}
+.E .box{width:22px;height:22px;border:1.5px solid var(--muted);border-radius:6px;flex:none;margin-top:1px;background:var(--card)}
+.E .box.done{background:var(--p);border-color:var(--p);position:relative}
+.E .box.done::after{content:"";position:absolute;left:6px;top:2px;width:6px;height:11px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.E .task b{font-weight:600}
+.E .task.d b{font-weight:400;color:var(--muted);text-decoration:line-through}
+.E .task span{display:block;font-size:13px;color:var(--muted)}
+.E .msg{display:flex;gap:12px}
+.E .av{width:36px;height:36px;border-radius:50%;background:var(--acc-sub);color:var(--acc-ink);border:1px solid var(--acc);font-weight:600;display:grid;place-items:center;flex:none}
+.E .msg .who{font-size:13px;color:var(--muted)}
+.E .msg .who b{color:var(--text);font-weight:600}
+.E .msg p{margin-top:2px}
+.E .nav{margin-top:auto;display:flex;justify-content:space-around;border-top:1px solid var(--line);padding:6px 6px 20px;background:var(--card)}
+.E .nav a{font-size:12px;color:var(--muted);text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:60px;min-height:52px;justify-content:center}
+.E .nav a .pi{width:52px;height:28px;border-radius:999px;display:grid;place-items:center}
+.E .nav a.on{color:var(--p);font-weight:600}
+.E .nav a.on .pi{background:var(--p-sub)}
+.E .spacer{height:16px}
+
+/* Cockpit */
+.E.cockpit{font-size:15px}
+.E .shell{display:flex;align-items:center;gap:24px;padding:0 28px;background:var(--card);border-bottom:1px solid var(--line);min-height:56px}
+.E .brand{font-weight:700;font-size:17px;display:flex;align-items:center;gap:8px;color:var(--p-deep)}
+.E .tabs{display:flex;gap:4px;font-size:14px;align-self:stretch}
+.E .tabs span{display:flex;align-items:center;padding:0 12px;color:var(--muted)}
+.E .tabs span.on{color:var(--p);font-weight:600;box-shadow:inset 0 -3px 0 var(--p)}
+.E .user{margin-left:auto;font-size:13px;color:var(--muted)}
+.E .cbody{padding:24px 28px 28px}
+.E .phead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:16px}
+.E .phead .title{font-size:26px;margin-top:2px}
+.E .btn{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px;border-radius:10px;font-weight:600;font-size:15px;background:var(--p);color:#fff;white-space:nowrap}
+.E .btn.ghost{background:var(--card);color:var(--text);border:1px solid var(--line)}
+.E .acts{display:flex;gap:8px}
+.E .strip{display:flex;gap:12px;margin-bottom:16px}
+.E .sum{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+.E .sum strong{display:block;font-size:22px;font-weight:700;line-height:1.1}
+.E .sum span{font-size:13px;color:var(--muted)}
+.E .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.E .cgrid .card{margin:0;padding:18px 20px}
+.E .big{font-size:36px;font-weight:700;line-height:1}
+.E .big small{font-size:16px;font-weight:400;color:var(--muted)}
+.E .bar{height:10px;background:var(--filter);border-radius:999px;overflow:hidden;margin:12px 0 6px}
+.E .bar i{display:block;height:100%;background:var(--p);border-radius:999px}
+.E .meta{font-size:13px;color:var(--muted)}
+.E .warn{display:flex;gap:12px;align-items:flex-start;padding:10px 0}
+.E .warn+.warn{border-top:1px solid var(--line)}
+.E .warn .wi{width:24px;height:24px;border-radius:50%;background:var(--warn-sub);border:1.5px solid var(--warn);color:var(--warn-ink);font-weight:700;font-size:13px;display:grid;place-items:center;flex:none}
+.E .warn div{flex:1}
+.E .warn b{font-weight:600}
+.E .warn div span{display:block;font-size:13px;color:var(--muted)}
+.E .warn a{font-size:13px;font-weight:600;color:var(--p);text-decoration:underline;text-underline-offset:3px;white-space:nowrap;padding-top:2px}
+.E .brow{display:grid;grid-template-columns:92px 1fr 132px;gap:12px;align-items:center;padding:8px 0;font-size:14px}
+.E .brow+.brow{border-top:1px solid var(--line)}
+.E .brow .bar{margin:0;height:8px}
+.E .st{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.E .st .s{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;flex:none}
+.E .st.ok{color:var(--p)}.E .st.ok .s{background:var(--p)}
+.E .st.mid{color:var(--warn-ink)}.E .st.mid .s{background:var(--warn);color:#000}
+.E .st.bad{color:var(--sos-ink)}.E .st.bad .s{background:var(--sos)}
+.E .steps{list-style:none}
+.E .steps li{display:flex;gap:12px;align-items:center;padding:9px 0}
+.E .steps li+li{border-top:1px solid var(--line)}
+.E .steps .n{width:24px;height:24px;border-radius:50%;background:var(--p-sub);color:var(--p);font-weight:700;font-size:13px;display:grid;place-items:center;flex:none}
+.E .steps li>span:last-child{margin-left:auto;font-size:13px;color:var(--muted);white-space:nowrap}
+
+/* D1 Dunkelmodus – im Produkt per @media (prefers-color-scheme: dark);
+   hier fest gerendert, damit er neben dem hellen Modus sichtbar ist. */
+.E.dark{--canvas:#151A17;--card:#1C221E;--line:#2E3631;--filter:#2A322D;--text:#E8ECE9;--muted:#A9B3AD;
+  --p:#7FC79D;--p-sub:#1F3328;--p-deep:#7FC79D;
+  --acc:#CB957D;--acc-sub:#33261F;--acc-ink:#E9C7B8;
+  --sos:#D9434F;--sos-sub:#3A1E1F;--sos-line:#6A2F33;--sos-ink:#F2A8A0;
+  --shadow:none}
+.E.dark .what span.badge{color:#151A17}
+.E.dark .box.done::after{border-color:#151A17}
+</style>
+</head>
+<body>
+<header class="page-head">
+  <h1>Zeltlotse – Richtung D: ELKW-Stil in Grün</h1>
+  <p>Der ruhige App-Stil der Evangelischen Landeskirche in Württemberg (ELKW): Schrift Sarabun, helle Flächen, weiße Karten mit feinem Rand, 12-px-Ecken, viel Luft und genau eine Hauptfarbe. Statt des Hausvioletts trägt hier Grün die Hauptrolle – in drei Tönen zum Vergleich. Jede Variante zeigt dieselben zwei Bildschirme: die Startseite für Jonas am dritten Lagertag (Telefon) und das Leitungs-Cockpit für Miriam und Tobias (Browser, verkleinert). Rot bleibt für den Notfall reserviert; als Schmuckfarbe dient Apricot statt des ELKW-Dunkelgrüns, das mit der grünen Hauptfarbe verschwimmen würde.</p>
+</header>
+<main class="grid">
+
+<article class="dir D1">
+  <div class="dir-label">Variante D1</div>
+  <h2>Tannengrün</h2>
+  <p class="rationale">Ein tiefes Tannengrün erinnert an Wald und Zeltplatz, wirkt aber so ernst und ruhig wie das ELKW-Violett. Sehr hoher Kontrast (8:1) – gut lesbar auch draußen in der Sonne.</p>
+  <div class="swatches"><span class="sw"><i style="background:#1E5B3F"></i>#1E5B3F</span><span class="sw"><i style="background:#164A33"></i>#164A33</span><span class="sw"><i style="background:#123526"></i>#123526</span><span class="sw"><i style="background:#EAF2ED"></i>#EAF2ED</span><span class="sw"><i style="background:#CB957D"></i>#CB957D</span><span class="sw"><i style="background:#B61231"></i>#B61231</span></div>
+  <div>
+    <div class="cap">Startseite · Jonas · Tag 3</div>
+    <div class="stage"><div class="phone"><div class="screen E D1">
+      <div class="top">
+        <div class="statusbar"><span>14:07</span><span>5G ▮▮▮</span></div>
+        <div class="eyebrow">Mo, 2. August · Tag 3 von 12</div>
+        <div class="title">Zeltlager Kapf 2027</div>
+        <div class="hello">Hallo Jonas · Team</div>
+      </div>
+      <div class="scroll">
+        <div class="sos"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"/></svg></span><span><b>Notfall</b><small>Leitung anrufen, Nummern &amp; Ablauf</small></span><span class="arr">›</span></div>
+        <div class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Person suchen…</div>
+        <div class="hint"><i></i>1 neue Nachricht in „Alle“<span>›</span></div>
+        <div class="card">
+          <h3>Jetzt &amp; als Nächstes <a>Ganzer Tag</a></h3>
+          <div class="row now"><div class="time">14:00</div><div class="what"><b>Geländespiel</b><span class="badge">Jetzt</span><span>Wald hinter der Wiese · bis 17:00</span></div></div>
+          <div class="row"><div class="time">18:00</div><div class="what"><b>Abendessen – Linsen-Dal</b><span>mit Reis · 2 vegan, 1 glutenfrei</span></div></div>
+        </div>
+        <div class="card">
+          <h3>Meine Aufgaben <a>1 offen</a></h3>
+          <div class="task"><div class="box"></div><div><b>Material Geländespiel prüfen</b><span>Fahnen, Leibchen, Funkgeräte · bis 13:45</span></div></div>
+          <div class="task d"><div class="box done"></div><div><b>Spülplan für heute aushängen</b><span>erledigt um 9:12</span></div></div>
+        </div>
+        <div class="card">
+          <h3>Kanal „Team“ <a>Öffnen</a></h3>
+          <div class="msg"><div class="av">M</div><div><div class="who"><b>Miriam</b> · vor 12 Min.</div><p>Funkgeräte liegen geladen im Materialzelt. Bitte Kanal 3 nehmen.</p></div></div>
+        </div>
+        <div class="spacer"></div>
+        <nav class="nav" aria-label="Hauptnavigation"><a class="on" aria-current="page"><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20 L12 4 L21 20 Z"/><path d="M12 4v16"/></svg></span>Start</a><a><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>Programm</a><a><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><path d="M16 5a3 3 0 010 6M18 14c2 .6 3 2.8 3 6"/></svg></span>Personen</a><a><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg></span>Kanäle</a><a><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg></span>Mehr</a></nav>
+      </div>
+    </div></div></div>
+  </div>
+  <div>
+    <div class="cap">Leitungs-Cockpit · Vorbereitung</div>
+    <div class="bwrap"><div class="browser">
+      <div class="bbar"><div class="dots"><i></i><i></i><i></i></div><div class="url">zeltlotse.de/kapf-2027/cockpit</div></div>
+      <div class="E cockpit D1">
+        <div class="shell">
+          <div class="brand"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 20 L12 4 L21 20 Z"/><path d="M12 4v16"/></svg>Zeltlotse</div>
+          <div class="tabs"><span class="on">Überblick</span><span>Anmeldungen</span><span>Team</span><span>Programm</span><span>Finanzen</span></div>
+          <div class="user">Miriam &amp; Tobias</div>
+        </div>
+        <div class="cbody">
+          <div class="phead">
+            <div><div class="eyebrow">Vorbereitung · Abfahrt Sa, 31. Juli 2027</div><div class="title">Zeltlager Kapf 2027</div></div>
+            <div class="acts"><span class="btn ghost">Exportieren</span><span class="btn">Nachricht an alle</span></div>
+          </div>
+          <div class="strip">
+            <div class="sum"><strong>294</strong><span>Tage bis zur Abfahrt</span></div>
+            <div class="sum"><strong>14</strong><span>Mitarbeitende im Team</span></div>
+            <div class="sum"><strong>3</strong><span>Punkte zu klären</span></div>
+          </div>
+          <div class="cgrid">
+            <div class="card">
+              <h3>Anmeldungen <a>Liste öffnen</a></h3>
+              <div class="big">42 <small>von 60 Plätzen</small></div>
+              <div class="bar" role="img" aria-label="42 von 60 Plätzen belegt"><i style="width:70%"></i></div>
+              <div class="meta">18 Plätze frei · Anmeldeschluss 15. März</div>
+            </div>
+            <div class="card">
+              <h3>Zu klären <a>Alle 3</a></h3>
+              <div class="warn"><span class="wi">!</span><div><b>3 Freizeitpässe unvollständig</b><span>Fehlt: Notfallkontakt, Krankenkasse</span></div><a>Ansehen</a></div>
+              <div class="warn"><span class="wi">!</span><div><b>Nachweis von Jonas noch nicht geprüft</b><span>Erweitertes Führungszeugnis</span></div><a>Prüfen</a></div>
+              <div class="warn"><span class="wi">!</span><div><b>Schutzkonzept: 4 Mitarbeitende haben noch nicht gelesen</b></div><a>Erinnern</a></div>
+            </div>
+            <div class="card">
+              <h3>Budget · Soll / Ist</h3>
+              <div class="brow"><span>Verpflegung</span><div class="bar"><i style="width:82%;background:var(--warn)"></i></div><span class="st mid"><span class="s">!</span>82 % · knapp</span></div>
+              <div class="brow"><span>Material</span><div class="bar"><i style="width:45%"></i></div><span class="st ok"><span class="s">✓</span>45 % · im Rahmen</span></div>
+              <div class="brow"><span>Fahrtkosten</span><div class="bar"><i style="width:100%;background:var(--sos)"></i></div><span class="st bad"><span class="s">×</span>104 % · drüber</span></div>
+              <div class="brow"><span>Programm</span><div class="bar"><i style="width:30%"></i></div><span class="st ok"><span class="s">✓</span>30 % · im Rahmen</span></div>
+              <div class="meta" style="margin-top:8px">Gesamt 11.250 € von 18.400 € ausgegeben</div>
+            </div>
+            <div class="card">
+              <h3>Nächste Schritte</h3>
+              <ul class="steps">
+                <li><span class="n">1</span>Elternabend vorbereiten<span>12. März</span></li>
+                <li><span class="n">2</span>Zuschuss Kreisjugendring beantragen<span>31. März</span></li>
+                <li><span class="n">3</span>Küchenplan an Anna geben<span>April</span></li>
+                <li><span class="n">4</span>Zeltaufbau-Team festlegen<span>Mai</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div>
+    <div class="cap">Startseite im Dunkelmodus (folgt der Geräteeinstellung)</div>
+    <div class="darkwrap"><div class="phone"><div class="screen E D1 dark">
+      <div class="top">
+        <div class="statusbar"><span>14:07</span><span>5G ▮▮▮</span></div>
+        <div class="eyebrow">Mo, 2. August · Tag 3 von 12</div>
+        <div class="title">Zeltlager Kapf 2027</div>
+        <div class="hello">Hallo Jonas · Team</div>
+      </div>
+      <div class="scroll">
+        <div class="sos"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"/></svg></span><span><b>Notfall</b><small>Leitung anrufen, Nummern &amp; Ablauf</small></span><span class="arr">›</span></div>
+        <div class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Person suchen…</div>
+        <div class="hint"><i></i>1 neue Nachricht in „Alle“<span>›</span></div>
+        <div class="card">
+          <h3>Jetzt &amp; als Nächstes <a>Ganzer Tag</a></h3>
+          <div class="row now"><div class="time">14:00</div><div class="what"><b>Geländespiel</b><span class="badge">Jetzt</span><span>Wald hinter der Wiese · bis 17:00</span></div></div>
+          <div class="row"><div class="time">18:00</div><div class="what"><b>Abendessen – Linsen-Dal</b><span>mit Reis · 2 vegan, 1 glutenfrei</span></div></div>
+        </div>
+        <div class="card">
+          <h3>Meine Aufgaben <a>1 offen</a></h3>
+          <div class="task"><div class="box"></div><div><b>Material Geländespiel prüfen</b><span>Fahnen, Leibchen, Funkgeräte · bis 13:45</span></div></div>
+          <div class="task d"><div class="box done"></div><div><b>Spülplan für heute aushängen</b><span>erledigt um 9:12</span></div></div>
+        </div>
+        <div class="card">
+          <h3>Kanal „Team“ <a>Öffnen</a></h3>
+          <div class="msg"><div class="av">M</div><div><div class="who"><b>Miriam</b> · vor 12 Min.</div><p>Funkgeräte liegen geladen im Materialzelt. Bitte Kanal 3 nehmen.</p></div></div>
+        </div>
+        <div class="spacer"></div>
+        <nav class="nav" aria-label="Hauptnavigation"><a class="on" aria-current="page"><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20 L12 4 L21 20 Z"/><path d="M12 4v16"/></svg></span>Start</a><a><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>Programm</a><a><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><path d="M16 5a3 3 0 010 6M18 14c2 .6 3 2.8 3 6"/></svg></span>Personen</a><a><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg></span>Kanäle</a><a><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg></span>Mehr</a></nav>
+      </div>
+    </div></div></div>
+  </div>
+</article>
+<article class="dir D2">
+  <div class="dir-label">Variante D2</div>
+  <h2>Frisches Mittelgrün</h2>
+  <p class="rationale">Ein helleres, frischeres Grün wirkt jünger und freundlicher, bleibt aber im ruhigen ELKW-Rahmen. Der Kontrast (5,1:1) reicht für Text und Buttons, hat aber die wenigste Reserve.</p>
+  <div class="swatches"><span class="sw"><i style="background:#2E7D32"></i>#2E7D32</span><span class="sw"><i style="background:#256A2A"></i>#256A2A</span><span class="sw"><i style="background:#1B4D1F"></i>#1B4D1F</span><span class="sw"><i style="background:#EBF5EC"></i>#EBF5EC</span><span class="sw"><i style="background:#CB957D"></i>#CB957D</span><span class="sw"><i style="background:#B61231"></i>#B61231</span></div>
+  <div>
+    <div class="cap">Startseite · Jonas · Tag 3</div>
+    <div class="stage"><div class="phone"><div class="screen E D2">
+      <div class="top">
+        <div class="statusbar"><span>14:07</span><span>5G ▮▮▮</span></div>
+        <div class="eyebrow">Mo, 2. August · Tag 3 von 12</div>
+        <div class="title">Zeltlager Kapf 2027</div>
+        <div class="hello">Hallo Jonas · Team</div>
+      </div>
+      <div class="scroll">
+        <div class="sos"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"/></svg></span><span><b>Notfall</b><small>Leitung anrufen, Nummern &amp; Ablauf</small></span><span class="arr">›</span></div>
+        <div class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Person suchen…</div>
+        <div class="hint"><i></i>1 neue Nachricht in „Alle“<span>›</span></div>
+        <div class="card">
+          <h3>Jetzt &amp; als Nächstes <a>Ganzer Tag</a></h3>
+          <div class="row now"><div class="time">14:00</div><div class="what"><b>Geländespiel</b><span class="badge">Jetzt</span><span>Wald hinter der Wiese · bis 17:00</span></div></div>
+          <div class="row"><div class="time">18:00</div><div class="what"><b>Abendessen – Linsen-Dal</b><span>mit Reis · 2 vegan, 1 glutenfrei</span></div></div>
+        </div>
+        <div class="card">
+          <h3>Meine Aufgaben <a>1 offen</a></h3>
+          <div class="task"><div class="box"></div><div><b>Material Geländespiel prüfen</b><span>Fahnen, Leibchen, Funkgeräte · bis 13:45</span></div></div>
+          <div class="task d"><div class="box done"></div><div><b>Spülplan für heute aushängen</b><span>erledigt um 9:12</span></div></div>
+        </div>
+        <div class="card">
+          <h3>Kanal „Team“ <a>Öffnen</a></h3>
+          <div class="msg"><div class="av">M</div><div><div class="who"><b>Miriam</b> · vor 12 Min.</div><p>Funkgeräte liegen geladen im Materialzelt. Bitte Kanal 3 nehmen.</p></div></div>
+        </div>
+        <div class="spacer"></div>
+        <nav class="nav" aria-label="Hauptnavigation"><a class="on" aria-current="page"><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20 L12 4 L21 20 Z"/><path d="M12 4v16"/></svg></span>Start</a><a><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>Programm</a><a><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><path d="M16 5a3 3 0 010 6M18 14c2 .6 3 2.8 3 6"/></svg></span>Personen</a><a><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg></span>Kanäle</a><a><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg></span>Mehr</a></nav>
+      </div>
+    </div></div></div>
+  </div>
+  <div>
+    <div class="cap">Leitungs-Cockpit · Vorbereitung</div>
+    <div class="bwrap"><div class="browser">
+      <div class="bbar"><div class="dots"><i></i><i></i><i></i></div><div class="url">zeltlotse.de/kapf-2027/cockpit</div></div>
+      <div class="E cockpit D2">
+        <div class="shell">
+          <div class="brand"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 20 L12 4 L21 20 Z"/><path d="M12 4v16"/></svg>Zeltlotse</div>
+          <div class="tabs"><span class="on">Überblick</span><span>Anmeldungen</span><span>Team</span><span>Programm</span><span>Finanzen</span></div>
+          <div class="user">Miriam &amp; Tobias</div>
+        </div>
+        <div class="cbody">
+          <div class="phead">
+            <div><div class="eyebrow">Vorbereitung · Abfahrt Sa, 31. Juli 2027</div><div class="title">Zeltlager Kapf 2027</div></div>
+            <div class="acts"><span class="btn ghost">Exportieren</span><span class="btn">Nachricht an alle</span></div>
+          </div>
+          <div class="strip">
+            <div class="sum"><strong>294</strong><span>Tage bis zur Abfahrt</span></div>
+            <div class="sum"><strong>14</strong><span>Mitarbeitende im Team</span></div>
+            <div class="sum"><strong>3</strong><span>Punkte zu klären</span></div>
+          </div>
+          <div class="cgrid">
+            <div class="card">
+              <h3>Anmeldungen <a>Liste öffnen</a></h3>
+              <div class="big">42 <small>von 60 Plätzen</small></div>
+              <div class="bar" role="img" aria-label="42 von 60 Plätzen belegt"><i style="width:70%"></i></div>
+              <div class="meta">18 Plätze frei · Anmeldeschluss 15. März</div>
+            </div>
+            <div class="card">
+              <h3>Zu klären <a>Alle 3</a></h3>
+              <div class="warn"><span class="wi">!</span><div><b>3 Freizeitpässe unvollständig</b><span>Fehlt: Notfallkontakt, Krankenkasse</span></div><a>Ansehen</a></div>
+              <div class="warn"><span class="wi">!</span><div><b>Nachweis von Jonas noch nicht geprüft</b><span>Erweitertes Führungszeugnis</span></div><a>Prüfen</a></div>
+              <div class="warn"><span class="wi">!</span><div><b>Schutzkonzept: 4 Mitarbeitende haben noch nicht gelesen</b></div><a>Erinnern</a></div>
+            </div>
+            <div class="card">
+              <h3>Budget · Soll / Ist</h3>
+              <div class="brow"><span>Verpflegung</span><div class="bar"><i style="width:82%;background:var(--warn)"></i></div><span class="st mid"><span class="s">!</span>82 % · knapp</span></div>
+              <div class="brow"><span>Material</span><div class="bar"><i style="width:45%"></i></div><span class="st ok"><span class="s">✓</span>45 % · im Rahmen</span></div>
+              <div class="brow"><span>Fahrtkosten</span><div class="bar"><i style="width:100%;background:var(--sos)"></i></div><span class="st bad"><span class="s">×</span>104 % · drüber</span></div>
+              <div class="brow"><span>Programm</span><div class="bar"><i style="width:30%"></i></div><span class="st ok"><span class="s">✓</span>30 % · im Rahmen</span></div>
+              <div class="meta" style="margin-top:8px">Gesamt 11.250 € von 18.400 € ausgegeben</div>
+            </div>
+            <div class="card">
+              <h3>Nächste Schritte</h3>
+              <ul class="steps">
+                <li><span class="n">1</span>Elternabend vorbereiten<span>12. März</span></li>
+                <li><span class="n">2</span>Zuschuss Kreisjugendring beantragen<span>31. März</span></li>
+                <li><span class="n">3</span>Küchenplan an Anna geben<span>April</span></li>
+                <li><span class="n">4</span>Zeltaufbau-Team festlegen<span>Mai</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</article>
+<article class="dir D3">
+  <div class="dir-label">Variante D3</div>
+  <h2>Petrolgrün</h2>
+  <p class="rationale">Ein bläuliches Grün liegt nah an den ELKW-Schmuckfarben Blaugrün und Türkis und wirkt dadurch am meisten „nach Landeskirche“. Es grenzt sich vom Ampel-Grün ab und bleibt mit 6,2:1 gut lesbar.</p>
+  <div class="swatches"><span class="sw"><i style="background:#1D6B73"></i>#1D6B73</span><span class="sw"><i style="background:#16575E"></i>#16575E</span><span class="sw"><i style="background:#10393E"></i>#10393E</span><span class="sw"><i style="background:#E6F1F2"></i>#E6F1F2</span><span class="sw"><i style="background:#CB957D"></i>#CB957D</span><span class="sw"><i style="background:#B61231"></i>#B61231</span></div>
+  <div>
+    <div class="cap">Startseite · Jonas · Tag 3</div>
+    <div class="stage"><div class="phone"><div class="screen E D3">
+      <div class="top">
+        <div class="statusbar"><span>14:07</span><span>5G ▮▮▮</span></div>
+        <div class="eyebrow">Mo, 2. August · Tag 3 von 12</div>
+        <div class="title">Zeltlager Kapf 2027</div>
+        <div class="hello">Hallo Jonas · Team</div>
+      </div>
+      <div class="scroll">
+        <div class="sos"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"/></svg></span><span><b>Notfall</b><small>Leitung anrufen, Nummern &amp; Ablauf</small></span><span class="arr">›</span></div>
+        <div class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Person suchen…</div>
+        <div class="hint"><i></i>1 neue Nachricht in „Alle“<span>›</span></div>
+        <div class="card">
+          <h3>Jetzt &amp; als Nächstes <a>Ganzer Tag</a></h3>
+          <div class="row now"><div class="time">14:00</div><div class="what"><b>Geländespiel</b><span class="badge">Jetzt</span><span>Wald hinter der Wiese · bis 17:00</span></div></div>
+          <div class="row"><div class="time">18:00</div><div class="what"><b>Abendessen – Linsen-Dal</b><span>mit Reis · 2 vegan, 1 glutenfrei</span></div></div>
+        </div>
+        <div class="card">
+          <h3>Meine Aufgaben <a>1 offen</a></h3>
+          <div class="task"><div class="box"></div><div><b>Material Geländespiel prüfen</b><span>Fahnen, Leibchen, Funkgeräte · bis 13:45</span></div></div>
+          <div class="task d"><div class="box done"></div><div><b>Spülplan für heute aushängen</b><span>erledigt um 9:12</span></div></div>
+        </div>
+        <div class="card">
+          <h3>Kanal „Team“ <a>Öffnen</a></h3>
+          <div class="msg"><div class="av">M</div><div><div class="who"><b>Miriam</b> · vor 12 Min.</div><p>Funkgeräte liegen geladen im Materialzelt. Bitte Kanal 3 nehmen.</p></div></div>
+        </div>
+        <div class="spacer"></div>
+        <nav class="nav" aria-label="Hauptnavigation"><a class="on" aria-current="page"><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20 L12 4 L21 20 Z"/><path d="M12 4v16"/></svg></span>Start</a><a><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>Programm</a><a><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><path d="M16 5a3 3 0 010 6M18 14c2 .6 3 2.8 3 6"/></svg></span>Personen</a><a><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg></span>Kanäle</a><a><span class="pi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg></span>Mehr</a></nav>
+      </div>
+    </div></div></div>
+  </div>
+  <div>
+    <div class="cap">Leitungs-Cockpit · Vorbereitung</div>
+    <div class="bwrap"><div class="browser">
+      <div class="bbar"><div class="dots"><i></i><i></i><i></i></div><div class="url">zeltlotse.de/kapf-2027/cockpit</div></div>
+      <div class="E cockpit D3">
+        <div class="shell">
+          <div class="brand"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 20 L12 4 L21 20 Z"/><path d="M12 4v16"/></svg>Zeltlotse</div>
+          <div class="tabs"><span class="on">Überblick</span><span>Anmeldungen</span><span>Team</span><span>Programm</span><span>Finanzen</span></div>
+          <div class="user">Miriam &amp; Tobias</div>
+        </div>
+        <div class="cbody">
+          <div class="phead">
+            <div><div class="eyebrow">Vorbereitung · Abfahrt Sa, 31. Juli 2027</div><div class="title">Zeltlager Kapf 2027</div></div>
+            <div class="acts"><span class="btn ghost">Exportieren</span><span class="btn">Nachricht an alle</span></div>
+          </div>
+          <div class="strip">
+            <div class="sum"><strong>294</strong><span>Tage bis zur Abfahrt</span></div>
+            <div class="sum"><strong>14</strong><span>Mitarbeitende im Team</span></div>
+            <div class="sum"><strong>3</strong><span>Punkte zu klären</span></div>
+          </div>
+          <div class="cgrid">
+            <div class="card">
+              <h3>Anmeldungen <a>Liste öffnen</a></h3>
+              <div class="big">42 <small>von 60 Plätzen</small></div>
+              <div class="bar" role="img" aria-label="42 von 60 Plätzen belegt"><i style="width:70%"></i></div>
+              <div class="meta">18 Plätze frei · Anmeldeschluss 15. März</div>
+            </div>
+            <div class="card">
+              <h3>Zu klären <a>Alle 3</a></h3>
+              <div class="warn"><span class="wi">!</span><div><b>3 Freizeitpässe unvollständig</b><span>Fehlt: Notfallkontakt, Krankenkasse</span></div><a>Ansehen</a></div>
+              <div class="warn"><span class="wi">!</span><div><b>Nachweis von Jonas noch nicht geprüft</b><span>Erweitertes Führungszeugnis</span></div><a>Prüfen</a></div>
+              <div class="warn"><span class="wi">!</span><div><b>Schutzkonzept: 4 Mitarbeitende haben noch nicht gelesen</b></div><a>Erinnern</a></div>
+            </div>
+            <div class="card">
+              <h3>Budget · Soll / Ist</h3>
+              <div class="brow"><span>Verpflegung</span><div class="bar"><i style="width:82%;background:var(--warn)"></i></div><span class="st mid"><span class="s">!</span>82 % · knapp</span></div>
+              <div class="brow"><span>Material</span><div class="bar"><i style="width:45%"></i></div><span class="st ok"><span class="s">✓</span>45 % · im Rahmen</span></div>
+              <div class="brow"><span>Fahrtkosten</span><div class="bar"><i style="width:100%;background:var(--sos)"></i></div><span class="st bad"><span class="s">×</span>104 % · drüber</span></div>
+              <div class="brow"><span>Programm</span><div class="bar"><i style="width:30%"></i></div><span class="st ok"><span class="s">✓</span>30 % · im Rahmen</span></div>
+              <div class="meta" style="margin-top:8px">Gesamt 11.250 € von 18.400 € ausgegeben</div>
+            </div>
+            <div class="card">
+              <h3>Nächste Schritte</h3>
+              <ul class="steps">
+                <li><span class="n">1</span>Elternabend vorbereiten<span>12. März</span></li>
+                <li><span class="n">2</span>Zuschuss Kreisjugendring beantragen<span>31. März</span></li>
+                <li><span class="n">3</span>Küchenplan an Anna geben<span>April</span></li>
+                <li><span class="n">4</span>Zeltaufbau-Team festlegen<span>Mai</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</article>
+</main>
+</body>
+</html>

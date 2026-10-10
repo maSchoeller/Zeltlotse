@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="de" class="elkw" data-farbwelt="09" data-stil="nahbar" data-dichte="arbeiten">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zeltlotse – Key Screen: Gast-Anmeldung (NS-1)</title>
+<link rel="stylesheet" href="elkw-fonts.css">
+<link rel="stylesheet" href="elkw-tokens.css">
+<link rel="stylesheet" href="elkw-components.css">
+<link rel="stylesheet" href="elkw-app.css">
+<link rel="stylesheet" href="elkw-nahbar.css">
+<style>
+/* =====================================================================
+   Key Screen „Gast-Anmeldung“ – NS-1, öffentliche Einspalten-Seiten am Handy
+   Maßgeblich (Spine):
+   - EXPERIENCE.md → IA „Öffentliche Seiten“; Flächen: Freizeitseite, Anmeldung Teilnehmende
+   - EXPERIENCE.md → Key Flows NS-1 (Schritte 1–5, Fehlerpfad „ausgebucht“)
+   - EXPERIENCE.md → Component Patterns: Formular (1–2 Pflichtfelder je Objekt, „*“ mit Legende),
+     Schritte („Weiter“ mit Pfeil, „Zurück“ Outline, „Anmeldung absenden“ ohne Pfeil), Meldung, Status
+   - EXPERIENCE.md → State Patterns: Ausgebucht; Anmeldung eingegangen / bestätigt / abgesagt
+   - EXPERIENCE.md → Voice and Tone (Beispielsätze „Anmeldung eingegangen …“, „Ausgebucht …“)
+   - DESIGN.md → Layout & Spacing „Öffentliche Seiten“; Components: Button, Eingabefeld, Meldung, Status
+   Platzhalter (nicht im PRD): Name der Organisation, Nachname, Mail-Adresse, Herkunft des Teams,
+   Beschreibungstext, Datum Ende der Freizeit.
+   ===================================================================== */
+.zl-page { max-width: 1440px; margin: 0 auto; padding: var(--elkw-space-m); }
+.zl-page > h1 { margin: 0 0 var(--elkw-space-xs); }
+.zl-intro { margin: 0 0 var(--elkw-space-m); max-width: 60rem; }
+.zl-screens { display: flex; flex-wrap: wrap; gap: var(--elkw-space-l); align-items: flex-start; }
+.zl-screen { flex: none; width: 375px; max-width: 100%; min-width: 0; }
+.zl-screen > .elkw-kicker { margin-bottom: 0.5rem; }
+.zl-frame { border: 1px solid var(--elkw-border); border-radius: var(--elkw-radius); overflow: hidden; background: var(--elkw-white); }
+.zl-phone { display: flex; flex-direction: column; }
+.zl-phone .elkw-appbar { padding: var(--elkw-header-pad) var(--elkw-space-m); min-height: 53px; }
+.zl-phone__content { flex: 1; padding: var(--elkw-space-m); }
+.zl-phone__content > * + * { margin-top: var(--elkw-space-m); }
+.zl-phone__content h1 { margin: 0; }
+.zl-h1 { font-size: var(--elkw-fs-h1); line-height: var(--elkw-lh-h1); font-weight: 300; letter-spacing: -0.01em; }
+.zl-h1 strong { font-weight: 600; }
+.zl-head > * { margin: 0; }
+.zl-head > * + * { margin-top: 0.25rem; }
+
+/* Kopf der öffentlichen Seite: Name der Organisation oben, keine App-Navigation */
+.zl-org { font-weight: 600; line-height: 36px; white-space: nowrap; }
+
+.elkw-surface > h2:first-child { margin-bottom: 0.75rem; }
+.elkw-surface > p:last-child { margin-bottom: 0; }
+.zl-more { margin-top: 0.5rem; }
+.zl-block { margin-bottom: 0; }
+.zl-legend { margin: 0; }
+.elkw-steps { margin-bottom: 0; }
+.elkw-steps li { flex-basis: 8rem; }
+.elkw-fieldset { margin-bottom: 0; }
+.elkw-fieldset .elkw-field + .elkw-field { margin-top: 0.75rem; }
+.elkw-formactions { margin-top: 0; }
+.zl-doclist { margin: 0; padding-left: 1.2rem; }
+.zl-status-line { margin: 0.5rem 0 0; }
+
+/* Korrigierte Werte für WCAG 2.2 AA (DESIGN.md → Colors → Korrigierte Werte):
+   Feldrahmen in action; blaugrüne Schrift (Dachzeile) nur auf Weiß, auf dem Grundton schwarz */
+.elkw input:not([type=checkbox]):not([type=radio]), .elkw select, .elkw textarea { border-color: var(--elkw-action); }
+.elkw-ground .zl-head .elkw-kicker { color: var(--elkw-text); }
+
+.zl-caption { margin-top: var(--elkw-space-l); padding: var(--elkw-space-m); border: 1px solid var(--elkw-border); border-radius: var(--elkw-radius); max-width: 1200px; }
+.zl-caption ul { margin: 0; padding-left: 1.2rem; }
+@media (max-width: 420px) { .zl-page { padding: var(--elkw-space-m) 1rem; } }
+</style>
+</head>
+<body>
+<a class="elkw-skiplink" href="#inhalt">Zum Inhalt springen</a>
+<div class="zl-page">
+  <h1>Zeltlotse – Gast-Anmeldung (NS-1)</h1>
+  <p class="zl-intro">Sabine öffnet den Anmeldelink für Teilnehmende aus dem WhatsApp-Status der Gemeinde und meldet Paul als Gast an, ohne Konto und ohne Installation. Öffentliche Einspalten-Seiten ohne App-Navigation, oben der Name der Organisation.</p>
+
+  <div class="zl-screens" id="inhalt" role="main">
+
+    <!-- ============ 1: Freizeitseite ============ -->
+    <section class="zl-screen" aria-labelledby="s1-label">
+      <p class="elkw-kicker" id="s1-label">1 · Freizeitseite (öffentlich)</p>
+      <div class="zl-frame zl-phone">
+        <header class="elkw-appbar"><span class="zl-org">CVJM Musterstadt</span></header>
+        <div class="zl-phone__content elkw-ground">
+          <div class="zl-head">
+            <p class="elkw-kicker">Freizeit · 1. bis 8.&nbsp;August 2027</p>
+            <h2 class="zl-h1">Zeltlager <strong>Kapf 2027</strong></h2>
+            <p>Eine Woche Zeltlager auf dem Kapf: Geländespiel, Lagerfeuer und gemeinsames Essen im Essenszelt.</p>
+          </div>
+          <a class="elkw-btn elkw-btn--block zl-block" href="#">Anmelden</a>
+          <section class="elkw-surface" aria-labelledby="s1-team">
+            <h2 id="s1-team">Das Team</h2>
+            <ul class="elkw-people">
+              <li><span class="elkw-avatar" aria-hidden="true">MK</span><div class="elkw-people__who"><strong>Miriam</strong><span>Leitung · aus Musterstadt</span></div></li>
+              <li><span class="elkw-avatar" aria-hidden="true">TS</span><div class="elkw-people__who"><strong>Tobias</strong><span>Leitung · aus Musterstadt</span></div></li>
+              <li><span class="elkw-avatar" aria-hidden="true">JB</span><div class="elkw-people__who"><strong>Jonas</strong><span>Mitarbeiter · aus Musterstadt</span></div></li>
+              <li><span class="elkw-avatar" aria-hidden="true">UH</span><div class="elkw-people__who"><strong>Uwe</strong><span>Küche · aus Musterstadt</span></div></li>
+            </ul>
+          </section>
+          <section class="elkw-surface" aria-labelledby="s1-dok">
+            <h2 id="s1-dok">Dokumente</h2>
+            <ul class="zl-doclist">
+              <li><a class="elkw-link" href="#">Infobrief (PDF)</a></li>
+              <li><a class="elkw-link" href="#">Teilnahmebedingungen (PDF)</a></li>
+            </ul>
+          </section>
+          <section class="elkw-surface" aria-labelledby="s1-vt">
+            <h2 id="s1-vt">Daten bei der Anmeldung</h2>
+            <p>Welche Angaben erhoben werden, wer sie sieht und wann sie gelöscht werden: <a class="elkw-link" href="#">Vertrauensseite</a></p>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 2: Anmeldung, Schritt 1 ============ -->
+    <section class="zl-screen" aria-labelledby="s2-label">
+      <p class="elkw-kicker" id="s2-label">2 · Anmeldung, Schritt 1 von 2 · Angaben</p>
+      <div class="zl-frame zl-phone">
+        <header class="elkw-appbar"><span class="zl-org">CVJM Musterstadt</span></header>
+        <form class="zl-phone__content elkw-ground" onsubmit="return false" aria-labelledby="s2-h">
+          <div class="zl-head">
+            <p class="elkw-kicker">Zeltlager Kapf 2027</p>
+            <h2 id="s2-h" class="zl-h1">Anmeldung</h2>
+            <p>Ohne Konto möglich. Gefragt wird nur das Nötigste.</p>
+          </div>
+          <ol class="elkw-steps" aria-label="Schritte der Anmeldung">
+            <li aria-current="step">Angaben</li>
+            <li>Absenden</li>
+          </ol>
+          <div class="elkw-surface">
+            <fieldset class="elkw-fieldset">
+              <legend>Kind</legend>
+              <div class="elkw-field"><label for="s2-name" class="elkw-required">Vor- und Nachname</label><input id="s2-name" type="text" value="Paul Weber" autocomplete="off"></div>
+              <div class="elkw-field"><label for="s2-geb" class="elkw-required">Geburtsdatum</label><input id="s2-geb" type="text" value="14.05.2015" aria-describedby="s2-geb-h" inputmode="numeric"><span class="elkw-hint" id="s2-geb-h">TT.MM.JJJJ</span></div>
+            </fieldset>
+          </div>
+          <div class="elkw-surface">
+            <fieldset class="elkw-fieldset">
+              <legend>Elternteil</legend>
+              <div class="elkw-field"><label for="s2-eltern" class="elkw-required">Vor- und Nachname</label><input id="s2-eltern" type="text" value="Sabine Weber" autocomplete="off"></div>
+              <div class="elkw-field"><label for="s2-mail" class="elkw-required">E-Mail</label><input id="s2-mail" type="email" value="sabine.weber@example.org" aria-describedby="s2-mail-h" autocomplete="off"><span class="elkw-hint" id="s2-mail-h">Dorthin gehen Bestätigung oder Absage.</span></div>
+              <div class="elkw-field"><label for="s2-tel">Telefon (freiwillig)</label><input id="s2-tel" type="tel" autocomplete="off"></div>
+            </fieldset>
+          </div>
+          <p class="small zl-legend">* Pflichtfeld</p>
+          <div class="elkw-formactions"><button class="elkw-btn" type="submit">Weiter</button></div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============ 3: Anmeldung, Schritt 2 ============ -->
+    <section class="zl-screen" aria-labelledby="s3-label">
+      <p class="elkw-kicker" id="s3-label">3 · Anmeldung, Schritt 2 von 2 · Absenden</p>
+      <div class="zl-frame zl-phone">
+        <header class="elkw-appbar"><span class="zl-org">CVJM Musterstadt</span></header>
+        <form class="zl-phone__content elkw-ground" onsubmit="return false" aria-labelledby="s3-h">
+          <div class="zl-head">
+            <p class="elkw-kicker">Zeltlager Kapf 2027</p>
+            <h2 id="s3-h" class="zl-h1">Anmeldung</h2>
+          </div>
+          <ol class="elkw-steps" aria-label="Schritte der Anmeldung">
+            <li class="done">Angaben</li>
+            <li aria-current="step">Absenden</li>
+          </ol>
+          <section class="elkw-surface" aria-labelledby="s3-pr">
+            <h2 id="s3-pr">Angaben prüfen</h2>
+            <dl class="elkw-details">
+              <dt>Kind</dt><dd>Paul Weber, geboren 14.05.2015</dd>
+              <dt>Elternteil</dt><dd>Sabine Weber</dd>
+              <dt>E-Mail</dt><dd>sabine.weber@example.org</dd>
+            </dl>
+          </section>
+          <div class="elkw-surface">
+            <label class="elkw-choice"><input type="checkbox" checked> <span class="elkw-required">Teilnahmebedingungen gelesen und bestätigt</span></label>
+            <p class="small" style="margin:0.5rem 0 0"><a class="elkw-link" href="#">Teilnahmebedingungen</a> · <a class="elkw-link" href="#">Vertrauensseite</a></p>
+          </div>
+          <p class="small zl-legend">* Pflichtfeld</p>
+          <div class="elkw-formactions">
+            <button class="elkw-btn elkw-btn--outline elkw-btn--noarrow" type="button">Zurück</button>
+            <button class="elkw-btn elkw-btn--noarrow" type="submit">Anmeldung absenden</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============ 4: Anmeldung eingegangen ============ -->
+    <section class="zl-screen" aria-labelledby="s4-label">
+      <p class="elkw-kicker" id="s4-label">4 · Nach dem Absenden · Status „Eingegangen“</p>
+      <div class="zl-frame zl-phone">
+        <header class="elkw-appbar"><span class="zl-org">CVJM Musterstadt</span></header>
+        <div class="zl-phone__content elkw-ground">
+          <div class="zl-head">
+            <p class="elkw-kicker">Zeltlager Kapf 2027</p>
+            <h2 tabindex="-1" class="zl-h1">Anmeldung für <strong>Paul</strong></h2>
+          </div>
+          <div class="elkw-alert elkw-alert--hinweis zl-block" role="status">
+            <span class="elkw-alert__title">Anmeldung eingegangen:</span>
+            <p>Die Leitung meldet sich in Kürze.</p>
+            <p class="zl-status-line"><span class="elkw-status elkw-status--offen">Eingegangen</span></p>
+            <p class="small zl-status-line">Bestätigung oder Absage kommt per Mail an sabine.weber@example.org.</p>
+          </div>
+          <section class="elkw-surface" aria-labelledby="s4-konto">
+            <h2 id="s4-konto">Konto aus diesen Daten erstellen?</h2>
+            <p>Mit Konto sind die Angaben beim nächsten Mal schon ausgefüllt und der Status ist jederzeit sichtbar. Anmelden geht per Login-Link aus einer Mail, ein Passwort ist freiwillig.</p>
+            <button class="elkw-btn elkw-btn--noarrow zl-more" type="button">Konto erstellen</button>
+          </section>
+          <section class="elkw-surface" aria-labelledby="s4-pass">
+            <h2 id="s4-pass">Freizeitpass für Paul</h2>
+            <p>Der Freizeitpass enthält die Angaben, die das Team auf der Freizeit über Paul braucht, zum Beispiel Notfallkontakte. <span class="elkw-status elkw-status--warnung">Freizeitpass fehlt noch</span></p>
+            <a class="elkw-btn zl-more" href="#">Freizeitpass für Paul ausfüllen</a>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 5: Freizeitseite ausgebucht ============ -->
+    <section class="zl-screen" aria-labelledby="s5-label">
+      <p class="elkw-kicker" id="s5-label">5 · Zustand · Freizeitseite „Ausgebucht“</p>
+      <div class="zl-frame zl-phone">
+        <header class="elkw-appbar"><span class="zl-org">CVJM Musterstadt</span></header>
+        <div class="zl-phone__content elkw-ground">
+          <div class="zl-head">
+            <p class="elkw-kicker">Freizeit · 1. bis 8.&nbsp;August 2027</p>
+            <h2 class="zl-h1">Zeltlager <strong>Kapf 2027</strong></h2>
+            <p>Eine Woche Zeltlager auf dem Kapf: Geländespiel, Lagerfeuer und gemeinsames Essen im Essenszelt.</p>
+          </div>
+          <div class="elkw-surface">
+            <p style="margin:0"><span class="elkw-status elkw-status--offen"><strong>Ausgebucht</strong></span></p>
+            <p style="margin:0.25rem 0 0">Anmelden ist trotzdem möglich, eine Zusage gibt es erst, wenn ein Platz frei wird.</p>
+            <a class="elkw-btn elkw-btn--block zl-more" href="#">Anmelden</a>
+          </div>
+          <section class="elkw-surface" aria-labelledby="s5-team">
+            <h2 id="s5-team">Das Team</h2>
+            <ul class="elkw-people">
+              <li><span class="elkw-avatar" aria-hidden="true">MK</span><div class="elkw-people__who"><strong>Miriam</strong><span>Leitung · aus Musterstadt</span></div></li>
+              <li><span class="elkw-avatar" aria-hidden="true">TS</span><div class="elkw-people__who"><strong>Tobias</strong><span>Leitung · aus Musterstadt</span></div></li>
+            </ul>
+            <a class="elkw-btn elkw-btn--text zl-more" href="#">Ganzes Team</a>
+          </section>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <aside class="zl-caption" aria-label="Einordnung">
+    <ul class="small">
+      <li>Pflichtfelder: Kind 2 (Name, Geburtsdatum), Elternteil 2 (Name, E-Mail), dazu die Bestätigung der Teilnahmebedingungen (PRD NFR-12, FR-19).</li>
+      <li>„Ausgebucht“ steht neutral grau (Status „offen“): ein Hinweis, kein Problem (EXPERIENCE.md → State Patterns „Ausgebucht“).</li>
+      <li>Platzhalter: Name der Organisation, Nachname „Weber“, Mail-Adresse, Herkunft des Teams, Beschreibung, Enddatum.</li>
+    </ul>
+  </aside>
+</div>
+</body>
+</html>

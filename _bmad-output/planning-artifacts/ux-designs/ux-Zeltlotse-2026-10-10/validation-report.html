@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UX-Prüfbericht Zeltlotse</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --muted: #78716c;
+
+    --verdict-strong: #16a34a;
+    --verdict-adequate: #65a30d;
+    --verdict-thin: #d97706;
+    --verdict-broken: #dc2626;
+
+    --sev-low: #64748b;
+    --sev-medium: #ca8a04;
+    --sev-high: #ea580c;
+    --sev-critical: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px 64px; }
+
+  header.report-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .title h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .title .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+
+  .synthesis {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--muted);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .synthesis p { margin: 0 0 10px; }
+  .synthesis p:last-child { margin-bottom: 0; }
+
+  .dimension-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .dim-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .dim-card .dim-name { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .dim-card .dim-verdict { font-size: 14px; font-weight: 600; }
+
+  section.dimension, section.reviewer-section { margin-bottom: 14px; }
+  section.dimension details, section.reviewer-section details {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  section summary {
+    padding: 14px 20px;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  section summary::-webkit-details-marker { display: none; }
+  section summary::before {
+    content: "▸";
+    display: inline-block;
+    color: var(--muted);
+    transition: transform 0.15s ease;
+  }
+  section details[open] summary::before { transform: rotate(90deg); }
+  section summary h2 {
+    display: inline;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    flex: 1;
+  }
+  .verdict-pill {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: white;
+  }
+  .verdict-strong { background: var(--verdict-strong); }
+  .verdict-adequate { background: var(--verdict-adequate); }
+  .verdict-thin { background: var(--verdict-thin); }
+  .verdict-broken { background: var(--verdict-broken); }
+
+  .dim-body { padding: 4px 20px 18px; }
+  .dim-judgment { color: var(--text); font-size: 14.5px; }
+  .dim-judgment p { margin: 0 0 10px; }
+
+  .findings-list { padding: 0 20px 4px; }
+  article.finding {
+    padding: 14px 0;
+    border-top: 1px solid var(--border);
+  }
+  article.finding:first-child { border-top: none; }
+  article.finding header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .badge {
+    font-size: 10.5px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+  }
+  .badge-sev-low { background: rgba(100, 116, 139, 0.12); color: var(--sev-low); }
+  .badge-sev-medium { background: rgba(202, 138, 4, 0.14); color: var(--sev-medium); }
+  .badge-sev-high { background: rgba(234, 88, 12, 0.14); color: var(--sev-high); }
+  .badge-sev-critical { background: rgba(220, 38, 38, 0.14); color: var(--sev-critical); }
+  .finding-title { margin: 0; font-size: 15px; font-weight: 500; flex: 1; min-width: 200px; }
+  .finding-location { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; color: var(--muted); }
+  .finding-note, .finding-fix { margin-top: 6px; font-size: 14px; }
+  .finding-fix strong { color: var(--muted); font-weight: 500; }
+
+  .reviewer-source {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  .mechanical {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-top: 24px;
+    font-size: 14px;
+  }
+  .mechanical h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .mechanical ul { margin: 0; padding-left: 20px; }
+  .mechanical li { margin-bottom: 4px; color: var(--text); }
+
+  footer.report-footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  footer .meta { display: flex; gap: 24px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+  <div class="container">
+
+    <header class="report-header">
+      <div class="title">
+        <h1>Zeltlotse – UX-Design-Prüfbericht</h1>
+        <div class="subtitle">_bmad-output/planning-artifacts/ux-designs/ux-Zeltlotse-2026-10-10/ (DESIGN.md + EXPERIENCE.md)</div>
+      </div>
+    </header>
+
+    <div class="synthesis">
+      <p>Das Spine-Paar ist sauber gebaut: Abschnittsreihenfolge stimmt, alle 13 Nutzungsszenarien tragen die PRD-Namen wörtlich, alle FR (außer dem gestrichenen FR-42) sind einer Fläche zugeordnet, und jede <code>{token}</code>-Referenz in beiden Dateien löst auf. Zwei Stellen wären in der Umsetzung direkt falsch gebaut worden: Die phasenabhängige Startseite „gelaufen“ widersprach FR-45 (der Abschluss-Bildschirm wäre nie erreichbar gewesen), und im Dunkelmodus fehlten dunkle Gegenstücke für die Akzent-Stufen, sodass z.&nbsp;B. der Avatar unlesbar geworden wäre. Daneben gab es Lücken bei der Offline-Menge, beim Weg zur Schnellsuche im Notfall, bei der Konto-Navigation und bei mehreren eigenen Bausteinen (Wochenraster, Kanal-Nachrichten), die in der ELKW-Bibliothek nicht vorkommen. <strong>Befunde:</strong> kritisch 2 · hoch 6 · mittel 12 · niedrig 9 (die Kopfzeile von <code>review-rubric.md</code> nennt mittel 11 · niedrig 8; gezählt sind hier die tatsächlich aufgeführten Befunde).</p>
+      <p><strong>Stand nach dem Review:</strong> Alle 2 kritischen und 6 hohen Befunde sind in den Spines behoben – auf Grundlage der Entscheidungen im Memlog (<code>.memlog.md</code>, Einträge rund um das Ereignis „Rubric-Review“). Kurz: eigene Phase <em>Nachbereitung</em> ab dem Tag nach dem Enddatum, erst „Freizeit abschließen“ setzt „gelaufen“; vollständige <code>*-dark</code>-Akzentstufen (Avatar 9,75:1) plus aufgehelltes Statusrot und sichtbare Kartenkanten im Dunkeln; Suchfeld „Betroffene Person suchen“ direkt auf der Sicherheitskette; Wiederanmeldung als Variante von NS-1 über den Anmeldelink mit Login; Wochenraster und Kanal-Nachrichten in beiden Component-Tabellen; abschließende, verschlüsselte Offline-Liste; Sicherheitskette in den Einstellungen der Freizeit mit Warnhinweis und Rückfall (Leitung + Notruf 112); eigene Seite „Konto“ und Eltern-Navigation über die Familienübersicht. Die Stichprobe zeigt, dass auch viele mittlere und niedrige Befunde bereits eingearbeitet sind (u.&nbsp;a. <code>spacing.touch-large</code>, Brainstorming in <code>sources</code>, alle [ASSUMPTION]-Marken entfernt, Key-Screens in <code>mockups/</code>, Status <code>final</code>); deren Einzelstand ist unten nicht je Befund nachgeprüft. Offen bleibt laut Memlog nur die Prüfung des Dunkelmodus auf einem echten Handy (kein Blocker).</p>
+    </div>
+
+    <div class="dimension-summary">
+      <div class="dim-card"><div class="dim-name">Flow-Abdeckung</div><div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div></div>
+      <div class="dim-card"><div class="dim-name">Token-Vollständigkeit</div><div class="dim-verdict" style="color: var(--verdict-thin)">thin</div></div>
+      <div class="dim-card"><div class="dim-name">Komponenten-Abdeckung</div><div class="dim-verdict" style="color: var(--verdict-thin)">thin</div></div>
+      <div class="dim-card"><div class="dim-name">Zustands-Abdeckung</div><div class="dim-verdict" style="color: var(--verdict-thin)">thin</div></div>
+      <div class="dim-card"><div class="dim-name">Abdeckung visueller Referenzen</div><div class="dim-verdict" style="color: var(--verdict-thin)">thin</div></div>
+      <div class="dim-card"><div class="dim-name">Ballast und Überspezifikation</div><div class="dim-verdict" style="color: var(--verdict-strong)">strong</div></div>
+      <div class="dim-card"><div class="dim-name">Vererbungsdisziplin</div><div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div></div>
+      <div class="dim-card"><div class="dim-name">Formpassung</div><div class="dim-verdict" style="color: var(--verdict-strong)">strong</div></div>
+    </div>
+
+    <!-- 1 -->
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>Flow-Abdeckung</h2>
+          <span class="verdict-pill verdict-adequate">adequate</span>
+        </summary>
+        <div class="dim-body"><div class="dim-judgment">
+          <p>Alle NS-1 bis NS-13 aus dem PRD stehen in EXPERIENCE.md → Key Flows, Namen wörtlich. Die ausführlichen Flows (NS-1, NS-3 bis NS-10) sind vollständig mit Hauptperson, Schritten, Höhepunkt und Fehlerpfad; NS-2, NS-11, NS-12 und NS-13 sind laut Memlog bewusst kurz.</p>
+        </div></div>
+        <div class="findings-list">
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-high">hoch</span>
+              <h3 class="finding-title">Kein Weg zur Schnellsuche am Höhepunkt des Notfalls (Handy)</h3>
+              <span class="finding-location">EXPERIENCE.md → Key Flows NS-6; Component Patterns „App-Leiste“, „Schnellsuche“</span>
+            </header>
+            <div class="finding-note">Jonas soll in NS-6 Schritt 3 „in die Schnellsuche“ tippen, steht aber auf der Sicherheitskette. Die Schnellsuche gab es nur auf Startseite, Personen und in der App-Leiste – dort nur am Laptop. DESIGN.md nannte „Suche“ in der App-Leiste ohne Geräte-Einschränkung.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Schnellsuche fest oben auf der Seite „Sicherheitskette“; App-Leiste in beiden Dateien einheitlich festlegen (Suche am Handy ja/nein).</div>
+            <div class="finding-note"><strong>Stand: behoben.</strong> Memlog-Entscheidung „Suchfeld ‚Betroffene Person suchen‘ direkt auf der Seite Sicherheitskette (keine Lupe in der Kopfleiste)“. Beide Spines nennen das Suchfeld ganz oben auf der Sicherheitskette; die App-Leiste hat am Handy ausdrücklich keine Suche.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-high">hoch</span>
+              <h3 class="finding-title">Wiederanmeldung im nächsten Jahr ohne Flow und Einstieg</h3>
+              <span class="finding-location">EXPERIENCE.md → Flächen „Familienübersicht“, Key Flows NS-1</span>
+            </header>
+            <div class="finding-note">Das NS-1-Erfolgskriterium („unter 3 Minuten, weil alles vorausgefüllt ist“) und NFR-17 hatten keinen Flow; offen war, ob eine angemeldete Mutter über den Anmeldelink eingeloggt und vorausgefüllt landet.</div>
+            <div class="finding-fix"><strong>Fix:</strong> NS-1 um den Abzweig „schon mit Konto“ ergänzen (Anmeldelink erkennt Login, Formular aus Familienkonto und Freizeitpass vorausgefüllt, Kind per Auswahl).</div>
+            <div class="finding-note"><strong>Stand: behoben.</strong> Memlog: „Familienübersicht ohne eigenen Anmelden-Knopf; Anmeldung nur über Anmeldelink der Freizeit“. NS-1 hat jetzt die Variante „Wiederanmeldung im nächsten Jahr (NFR-17)“: Login-Link, Kind aus dem Familienkonto wählen, nur Teilnahmebedingungen bestätigen.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">mittel</span>
+              <h3 class="finding-title">Vorfall-Notiz „erscheint bei der Leitung“ ohne Fläche und ohne passende Regel</h3>
+              <span class="finding-location">EXPERIENCE.md → Key Flows NS-6 Schritt 7; IA Phasen-Tabelle</span>
+            </header>
+            <div class="finding-note">Die Startseite „läuft“ listet keine Vorfall-Notizen, es gibt keine Fläche dafür, und Meldungen verschwinden beim Seitenwechsel.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Startseite „läuft“ für die Leitung um „Neue Vorfall-Notizen“ ergänzen; Fläche mit FR-31 aufnehmen; Zustand „neu / gesehen“.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">mittel</span>
+              <h3 class="finding-title">Herkunft der vorausgefüllten Elterndaten ohne Konto unklar</h3>
+              <span class="finding-location">EXPERIENCE.md → Key Flows NS-1 Schritt 6</span>
+            </header>
+            <div class="finding-note">Ohne Konto ist unklar, woher die Daten kommen; dauerhafte Speicherung im Gerät wäre auf geteilten Geräten heikel (Daten Minderjähriger).</div>
+            <div class="finding-fix"><strong>Fix:</strong> Vorausfüllung nur bei Login oder in derselben Sitzung („Weiteres Kind anmelden“ auf der Bestätigungsseite), nichts dauerhaft im Gerät.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-low">niedrig</span>
+              <h3 class="finding-title">NS-12 ohne Fehlerpfad bei offenen Aufgaben oder Belegen</h3>
+              <span class="finding-location">EXPERIENCE.md → Key Flows NS-2, NS-11, NS-12, NS-13</span>
+            </header>
+            <div class="finding-note">Kurz-Flows haben bewusst keine nummerierten Schritte; NS-12 fehlt aber, was bei „Freizeit abschließen“ mit offenen Punkten passiert.</div>
+            <div class="finding-fix"><strong>Fix:</strong> einen Satz ergänzen (Inline-Bestätigung nennt offene Punkte, Abschluss trotzdem möglich).</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-low">niedrig</span>
+              <h3 class="finding-title">NS-1 lässt PRD-Schritt 8 (Vater ins Familienkonto, FR-3) aus</h3>
+              <span class="finding-location">EXPERIENCE.md → Key Flows NS-1</span>
+            </header>
+            <div class="finding-note">In der Flächen-Tabelle vorhanden, im Flow nicht.</div>
+            <div class="finding-fix"><strong>Fix:</strong> als optionalen Schritt nach Schritt 7 ergänzen.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-low">niedrig</span>
+              <h3 class="finding-title">NS-9: Seite verlassen ohne Antwort auf „Alle informieren?“</h3>
+              <span class="finding-location">EXPERIENCE.md → Key Flows NS-9</span>
+            </header>
+            <div class="finding-note">Unklar, was passiert, wenn Jonas weder „Ja“ noch „Nein“ tippt.</div>
+            <div class="finding-fix"><strong>Fix:</strong> „Seite verlassen = Nein“; Hinweis „Änderung nicht mitgeteilt – Alle informieren“ am Programmpunkt.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <!-- 2 -->
+    <section class="dimension">
+      <details open>
+        <summary>
+          <h2>Token-Vollständigkeit</h2>
+          <span class="verdict-pill verdict-thin">thin</span>
+        </summary>
+        <div class="dim-body"><div class="dim-judgment">
+          <p>Alle Frontmatter-Token und alle <code>{pfad.zum.token}</code>-Verweise lösen auf; die Hell-Werte sind vollständig mit Hex-Wert, eine Kontrasttabelle für die wichtigen Paare ist vorhanden. Schwach war der Dunkelmodus.</p>
+        </div></div>
+        <div class="findings-list">
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-critical">kritisch</span>
+              <h3 class="finding-title">Dunkelmodus unvollständig – Avatar im Dunkeln unlesbar</h3>
+              <span class="finding-location">DESIGN.md → Frontmatter colors; Components „Avatar“; Colors → Dunkelmodus</span>
+            </header>
+            <div class="finding-note">Für <code>akzent-80/60/40/20/10</code>, <code>contrast</code>/<code>on-contrast</code>, <code>neutral-40/60</code> und <code>line-on-light</code> fehlte ein <code>*-dark</code>-Gegenstück. <code>components.avatar.background = {colors.akzent-20}</code> (#D6E6EA) mit <code>text-dark</code> #EAF2F4 darauf wäre praktisch unlesbar; die Do's-and-Don'ts-Regel verbot der Entwicklung zugleich eigene Dunkel-Farben.</div>
+            <div class="finding-fix"><strong>Fix:</strong> für jedes genutzte helle Token ein <code>*-dark</code> festlegen (mind. <code>akzent-20-dark</code>) oder je Token „bleibt gleich“ vermerken; Avatar-Kontrast dunkel ergänzen.</div>
+            <div class="finding-note"><strong>Stand: behoben.</strong> Memlog-Entscheidung „Dunkelmodus-Fix“ (nach der Prüfung der gerenderten Key-Screens, die zusätzlich Statusrot 2,30:1, roten Balken 1,88:1, Karte/Grund 1,14:1 und Rand 2,65:1 zeigte): aufgehelltes Notfall-/Statusrot ≥ 4,5:1, Karten eine Stufe heller mit sichtbarer Kante ≥ 3:1, roter Balken ≥ 3:1. DESIGN.md führt jetzt <code>akzent-10-dark</code> bis <code>akzent-80-dark</code>; Avatar: <code>text-dark</code> auf <code>akzent-20-dark</code> 9,75:1. Offen nur: Prüfung auf echtem Handy.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">mittel</span>
+              <h3 class="finding-title">Zielgröße 44 px ohne Token</h3>
+              <span class="finding-location">EXPERIENCE.md → Accessibility Floor; DESIGN.md → spacing, components.notfall-box</span>
+            </header>
+            <div class="finding-note">44 px für Notfall-Button und untere Navigation stand nur als Satz; DESIGN.md kannte nur <code>control-h</code> 38 px.</div>
+            <div class="finding-fix"><strong>Fix:</strong> <code>spacing.touch-large: 44px</code> anlegen und in <code>notfall-box</code> und <code>bottom-nav</code> referenzieren.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-low">niedrig</span>
+              <h3 class="finding-title">Kleinigkeiten im Token-Satz</h3>
+              <span class="finding-location">DESIGN.md → Frontmatter spacing, typography, components.alert</span>
+            </header>
+            <div class="finding-note"><code>spacing.s</code> = <code>spacing.m</code> = 1rem; „3mm“ als Bildschirm-Einheit; <code>small</code>, <code>h3</code>, <code>kicker</code>, <code>table-head</code> ohne lineHeight; einige Kontraste (Balkenfüllungen, <code>error-field</code> auf <code>surface-dark</code>) fehlen.</div>
+            <div class="finding-fix"><strong>Fix:</strong> 3mm durch px/rem ersetzen, lineHeight ergänzen, fehlende Kontraste eintragen.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <!-- 3 -->
+    <section class="dimension">
+      <details open>
+        <summary>
+          <h2>Komponenten-Abdeckung</h2>
+          <span class="verdict-pill verdict-thin">thin</span>
+        </summary>
+        <div class="dim-body"><div class="dim-judgment">
+          <p>Die zusammengesetzten Zeltlotse-Bausteine (Notfall-Box, Balken, Inline-Bestätigung, Offline-Leiste, Speicher-Hinweis) sind in beiden Dateien gut beschrieben; Bibliotheksbausteine sind vertretbar pauschal abgedeckt. Es fehlten aber zentrale eigene Ansichten.</p>
+        </div></div>
+        <div class="findings-list">
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-high">hoch</span>
+              <h3 class="finding-title">Wochenraster und Kanal-Nachrichten ohne Baustein-Spezifikation</h3>
+              <span class="finding-location">EXPERIENCE.md → Flächen „Wochenraster“, „Kanäle“; DESIGN.md → Components</span>
+            </header>
+            <div class="finding-note">Beide Ansichten liefert die ELKW-Bibliothek nicht, beide sind täglich bzw. Handy-first genutzt – es gab keine Zeile in DESIGN.md → Components oder Component Patterns.</div>
+            <div class="finding-fix"><strong>Fix:</strong> je eine Zeile in beiden Tabellen (Wochenraster: Laptop Spalten je Tag, Handy Terminliste je Tag; Nachrichtenliste mit Avatar, Eingabe unten, Verhalten offline).</div>
+            <div class="finding-note"><strong>Stand: behoben.</strong> Beide Bausteine stehen jetzt in DESIGN.md → Components (Token <code>week-grid</code>, <code>message</code>) und in EXPERIENCE.md → Component Patterns: Wochenraster am Handy ein Tag mit Reitern; Kanal-Nachrichten mit Segmenten „Team / Alle“, im Kanal „Alle“ Inline-Bestätigung vor dem Senden (Memlog: „An 60 Personen senden? Ja / Nein“), offline ausgegraut.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">mittel</span>
+              <h3 class="finding-title">Weitere eigene Bedienelemente ohne Spezifikation</h3>
+              <span class="finding-location">Beitragsrechner (FR-57), Upload (FR-8, FR-58), Material-Status (FR-36), QR-Code (FR-64), Gericht-Tausch (FR-50), Kind-Card</span>
+            </header>
+            <div class="finding-note">Schieberegler, Datei-Hochladen, Statuswahl mit vier Zuständen, QR-Anzeige, Vorher/Nachher-Ansicht und Kind-Card sind nirgends beschrieben.</div>
+            <div class="finding-fix"><strong>Fix:</strong> je eine kurze Zeile in beiden Component-Tabellen (z.&nbsp;B. Material-Status als Segmente, Regler mit Zahlenfeld).</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">mittel</span>
+              <h3 class="finding-title">Zähler in der Seitennavigation widersprechen „keine Badges“</h3>
+              <span class="finding-location">DESIGN.md → Components „Seitennavigation“, Shapes; EXPERIENCE.md → Interaction Primitives</span>
+            </header>
+            <div class="finding-note">„Anzahl rechts“ steht neben „Keine Zähler-Badges“.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Anzahl als reiner Text festlegen und abschließend aufzählen, welche Punkte sie zeigen.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-low">niedrig</span>
+              <h3 class="finding-title">Namensabweichungen und fehlende Verhaltenszeilen</h3>
+              <span class="finding-location">„Avatar“ vs. „Avatar / Person“; Button, Eingabefeld</span>
+            </header>
+            <div class="finding-note">Button und Eingabefeld haben keine Zeile in Component Patterns.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Namen angleichen; kurze Verhaltenszeilen ergänzen.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <!-- 4 -->
+    <section class="dimension">
+      <details open>
+        <summary>
+          <h2>Zustands-Abdeckung</h2>
+          <span class="verdict-pill verdict-thin">thin</span>
+        </summary>
+        <div class="dim-body"><div class="dim-judgment">
+          <p>Die allgemeinen Zustände (leer, Laden, Fehler, Fokus, keine Berechtigung, gelaufen) sind gut gelöst. Die Phasenlogik, die Offline-Menge und mehrere Navigationsorte waren jedoch widersprüchlich oder fehlten.</p>
+        </div></div>
+        <div class="findings-list">
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-critical">kritisch</span>
+              <h3 class="finding-title">Phasenlogik widerspricht FR-45 – Abschluss-Startseite nie erreichbar</h3>
+              <span class="finding-location">EXPERIENCE.md → IA „Startseite der Freizeit wechselt mit der Phase“; State Patterns „Abgeschlossen“; NS-12</span>
+            </header>
+            <div class="finding-note">Die Abschluss-Startseite mit „Freizeit abschließen“ hing am Status „gelaufen“, der laut FR-45 erst durch genau diesen Knopf gesetzt wird. Nach dem letzten Freizeittag wäre zudem die „läuft“-Startseite mit Notfall-Box stehen geblieben.</div>
+            <div class="finding-fix"><strong>Fix:</strong> eigene Phase „nach Ende, noch nicht abgeschlossen“ mit der Abschluss-Startseite; Notfall nur zwischen Start- und Enddatum; „gelaufen“ = nur lesbar.</div>
+            <div class="finding-note"><strong>Stand: behoben.</strong> Memlog-Entscheidung „Phase Nachbereitung“: ab dem Tag nach dem Enddatum verschwindet der Notfall, die Startseite zeigt Schäden, Belege, offene Punkte und „Freizeit abschließen“; erst danach Status „gelaufen“. Dazu: Abschluss trotz offener Punkte mit Inline-Warnung. Phasen-Tabelle, Notfall-Eintrag und Fläche „Freizeit-Start“ sind angeglichen.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-high">hoch</span>
+              <h3 class="finding-title">Offline-Menge widersprüchlich, lokale Vorfall-Einträge ohne Schutzregel</h3>
+              <span class="finding-location">EXPERIENCE.md → State Patterns „Offline“; Responsive &amp; Platform</span>
+            </header>
+            <div class="finding-note">State Patterns nannte nur Küche und Notfallkarte als nutzbar, an anderer Stelle waren Notfall-Box, Sicherheitskette und Vorfall-Protokoll offline nutzbar; der Weg zum Vorfall-Protokoll lief über den offline ausgegrauten Freizeitpass; Verschlüsselung lokal wartender Gesundheitsdaten war offen.</div>
+            <div class="finding-fix"><strong>Fix:</strong> abschließende Liste „offline nutzbar“, Weg zum Vorfall-Protokoll über die Sicherheitskette, „lokal verschlüsselt, nach Übertragung gelöscht“.</div>
+            <div class="finding-note"><strong>Stand: behoben.</strong> Memlog-Entscheidung „Offline nutzbar: Küchenansicht, Notfallkarte, Sicherheitskette (lesen), Vorfall-Protokoll (schreibbar, Warteschlange); lokal gespeicherte Daten verschlüsselt“. State Patterns und Responsive &amp; Platform führen jetzt dieselbe abschließende Liste; wartende Einträge verlassen das Gerät mit der Übertragung.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-high">hoch</span>
+              <h3 class="finding-title">Sicherheitskette ohne Quelle und ohne Leer-Zustand</h3>
+              <span class="finding-location">EXPERIENCE.md → IA Navigation, Flächen „Einstellungen der Freizeit“, „Notfall: Sicherheitskette“</span>
+            </header>
+            <div class="finding-note">Nirgends war festgelegt, wo Ablauf und Ansprechperson am Heimatort eingerichtet werden; ohne Eintrag wäre die wichtigste Notfallseite leer.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Sicherheitskette in die Einstellungen aufnehmen; Warnhinweis im Leitungs-Cockpit; Rückfall mit Leitung + „Notruf 112“.</div>
+            <div class="finding-note"><strong>Stand: behoben.</strong> Memlog: „Sicherheitskette wird in Einstellungen der Freizeit (Leitung) eingerichtet; fehlt sie → Warnhinweis im Leitungs-Cockpit“. Die Einstellungen nennen jetzt die Sicherheitskette; NS-6 beschreibt den Rückfall (Suchfeld, Leitung und Notruf 112 stehen immer da).</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-high">hoch</span>
+              <h3 class="finding-title">Konto-Bereich und Wechsel von Organisation/Freizeit ohne Ort</h3>
+              <span class="finding-location">EXPERIENCE.md → IA „Ebenen“, „Navigation“, Flächen-Tabelle</span>
+            </header>
+            <div class="finding-note">„Über Konto“ erreichbare Flächen hatten keinen Navigationspunkt; Eltern und volljährige Teilnehmende hatten gar keine Navigation; der Wechsel ohne Aufklappmenü war nicht beschrieben. Betrifft NS-2 und NS-3.</div>
+            <div class="finding-fix"><strong>Fix:</strong> eigene Seite „Konto“ (Profil und Nachweise, Zugriffsprotokoll, Meine Daten, Abmelden, Wechsel als Liste); Navigation für Eltern festlegen.</div>
+            <div class="finding-note"><strong>Stand: behoben.</strong> Memlog: „Konto und Wechsel Organisation/Freizeit am Handy ganz oben in ‚Mehr‘“ und „Eltern-Navigation ohne Leiste: alles von der Familienübersicht über Karten; oben ‚Konto‘; Zurück-Link auf jeder Unterseite“. EXPERIENCE.md hat jetzt die Fläche „Konto“ mit Einstieg je Gerät und Rolle.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">mittel</span>
+              <h3 class="finding-title">Fehlende Zustände an einzelnen Flächen</h3>
+              <span class="finding-location">Login, Anmeldung, Profil übernehmen, Push, Freizeitpass vor Bestätigung (FR-24 b), Upload</span>
+            </header>
+            <div class="finding-note">Link verschickt/abgelaufen/benutzt, Anmeldelink ungültig, Push verweigert, Freizeitpass für das Team vor Bestätigung, fehlgeschlagener Upload.</div>
+            <div class="finding-fix"><strong>Fix:</strong> je eine Zeile in State Patterns im Ton der Voice-Tabelle.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">mittel</span>
+              <h3 class="finding-title">NFR-6 (widerrufbare Einwilligungen) ohne Fläche und Zustand</h3>
+              <span class="finding-location">EXPERIENCE.md → Flächen, State Patterns</span>
+            </header>
+            <div class="finding-note">Einzeln erteilte, jederzeit widerrufbare Einwilligungen (z.&nbsp;B. Fotos) kommen nicht vor.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Abschnitt im Freizeitpass bzw. „Meine Daten“ mit Schalter je Einwilligung und Zustand „widerrufen am …“.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">mittel</span>
+              <h3 class="finding-title">Aufklapp-Regel zu schmal für den Notfall</h3>
+              <span class="finding-location">EXPERIENCE.md → Component Patterns „Aufklapp“</span>
+            </header>
+            <div class="finding-note">Nur Notfallkontakte sind vom Aufklappen ausgenommen; NS-6 verlangt auch Allergien und Medikamente offen ganz oben.</div>
+            <div class="finding-fix"><strong>Fix:</strong> „nie für Allergien, Medikamente, Notfallkontakte; diese stehen immer offen ganz oben im Freizeitpass“.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-low">niedrig</span>
+              <h3 class="finding-title">„Deaktiviert 50 % Deckkraft“ neben „kein gesperrter Knopf“</h3>
+              <span class="finding-location">DESIGN.md → Components „Button“; EXPERIENCE.md → Sichtbarkeit nach Rolle</span>
+            </header>
+            <div class="finding-note">Unklar, wann ein Button deaktiviert statt weggelassen wird.</div>
+            <div class="finding-fix"><strong>Fix:</strong> deaktiviert nur offline oder bei laufender Übertragung, sonst weglassen.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <!-- 5 -->
+    <section class="dimension">
+      <details open>
+        <summary>
+          <h2>Abdeckung visueller Referenzen</h2>
+          <span class="verdict-pill verdict-thin">thin</span>
+        </summary>
+        <div class="dim-body"><div class="dim-judgment">
+          <p>Zum Zeitpunkt des Reviews waren <code>imports/</code> leer und <code>mockups/</code> nicht vorhanden; verlinkt waren nur zwei Dateien aus <code>.working/elkw/</code>. „Bei Widerspruch gelten die Spines“ steht in beiden Dateien.</p>
+        </div></div>
+        <div class="findings-list">
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">mittel</span>
+              <h3 class="finding-title">Entschiedene Key-Screen-Mockups fehlen</h3>
+              <span class="finding-location">DESIGN.md → Colors → Dunkelmodus; EXPERIENCE.md → Key Flows NS-1, NS-6; IA „Einstieg nach Rolle“</span>
+            </header>
+            <div class="finding-note">Laut Memlog entschieden: Dunkelmodus-Check, Gast-Anmeldung, Notfall-Ablauf, Familienübersicht. Es gab sie nicht; gerade der Dunkelmodus war ungesehen.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Mockups erstellen, nach <code>mockups/</code> legen und inline verlinken.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">mittel</span>
+              <h3 class="finding-title">Referenzen liegen im flüchtigen Arbeitsordner</h3>
+              <span class="finding-location">.working/elkw/</span>
+            </header>
+            <div class="finding-note"><code>.working/</code> ist Zwischenablage; die Varianten-Datei enthält verworfene Farbwelten, der Mock eine gesperrte Ansprache.</div>
+            <div class="finding-fix"><strong>Fix:</strong> gültige Ansicht (Farbwelt 09, Variante 2) als feste Datei nach <code>mockups/</code> kopieren und dort verlinken.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <!-- 6 -->
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>Ballast und Überspezifikation</h2>
+          <span class="verdict-pill verdict-strong">strong</span>
+        </summary>
+        <div class="dim-body"><div class="dim-judgment">
+          <p>Die Dateien sind dicht und tabellarisch; die Übernahme der Bibliothekswerte ins Frontmatter ist gewollt (Werte statt Schätzungen). Keine nennenswerten Befunde. Die Dunkel-Tabelle in DESIGN.md → Colors wiederholt die Frontmatter-Kommentare – unschädlich.</p>
+        </div></div>
+      </details>
+    </section>
+
+    <!-- 7 -->
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>Vererbungsdisziplin</h2>
+          <span class="verdict-pill verdict-adequate">adequate</span>
+        </summary>
+        <div class="dim-body"><div class="dim-judgment">
+          <p><code>sources</code> lösen auf, NS-Namen und Begriffe folgen dem PRD, Token-Verweise in EXPERIENCE.md lösen gegen DESIGN.md auf.</p>
+        </div></div>
+        <div class="findings-list">
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">mittel</span>
+              <h3 class="finding-title"><code>sources</code> nennt nur das PRD</h3>
+              <span class="finding-location">Frontmatter beider Dateien</span>
+            </header>
+            <div class="finding-note">Laut Memlog sind auch <code>brainstorm-intent.md</code> und <code>roadmap.md</code> Quellen; Inspiration stützt sich darauf.</div>
+            <div class="finding-fix"><strong>Fix:</strong> beide Dateien in <code>sources</code> aufnehmen, Vermerk „bei Widerspruch gilt das PRD“.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">mittel</span>
+              <h3 class="finding-title">21 [ASSUMPTION]-Marken stehen noch im Text</h3>
+              <span class="finding-location">DESIGN.md (8), EXPERIENCE.md (13)</span>
+            </header>
+            <div class="finding-note">Der Memlog hat sie als Entscheidungen übernommen; nachgelagerte Leser würden sie als offen behandeln.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Marken entfernen; nur die echte offene Frage (Dunkelmodus) in „Offene Fragen“ lassen.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-low">niedrig</span>
+              <h3 class="finding-title">Begriffe uneinheitlich: „Kopfleiste“ / „App-Leiste“, „Notfall-Button“</h3>
+              <span class="finding-location">Component Patterns „Notfall-Eintrag (Kopfleiste)“, „Notfall-Box“</span>
+            </header>
+            <div class="finding-note">Die Abbildung des PRD-Begriffs „Notfall-Button“ (FR-29) wird nirgends genannt.</div>
+            <div class="finding-fix"><strong>Fix:</strong> „Kopfleiste“ durch „App-Leiste“ ersetzen; „setzt den Notfall-Button aus FR-29 um“ ergänzen.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <!-- 8 -->
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>Formpassung</h2>
+          <span class="verdict-pill verdict-strong">strong</span>
+        </summary>
+        <div class="dim-body"><div class="dim-judgment">
+          <p>DESIGN.md folgt der kanonischen Abschnittsreihenfolge vollständig; EXPERIENCE.md enthält alle Pflichtabschnitte plus die ausgelösten Zusatzabschnitte Responsive &amp; Platform und Inspiration &amp; Anti-patterns. „Offene Fragen“ ist gerechtfertigt.</p>
+        </div></div>
+        <div class="findings-list">
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-low">niedrig</span>
+              <h3 class="finding-title">Umbruch-Prüfbreite uneinheitlich (375 px vs. 320 px)</h3>
+              <span class="finding-location">DESIGN.md → Layout &amp; Spacing; EXPERIENCE.md → Accessibility Floor</span>
+            </header>
+            <div class="finding-note">WCAG 1.4.10 verlangt 320 px.</div>
+            <div class="finding-fix"><strong>Fix:</strong> überall 320 px als Untergrenze, 375 px als Prüfgerät.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-low">niedrig</span>
+              <h3 class="finding-title"><code>status: draft</code> trotz abgeschlossener Entscheidungen</h3>
+              <span class="finding-location">Frontmatter beider Dateien</span>
+            </header>
+            <div class="finding-note">Discovery und Entscheidungen sind abgeschlossen.</div>
+            <div class="finding-fix"><strong>Fix:</strong> nach Einarbeitung der Befunde auf <code>final</code> setzen.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <div class="mechanical">
+      <h3>Mechanische Hinweise</h3>
+      <ul>
+        <li>Alle <code>{colors.*}</code>-, <code>{typography.*}</code>-, <code>{rounded.*}</code>-, <code>{spacing.*}</code>- und <code>{components.*}</code>-Verweise lösen auf; keine Mermaid-Diagramme.</li>
+        <li>NS-Überschriften 1–13 stimmen wörtlich mit dem PRD überein; FR-1 bis FR-69 in der Flächen-Tabelle abgedeckt (FR-42 gestrichen).</li>
+        <li>Zum Review-Zeitpunkt nicht abgedeckt: NFR-6 (Einwilligungen), NFR-15 (arbeitsfähig nach 2 Minuten, nur indirekt), NFR-17 (Wiederanmeldung).</li>
+        <li>Namensabweichungen „Kopfleiste“/„App-Leiste“, „Avatar“/„Avatar / Person“; doppelter Wert <code>spacing.s</code> = <code>spacing.m</code> = 1rem; Referenzen in <code>.working/</code> statt <code>mockups/</code>.</li>
+        <li>Nach dem Review (Stichprobe in den Spines): <code>[ASSUMPTION]</code>-Marken 0, <code>sources</code> mit Brainstorming, <code>status: final</code>, <code>spacing.touch-large</code> vorhanden, Key-Screens und Navigation in <code>mockups/</code>.</li>
+      </ul>
+    </div>
+
+    <footer class="report-footer">
+      <div class="meta">
+        <span>Rubric: review-rubric.md</span>
+        <span>Memlog: .memlog.md</span>
+        <span>Erstellt: 2026-10-11T00:08</span>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

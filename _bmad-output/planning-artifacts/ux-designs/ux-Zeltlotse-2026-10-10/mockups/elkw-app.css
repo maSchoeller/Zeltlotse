@@ -1,0 +1,167 @@
+@charset "utf-8";
+/* ==========================================================================
+   ELKW Design – App-Ebene (Webanwendungen)
+   Ergänzt elkw-components.css um Bausteine zum Arbeiten. Alles aus vorhandenen
+   Tokens abgeleitet: Sarabun, 1-px-Rahmen, neutrale Grauflächen, Farbwelt-Rollen,
+   Rechtecke statt Pills, keine Schatten. Beschreibung: references/apps.md
+   Empfohlen: <html class="elkw" data-dichte="arbeiten" data-farbwelt="01">
+   ========================================================================== */
+
+/* ---------- App-Rahmen ---------- */
+.elkw-app { display: grid; height: 100vh; grid-template-columns: 15rem minmax(0, 1fr); grid-template-rows: auto 1fr;
+  grid-template-areas: "bar bar" "nav main"; }
+/* Wenige Bereiche: farbige Navigationsleiste .elkw-app__topnav.elkw-header statt Seitennavigation */
+.elkw-app--topnav { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr; grid-template-areas: "bar" "topnav" "main"; }
+.elkw-app__topnav { grid-area: topnav; }
+.elkw-app__topnav .elkw-header__inner { padding: 0 var(--elkw-space-l); }
+.elkw-app__bar  { grid-area: bar; }
+.elkw-app__nav  { grid-area: nav; overflow-y: auto; background: var(--elkw-neutral-10); border-right: 1px solid var(--elkw-light); }
+.elkw-app__main { grid-area: main; position: relative; min-width: 0; overflow-y: auto; padding: var(--elkw-space-l) var(--elkw-space-l) var(--elkw-space-xl); }  /* nur der Arbeitsbereich scrollt */
+.elkw-app__main--split { display: grid; grid-template-columns: minmax(0, 1fr) 20rem; gap: var(--elkw-gap); align-items: start; }
+
+/* App-Leiste: weiß, Logo + Anwendungsname links, Suche/Benutzer rechts, 1-px-Linie unten */
+.elkw-appbar { display: flex; align-items: center; gap: var(--elkw-space-m); padding: var(--elkw-header-pad) var(--elkw-space-l); background: var(--elkw-white); border-bottom: 1px solid var(--elkw-border); }
+.elkw-appbar__logo img { display: block; height: var(--elkw-logo-h); width: auto; }
+.elkw-appbar__name { font-weight: 600; padding-left: var(--elkw-space-m); border-left: 1px solid var(--elkw-border); white-space: nowrap; }
+.elkw-appbar__end { margin-left: auto; display: flex; align-items: center; gap: var(--elkw-space-m); font-size: var(--elkw-fs-small); }
+.elkw-appbar__end input[type=search] { width: 16rem; }
+.elkw-appbar__toggle { display: none; background: none; border: 0; padding: 0.4rem; cursor: pointer; color: var(--elkw-text); }
+.elkw-appbar__toggle span { display: block; width: 24px; height: 2px; margin: 5px 0; background: currentColor; }
+
+/* Seitennavigation: neutrale Fläche, aktiver Punkt weiß mit Balken in der Akzentfarbe */
+.elkw-sidenav { padding: var(--elkw-space-m) 0; }
+.elkw-sidenav__group { margin: var(--elkw-space-m) 0 0.25rem; padding: 0 var(--elkw-space-m); }
+.elkw-sidenav ul { margin: 0; padding: 0; list-style: none; }
+.elkw-sidenav a { position: relative; display: block; padding: 0.45rem var(--elkw-space-m); color: var(--elkw-text); text-decoration: none; transition: var(--elkw-transition); }
+.elkw .elkw-sidenav :focus-visible { outline-offset: -2px; }
+.elkw-sidenav a:hover { background: var(--elkw-light); }
+.elkw-sidenav a[aria-current] { background: var(--elkw-white); font-weight: 600; }
+.elkw-sidenav a[aria-current]::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--elkw-akzent); }
+.elkw-sidenav .elkw-count { float: right; font-weight: 400; font-size: var(--elkw-fs-small); }
+
+/* ---------- Seitenkopf, Brotkrumen, Werkzeugleiste ---------- */
+.elkw-breadcrumb { margin: 0 0 0.5rem; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 0.25rem; font-size: var(--elkw-fs-small); }
+.elkw-breadcrumb li + li::before { content: "/"; margin-right: 0.25rem; color: var(--elkw-neutral-60); }
+.elkw-breadcrumb a { color: var(--elkw-action); text-decoration: none; border-bottom: 1px solid; }
+.elkw-pagehead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem var(--elkw-space-m); margin-bottom: var(--elkw-space-m); }
+.elkw-pagehead h1 { margin: 0; }
+.elkw-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 0.75rem var(--elkw-space-m); padding: 0.75rem var(--elkw-space-m); background: var(--elkw-light); border-radius: var(--elkw-radius); margin-bottom: var(--elkw-space-m); }
+.elkw-toolbar .elkw-field { min-width: 10rem; }
+.elkw-toolbar__end { margin-left: auto; display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; }
+.elkw-toolbar--selection { background: var(--elkw-akzent-10); }   /* Massenaktionen bei Auswahl */
+
+/* ---------- Datentabelle ---------- */
+.elkw-datatable { position: relative; }
+.elkw-datatable thead th { position: sticky; top: 0; z-index: 1; white-space: nowrap; }
+.elkw-datatable th.num, .elkw-datatable td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.elkw-datatable .select { width: 2.5rem; text-align: center; }
+.elkw-datatable .rowactions { width: 1%; white-space: nowrap; text-align: right; }
+.elkw-datatable td { vertical-align: middle; }
+.elkw-datatable .elkw-btn { margin: 0; padding-top: 0; padding-bottom: 0; }
+.elkw-sort { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; }
+.elkw-sort::after { content: "\2195"; color: var(--elkw-neutral-60); }               /* ↕ unsortiert */
+[aria-sort="ascending"]  .elkw-sort::after { content: "\2191"; color: var(--elkw-text); }   /* ↑ */
+[aria-sort="descending"] .elkw-sort::after { content: "\2193"; color: var(--elkw-text); }   /* ↓ */
+.elkw-tablefoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 0.75rem; font-size: var(--elkw-fs-small); }
+
+/* Seitenwechsel */
+.elkw-pagination { display: flex; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.elkw-pagination a, .elkw-pagination span { display: block; min-width: 2.25rem; padding: 0.25rem 0.5rem; text-align: center; border: 1px solid var(--elkw-light); color: var(--elkw-text); text-decoration: none; background: var(--elkw-white); }
+.elkw-pagination a:hover { background: var(--elkw-neutral-10); }
+.elkw-pagination [aria-current] { background: var(--elkw-action); border-color: var(--elkw-action); color: var(--elkw-on-action); }
+
+/* ---------- Status (Wort + kleines Quadrat) ---------- */
+.elkw-status { display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+.elkw-status::before { content: ""; flex: none; width: 0.6em; height: 0.6em; background: var(--status, var(--elkw-neutral-60)); }
+.elkw-status--erfolg  { --status: var(--elkw-status-erfolg); }
+.elkw-status--warnung { --status: var(--elkw-status-warnung); }
+.elkw-status--fehler  { --status: var(--elkw-status-fehler); }
+.elkw-status--aktiv   { --status: var(--elkw-akzent); }
+.elkw-status--offen   { --status: var(--elkw-neutral-60); }
+
+/* ---------- Meldungen (Infobox mit Balken links, Bedeutung immer als Wort) ---------- */
+.elkw-alert--hinweis { --status: var(--elkw-status-hinweis); }
+.elkw-alert { position: relative; padding: var(--elkw-space-m) var(--elkw-space-m) var(--elkw-space-m) calc(var(--elkw-space-m) + 4mm); background: var(--elkw-white); border: 1px solid var(--elkw-border); border-radius: var(--elkw-radius); margin: 0 0 var(--elkw-space-m); }
+.elkw-alert::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3mm; background: var(--status, var(--elkw-action)); }
+.elkw-alert__title { display: block; font-weight: 700; margin-bottom: 0.25rem; }
+.elkw-alert p { margin: 0; }
+.elkw-alert ul { margin: 0.25rem 0 0; padding-left: 1.2rem; }
+.elkw-alert--erfolg  { --status: var(--elkw-status-erfolg); }
+.elkw-alert--warnung { --status: var(--elkw-status-warnung); }
+.elkw-alert--fehler  { --status: var(--elkw-status-fehler); }
+
+/* ---------- Formular-Ergänzungen ---------- */
+.elkw-required::after { content: " *"; color: var(--elkw-action); }
+.elkw-field-error { display: block; font-size: var(--elkw-fs-small); margin-top: 0.25rem; font-weight: 600; }
+.elkw-fieldset { border: 0; margin: 0 0 var(--elkw-space-l); padding: 0; }
+.elkw-fieldset legend { font-weight: 700; font-size: var(--elkw-fs-h4); margin-bottom: var(--elkw-space-s); padding: 0; }
+.elkw-choice { display: flex; align-items: center; gap: 0.5rem; margin: 0.25rem 0; }
+.elkw-formactions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.75rem 1rem; padding-top: var(--elkw-space-m); border-top: 1px solid var(--elkw-light); margin-top: var(--elkw-space-l); }
+
+/* Schritte (Formular in Schritten) */
+.elkw-steps { display: flex; flex-wrap: wrap; gap: 2px; margin: 0 0 var(--elkw-space-l); padding: 0; list-style: none; counter-reset: step; }
+.elkw-steps li { flex: 1 1 10rem; display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.9rem; background: var(--elkw-white); border: 1px solid var(--elkw-light); counter-increment: step; }
+.elkw-steps li::before { content: counter(step); flex: none; width: 1.75rem; height: 1.75rem; display: grid; place-items: center; font-weight: 700; background: var(--elkw-light); }
+.elkw-steps [aria-current="step"] { border-color: var(--elkw-action); font-weight: 600; }
+.elkw-steps [aria-current="step"]::before { background: var(--elkw-action); color: var(--elkw-on-action); }
+.elkw-steps .done { background: var(--elkw-neutral-10); }
+.elkw-steps .done::before { content: "\2713"; background: var(--elkw-dark); color: var(--elkw-on-dark); }
+
+/* ---------- Kennzahlen (Zahlenzeile, keine Kacheln mit Icons) ---------- */
+.elkw-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 2px; margin: 0 0 var(--elkw-space-l); padding: 0; background: var(--elkw-white); }
+.elkw-stats > div { padding: var(--elkw-space-s) var(--elkw-space-m); background: var(--elkw-light); }
+.elkw-stats dt { font-size: var(--elkw-fs-small); }
+.elkw-stats dd { margin: 0; font-size: 1.75rem; line-height: 1.2; font-weight: 700; font-variant-numeric: tabular-nums; }
+.elkw-stats dd small { font-size: var(--elkw-fs-small); font-weight: 400; }
+
+/* ---------- Detailliste ---------- */
+.elkw-details { display: grid; grid-template-columns: minmax(7rem, auto) 1fr; gap: 0.35rem 1rem; margin: 0; }
+.elkw-details dt { font-weight: 600; }
+.elkw-details dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+
+/* ---------- Drawer (Seitenpanel als Overlay, aus Dialog abgeleitet) ---------- */
+.elkw-drawer { margin: 0 0 0 auto; height: 100vh; max-height: 100vh; width: min(30rem, 100vw); max-width: none; padding: 0; border: 0; border-left: 1px solid var(--elkw-border); background: var(--elkw-white); color: var(--elkw-text); }
+.elkw-drawer::backdrop { background: var(--elkw-overlay); }
+.elkw-drawer__head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: var(--elkw-space-s) var(--elkw-space-m); background: var(--elkw-light); }
+.elkw-drawer__head h2 { margin: 0; font-size: var(--elkw-fs-h3); }
+.elkw-drawer[open] { display: flex; flex-direction: column; }
+.elkw-drawer__body { flex: 1; padding: var(--elkw-space-m); overflow: auto; }
+.elkw-drawer__foot { display: flex; justify-content: flex-end; gap: 0.75rem; padding: var(--elkw-space-s) var(--elkw-space-m); border-top: 1px solid var(--elkw-light); }
+.elkw-close { border: 0; background: none; font: inherit; font-size: 1.5rem; line-height: 1; padding: 0.25rem 0.5rem; cursor: pointer; color: var(--elkw-text); }
+
+/* ---------- Aufklappmenü für Zeilenaktionen (details) ---------- */
+.elkw-menu { position: relative; display: inline-block; }
+.elkw-menu > summary { list-style: none; cursor: pointer; padding: 0.15rem 0.6rem; border: 1px solid var(--elkw-light); background: var(--elkw-white); }
+.elkw-menu > summary::-webkit-details-marker { display: none; }
+.elkw-menu > summary::after { content: " \25BE"; }
+.elkw-menu ul { position: absolute; right: 0; top: calc(100% + 2px); z-index: 5; min-width: 12rem; margin: 0; padding: 0.25rem 0; list-style: none; background: var(--elkw-white); border: 1px solid var(--elkw-border); text-align: left; }
+.elkw-menu li > a, .elkw-menu li > button { display: block; width: 100%; padding: 0.4rem 0.9rem; border: 0; background: none; font: inherit; color: var(--elkw-text); text-align: left; text-decoration: none; cursor: pointer; }
+.elkw-menu li > a:hover, .elkw-menu li > button:hover { background: var(--elkw-neutral-10); }
+
+/* ---------- Leer und Laden ---------- */
+.elkw-empty { padding: var(--elkw-space-xl) var(--elkw-space-m); text-align: center; background: var(--elkw-neutral-10); border-radius: var(--elkw-radius); }
+.elkw-empty h2, .elkw-empty h3 { margin-top: 0; }
+.elkw-empty p { max-width: 50ch; margin: 0 auto var(--elkw-space-m); }
+.elkw-loading { padding: var(--elkw-space-m); color: var(--elkw-dunkelgrau); }
+[aria-busy="true"] { cursor: progress; }
+
+/* ---------- Schmale Fenster ---------- */
+@media (max-width: 1023px) {
+  .elkw-app { height: auto; min-height: 100vh; grid-template-columns: minmax(0, 1fr); grid-template-areas: "bar" "nav" "main"; }
+  .elkw-app--topnav { grid-template-areas: "bar" "topnav" "main"; }
+  .elkw-app__main, .elkw-app__nav { overflow: visible; }
+  .elkw-app__nav, .elkw-app--topnav .elkw-app__topnav .elkw-nav { display: none; border-right: 0; border-bottom: 1px solid var(--elkw-light); }
+  .elkw-app--topnav .elkw-app__topnav .elkw-nav.is-open { display: block; }
+  .elkw-app__nav.is-open { display: block; }
+  .elkw-appbar__toggle { display: block; }
+  .elkw-appbar__end input[type=search] { width: 10rem; }
+  .elkw-app__main { padding: var(--elkw-space-m); }
+  .elkw-app__main--split { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .elkw-appbar { flex-wrap: wrap; padding: var(--elkw-header-pad) var(--elkw-space-m); }
+  .elkw-appbar__name { display: none; }
+  .elkw-appbar__end .elkw-appbar__user { display: none; }
+  .elkw-toolbar__end { margin-left: 0; }
+  .elkw-details { grid-template-columns: 1fr; }
+}

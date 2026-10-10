@@ -1,0 +1,289 @@
+@charset "utf-8";
+/* ==========================================================================
+   ELKW Design – Komponentenbibliothek (Websites und Anwendungen)
+   Bausteine nach www.elk-wue.de bzw. Styleguide; Maße gemessen.
+   Beschreibung: references/components.md · Live-Ansicht: assets/components.html
+   Benötigt elkw-tokens.css. Farben nur über Rollen-Variablen, nie fest.
+   ========================================================================== */
+
+/* ---------- Grundlagen ---------- */
+.elkw, .elkw body {
+  margin: 0;
+  font-family: var(--elkw-font);
+  font-size: var(--elkw-fs);
+  line-height: var(--elkw-lh);
+  color: var(--elkw-text);
+  background: var(--elkw-white);
+}
+.elkw *, .elkw *::before, .elkw *::after { box-sizing: border-box; }
+.elkw h1, .elkw h2, .elkw h3, .elkw h4, .elkw h5 { font-weight: 700; hyphens: auto; overflow-wrap: break-word; }
+.elkw h1 { font-size: var(--elkw-fs-h1); line-height: var(--elkw-lh-h1); margin: 0 0 var(--elkw-space-l); }
+.elkw h2 { font-size: var(--elkw-fs-h2); line-height: var(--elkw-lh-h2); }
+.elkw h3 { font-size: var(--elkw-fs-h3); }
+.elkw h4 { font-size: var(--elkw-fs-h4); }
+.elkw p, .elkw td, .elkw li { hyphens: auto; overflow-wrap: break-word; }
+.elkw img { max-width: 100%; }
+.elkw .h-primary { color: var(--elkw-primary); }
+.elkw .h-action  { color: var(--elkw-action); }
+.elkw .text-center { text-align: center; }
+.elkw .small { font-size: var(--elkw-fs-small); line-height: 1.5; }
+.elkw .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.elkw [hidden] { display: none !important; }   /* hidden gilt auch für Bausteine mit eigener display-Regel */
+/* Sprunglink: erstes Element im body, erscheint bei Tastaturfokus */
+.elkw-skiplink { position: absolute; left: 1rem; top: -100px; z-index: 1000; padding: 0.5rem 1rem; background: var(--elkw-white); color: var(--elkw-text); border: 1px solid var(--elkw-text); }
+.elkw-skiplink:focus { top: 1rem; }
+/* Überschrift, die nach einem Ansichtswechsel den Fokus bekommt (tabindex="-1") */
+.elkw [tabindex="-1"]:focus { outline: none; }
+
+/* Tastaturfokus (elk-wue.de: 2 px schwarz, 4 px Abstand; auf farbigen Flächen gelb) */
+.elkw :focus-visible { outline: 2px solid var(--elkw-focus); outline-offset: 4px; }
+.elkw .elkw-header :focus-visible, .elkw .elkw-footer__main :focus-visible,
+.elkw .elkw-bg-1 :focus-visible, .elkw .elkw-bg-3 :focus-visible { outline-color: var(--elkw-focus-on-color); }
+
+/* ---------- Layout ---------- */
+.elkw-container { max-width: var(--elkw-container); margin: 0 auto; padding: 0 var(--elkw-gutter); }
+.elkw-section    { padding: var(--elkw-section) 0; }          /* Abschnitt ohne Farbfläche */
+.elkw-grid-main  { display: grid; grid-template-columns: 2fr 1fr; gap: var(--elkw-gap); align-items: start; }
+.elkw-grid-2     { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--elkw-gap); }
+.elkw-grid-3     { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--elkw-gap); }
+.elkw-grid-4     { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--elkw-gap-tiles); }
+.elkw-grid-main > *, .elkw-grid-2 > *, .elkw-grid-3 > *, .elkw-grid-4 > * { min-width: 0; }
+.elkw-measure    { max-width: 75ch; }
+.elkw-stack > * + * { margin-top: var(--elkw-space-m); }
+
+/* ---------- Flächen und Bänder ---------- */
+.elkw-bg-0 { background: var(--elkw-white);    color: var(--elkw-text); }
+.elkw-bg-1 { background: var(--elkw-primary);  color: var(--elkw-on-primary); }
+.elkw-bg-2 { background: var(--elkw-light);    color: var(--elkw-text); }
+.elkw-bg-3 { background: var(--elkw-dark);     color: var(--elkw-on-dark); }
+.elkw-bg-4 { background: var(--elkw-contrast); color: var(--elkw-on-contrast); }
+.elkw-bg-1 a:not(.elkw-btn), .elkw-bg-3 a:not(.elkw-btn) { color: inherit; }
+.elkw-band { padding: var(--elkw-space-xl) 0; }
+.elkw-band--intro { padding: 1.5rem 0; text-align: center; }
+.elkw-band__title { color: var(--elkw-band-title); }
+.elkw-band--intro .elkw-band__title { font-size: var(--elkw-fs-h3); line-height: var(--elkw-lh); margin: 1.5rem 0 1rem; }
+.elkw-band--intro p { margin: 0 0 1.5rem; }
+.elkw-section-title { text-align: center; color: var(--elkw-action); font-size: var(--elkw-fs-h2); line-height: var(--elkw-lh-h2); margin: 0 0 var(--elkw-space-l); }
+
+/* ---------- Links ---------- */
+.elkw-link, .elkw main a:not([class]):not(nav a):not(.elkw-header a) {
+  color: var(--elkw-action); text-decoration: none; border-bottom: 1px solid; transition: var(--elkw-transition);
+}
+.elkw-link:hover, .elkw main a:not([class]):not(nav a):not(.elkw-header a):hover { border-bottom-style: dashed; }
+
+/* ---------- Buttons (Pfeil = führt weiter; --noarrow = Aktion an Ort und Stelle) ---------- */
+.elkw-btn {
+  display: inline-flex; align-items: center; gap: 0.85rem;
+  padding: var(--elkw-btn-pad); margin: 0.25rem 0;
+  border: 1px solid transparent; border-radius: var(--elkw-radius-btn);
+  background: var(--elkw-action); color: var(--elkw-on-action);
+  font: inherit; line-height: var(--elkw-lh); text-align: left; text-decoration: none; white-space: nowrap;
+  cursor: pointer; transition: var(--elkw-transition);
+}
+.elkw-btn::after {
+  content: ""; flex: none; position: relative; left: 0;
+  width: 0.9em; height: 0.9em; background: currentColor;
+  -webkit-mask: var(--elkw-arrow) center / contain no-repeat; mask: var(--elkw-arrow) center / contain no-repeat;
+  transition: var(--elkw-transition);
+}
+.elkw-btn:hover::after { left: 0.15rem; }
+.elkw-btn--outline  { background: transparent; color: var(--elkw-text); border-color: var(--elkw-primary); }
+.elkw-btn--contrast { background: var(--elkw-contrast); color: var(--elkw-on-contrast); }
+.elkw-btn--light    { background: var(--elkw-light); color: var(--elkw-text); border-color: var(--elkw-text); }
+.elkw-btn--text     { background: transparent; color: var(--elkw-action); padding-left: 0; padding-right: 0; }  /* App-Ergänzung: tertiär */
+.elkw-btn--on-same  { border-color: var(--elkw-white); }
+.elkw-btn--block    { display: flex; width: 100%; justify-content: space-between; white-space: normal; }
+.elkw-btn--noarrow::after { content: none; }
+.elkw-btn:disabled, .elkw-btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+.elkw-actions { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; align-items: center; }
+
+/* ---------- Kopf (zweigeteilt): weiße Absenderzeile + farbige Navigationsleiste ---------- */
+/* Absenderzeile: offizielles Logo auf Weiß (Styleguide-Regelfall), rechts Metanavigation/Burger */
+.elkw-brandbar { background: var(--elkw-white); padding: var(--elkw-header-pad) 0; }
+.elkw-brandbar__inner { display: flex; align-items: center; justify-content: space-between; gap: 2rem; }
+.elkw-brandbar__logo { display: block; color: var(--elkw-text); text-decoration: none; }
+.elkw-brandbar__logo img { display: block; height: var(--elkw-logo-h); width: auto; }
+.elkw-meta ul { display: flex; justify-content: flex-end; gap: 2rem; margin: 0; padding: 0; list-style: none; font-size: var(--elkw-fs-small); }
+.elkw-meta a { color: var(--elkw-text); text-decoration: none; }
+/* Navigationsleiste in der Trägerfarbe */
+.elkw-header { position: relative; background: var(--elkw-primary); color: var(--elkw-on-primary); }
+.elkw-header__inner { display: flex; align-items: center; justify-content: space-between; gap: 2rem; min-height: 3.25rem; }
+.elkw-nav > ul { display: flex; flex-wrap: wrap; gap: 0 2rem; margin: 0; padding: 0; list-style: none; }
+.elkw-nav a { display: block; padding: 0.75rem 0; color: var(--elkw-on-primary); text-decoration: none; border-bottom: 1px solid transparent; }
+.elkw-nav a[aria-current] { border-bottom-color: currentColor; }
+.elkw-nav li { position: relative; }
+.elkw-submenu { display: none; position: absolute; left: 0; top: 100%; z-index: 20; min-width: 16rem; margin: 0; padding: 16px 4px 16px 16px; list-style: none; background: var(--elkw-primary); }
+.elkw-nav li:hover > .elkw-submenu, .elkw-nav li:focus-within > .elkw-submenu { display: block; }
+.elkw-submenu a { padding: 0 0 0.65rem; font-size: var(--elkw-fs-nav-sub); border: 0; }
+.elkw-burger { display: none; background: none; border: 0; padding: 0.5rem; color: var(--elkw-text); cursor: pointer; }
+.elkw-burger span { display: block; width: 28px; height: 3px; margin: 5px 0; background: currentColor; }
+
+/* ---------- Wortmarke: Proportionen der offiziellen Bild-Wort-Marke ---------- */
+/* --d = Kreisdurchmesser. Abstand ¼ d, Schrift 0,262 d, Zeilenabstand 1,19, Zeile 1 SemiBold, Zeile 2 Light. */
+.elkw-wordmark { --d: var(--elkw-logo-h); display: inline-flex; align-items: center; gap: calc(var(--d) * 0.25); color: inherit; text-decoration: none; }
+.elkw-wordmark img { width: var(--d); height: var(--d); display: block; }
+.elkw-wordmark span { display: block; font-size: calc(var(--d) * 0.262); line-height: 1.19; white-space: nowrap; }
+.elkw-wordmark .l1 { font-weight: 600; }
+.elkw-wordmark .l2 { font-weight: 300; }
+
+/* ---------- Bildkachel ---------- */
+.elkw-tile { display: flex; flex-direction: column; min-height: 600px; border-radius: var(--elkw-radius); overflow: hidden; color: inherit; text-decoration: none; border: 0; }
+.elkw-tile .elkw-photo { flex: 1; }
+.elkw-tile__label { background: var(--elkw-primary); color: var(--elkw-on-primary); padding: 24px 16px; font-size: var(--elkw-fs-h4); line-height: var(--elkw-lh); min-height: 89px; }
+
+/* ---------- Card ---------- */
+.elkw-card { position: relative; display: flex; flex-direction: column; border: 1px solid var(--elkw-border); border-radius: var(--elkw-radius); overflow: hidden; background: var(--elkw-white); }
+.elkw-card > .elkw-photo { aspect-ratio: 3 / 2; }
+.elkw-card__body { padding: 16px 32px; flex: 1; }
+.elkw-card__title { margin: 1.5rem 0; padding-bottom: 0.75rem; line-height: 1.5; font-size: var(--elkw-fs-h3); color: var(--elkw-text); }
+.elkw-card__body > .elkw-kicker:first-child { margin-top: 1.5rem; }
+.elkw-card__body > .elkw-kicker + .elkw-card__title { margin-top: 0.25rem; }
+.elkw-card__footer { padding: 0 2rem 2rem; }
+
+/* ---------- Infobox und Panel ---------- */
+.elkw-infobox { border: 1px solid var(--elkw-primary); background: var(--elkw-white); padding: var(--elkw-box-pad); border-radius: var(--elkw-radius); }
+.elkw-infobox__title { margin: 0 0 1rem; color: var(--elkw-primary); font-size: var(--elkw-fs-h4); }
+.elkw-panel { background: var(--elkw-light); padding: var(--elkw-panel-pad); border-radius: var(--elkw-radius); }
+.elkw-panel__title { color: var(--elkw-action); font-size: var(--elkw-fs-h4); margin: 8px 0 var(--elkw-panel-title-gap); }
+.elkw-panel hr, .elkw-panel .elkw-divider { border: 0; border-top: 1px solid var(--elkw-line-on-light); margin: 1rem 0; }
+
+/* ---------- Linkliste ---------- */
+.elkw-linklist { display: flex; flex-direction: column; gap: 1rem; margin: 0; padding: 0; list-style: none; }
+.elkw-linklist .elkw-btn { display: flex; width: 100%; justify-content: space-between; margin: 0; white-space: normal; }
+
+/* ---------- Terminliste (Datumsblock + Text) ---------- */
+.elkw-eventlist { margin: 0; padding: 0; list-style: none; }
+.elkw-eventlist > li { display: flex; gap: var(--elkw-space-m); align-items: flex-start; padding: var(--elkw-space-m) 0; border-bottom: 1px solid var(--elkw-border); }
+.elkw-eventlist > li:first-child { padding-top: 0; }
+.elkw-eventlist__body { min-width: 0; }
+.elkw-eventlist__body h3, .elkw-eventlist__body h4 { margin: 0 0 0.25rem; }
+
+/* ---------- Reiter ---------- */
+.elkw-tabs { display: flex; flex-wrap: wrap; gap: 0 2px; margin: 0; padding: 2px 2px 0; list-style: none; background: var(--elkw-light); }
+.elkw-tabs button, .elkw-tabs a { display: block; padding: var(--elkw-btn-pad); border: 0; background: transparent; color: var(--elkw-primary); font: inherit; text-decoration: none; cursor: pointer; transition: var(--elkw-transition); }
+.elkw-tabs button:hover, .elkw-tabs a:hover { background: var(--elkw-white); }
+.elkw-tabs [aria-selected="true"], .elkw-tabs .active { color: var(--elkw-text); background: var(--elkw-white); font-weight: 600; }   /* zweites Merkmal neben der Farbe */
+
+/* ---------- Aufklapp (gemessen: 1 px schwarz, Kopfzeile weiß, +/−) ---------- */
+.elkw-accordion details { border: 1px solid var(--elkw-text); margin: -1px 0 0; background: var(--elkw-white); }
+.elkw-accordion details:first-child { margin-top: 0; }
+.elkw-accordion summary { display: flex; justify-content: space-between; gap: 1rem; padding: 1.15rem; cursor: pointer; list-style: none; background: var(--elkw-white); color: var(--elkw-text); font-weight: 400; }
+.elkw-accordion summary::-webkit-details-marker { display: none; }
+.elkw-accordion summary::after { content: "+"; font-weight: 700; }
+.elkw-accordion details[open] summary::after { content: "−"; }
+.elkw-accordion .elkw-accordion__content { padding: 2rem 1.15rem; background: var(--elkw-white); }
+
+/* ---------- Dialog (gemessen: Einwilligungsdialog elk-wue.de) ---------- */
+.elkw-dialog { border: 1px solid var(--elkw-border); padding: 18px; max-width: 1100px; width: calc(100% - 2rem); background: var(--elkw-dialog); color: var(--elkw-text); border-radius: var(--elkw-radius); }
+.elkw-dialog::backdrop { background: var(--elkw-overlay); }
+.elkw-dialog__title { display: block; margin: 0 0 0.5rem; line-height: var(--elkw-lh); font-size: var(--elkw-fs-h4); font-weight: 700; color: var(--elkw-primary); }
+.elkw-dialog__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.75rem 1rem; margin-top: 1rem; }
+.elkw-dialog--bottom { margin: auto auto 0; }
+.elkw-dialog--center { max-width: 640px; }
+
+/* ---------- Formular ---------- */
+.elkw-field { display: block; }
+.elkw-field label, .elkw-label { display: block; font-size: var(--elkw-fs-small); margin-bottom: 0.25rem; }
+.elkw-field .elkw-hint { display: block; font-size: var(--elkw-fs-small); margin-top: 0.25rem; }
+.elkw input[type=text], .elkw input[type=email], .elkw input[type=number], .elkw input[type=date], .elkw input[type=password],
+.elkw input[type=search], .elkw input[type=tel], .elkw input[type=time], .elkw input[type=url], .elkw select {
+  width: 100%; height: var(--elkw-control-h); padding: 0 1rem;
+  border: 1px solid var(--elkw-action); border-radius: var(--elkw-radius-input);
+  background: var(--elkw-white); color: var(--elkw-text); font: inherit; font-size: 100%; line-height: 1.4;
+}
+.elkw textarea { width: 100%; height: 150px; padding: 0.5rem 1rem; border: 1px solid var(--elkw-action); border-radius: var(--elkw-radius-input); font: inherit; }
+.elkw input[type=checkbox], .elkw input[type=radio] { accent-color: var(--elkw-action); width: 1.1em; height: 1.1em; }
+.elkw input:disabled, .elkw select:disabled, .elkw textarea:disabled { border-color: var(--elkw-neutral-40); background: var(--elkw-neutral-10); cursor: not-allowed; }
+.elkw .error, .elkw [aria-invalid="true"] { border-color: var(--elkw-error) !important; background: rgba(255, 0, 0, 0.1) !important; }
+.elkw-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem 1.5rem; align-items: start; }
+
+/* ---------- Tabelle ---------- */
+.elkw table, .elkw-table { width: 100%; border-collapse: collapse; border: 1px solid var(--elkw-table-border); }
+.elkw th, .elkw td { border: 1px solid var(--elkw-table-border); padding: var(--elkw-cell-pad); text-align: left; vertical-align: top; }
+.elkw thead th { background: var(--elkw-table-head); font-weight: 400; }
+.elkw-table-wrap { overflow-x: auto; }
+.elkw-table--select tbody tr { transition: var(--elkw-transition); }
+.elkw-table--select tbody tr:hover { background: var(--elkw-neutral-10); }
+.elkw-table tbody tr[aria-selected="true"] { background: var(--elkw-light); }
+@media (max-width: 640px) {
+  .elkw-table--stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .elkw-table--stack, .elkw-table--stack tbody, .elkw-table--stack tr, .elkw-table--stack td { display: block; width: 100%; border: 0; }
+  .elkw-table--stack tr { border-bottom: 1px solid var(--elkw-table-border); padding: 0.5rem 0; }
+  .elkw-table--stack td { padding: 0.1rem 0; }
+  .elkw-table--stack td:first-child { font-weight: 700; }
+  .elkw-table--stack td[data-label]::before { content: attr(data-label) ": "; font-weight: 600; }   /* Spaltenname vor dem Wert */
+}
+
+/* ---------- Fuß ---------- */
+.elkw-footer { font-size: var(--elkw-fs-nav-sub); }
+.elkw-footer__main { background: var(--elkw-primary); color: var(--elkw-on-primary); padding: 3rem 0; }
+.elkw-footer__main a { color: inherit; }
+.elkw-footer__main p { margin: 0 0 1rem; }
+.elkw-footer__legal { background: var(--elkw-light); color: var(--elkw-text); }
+.elkw-footer__legal ul { display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; margin: 0; padding: 1rem 0; list-style: none; }
+.elkw-footer__legal a { color: var(--elkw-text); text-decoration: none; }
+
+/* ---------- Foto / Platzhalter ---------- */
+.elkw-photo { display: flex; align-items: center; justify-content: center; padding: 1rem; background: var(--elkw-light); color: var(--elkw-dunkelgrau); font-size: var(--elkw-fs-small); text-align: center; overflow: hidden; }
+.elkw-photo:has(img) { padding: 0; }
+.elkw-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ---------- Akzente der Farbwelt (sparsam, flächig) ---------- */
+.elkw-bar { display: block; flex: none; width: 3mm; min-height: 22mm; background: var(--elkw-akzent); }
+.elkw-kicker { text-transform: uppercase; letter-spacing: 0.06em; font-size: var(--elkw-fs-small); margin: 0 0 0.25rem; }
+.elkw-dateblock { display: inline-flex; flex: none; flex-direction: column; width: 5.5rem; text-align: center; font-weight: 300; line-height: 1.05; }
+.elkw-dateblock__top { background: var(--elkw-akzent); color: var(--elkw-on-akzent); padding: 0.6rem 0 0.5rem; }
+.elkw-dateblock__bottom { background: var(--elkw-dateblock-bottom); color: #FFFFFF; padding: 0.5rem 0; margin-top: 2px; font-size: 1.6rem; }
+.elkw-dateblock .wd { font-size: 1.2rem; } .elkw-dateblock .day { font-size: 2.2rem; } .elkw-dateblock .mon { font-size: 0.75rem; margin-top: 0.3rem; }
+.elkw-dateblock--small { width: 4.25rem; }
+.elkw-dateblock--small .wd { font-size: 0.95rem; } .elkw-dateblock--small .day { font-size: 1.6rem; } .elkw-dateblock--small .elkw-dateblock__bottom { font-size: 1.1rem; }
+
+/* ---------- Fläche (weiße Karte für Inhaltsblöcke, v. a. in Anwendungen) ---------- */
+.elkw-surface { background: var(--elkw-white); border: 1px solid var(--elkw-border); border-radius: var(--elkw-radius); padding: var(--elkw-box-pad); }
+.elkw-surface > h2:first-child, .elkw-surface > h3:first-child { margin-top: 0; font-size: var(--elkw-fs-h3); }
+.elkw-grid-wide { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: var(--elkw-gap); align-items: start; }
+
+/* ---------- Begrüßung / Seitenkopf mit Satz ---------- */
+.elkw-hello { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: var(--elkw-space-l); }
+.elkw-hello h1 { margin: 0; }
+.elkw-hello p { margin: 0.25rem 0 0; }
+
+/* ---------- Wort (Zitat, Bibelvers, Leitsatz) – nach dem Zitatstil der Moodboards ---------- */
+.elkw-word { position: relative; margin: 0 0 var(--elkw-gap); padding: 1.5rem 1.5rem 1.5rem 2.75rem; background: var(--elkw-contrast); color: var(--elkw-on-contrast); border-radius: var(--elkw-radius); }
+.elkw-word::before { content: "\201D"; position: absolute; left: 0.9rem; top: 0.4rem; font-size: 3rem; font-weight: 700; line-height: 1; color: var(--elkw-band-title); }
+.elkw-word blockquote, .elkw-word > p { margin: 0; font-size: 1.15rem; font-weight: 300; line-height: 1.5; }
+.elkw-word cite, .elkw-word figcaption { display: block; margin-top: 0.5rem; font-style: normal; font-weight: 600; font-size: var(--elkw-fs-small); }
+
+/* ---------- Person: Initialen + Personenliste ---------- */
+.elkw-avatar { flex: none; display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: var(--elkw-radius-btn); background: var(--elkw-akzent-20); color: var(--elkw-text); font-weight: 600; font-size: 0.9rem; }
+.elkw-people { margin: 0; padding: 0; list-style: none; }
+.elkw-people li { display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 0; border-bottom: 1px solid var(--elkw-light); }
+.elkw-people li:last-child { border-bottom: 0; }
+.elkw-people__who { flex: 1; min-width: 0; }
+.elkw-people__who span { display: block; font-size: var(--elkw-fs-small); }
+
+/* ---------- Segmente (schneller Filter, aria-pressed) ---------- */
+.elkw-segments { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 var(--elkw-gap); padding: 0; list-style: none; }
+.elkw-segments button { border: 1px solid var(--elkw-primary); background: var(--elkw-white); color: var(--elkw-text); border-radius: var(--elkw-radius-btn); padding: 0.3rem 0.9rem; font: inherit; cursor: pointer; transition: var(--elkw-transition); }
+.elkw-segments button:hover { background: var(--elkw-neutral-10); }
+.elkw-segments [aria-pressed="true"] { background: var(--elkw-action); border-color: var(--elkw-action); color: var(--elkw-on-action); }
+
+@media (max-width: 1023px) { .elkw-grid-wide { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Schmale Bildschirme ---------- */
+@media (max-width: 1023px) {
+  .elkw-meta { display: none; }
+  .elkw { --elkw-logo-h: 40px; }
+  .elkw-burger { display: block; }
+  .elkw-header .elkw-nav { display: none; }
+  .elkw-header .elkw-nav.is-open { display: block; width: 100%; }
+  .elkw-header .elkw-nav.is-open > ul { flex-direction: column; gap: 0; padding: 0 0 1rem; }
+  .elkw-header .elkw-nav.is-open .elkw-submenu { display: block; position: static; padding: 0 0 0 1rem; min-width: 0; }
+  .elkw-header__inner { min-height: 0.5rem; }
+  .elkw-grid-main, .elkw-grid-3 { grid-template-columns: 1fr; }
+  .elkw-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .elkw-grid-2, .elkw-grid-4 { grid-template-columns: 1fr; }
+  .elkw-tile { min-height: 420px; }
+}

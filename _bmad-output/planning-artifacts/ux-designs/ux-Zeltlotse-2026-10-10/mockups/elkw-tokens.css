@@ -1,0 +1,421 @@
+@charset "utf-8";
+/* ==========================================================================
+   ELKW Design – Tokens
+   Farbwelt = EINE Farbe (Schmuckfarbe 01–15 oder Violett) + neutrales Grau.
+   Quellen: Styleguide (März 2025), Moodboards, gemessen auf www.elk-wue.de.
+
+   Einbinden: Sarabun + elkw-tokens.css + elkw-components.css (+ elkw-app.css für Anwendungen)
+   <html class="elkw" data-farbwelt="08">        Farbwelt 01–15 oder "violett" (Standard: 01 Dunkelblau)
+   <html data-stil="gemeinde">                    Ecken 12/6/8 px (Standard: eckig)
+   <html data-dichte="arbeiten">                  kompakte Dichte für Anwendungen
+   ========================================================================== */
+
+:root {
+  /* --- Schrift (Dichte „Lesen“, gemessen elk-wue.de) --- */
+  --elkw-font: "Sarabun", Arial, sans-serif;
+  --elkw-fs: 1.125rem;                /* 18 px */
+  --elkw-lh: 1.85rem;
+  --elkw-fs-h1: 200%;  --elkw-lh-h1: 2.75rem;
+  --elkw-fs-h2: 150%;  --elkw-lh-h2: 2.25rem;
+  --elkw-fs-h3: 135%;
+  --elkw-fs-h4: 120%;
+  --elkw-fs-small: 0.8rem;
+  --elkw-fs-nav-sub: 96%;
+  --elkw-control-h: 41px;             /* Eingabefelder */
+  --elkw-btn-pad: 0.5rem 1.5rem;
+  --elkw-cell-pad: 0.5rem;
+
+  /* --- Feste Farben --- */
+  --elkw-text: #000000;
+  --elkw-white: #FFFFFF;
+  --elkw-violett: #8D197C;            /* Hausfarbe: Logo, Farbwelt „violett“ */
+  --elkw-dunkelviolett: #591855;
+  --elkw-dunkelgrau: #474F60;         /* Grundfarbe, neutrale Trägerfarbe */
+
+  /* Neutrales Grau aus Dunkelgrau-Abstufungen (Styleguide 10–100 %) – in jeder Farbwelt gleich */
+  --elkw-neutral-10: #EDEDEF;         /* Hover, ruhige Hintergründe in Anwendungen */
+  --elkw-light: #D8DBDE;              /* ≈ 20 %, gemessen elk-wue.de: Panels, Reiter, Auswahl, Fußleiste */
+  --elkw-neutral-40: #B5B9BF;         /* Trenner auf Grau, deaktivierte Rahmen */
+  --elkw-neutral-60: #9195A0;
+  --elkw-dark: var(--elkw-dunkelgrau);
+  --elkw-on-dark: #FFFFFF;
+  --elkw-border: #868686;             /* Card-Rahmen, Trennlinien */
+  --elkw-table-border: #CCCCCC;
+  --elkw-table-head: #EEEEEE;
+  --elkw-dateblock-bottom: var(--elkw-dunkelgrau);
+  --elkw-overlay: rgba(200, 200, 200, 0.7);   /* Dialog-Hintergrund (gemessen) */
+  --elkw-dialog: #D8D8D8;                     /* Dialogfläche (gemessen) */
+
+  /* Statusfarben (Anwendungen): Schmuckfarben, nur als Balken/Markierung – Bedeutung immer auch als Wort */
+  --elkw-status-fehler: #B61231;      /* 14 Rot */
+  --elkw-status-warnung: #DC9018;     /* 12 Orange */
+  --elkw-status-erfolg: #518471;      /* 08 Dunkelgrün */
+  --elkw-status-hinweis: var(--elkw-action);
+  --elkw-error: #FF0000;              /* Feldfehler wie elk-wue.de */
+
+  /* Grundfarben-Abstufungen für Druck */
+  --elkw-dunkelviolett-80: #7A4677; --elkw-dunkelviolett-60: #9B7499; --elkw-dunkelviolett-40: #BDA3BB; --elkw-dunkelviolett-20: #DED1DD;
+  --elkw-dunkelgrau-80: #6C7280;    --elkw-dunkelgrau-60: #9195A0;    --elkw-dunkelgrau-40: #B5B9BF;    --elkw-dunkelgrau-20: #DADCDF;
+
+  /* --- Raster --- */
+  --elkw-container: 1310px;
+  --elkw-gutter: 1rem;
+  --elkw-space-xs: 0.5rem;
+  --elkw-space-s: 1rem;
+  --elkw-space-m: 1.5rem;
+  --elkw-space-l: 2rem;
+  --elkw-space-xl: 4rem;
+  --elkw-section: 3rem;               /* Abstand zwischen Abschnitten ohne Band */
+  --elkw-gap: 24px;
+  --elkw-gap-tiles: 25px;
+  --elkw-header-pad: 16px;
+  --elkw-logo-h: 60px;
+
+  --elkw-radius: 0px;
+  --elkw-radius-btn: 0px;
+  --elkw-radius-input: 0px;
+
+  --elkw-transition: background-color 0.3s, color 0.3s, border-color 0.3s, left 0.3s;   /* Hover wie elk-wue.de (0,3 s), ohne Fokus-Rahmen zu animieren */
+  --elkw-focus: #000000;              /* Tastaturfokus 2 px, 4 px Abstand (elk-wue.de) */
+  --elkw-focus-on-color: #FFFF00;     /* auf farbigen Flächen (elk-wue.de) */
+  --elkw-line-on-light: var(--elkw-neutral-40);   /* Trennlinie auf grauen Flächen */
+  --elkw-box-pad: 2rem;               /* Infobox */
+  --elkw-panel-pad: 18px 32px 32px;   /* Panel */
+  --elkw-panel-title-gap: 28.8px;     /* Abstand unter Panel-Titel */
+  --elkw-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M1 7h11.2L8.3 3.1 9.7 1.7 16 8l-6.3 6.3-1.4-1.4L12.2 9H1z'/%3E%3C/svg%3E");
+}
+
+/* Stil: klassisch (Standard, eckig) · gemeinde (klassisch mit Baukasten-Rundungen) · nahbar (elkw-nahbar.css) */
+[data-stil="gemeinde"], [data-stil="nahbar"] { --elkw-radius: 12px; --elkw-radius-btn: 6px; --elkw-radius-input: 8px; }
+
+/* Dichte „Arbeiten“ für Anwendungen */
+[data-dichte="arbeiten"] {
+  --elkw-fs: 1rem;                    /* 16 px */
+  --elkw-lh: 1.5rem;
+  --elkw-fs-h1: 1.5rem;  --elkw-lh-h1: 2rem;
+  --elkw-fs-h2: 1.25rem; --elkw-lh-h2: 1.75rem;
+  --elkw-fs-h3: 1.125rem;
+  --elkw-fs-h4: 1rem;
+  --elkw-fs-small: 0.8125rem;
+  --elkw-control-h: 36px;
+  --elkw-btn-pad: 0.3rem 1rem;
+  --elkw-cell-pad: 0.4rem 0.6rem;
+  --elkw-space-m: 1rem;
+  --elkw-space-l: 1.5rem;
+  --elkw-space-xl: 2rem;
+  --elkw-section: 1.5rem;
+  --elkw-gap: 16px;
+  --elkw-header-pad: 8px;
+  --elkw-logo-h: 36px;
+  --elkw-box-pad: 1.25rem;
+  --elkw-panel-pad: 12px 20px 20px;
+  --elkw-panel-title-gap: 12px;
+}
+
+/* BEGIN FARBWELTEN (generiert von scripts/make-farbwelt.py --write-presets) */
+/* 01 Dunkelblau – kräftig, Band 40 % */
+:root {
+  --elkw-primary: #29447B;
+  --elkw-action: #29447B;
+  --elkw-akzent: #29447B;
+  --elkw-akzent-80: #546995;
+  --elkw-akzent-60: #7F8FB0;
+  --elkw-akzent-40: #A9B4CA;
+  --elkw-akzent-20: #D4DAE5;
+  --elkw-akzent-10: #EAECF2;
+  --elkw-contrast: #A9B4CA;
+  --elkw-band-title: #29447B;
+  --elkw-on-primary: #FFFFFF;
+  --elkw-on-action: #FFFFFF;
+  --elkw-on-akzent: #FFFFFF;
+  --elkw-on-contrast: #000000;
+}
+
+/* 01 Dunkelblau – kräftig, Band 40 % */
+[data-farbwelt="01"] {
+  --elkw-primary: #29447B;
+  --elkw-action: #29447B;
+  --elkw-akzent: #29447B;
+  --elkw-akzent-80: #546995;
+  --elkw-akzent-60: #7F8FB0;
+  --elkw-akzent-40: #A9B4CA;
+  --elkw-akzent-20: #D4DAE5;
+  --elkw-akzent-10: #EAECF2;
+  --elkw-contrast: #A9B4CA;
+  --elkw-band-title: #29447B;
+  --elkw-on-primary: #FFFFFF;
+  --elkw-on-action: #FFFFFF;
+  --elkw-on-akzent: #FFFFFF;
+  --elkw-on-contrast: #000000;
+}
+
+/* 02 Taubenblau – kräftig, Band 60 % */
+[data-farbwelt="02"] {
+  --elkw-primary: #6C759A;
+  --elkw-action: #6C759A;
+  --elkw-akzent: #707AA0;
+  --elkw-akzent-80: #8D95B3;
+  --elkw-akzent-60: #A9AFC6;
+  --elkw-akzent-40: #C6CAD9;
+  --elkw-akzent-20: #E2E4EC;
+  --elkw-akzent-10: #F1F2F6;
+  --elkw-contrast: #A9AFC6;
+  --elkw-band-title: #000000;
+  --elkw-on-primary: #FFFFFF;
+  --elkw-on-action: #FFFFFF;
+  --elkw-on-akzent: #FFFFFF;
+  --elkw-on-contrast: #000000;
+}
+
+/* 03 Hellblau – hell, Band 60 % */
+[data-farbwelt="03"] {
+  --elkw-primary: #474F60;
+  --elkw-action: #474F60;
+  --elkw-akzent: #5EB3D2;
+  --elkw-akzent-80: #7EC2DB;
+  --elkw-akzent-60: #9ED1E4;
+  --elkw-akzent-40: #BFE1ED;
+  --elkw-akzent-20: #DFF0F6;
+  --elkw-akzent-10: #EFF7FA;
+  --elkw-contrast: #9ED1E4;
+  --elkw-band-title: #474F60;
+  --elkw-on-primary: #FFFFFF;
+  --elkw-on-action: #FFFFFF;
+  --elkw-on-akzent: #000000;
+  --elkw-on-contrast: #000000;
+}
+
+/* 04 Graublau – hell, Band 60 % */
+[data-farbwelt="04"] {
+  --elkw-primary: #474F60;
+  --elkw-action: #474F60;
+  --elkw-akzent: #6290B1;
+  --elkw-akzent-80: #81A6C1;
+  --elkw-akzent-60: #A1BCD0;
+  --elkw-akzent-40: #C0D3E0;
+  --elkw-akzent-20: #E0E9EF;
+  --elkw-akzent-10: #EFF4F7;
+  --elkw-contrast: #A1BCD0;
+  --elkw-band-title: #474F60;
+  --elkw-on-primary: #FFFFFF;
+  --elkw-on-action: #FFFFFF;
+  --elkw-on-akzent: #FFFFFF;
+  --elkw-on-contrast: #000000;
+}
+
+/* 05 Pastellviolett – hell, Band 60 % */
+[data-farbwelt="05"] {
+  --elkw-primary: #474F60;
+  --elkw-action: #474F60;
+  --elkw-akzent: #988FA0;
+  --elkw-akzent-80: #ADA5B3;
+  --elkw-akzent-60: #C1BCC6;
+  --elkw-akzent-40: #D6D2D9;
+  --elkw-akzent-20: #EAE9EC;
+  --elkw-akzent-10: #F5F4F6;
+  --elkw-contrast: #C1BCC6;
+  --elkw-band-title: #474F60;
+  --elkw-on-primary: #FFFFFF;
+  --elkw-on-action: #FFFFFF;
+  --elkw-on-akzent: #000000;
+  --elkw-on-contrast: #000000;
+}
+
+/* 06 Gelbgrün – hell, Band 60 % */
+[data-farbwelt="06"] {
+  --elkw-primary: #474F60;
+  --elkw-action: #474F60;
+  --elkw-akzent: #C9D229;
+  --elkw-akzent-80: #D4DB54;
+  --elkw-akzent-60: #DFE47F;
+  --elkw-akzent-40: #E9EDA9;
+  --elkw-akzent-20: #F4F6D4;
+  --elkw-akzent-10: #FAFAEA;
+  --elkw-contrast: #DFE47F;
+  --elkw-band-title: #474F60;
+  --elkw-on-primary: #FFFFFF;
+  --elkw-on-action: #FFFFFF;
+  --elkw-on-akzent: #000000;
+  --elkw-on-contrast: #000000;
+}
+
+/* 07 Hellgrün – hell, Band 60 % */
+[data-farbwelt="07"] {
+  --elkw-primary: #474F60;
+  --elkw-action: #474F60;
+  --elkw-akzent: #A3B37A;
+  --elkw-akzent-80: #B5C295;
+  --elkw-akzent-60: #C8D1AF;
+  --elkw-akzent-40: #DAE1CA;
+  --elkw-akzent-20: #EDF0E4;
+  --elkw-akzent-10: #F6F7F2;
+  --elkw-contrast: #C8D1AF;
+  --elkw-band-title: #474F60;
+  --elkw-on-primary: #FFFFFF;
+  --elkw-on-action: #FFFFFF;
+  --elkw-on-akzent: #000000;
+  --elkw-on-contrast: #000000;
+}
+
+/* 08 Dunkelgrün – kräftig, Band 60 % */
+[data-farbwelt="08"] {
+  --elkw-primary: #4F806E;
+  --elkw-action: #4F806E;
+  --elkw-akzent: #518471;
+  --elkw-akzent-80: #749D8D;
+  --elkw-akzent-60: #97B5AA;
+  --elkw-akzent-40: #B9CEC6;
+  --elkw-akzent-20: #DCE6E3;
+  --elkw-akzent-10: #EEF3F1;
+  --elkw-contrast: #97B5AA;
+  --elkw-band-title: #000000;
+  --elkw-on-primary: #FFFFFF;
+  --elkw-on-action: #FFFFFF;
+  --elkw-on-akzent: #FFFFFF;
+  --elkw-on-contrast: #000000;
+}
+
+/* 09 Blaugrün – kräftig, Band 60 % */
+[data-farbwelt="09"] {
+  --elkw-primary: #307F91;
+  --elkw-action: #307F91;
+  --elkw-akzent: #318294;
+  --elkw-akzent-80: #5A9BA9;
+  --elkw-akzent-60: #83B4BF;
+  --elkw-akzent-40: #ADCDD4;
+  --elkw-akzent-20: #D6E6EA;
+  --elkw-akzent-10: #EAF2F4;
+  --elkw-contrast: #83B4BF;
+  --elkw-band-title: #000000;
+  --elkw-on-primary: #FFFFFF;
+  --elkw-on-action: #FFFFFF;
+  --elkw-on-akzent: #FFFFFF;
+  --elkw-on-contrast: #000000;
+}
+
+/* 10 Türkis – kräftig, Band 60 % */
+[data-farbwelt="10"] {
+  --elkw-primary: #258194;
+  --elkw-action: #258194;
+  --elkw-akzent: #298FA5;
+  --elkw-akzent-80: #54A5B7;
+  --elkw-akzent-60: #7FBCC9;
+  --elkw-akzent-40: #A9D2DB;
+  --elkw-akzent-20: #D4E9ED;
+  --elkw-akzent-10: #EAF4F6;
+  --elkw-contrast: #7FBCC9;
+  --elkw-band-title: #000000;
+  --elkw-on-primary: #FFFFFF;
+  --elkw-on-action: #FFFFFF;
+  --elkw-on-akzent: #FFFFFF;
+  --elkw-on-contrast: #000000;
+}
+
+/* 11 Gelb – hell, Band 60 % */
+[data-farbwelt="11"] {
+  --elkw-primary: #474F60;
+  --elkw-action: #474F60;
+  --elkw-akzent: #F5D403;
+  --elkw-akzent-80: #F7DD35;
+  --elkw-akzent-60: #F9E568;
+  --elkw-akzent-40: #FBEE9A;
+  --elkw-akzent-20: #FDF6CD;
+  --elkw-akzent-10: #FEFBE6;
+  --elkw-contrast: #F9E568;
+  --elkw-band-title: #474F60;
+  --elkw-on-primary: #FFFFFF;
+  --elkw-on-action: #FFFFFF;
+  --elkw-on-akzent: #000000;
+  --elkw-on-contrast: #000000;
+}
+
+/* 12 Orange – hell, Band 60 % */
+[data-farbwelt="12"] {
+  --elkw-primary: #474F60;
+  --elkw-action: #474F60;
+  --elkw-akzent: #DC9018;
+  --elkw-akzent-80: #E3A646;
+  --elkw-akzent-60: #EABC74;
+  --elkw-akzent-40: #F1D3A3;
+  --elkw-akzent-20: #F8E9D1;
+  --elkw-akzent-10: #FCF4E8;
+  --elkw-contrast: #EABC74;
+  --elkw-band-title: #474F60;
+  --elkw-on-primary: #FFFFFF;
+  --elkw-on-action: #FFFFFF;
+  --elkw-on-akzent: #000000;
+  --elkw-on-contrast: #000000;
+}
+
+/* 13 Apricot – hell, Band 60 % */
+[data-farbwelt="13"] {
+  --elkw-primary: #474F60;
+  --elkw-action: #474F60;
+  --elkw-akzent: #CB957D;
+  --elkw-akzent-80: #D5AA97;
+  --elkw-akzent-60: #E0BFB1;
+  --elkw-akzent-40: #EAD5CB;
+  --elkw-akzent-20: #F5EAE5;
+  --elkw-akzent-10: #FAF4F2;
+  --elkw-contrast: #E0BFB1;
+  --elkw-band-title: #474F60;
+  --elkw-on-primary: #FFFFFF;
+  --elkw-on-action: #FFFFFF;
+  --elkw-on-akzent: #000000;
+  --elkw-on-contrast: #000000;
+}
+
+/* 14 Rot – kräftig, Band 40 % */
+[data-farbwelt="14"] {
+  --elkw-primary: #B61231;
+  --elkw-action: #B61231;
+  --elkw-akzent: #B61231;
+  --elkw-akzent-80: #C5415A;
+  --elkw-akzent-60: #D37183;
+  --elkw-akzent-40: #E2A0AD;
+  --elkw-akzent-20: #F0D0D6;
+  --elkw-akzent-10: #F8E7EA;
+  --elkw-contrast: #E2A0AD;
+  --elkw-band-title: #B61231;
+  --elkw-on-primary: #FFFFFF;
+  --elkw-on-action: #FFFFFF;
+  --elkw-on-akzent: #FFFFFF;
+  --elkw-on-contrast: #000000;
+}
+
+/* 15 Dunkelrot – kräftig, Band 40 % */
+[data-farbwelt="15"] {
+  --elkw-primary: #9C2049;
+  --elkw-action: #9C2049;
+  --elkw-akzent: #9C2049;
+  --elkw-akzent-80: #B04D6D;
+  --elkw-akzent-60: #C47992;
+  --elkw-akzent-40: #D7A6B6;
+  --elkw-akzent-20: #EBD2DB;
+  --elkw-akzent-10: #F5E9ED;
+  --elkw-contrast: #D7A6B6;
+  --elkw-band-title: #9C2049;
+  --elkw-on-primary: #FFFFFF;
+  --elkw-on-action: #FFFFFF;
+  --elkw-on-akzent: #FFFFFF;
+  --elkw-on-contrast: #000000;
+}
+
+/* Violett (Hausfarbe) – violett, Band 60 % */
+[data-farbwelt="violett"] {
+  --elkw-primary: #591855;
+  --elkw-action: #8D197C;
+  --elkw-akzent: #8D197C;
+  --elkw-akzent-80: #7A4677;
+  --elkw-akzent-60: #9B7499;
+  --elkw-akzent-40: #BDA3BB;
+  --elkw-akzent-20: #DED1DD;
+  --elkw-akzent-10: #EEE8EE;
+  --elkw-contrast: #9B7499;
+  --elkw-band-title: #591855;
+  --elkw-on-primary: #FFFFFF;
+  --elkw-on-action: #FFFFFF;
+  --elkw-on-akzent: #FFFFFF;
+  --elkw-on-contrast: #000000;
+}
+/* END FARBWELTEN */

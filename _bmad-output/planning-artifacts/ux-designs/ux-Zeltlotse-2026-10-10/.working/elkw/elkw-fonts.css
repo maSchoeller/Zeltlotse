@@ -1,0 +1,9 @@
+@charset "utf-8";
+/* Sarabun lokal (SIL Open Font License, fonts/OFL.txt) – statt Google Fonts für Offline-Anwendungen.
+   Einbinden vor elkw-tokens.css; Ordner fonts/ mitkopieren. */
+@font-face { font-family: "Sarabun"; font-style: normal; font-weight: 300; font-display: swap; src: url("fonts/Sarabun-Light.ttf") format("truetype"); }
+@font-face { font-family: "Sarabun"; font-style: italic; font-weight: 300; font-display: swap; src: url("fonts/Sarabun-LightItalic.ttf") format("truetype"); }
+@font-face { font-family: "Sarabun"; font-style: normal; font-weight: 400; font-display: swap; src: url("fonts/Sarabun-Regular.ttf") format("truetype"); }
+@font-face { font-family: "Sarabun"; font-style: italic; font-weight: 400; font-display: swap; src: url("fonts/Sarabun-Italic.ttf") format("truetype"); }
+@font-face { font-family: "Sarabun"; font-style: normal; font-weight: 600; font-display: swap; src: url("fonts/Sarabun-SemiBold.ttf") format("truetype"); }
+@font-face { font-family: "Sarabun"; font-style: normal; font-weight: 700; font-display: swap; src: url("fonts/Sarabun-Bold.ttf") format("truetype"); }

@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="de" class="elkw" data-farbwelt="09" data-stil="nahbar" data-dichte="arbeiten">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zeltlotse – Laptop-Navigation: zwei Varianten</title>
+<link rel="stylesheet" href="elkw-fonts.css">
+<link rel="stylesheet" href="elkw-tokens.css">
+<link rel="stylesheet" href="elkw-components.css">
+<link rel="stylesheet" href="elkw-app.css">
+<link rel="stylesheet" href="elkw-nahbar.css">
+<style>
+/* ===== Nur Anordnung (keine neuen Gestaltungsmittel): Farben ausschließlich über ELKW-Variablen ===== */
+.zl-page { max-width: 1440px; margin: 0 auto; padding: var(--elkw-space-m); }
+.zl-page > h1 { margin: 0 0 var(--elkw-space-s); }
+.zl-intro { margin: 0 0 var(--elkw-space-m); max-width: 60rem; }
+.zl-switch { align-items: center; }
+.zl-switch .elkw-segments { margin: 0; }
+.zl-switch__label { font-size: var(--elkw-fs-small); font-weight: 600; margin-right: 0.25rem; }
+.zl-switch__group { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+
+.zl-variant { display: flex; flex-direction: column; gap: var(--elkw-space-l); margin-top: var(--elkw-space-m); }
+.zl-variant[hidden] { display: none; }
+.zl-screen { max-width: 1200px; width: 100%; margin: 0 auto; min-width: 0; }
+.zl-screen > .elkw-kicker { margin-bottom: 0.5rem; }
+
+/* Gerätrahmen: 1 px Rahmen in der Rahmenfarbe der Bibliothek */
+.zl-frame { border: 1px solid var(--elkw-border); border-radius: var(--elkw-radius); overflow: hidden; background: var(--elkw-white); }
+.zl-browser__address { padding: 0.35rem var(--elkw-space-m); font-size: var(--elkw-fs-small); background: var(--elkw-neutral-10); border-bottom: 1px solid var(--elkw-light); }
+.zl-browser .elkw-app { height: auto; min-height: 0; }
+.zl-browser .elkw-app__main > * + *, .zl-tabpanel > * + * { margin-top: var(--elkw-space-m); }
+.zl-browser .elkw-app__main .elkw-hello { margin-bottom: 0; }
+.zl-browser .elkw-alert { margin: 0; }
+.zl-browser .elkw-tabs + .zl-tabpanel { margin-top: var(--elkw-space-m); }
+.zl-browser .elkw-pagehead { margin-bottom: 0; }
+.zl-notfall { font-weight: 600; white-space: nowrap; }
+
+/* Wortmarke Zeltlotse: reiner Text in Sarabun */
+.zl-wordmark { font-weight: 600; font-size: var(--elkw-fs-h3); line-height: 36px; color: var(--elkw-text); text-decoration: none; white-space: nowrap; }
+
+/* Seitennavigation: Einstellungen unten, mit Linie abgesetzt */
+@media (min-width: 1024px) {
+  .zl-nav { display: flex; flex-direction: column; justify-content: space-between; gap: var(--elkw-space-l); }
+}
+.zl-nav__end { border-top: 1px solid var(--elkw-light); padding-top: 0.5rem !important; }
+.zl-nav .elkw-sidenav__group:first-child { margin-top: 0; }
+
+/* Listen der Startseite */
+.zl-list { margin: 0; padding: 0; list-style: none; }
+.zl-list > li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.25rem 1rem; padding: 0.6rem 0; border-bottom: 1px solid var(--elkw-light); }
+.zl-list > li:last-child { border-bottom: 0; }
+.zl-list .elkw-choice { margin: 0; }
+.zl-done { text-decoration: line-through; }
+.zl-message { margin: 0.25rem 0 0; }
+.elkw-surface > h2:first-child { margin-bottom: 0.75rem; }
+.zl-more { margin-top: 0.5rem; }
+
+/* Formular Schaden melden */
+.zl-gap { margin-top: 1rem; }
+.zl-textarea { height: 5.5rem !important; }
+.zl-listhead { margin-bottom: 0 !important; }
+.zl-browser .elkw-surface .elkw-formactions { margin-top: var(--elkw-space-m); }
+.zl-browser .elkw-surface .elkw-stats { margin: 0; }
+
+/* Einordnung unter jeder Variante (Präsentation, nicht Produkt) */
+.zl-caption { max-width: 1200px; width: 100%; margin: calc(-1 * var(--elkw-space-s)) auto 0; padding: var(--elkw-space-m); border: 1px solid var(--elkw-border); border-radius: var(--elkw-radius); }
+.zl-caption__clicks { margin: 0 0 var(--elkw-space-s); }
+.zl-caption__cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--elkw-space-m); }
+.zl-caption ul { margin: 0.25rem 0 0; padding-left: 1.2rem; }
+.zl-caption .elkw-kicker { margin: 0; }
+
+@media (max-width: 1023px) {
+  .zl-caption__cols { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) {
+  .zl-page { padding: var(--elkw-space-m) 1rem; }
+}
+</style>
+</head>
+<body>
+<a class="elkw-skiplink" href="#inhalt">Zum Inhalt springen</a>
+<div class="zl-page">
+  <h1>Zeltlotse – Laptop-Navigation: zwei Varianten</h1>
+  <p class="zl-intro">Zeltlager Kapf 2027 während der Freizeit (Tag&nbsp;3), Ansicht der Leitung (Miriam). Je Variante: Startseite mit Seitennavigation und die Seite, auf der ein Schaden eingetragen wird.</p>
+
+  <!-- Umschalter (nur für diese Vergleichsseite) -->
+  <div class="elkw-toolbar zl-switch" role="group" aria-label="Variante umschalten">
+    <div class="zl-switch__group" role="group" aria-labelledby="zl-var-label">
+      <span class="zl-switch__label" id="zl-var-label">Variante</span>
+      <div class="elkw-segments">
+        <button type="button" data-show="v1" aria-pressed="true">1 · kompakt</button>
+        <button type="button" data-show="v2" aria-pressed="false">2 · eigene Punkte</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="inhalt" role="main">
+    <div class="zl-variant" id="v1" aria-label="Variante 1: kompakt">
+    <section class="zl-screen" aria-labelledby="v1a-label">
+      <p class="elkw-kicker" id="v1a-label">Variante 1 · Bildschirm a · Browser, ca. 1200&nbsp;px · Startseite während der Freizeit</p>
+      <div class="zl-frame zl-browser">
+        <div class="zl-browser__address" aria-hidden="true">zeltlotse.de/kapf-2027/uebersicht</div>
+        <div class="elkw-app">
+          <header class="elkw-app__bar elkw-appbar">
+            <button class="elkw-appbar__toggle" aria-expanded="false" aria-controls="nav-1a"><span></span><span></span><span></span><span class="sr-only">Navigation</span></button>
+            <a class="zl-wordmark" href="#">Zeltlotse</a>
+            <span class="elkw-appbar__name">Zeltlager Kapf 2027</span>
+            <div class="elkw-appbar__end">
+              <a class="elkw-link zl-notfall" href="#">Notfall</a>
+              <input type="search" placeholder="Person, Dokument suchen …" aria-label="Suchen">
+              <span class="elkw-appbar__user">Miriam</span>
+            </div>
+          </header>
+          <nav class="elkw-app__nav elkw-sidenav zl-nav" id="nav-1a" aria-label="Bereiche der Freizeit">
+            <div><p class="elkw-kicker elkw-sidenav__group">Zeltlager Kapf 2027</p>
+<ul><li><a href="#" aria-current="page">Übersicht</a></li><li><a href="#">Anmeldungen <span class="elkw-count">42</span></a></li><li><a href="#">Freizeitpass</a></li><li><a href="#">Programm</a></li><li><a href="#">Material</a></li><li><a href="#">Küche</a></li><li><a href="#">Finanzen</a></li><li><a href="#">Dokumente</a></li><li><a href="#">Kanäle <span class="elkw-count">1</span></a></li></ul></div>
+            <ul class="zl-nav__end"><li><a href="#">Einstellungen</a></li></ul>
+          </nav>
+          <div class="elkw-app__main elkw-ground">
+            <div class="elkw-hello">
+              <div>
+                <p class="elkw-kicker">Tag 3 · Dienstag, 3.&nbsp;August 2027 · Freizeit läuft</p>
+                <h1>Hallo, <strong>Miriam</strong></h1>
+                <p>Das Geländespiel läuft, zwei Aufgaben sind noch offen.</p>
+              </div>
+            </div>
+            <section class="elkw-alert" style="--status: var(--elkw-status-fehler)" aria-labelledby="v1a-nf">
+              <span class="elkw-alert__title" id="v1a-nf">Im Notfall:</span>
+              <p>Notfallplan, Notrufnummern, Vorfall-Protokoll und wer heute Dienst hat.</p>
+              <a class="elkw-btn" href="#">Notfallhilfe öffnen</a>
+              <p class="small">Direkt anrufen: <a class="elkw-link" href="tel:112">Notruf 112</a></p>
+            </section>
+            <div class="elkw-grid-wide">
+              <div class="elkw-stack">
+                <section class="elkw-surface" aria-labelledby="v1a-jetzt">
+                  <h2 id="v1a-jetzt">Jetzt und als Nächstes</h2>
+                  <ul class="elkw-eventlist">
+                    <li><div class="elkw-eventlist__body">
+                      <p class="elkw-kicker">Jetzt · 14:00&nbsp;Uhr</p>
+                      <h3>Geländespiel</h3>
+                      <p class="small" style="margin:0"><span class="elkw-status elkw-status--aktiv">Läuft</span> · Treffpunkt Fahnenmast · verantwortlich: Jonas, Lea</p>
+                    </div></li>
+                    <li><div class="elkw-eventlist__body">
+                      <p class="elkw-kicker">Als Nächstes · 18:00&nbsp;Uhr</p>
+                      <h3>Abendessen – Linsen-Dal</h3>
+                      <p class="small" style="margin:0">Essenszelt · Küchendienst: Gruppe Fuchs</p>
+                    </div></li>
+                  </ul>
+                  <a class="elkw-btn elkw-btn--text zl-more" href="#">Ganzer Tagesplan</a>
+                </section>
+                <section class="elkw-surface" aria-labelledby="v1a-aufg">
+                  <h2 id="v1a-aufg">Meine Aufgaben</h2>
+                  <ul class="zl-list">
+                    <li><label class="elkw-choice"><input type="checkbox"> Abendrunde vorbereiten</label><span class="elkw-status elkw-status--offen">Offen</span></li>
+                    <li><label class="elkw-choice"><input type="checkbox"> Elterntelefon 19&nbsp;Uhr übernehmen</label><span class="elkw-status elkw-status--offen">Offen</span></li>
+                    <li><label class="elkw-choice"><input type="checkbox" checked> <span class="zl-done">Einkaufsliste für Mittwoch freigeben</span></label><span class="elkw-status elkw-status--erfolg">Erledigt</span></li>
+                  </ul>
+                </section>
+              </div>
+              <div class="elkw-stack">
+                <div class="elkw-field">
+                  <label for="v1a-suche">Schnellsuche</label>
+                  <input id="v1a-suche" type="search" placeholder="Person suchen …">
+                </div>
+                <section class="elkw-surface" aria-labelledby="v1a-kanal">
+                  <h2 id="v1a-kanal">Kanal „Team“</h2>
+                  <ul class="elkw-people">
+                    <li><span class="elkw-avatar" aria-hidden="true">JB</span>
+                      <div class="elkw-people__who"><strong>Jonas</strong><span>heute, 13:52&nbsp;Uhr</span></div></li>
+                  </ul>
+                  <p class="zl-message">Beim Aufbau ist in Zelt&nbsp;4 eine Zeltstange gebrochen. Ersatz aus Kiste&nbsp;2 ist drin.</p>
+                  <a class="elkw-btn elkw-btn--text zl-more" href="#">Zum Kanal „Team“</a>
+                </section>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="zl-screen" aria-labelledby="v1b-label">
+      <p class="elkw-kicker" id="v1b-label">Variante 1 · Bildschirm b · Material › Reiter „Schäden &amp; Verluste“</p>
+      <div class="zl-frame zl-browser">
+        <div class="zl-browser__address" aria-hidden="true">zeltlotse.de/kapf-2027/material/schaeden</div>
+        <div class="elkw-app">
+          <header class="elkw-app__bar elkw-appbar">
+            <button class="elkw-appbar__toggle" aria-expanded="false" aria-controls="nav-1b"><span></span><span></span><span></span><span class="sr-only">Navigation</span></button>
+            <a class="zl-wordmark" href="#">Zeltlotse</a>
+            <span class="elkw-appbar__name">Zeltlager Kapf 2027</span>
+            <div class="elkw-appbar__end">
+              <a class="elkw-link zl-notfall" href="#">Notfall</a>
+              <input type="search" placeholder="Person, Dokument suchen …" aria-label="Suchen">
+              <span class="elkw-appbar__user">Miriam</span>
+            </div>
+          </header>
+          <nav class="elkw-app__nav elkw-sidenav zl-nav" id="nav-1b" aria-label="Bereiche der Freizeit">
+            <div><p class="elkw-kicker elkw-sidenav__group">Zeltlager Kapf 2027</p>
+<ul><li><a href="#">Übersicht</a></li><li><a href="#">Anmeldungen <span class="elkw-count">42</span></a></li><li><a href="#">Freizeitpass</a></li><li><a href="#">Programm</a></li><li><a href="#" aria-current="page">Material</a></li><li><a href="#">Küche</a></li><li><a href="#">Finanzen</a></li><li><a href="#">Dokumente</a></li><li><a href="#">Kanäle <span class="elkw-count">1</span></a></li></ul></div>
+            <ul class="zl-nav__end"><li><a href="#">Einstellungen</a></li></ul>
+          </nav>
+          <div class="elkw-app__main">
+            <ol class="elkw-breadcrumb"><li><a href="#">Zeltlager Kapf 2027</a></li><li aria-current="page">Material</li></ol>
+            <div class="elkw-pagehead"><h1>Material</h1></div>
+            <ul class="elkw-tabs" role="tablist" aria-label="Material">
+              <li><button role="tab" aria-selected="false" type="button">Materialliste</button></li>
+              <li><button role="tab" aria-selected="false" type="button">Inventar</button></li>
+              <li><button role="tab" aria-selected="true" type="button">Schäden &amp; Verluste</button></li>
+            </ul>
+            <div class="zl-tabpanel" role="tabpanel" aria-label="Schäden &amp; Verluste">
+              <div class="elkw-alert" role="status"><span class="elkw-alert__title">Hinweis:</span><p>Schäden und Verluste lassen sich während der ganzen Freizeit eintragen. Beim Abschluss der Freizeit werden die Einträge zu Anschaffungswünschen.</p></div>
+              <div class="elkw-grid-wide">
+                <form class="elkw-surface" onsubmit="return false" aria-labelledby="v1b-form">
+                  <h2 id="v1b-form">Schaden melden</h2>
+                  <div class="elkw-form-grid">
+                    <div class="elkw-field"><label for="v1b-was" class="elkw-required">Was ist kaputt oder verloren?</label><input id="v1b-was" type="text" value="Zeltstange Zelt 4 gebrochen"></div>
+                    <div class="elkw-field"><label for="v1b-von" class="elkw-required">Gemeldet von</label><select id="v1b-von"><option>Jonas</option><option>Lea</option><option>Miriam</option><option>Tobias</option></select></div>
+                    <div class="elkw-field"><label for="v1b-inv">Inventar-Gegenstand (freiwillig)</label><select id="v1b-inv"><option>Gruppenzelt 4 (Nr.&nbsp;12)</option><option>– keiner –</option></select></div>
+                    <div class="elkw-field"><label for="v1b-foto">Foto (freiwillig)</label><input id="v1b-foto" type="file" accept="image/*"></div>
+                  </div>
+                  <div class="elkw-field zl-gap"><label for="v1b-notiz">Notiz (freiwillig)</label><textarea id="v1b-notiz" class="zl-textarea">Mittelstange beim Aufbau abgeknickt. Ersatzstange aus Kiste 2 eingesetzt.</textarea></div>
+                  <p class="small">* Pflichtfeld</p>
+                  <div class="elkw-formactions"><button class="elkw-btn elkw-btn--noarrow" type="submit">Eintrag speichern</button></div>
+                </form>
+                <section class="elkw-surface" aria-labelledby="v1b-sum">
+                  <h2 id="v1b-sum">Bisher in dieser Freizeit</h2>
+                  <dl class="elkw-stats">
+                    <div><dt>Einträge</dt><dd>3</dd></div>
+                    <div><dt>Schon ersetzt</dt><dd>1</dd></div>
+                  </dl>
+                </section>
+              </div>
+              <h2 class="zl-listhead">Einträge</h2>
+              <div class="elkw-table-wrap">
+                <table class="elkw-table elkw-datatable">
+                  <thead><tr><th>Wann</th><th>Was</th><th>Inventar-Gegenstand</th><th>Gemeldet von</th><th>Status</th></tr></thead>
+                  <tbody>
+                    <tr><td>Tag&nbsp;2, 19:10</td><td>Wasserkanister 20&nbsp;l undicht</td><td>Wasserkanister Küche (Nr.&nbsp;31)</td><td>Lea</td><td><span class="elkw-status elkw-status--offen">Erfasst</span></td></tr>
+                    <tr><td>Tag&nbsp;2, 10:30</td><td>Taschenlampe verloren</td><td>—</td><td>Tobias</td><td><span class="elkw-status elkw-status--offen">Erfasst</span></td></tr>
+                    <tr><td>Tag&nbsp;1, 16:45</td><td>Sechs Heringe Zelt&nbsp;2 verloren</td><td>Hering-Set Zelt&nbsp;2 (Nr.&nbsp;8)</td><td>Jonas</td><td><span class="elkw-status elkw-status--erfolg">Ersetzt</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <aside class="zl-caption" aria-label="Einordnung der Variante">
+      <p class="small zl-caption__clicks"><strong>Klicks von der Startseite bis „Schaden melden“:</strong> 2 Klicks – „Material“ in der Seitennavigation, dann der Reiter „Schäden &amp; Verluste“; das Formular steht oben im Reiter. Mit „Eintrag speichern“ 3 Klicks. Die Regel (höchstens 3–4 Klicks) ist eingehalten.</p>
+      <div class="zl-caption__cols">
+        <div><p class="elkw-kicker">Dafür</p><ul class="small"><li>Kurze Seitennavigation mit neun Punkten, nah an der bisherigen Informationsarchitektur.</li><li>Alles rund ums Material liegt beisammen: Materialliste, Inventar, Schäden.</li><li>„Programm“ bündelt Wochenraster, Aufgaben und Programmbibliothek als Reiter.</li></ul></div>
+        <div><p class="elkw-kicker">Dagegen</p><ul class="small"><li>Schäden sind in der Navigation nicht sichtbar; man muss wissen, dass sie unter „Material“ liegen.</li><li>Ein Klick mehr als in Variante 2.</li><li>Aufgaben liegen unter „Programm“ und sind im Lageralltag einen Schritt weiter weg.</li></ul></div>
+      </div>
+    </aside>
+    </div>
+    <div class="zl-variant" id="v2" aria-label="Variante 2: eigene Punkte" hidden>
+    <section class="zl-screen" aria-labelledby="v2a-label">
+      <p class="elkw-kicker" id="v2a-label">Variante 2 · Bildschirm a · Browser, ca. 1200&nbsp;px · Startseite während der Freizeit</p>
+      <div class="zl-frame zl-browser">
+        <div class="zl-browser__address" aria-hidden="true">zeltlotse.de/kapf-2027/uebersicht</div>
+        <div class="elkw-app">
+          <header class="elkw-app__bar elkw-appbar">
+            <button class="elkw-appbar__toggle" aria-expanded="false" aria-controls="nav-2a"><span></span><span></span><span></span><span class="sr-only">Navigation</span></button>
+            <a class="zl-wordmark" href="#">Zeltlotse</a>
+            <span class="elkw-appbar__name">Zeltlager Kapf 2027</span>
+            <div class="elkw-appbar__end">
+              <a class="elkw-link zl-notfall" href="#">Notfall</a>
+              <input type="search" placeholder="Person, Dokument suchen …" aria-label="Suchen">
+              <span class="elkw-appbar__user">Miriam</span>
+            </div>
+          </header>
+          <nav class="elkw-app__nav elkw-sidenav zl-nav" id="nav-2a" aria-label="Bereiche der Freizeit">
+            <div><p class="elkw-kicker elkw-sidenav__group">Planen</p>
+<ul><li><a href="#" aria-current="page">Übersicht</a></li><li><a href="#">Programm</a></li><li><a href="#">Aufgaben</a></li><li><a href="#">Material</a></li><li><a href="#">Inventar</a></li></ul>
+<p class="elkw-kicker elkw-sidenav__group">Menschen</p>
+<ul><li><a href="#">Anmeldungen <span class="elkw-count">42</span></a></li><li><a href="#">Freizeitpass</a></li><li><a href="#">Kanäle <span class="elkw-count">1</span></a></li></ul>
+<p class="elkw-kicker elkw-sidenav__group">Versorgen</p>
+<ul><li><a href="#">Küche</a></li><li><a href="#">Finanzen</a></li></ul>
+<p class="elkw-kicker elkw-sidenav__group">Ablage</p>
+<ul><li><a href="#">Dokumente</a></li><li><a href="#">Schäden &amp; Verluste <span class="elkw-count">3</span></a></li></ul>
+</div>
+            <ul class="zl-nav__end"><li><a href="#">Einstellungen</a></li></ul>
+          </nav>
+          <div class="elkw-app__main elkw-ground">
+            <div class="elkw-hello">
+              <div>
+                <p class="elkw-kicker">Tag 3 · Dienstag, 3.&nbsp;August 2027 · Freizeit läuft</p>
+                <h1>Hallo, <strong>Miriam</strong></h1>
+                <p>Das Geländespiel läuft, zwei Aufgaben sind noch offen.</p>
+              </div>
+            </div>
+            <section class="elkw-alert" style="--status: var(--elkw-status-fehler)" aria-labelledby="v2a-nf">
+              <span class="elkw-alert__title" id="v2a-nf">Im Notfall:</span>
+              <p>Notfallplan, Notrufnummern, Vorfall-Protokoll und wer heute Dienst hat.</p>
+              <a class="elkw-btn" href="#">Notfallhilfe öffnen</a>
+              <p class="small">Direkt anrufen: <a class="elkw-link" href="tel:112">Notruf 112</a></p>
+            </section>
+            <div class="elkw-grid-wide">
+              <div class="elkw-stack">
+                <section class="elkw-surface" aria-labelledby="v2a-jetzt">
+                  <h2 id="v2a-jetzt">Jetzt und als Nächstes</h2>
+                  <ul class="elkw-eventlist">
+                    <li><div class="elkw-eventlist__body">
+                      <p class="elkw-kicker">Jetzt · 14:00&nbsp;Uhr</p>
+                      <h3>Geländespiel</h3>
+                      <p class="small" style="margin:0"><span class="elkw-status elkw-status--aktiv">Läuft</span> · Treffpunkt Fahnenmast · verantwortlich: Jonas, Lea</p>
+                    </div></li>
+                    <li><div class="elkw-eventlist__body">
+                      <p class="elkw-kicker">Als Nächstes · 18:00&nbsp;Uhr</p>
+                      <h3>Abendessen – Linsen-Dal</h3>
+                      <p class="small" style="margin:0">Essenszelt · Küchendienst: Gruppe Fuchs</p>
+                    </div></li>
+                  </ul>
+                  <a class="elkw-btn elkw-btn--text zl-more" href="#">Ganzer Tagesplan</a>
+                </section>
+                <section class="elkw-surface" aria-labelledby="v2a-aufg">
+                  <h2 id="v2a-aufg">Meine Aufgaben</h2>
+                  <ul class="zl-list">
+                    <li><label class="elkw-choice"><input type="checkbox"> Abendrunde vorbereiten</label><span class="elkw-status elkw-status--offen">Offen</span></li>
+                    <li><label class="elkw-choice"><input type="checkbox"> Elterntelefon 19&nbsp;Uhr übernehmen</label><span class="elkw-status elkw-status--offen">Offen</span></li>
+                    <li><label class="elkw-choice"><input type="checkbox" checked> <span class="zl-done">Einkaufsliste für Mittwoch freigeben</span></label><span class="elkw-status elkw-status--erfolg">Erledigt</span></li>
+                  </ul>
+                </section>
+              </div>
+              <div class="elkw-stack">
+                <div class="elkw-field">
+                  <label for="v2a-suche">Schnellsuche</label>
+                  <input id="v2a-suche" type="search" placeholder="Person suchen …">
+                </div>
+                <section class="elkw-surface" aria-labelledby="v2a-kanal">
+                  <h2 id="v2a-kanal">Kanal „Team“</h2>
+                  <ul class="elkw-people">
+                    <li><span class="elkw-avatar" aria-hidden="true">JB</span>
+                      <div class="elkw-people__who"><strong>Jonas</strong><span>heute, 13:52&nbsp;Uhr</span></div></li>
+                  </ul>
+                  <p class="zl-message">Beim Aufbau ist in Zelt&nbsp;4 eine Zeltstange gebrochen. Ersatz aus Kiste&nbsp;2 ist drin.</p>
+                  <a class="elkw-btn elkw-btn--text zl-more" href="#">Zum Kanal „Team“</a>
+                </section>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="zl-screen" aria-labelledby="v2b-label">
+      <p class="elkw-kicker" id="v2b-label">Variante 2 · Bildschirm b · eigener Punkt „Schäden &amp; Verluste“</p>
+      <div class="zl-frame zl-browser">
+        <div class="zl-browser__address" aria-hidden="true">zeltlotse.de/kapf-2027/schaeden</div>
+        <div class="elkw-app">
+          <header class="elkw-app__bar elkw-appbar">
+            <button class="elkw-appbar__toggle" aria-expanded="false" aria-controls="nav-2b"><span></span><span></span><span></span><span class="sr-only">Navigation</span></button>
+            <a class="zl-wordmark" href="#">Zeltlotse</a>
+            <span class="elkw-appbar__name">Zeltlager Kapf 2027</span>
+            <div class="elkw-appbar__end">
+              <a class="elkw-link zl-notfall" href="#">Notfall</a>
+              <input type="search" placeholder="Person, Dokument suchen …" aria-label="Suchen">
+              <span class="elkw-appbar__user">Miriam</span>
+            </div>
+          </header>
+          <nav class="elkw-app__nav elkw-sidenav zl-nav" id="nav-2b" aria-label="Bereiche der Freizeit">
+            <div><p class="elkw-kicker elkw-sidenav__group">Planen</p>
+<ul><li><a href="#">Übersicht</a></li><li><a href="#">Programm</a></li><li><a href="#">Aufgaben</a></li><li><a href="#">Material</a></li><li><a href="#">Inventar</a></li></ul>
+<p class="elkw-kicker elkw-sidenav__group">Menschen</p>
+<ul><li><a href="#">Anmeldungen <span class="elkw-count">42</span></a></li><li><a href="#">Freizeitpass</a></li><li><a href="#">Kanäle <span class="elkw-count">1</span></a></li></ul>
+<p class="elkw-kicker elkw-sidenav__group">Versorgen</p>
+<ul><li><a href="#">Küche</a></li><li><a href="#">Finanzen</a></li></ul>
+<p class="elkw-kicker elkw-sidenav__group">Ablage</p>
+<ul><li><a href="#">Dokumente</a></li><li><a href="#" aria-current="page">Schäden &amp; Verluste <span class="elkw-count">3</span></a></li></ul>
+</div>
+            <ul class="zl-nav__end"><li><a href="#">Einstellungen</a></li></ul>
+          </nav>
+          <div class="elkw-app__main">
+            <ol class="elkw-breadcrumb"><li><a href="#">Zeltlager Kapf 2027</a></li><li aria-current="page">Schäden &amp; Verluste</li></ol>
+            <div class="elkw-pagehead"><h1>Schäden &amp; Verluste</h1></div>
+            <div class="zl-tabpanel">
+              <div class="elkw-alert" role="status"><span class="elkw-alert__title">Hinweis:</span><p>Schäden und Verluste lassen sich während der ganzen Freizeit eintragen. Beim Abschluss der Freizeit werden die Einträge zu Anschaffungswünschen.</p></div>
+              <div class="elkw-grid-wide">
+                <form class="elkw-surface" onsubmit="return false" aria-labelledby="v2b-form">
+                  <h2 id="v2b-form">Schaden melden</h2>
+                  <div class="elkw-form-grid">
+                    <div class="elkw-field"><label for="v2b-was" class="elkw-required">Was ist kaputt oder verloren?</label><input id="v2b-was" type="text" value="Zeltstange Zelt 4 gebrochen"></div>
+                    <div class="elkw-field"><label for="v2b-von" class="elkw-required">Gemeldet von</label><select id="v2b-von"><option>Jonas</option><option>Lea</option><option>Miriam</option><option>Tobias</option></select></div>
+                    <div class="elkw-field"><label for="v2b-inv">Inventar-Gegenstand (freiwillig)</label><select id="v2b-inv"><option>Gruppenzelt 4 (Nr.&nbsp;12)</option><option>– keiner –</option></select></div>
+                    <div class="elkw-field"><label for="v2b-foto">Foto (freiwillig)</label><input id="v2b-foto" type="file" accept="image/*"></div>
+                  </div>
+                  <div class="elkw-field zl-gap"><label for="v2b-notiz">Notiz (freiwillig)</label><textarea id="v2b-notiz" class="zl-textarea">Mittelstange beim Aufbau abgeknickt. Ersatzstange aus Kiste 2 eingesetzt.</textarea></div>
+                  <p class="small">* Pflichtfeld</p>
+                  <div class="elkw-formactions"><button class="elkw-btn elkw-btn--noarrow" type="submit">Eintrag speichern</button></div>
+                </form>
+                <section class="elkw-surface" aria-labelledby="v2b-sum">
+                  <h2 id="v2b-sum">Bisher in dieser Freizeit</h2>
+                  <dl class="elkw-stats">
+                    <div><dt>Einträge</dt><dd>3</dd></div>
+                    <div><dt>Schon ersetzt</dt><dd>1</dd></div>
+                  </dl>
+                </section>
+              </div>
+              <h2 class="zl-listhead">Einträge</h2>
+              <div class="elkw-table-wrap">
+                <table class="elkw-table elkw-datatable">
+                  <thead><tr><th>Wann</th><th>Was</th><th>Inventar-Gegenstand</th><th>Gemeldet von</th><th>Status</th></tr></thead>
+                  <tbody>
+                    <tr><td>Tag&nbsp;2, 19:10</td><td>Wasserkanister 20&nbsp;l undicht</td><td>Wasserkanister Küche (Nr.&nbsp;31)</td><td>Lea</td><td><span class="elkw-status elkw-status--offen">Erfasst</span></td></tr>
+                    <tr><td>Tag&nbsp;2, 10:30</td><td>Taschenlampe verloren</td><td>—</td><td>Tobias</td><td><span class="elkw-status elkw-status--offen">Erfasst</span></td></tr>
+                    <tr><td>Tag&nbsp;1, 16:45</td><td>Sechs Heringe Zelt&nbsp;2 verloren</td><td>Hering-Set Zelt&nbsp;2 (Nr.&nbsp;8)</td><td>Jonas</td><td><span class="elkw-status elkw-status--erfolg">Ersetzt</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <aside class="zl-caption" aria-label="Einordnung der Variante">
+      <p class="small zl-caption__clicks"><strong>Klicks von der Startseite bis „Schaden melden“:</strong> 1 Klick – „Schäden &amp; Verluste“ in der Seitennavigation; das Formular steht oben auf der Seite. Mit „Eintrag speichern“ 2 Klicks. Die Regel (höchstens 3–4 Klicks) ist eingehalten.</p>
+      <div class="zl-caption__cols">
+        <div><p class="elkw-kicker">Dafür</p><ul class="small"><li>Jeder Bereich ist direkt sichtbar, auch Aufgaben, Inventar und Schäden.</li><li>Die Gruppen „Planen“, „Menschen“, „Versorgen“ und „Ablage“ geben Orientierung.</li><li>Kürzester Weg zu „Schaden melden“, auch für Mitarbeitende, die die App selten öffnen.</li></ul></div>
+        <div><p class="elkw-kicker">Dagegen</p><ul class="small"><li>Längere Seitennavigation mit 14 Punkten in vier Gruppen; mehr zu überblicken.</li><li>Material, Inventar und Schäden stehen getrennt, obwohl sie zusammengehören.</li><li>Die Zuordnung zu Gruppen ist nicht immer eindeutig (z.&nbsp;B. Schäden unter „Ablage“).</li></ul></div>
+      </div>
+    </aside>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Umschalter Variante (nur Vergleichsseite) und Navigation aufklappen (App-Rahmen der Bibliothek) */
+document.querySelectorAll('.zl-switch .elkw-segments button').forEach(function (b, _, all) {
+  b.addEventListener('click', function () {
+    all.forEach(function (x) { x.setAttribute('aria-pressed', x === b); document.getElementById(x.dataset.show).hidden = x !== b; });
+  });
+});
+document.querySelectorAll('.elkw-appbar__toggle').forEach(function (b) {
+  b.addEventListener('click', function () { var n = document.getElementById(b.getAttribute('aria-controls')); n.classList.toggle('is-open'); b.setAttribute('aria-expanded', n.classList.contains('is-open')); });
+});
+</script>
+</body>
+</html>
