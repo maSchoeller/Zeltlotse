@@ -3,6 +3,7 @@ using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Zeltlotse.Api.Contracts.Gemeinsam;
 using Zeltlotse.Api.Contracts.Personen;
 using Zeltlotse.Personen.Daten;
@@ -48,7 +49,7 @@ internal static class ProfilSicherstellenEndpunkt
             var person = await sender.Send(new ProfilSicherstellen(personId), abbruch);
             return TypedResults.Ok(new ProfilAntwort(person.Version, person.Vorname, person.Nachname));
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException fehler) when (fehler.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
             // Gleichzeitig schon angelegt (zweiter Aufruf in derselben Sekunde): Das Profil gibt es jetzt.
             return TypedResults.Ok(await ProfilAbfrage.LadenAsync(lesen, personId, abbruch)
@@ -66,16 +67,8 @@ internal static class ProfilFeldAendernEndpunkt
     public static async Task<IResult> Aendern(JsonElement koerper, IAngemeldet angemeldet, ISender sender, CancellationToken abbruch)
     {
         var (version, alterWert, feld, neuerWert) = Lesen(koerper);
-        ProfilAenderung ergebnis;
-        try
-        {
-            ergebnis = await sender.Send(new ProfilFeldAendern(ProfilAbfrage.PersonId(angemeldet), feld, version, alterWert, neuerWert), abbruch);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            // Gleichzeitig geändert: wie ein Konflikt behandeln, der Client lädt neu.
-            ergebnis = new ProfilAenderung.Konflikt();
-        }
+        // Kein Fang für DbUpdateConcurrencyException: Der Handler sperrt die Zeile, gleichzeitige Änderungen laufen nacheinander.
+        var ergebnis = await sender.Send(new ProfilFeldAendern(ProfilAbfrage.PersonId(angemeldet), feld, version, alterWert, neuerWert), abbruch);
 
         return ergebnis switch
         {

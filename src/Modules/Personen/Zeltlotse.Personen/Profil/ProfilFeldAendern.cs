@@ -56,7 +56,12 @@ internal sealed class ProfilFeldAendernHandler(PersonenDbContext db) : ICommandH
 {
     public async ValueTask<ProfilAenderung> Handle(ProfilFeldAendern command, CancellationToken cancellationToken)
     {
-        var person = await db.Personen.SingleOrDefaultAsync(p => p.Id == command.PersonId, cancellationToken);
+        // Zeilensperre (FOR UPDATE) in der Transaktion der Pipeline: Gleichzeitige Änderungen derselben Person laufen
+        // nacheinander, die zweite sieht den gespeicherten Stand samt neuer Version, und allein die Regel zum alten Wert entscheidet.
+        var person = (await db.Personen
+                .FromSql($"SELECT *, xmin FROM personen.person WHERE \"Id\" = {command.PersonId} FOR UPDATE")
+                .ToListAsync(cancellationToken))
+            .SingleOrDefault();
         if (person is null)
         {
             return new ProfilAenderung.PersonFehlt();

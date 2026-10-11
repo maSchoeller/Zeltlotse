@@ -74,12 +74,13 @@ public sealed partial class MailTests(PostgresContainer postgres, MailpitContain
     }
 
     [Theory]
-    [InlineData("Zeltlotse:Mail:Smtp:Host")]
-    [InlineData("Zeltlotse:Mail:Absender")]
-    public async Task Smtp_ohne_Host_oder_Absender_bricht_den_Start_ab(string schluessel)
+    [InlineData("Zeltlotse:Mail:Smtp:Host", "")]
+    [InlineData("Zeltlotse:Mail:Absender", "")]
+    [InlineData("Zeltlotse:Mail:Absender", "Zeltlotse zeltlotse@example.org>")]
+    public async Task Smtp_ohne_Host_oder_mit_fehlendem_oder_unlesbarem_Absender_bricht_den_Start_ab(string schluessel, string wert)
     {
         var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync()) { Umgebung = "Production" };
-        factory.Einstellungen[schluessel] = "";
+        factory.Einstellungen[schluessel] = wert;
 
         var fehler = await StartScheitertAsync(factory);
 

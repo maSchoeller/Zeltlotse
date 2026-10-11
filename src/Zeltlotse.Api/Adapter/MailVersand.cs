@@ -123,7 +123,7 @@ internal static class MailRegistrierung
 
     /// <summary>
     /// Startprüfung: Art gesetzt (<c>Smtp</c> oder <c>Ordner</c>), <c>Ordner</c> nur in <c>Development</c>/<c>Testing</c> und mit
-    /// Ordner, <c>Smtp</c> mit Host und Absender. Die Meldung nennt den Schlüssel, nie einen Wert.
+    /// Ordner, <c>Smtp</c> mit Host und lesbarem Absender. Die Meldung nennt den Schlüssel, nie einen Wert.
     /// </summary>
     public static void Pruefen(IConfiguration konfiguration, IHostEnvironment umgebung, string testUmgebung)
     {
@@ -156,6 +156,11 @@ internal static class MailRegistrierung
             if (string.IsNullOrWhiteSpace(konfiguration[MailOptionen.AbsenderSchluessel]))
             {
                 throw new InvalidOperationException($"{MailOptionen.AbsenderSchluessel} fehlt.");
+            }
+
+            if (!MailboxAddress.TryParse(konfiguration[MailOptionen.AbsenderSchluessel], out _))
+            {
+                throw new InvalidOperationException($"{MailOptionen.AbsenderSchluessel} ist keine lesbare Mail-Adresse.");
             }
         }
     }

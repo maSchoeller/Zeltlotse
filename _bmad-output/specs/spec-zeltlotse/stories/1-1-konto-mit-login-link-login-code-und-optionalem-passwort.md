@@ -5,7 +5,7 @@ created: '2026-10-11'
 status: 'done'
 baseline_revision: '290876f74c208a8ba2dbec38692c59fa8944cdda'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Zeltlotse-2026-10-10/EXPERIENCE.md'
@@ -24,6 +24,13 @@ deferred:
       konten.login_anfrage wächst unbegrenzt und hält Mail-Adressen auch von Personen ohne Konto. Der tägliche Lösch-Dienst mit Fristen gehört laut stories.yaml zu Story 1-7 (AD-16); dort Anfragen nach Ablauf plus kurzer Frist löschen und die Seite „Was passiert mit meinen Daten“ ergänzen.
     location: >-
       src/Modules/Konten/Zeltlotse.Konten/Domaene/LoginAnfrage.cs
+    severity: medium
+  - summary: >-
+      Die gemeinsame Zugriffsbegrenzung (20 Anfragen je Minute und IP) kann viele Menschen hinter einem Hotspot beim gleichzeitigen Anmelden ausbremsen.
+    evidence: |-
+      Die Grenze aus Story 0-2 (AD-25, je Besucher-IP) gilt gemeinsam für Antiforgery-Token und alle Anmelde-Endpunkte. Eine Anmeldung braucht etwa drei Aufrufe; hinter einer gemeinsamen öffentlichen IP (Freizeit-WLAN, Mobilfunk-NAT) schaffen so nur rund sechs Personen je Minute die Anmeldung, der Rest sieht „Das hat nicht geklappt“. Die Grenze ist eine Architekturentscheidung (AD-25) und bestand schon vor 1-1; ob Grenze oder Schlüssel (z. B. je Mail-Adresse, siehe oben) angepasst werden, braucht eine bewusste Entscheidung vor dem Start als Dienst.
+    location: >-
+      src/Zeltlotse.SharedKernel/Web/Zugriffsbegrenzung.cs
     severity: medium
 ---
 
@@ -209,6 +216,47 @@ deferred:
   - `[false]` `[reject]` (intent) Doku-Seite liegt nicht in einem Rollen-Ordner — Anmelden betrifft alle Rollen; Seite unter „Erste Schritte“ mit Links aus Startseite, Eltern und Mitarbeitenden erfüllt „Rolle und Aufgabe“.
   - `[false]` `[reject]` (intent) Test zuerst und Doku-Build am Diff nicht sichtbar — Prozessaussage; `dotnet test` (648 grün) und `npm run build` sind gelaufen.
 
+### 2026-10-11 — Review pass (Folgedurchlauf)
+- verdicts: 37 findings — high 0, medium 6, low 20, false 11, maybe-false 0
+- findings:
+  - `[low]` `[reject]` (blind) Versandfehler nach dem Commit macht den alten Link ungültig — carried: Die Person sieht 500 bzw. die Fehlermeldung und fordert neu an; Fix wäre Umbau der Reihenfolge.
+  - `[medium]` `[defer]` (blind) Login-Link-Anfragen nur je IP, nicht je Mail-Adresse begrenzt — carried: siehe `deferred`.
+  - `[medium]` `[defer]` (blind) Gemeinsame IP-Grenze 20/Min. bremst viele Menschen hinter einem Hotspot aus — Grenze und Schlüssel stammen aus Story 0-2 (AD-25), nicht aus 1-1; neu in `deferred`.
+  - `[medium]` `[defer]` (blind) Login-Anfragen werden nie gelöscht — carried: Lösch-Dienst ist Story 1-7, siehe `deferred`.
+  - `[false]` `[reject]` (blind) Token im URL-Pfad landet in Logs und Traces — `TelemetrieBereinigung` entfernt `url.path`, `url.full` usw. vor jedem Exporter, Log-Scopes mit Rohpfad sind abgeschaltet (AD-22); der Pfad selbst ist vom Intent vorgegeben.
+  - `[low]` `[reject]` (blind) Passwort ändern ohne Nachweis, ohne Protokoll, ohne Mail — carried: AD-25 verlangt erneute Anmeldung nur vor Export, Löschung und Übergabe.
+  - `[low]` `[reject]` (blind) Abmelden beendet die Sitzung nicht auf dem Server — carried: übliches Verhalten der Cookie-Sitzung.
+  - `[low]` `[reject]` (blind) Zwei gleichzeitige Erst-Anmeldungen derselben neuen Mail → 500 — carried: setzt zwei offene Anfragen und gleichzeitiges Einlösen voraus.
+  - `[false]` `[reject]` (blind) `version` im PATCH wird nie genutzt — carried: AD-19 entscheidet am Wert desselben Felds.
+  - `[low]` `[patch]` (blind) Startprüfung übersieht unlesbaren SMTP-Absender, Port und Zeitüberschreitung — Absender: `Pruefen` verlangt jetzt `MailboxAddress.TryParse`, neuer Testfall in `MailTests`; Port und Zeitüberschreitung (MailKit-Standard 2 Min.) nicht geändert, weil selten und nur Zusatzlogik. (Gruppe mit edge „Absender“.)
+  - `[low]` `[reject]` (blind) Nach erneuter Anmeldung geht es zur Startseite statt zur vorigen Seite — Komfort; Fix wäre ein Rücksprung-Parameter samt Prüfung gegen fremde Adressen.
+  - `[low]` `[reject]` (blind) Antiforgery-Token wird bei abgelaufener Sitzung nicht verworfen — der `AntiforgeryHandler` holt bei `antiforgery-ungueltig` einmal ein neues Token und wiederholt; Nutzer merken nichts; Fix bräuchte eine neue Abhängigkeit in `AppSitzung`.
+  - `[false]` `[reject]` (blind) Doku sagt, das Code-Feld erscheine nur in der installierten App — `anmelden.md` beschreibt den Code als Weg für die installierte App, behauptet aber nicht, dass das Feld anderswo fehlt; der Schritt „erscheint das Feld Login-Code“ stimmt überall.
+  - `[low]` `[reject]` (blind) Startseite zeigt bei 500 des Profils nur „Hallo“ — selten (Server-Störung), die nächste Aktion zeigt den Fehler; Fix wäre ein zusätzlicher Fehlerzweig.
+  - `[low]` `[reject]` (blind) Angemeldete Person kann die Anmelde-Seiten öffnen und die Sitzung per altem Link wechseln — nur mit einem eigenen gültigen Link; Fix wäre eine zusätzliche Weiche auf drei Seiten.
+  - `[low]` `[reject]` (edge) Zwei gleichzeitige Link-Anforderungen lassen zwei Anfragen offen — carried.
+  - `[low]` `[reject]` (edge) Zwei offene Anfragen einer neuen Mail gleichzeitig eingelöst → Unique-Verletzung → 500 — carried.
+  - `[low]` `[reject]` (edge) Versand scheitert nach dem Commit, ältere Anfrage schon verworfen — carried.
+  - `[medium]` `[defer]` (edge) Code-Rateversuche über beliebig viele neue Anfragen — carried: gleiche Ursache wie Begrenzung je Mail-Adresse, siehe `deferred`.
+  - `[low]` `[reject]` (edge) Code mit Leerzeichen in der Mitte verbraucht einen Versuch — der Client entfernt Leerzeichen am Rand, die Mail zeigt den Code ohne Leerzeichen; Abtippen mit Leerzeichen ist selten.
+  - `[low]` `[reject]` (edge) Demo-Daten reparieren halb abgebrochenen Lauf nicht — carried.
+  - `[low]` `[reject]` (edge) `AnmeldungAbschluss` übergeht ein 401 direkt nach der Anmeldung — trifft zu, endet aber trotzdem auf „Anmelden“: die Startseite bekommt erneut 401 und der Sitzungs-Handler leitet weiter; nur ein kurzes Aufflackern.
+  - `[low]` `[patch]` (edge) Unlesbarer Absender besteht die Startprüfung, jede Login-Mail scheitert mit 500 — Gruppe „Absender“, mitbehoben.
+  - `[low]` `[patch]` (edge) `ProfilSicherstellenEndpunkt` fängt jede `DbUpdateException` und verschleiert echte Fehler — `when`-Filter auf `PostgresErrorCodes.UniqueViolation`.
+  - `[low]` `[reject]` (verification-gap) Rückfallzweig bei gleichzeitigem `POST /api/ich/profil` ungetestet — carried.
+  - `[medium]` `[patch]` (verification-gap) 409-Pfad bei gleichzeitigem `PATCH /api/ich/profil` nie ausgeführt — gleiche Ursache wie „unechter Konflikt“: Person wird jetzt unter `FOR UPDATE` geladen, Rückfall `DbUpdateConcurrencyException` → 409 entfernt (nicht mehr erreichbar); Test `Gleichzeitige_Aenderungen_an_verschiedenen_Feldern_gelingen_beide` (5 Runden).
+  - `[medium]` `[patch]` (verification-gap) Gleichzeitige Änderungen an Vorname und Nachname ergeben 409 `konflikt` entgegen AD-19 — `xmin` als Zeilenversion ließ die zweite Speicherung scheitern; mit der Zeilensperre wartet die zweite Anfrage und die alterWert-Regel entscheidet; Test war vor dem Fix rot (`Conflict`).
+  - `[low]` `[reject]` (verification-gap) Demo-Daten reparieren halbe Person nicht — carried.
+  - `[false]` `[reject]` (intent) Rate-Limit-Test misst gemeinsames IP-Budget statt je Endpunkt — AD-25 legt die Grenze je Besucher-IP fest; der Test zählt die 21. Anfrage der Minute einschließlich Antiforgery-Aufruf.
+  - `[false]` `[reject]` (intent) Stempelprüfung nur unter `/api` — außerhalb `/api` wird die Sitzung nicht benutzt und gilt als nicht vorhanden; strenger als „jede Anfrage“.
+  - `[false]` `[reject]` (intent) `AnmeldungFehlgeschlagen` auch bei Konto ohne Passwort und unbekannter Mail — nötig, damit bekannte und unbekannte Mail gleich behandelt werden (keine Konto-Aufzählung).
+  - `[false]` `[reject]` (intent) `version` im PATCH nur mitgetragen — carried.
+  - `[low]` `[reject]` (intent) Demo-Daten überspringen die ganze Person bei vorhandenem Konto — carried.
+  - `[false]` `[reject]` (intent) „Neuen Link schicken“ auf der Link-Seite ist ein Link zu „Anmelden“ — die Link-Seite kennt die Mail-Adresse nicht; der Baustein `Knopf` mit `Href` erfüllt „Knopf“.
+  - `[false]` `[reject]` (intent) Passwort-Seite mit h1 „Mit Passwort anmelden“ und `autocomplete=username` — der Intent legt für diese Seite weder h1 noch Autocomplete der Mail fest.
+  - `[false]` `[reject]` (intent) Test-Endpunkte unter `/api/test/` nicht in der Anonym-Liste — gibt es nur in der Umgebung `Testing`.
+  - `[false]` `[reject]` (intent) „Art fehlt“ nur mit leerem Wert getestet — `Pruefen` behandelt fehlenden und leeren Schlüssel im selben Zweig (`string.IsNullOrEmpty`).
+
 ## Design Notes
 
 - **Login-Mail ohne Outbox:** AD-13 nimmt selbst angeforderte Mails (Login-Link) ausdrücklich aus. Über die Outbox ginge es auch nicht: Ereignisse tragen weder Mail-Adresse noch Token (AD-4), und der Hash lässt sich nicht zurückrechnen. Darum verschickt der Endpunkt die Mail direkt nach dem erfolgreichen Command; scheitert der Versand, bleibt die Anfrage bestehen und die Antwort ist `500` (die Person fordert neu an).
@@ -275,3 +323,29 @@ Zurückgestellt (siehe `deferred`): Begrenzung je Mail-Adresse; Löschen alter L
 - Der AppHost mit Mailpit ist nur kompiliert, nicht unter Aspire gestartet.
 - Deferred aus 0-2 („Schlüssel anlegen und im selben Command verschlüsseln“) bleibt offen, weil 1-1 kein `[Besonders]`-Feld verschlüsselt.
 - `npm audit` meldet weiter moderate Befunde in Build-Abhängigkeiten von Starlight.
+
+### Folgedurchlauf 2026-10-11
+
+**Zusammenfassung:** Erneutes Review mit vier Layern (Blind, Edge Case, Verification Gap, Intent Alignment) über den gesamten Diff seit `290876f74c208a8ba2dbec38692c59fa8944cdda`. Drei kleine Korrekturen, test-first umgesetzt:
+- Gleichzeitige Profil-Änderungen an verschiedenen Feldern: Die Person wird jetzt unter Zeilensperre (`FOR UPDATE`) geladen; vorher ergab die zweite Änderung wegen `xmin` ein falsches 409 `konflikt` (entgegen AD-19).
+- `POST /api/ich/profil` fängt nur noch die Unique-Verletzung beim gleichzeitigen Anlegen, andere Datenbankfehler bleiben sichtbar.
+- Startprüfung lehnt einen unlesbaren SMTP-Absender ab, statt erst bei der ersten Login-Mail mit 500 zu scheitern.
+
+**Dateien:**
+- `src/Modules/Personen/Zeltlotse.Personen/Profil/ProfilFeldAendern.cs` – Person unter Zeilensperre laden.
+- `src/Modules/Personen/Zeltlotse.Personen/Profil/ProfilEndpunkte.cs` – `when`-Filter auf Unique-Verletzung; nicht mehr erreichbarer 409-Rückfall entfernt.
+- `src/Zeltlotse.Api/Adapter/MailVersand.cs` – Absender-Prüfung mit `MailboxAddress.TryParse`.
+- `tests/Zeltlotse.Api.Tests/ProfilTests.cs` – Test für gleichzeitige Änderungen an Vor- und Nachname (5 Runden).
+- `tests/Zeltlotse.Api.Tests/MailTests.cs` – Testfall unlesbarer Absender.
+- `doku/src/assets/screenshots/app-offline-*.png` – von den Screenshot-Tests neu geschrieben.
+
+**Review:** 37 Befunde (high 0, medium 6, low 20, false 11). Gepatcht: 3 Einträge (medium 1: unechter Konflikt bei gleichzeitigen Profil-Änderungen; low 2: Absender-Prüfung, zu breiter Fehlerfang). Zurückgestellt: neu die gemeinsame IP-Grenze hinter Hotspots (aus 0-2/AD-25); weiter Begrenzung je Mail-Adresse und Löschen alter Login-Anfragen. Verworfen mit Begründung im Review Triage Log: u. a. Rücksprung nach erneuter Anmeldung, Antiforgery bei abgelaufener Sitzung, Startseite bei 500, Anmelde-Seiten für Angemeldete, Code mit Leerzeichen, 401 direkt nach der Anmeldung, SMTP-Port/Zeitüberschreitung; dazu alle `false`-Befunde (Token in Traces, Doku zum Code-Feld, die Lesarten aus dem Intent-Audit) und die aus dem ersten Durchlauf übernommenen (`carried`) Einträge.
+
+**Folge-Review empfohlen:** nein – Folgedurchlauf ohne gepatchten high-Befund (gepatcht: high 0, medium 1, low 2); die Arbeit ist konvergiert.
+
+**Verifikation:**
+- `dotnet build Zeltlotse.slnx --no-incremental`: 0 Warnungen, 0 Fehler.
+- `dotnet test`: 650 von 650 grün (inklusive E2E-Login-Test mit axe und Doku-Screenshots).
+- `npm ci` und `npm run build` in `doku/`: Exit-Code 0, 10 Seiten.
+
+**Restrisiken:** wie oben, plus die neue zurückgestellte IP-Grenze hinter Hotspots. Der Rückfallzweig beim gleichzeitigen `POST /api/ich/profil` bleibt ohne eigenen Test.

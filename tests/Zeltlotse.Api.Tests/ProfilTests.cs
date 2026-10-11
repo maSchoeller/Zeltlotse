@@ -100,6 +100,41 @@ public sealed class ProfilTests(PostgresContainer postgres)
         Assert.Equal("Feuerstein", profil.GetProperty("nachname").GetString());
     }
 
+    [Fact]
+    public async Task Gleichzeitige_Aenderungen_an_verschiedenen_Feldern_gelingen_beide()
+    {
+        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        using var client = await AngemeldeterClientAsync(factory, Mail);
+        var version = await SicherstellenAsync(client);
+        string? vorname = null;
+        string? nachname = null;
+
+        for (var runde = 0; runde < 5; runde++)
+        {
+            // Beide Geräte kennen dieselbe Version; jedes ändert ein anderes Feld.
+            var antworten = await Task.WhenAll(
+                Task.Run(() => PatchAsync(client, $$"""{"version":{{version}},"alterWert":{{Json(vorname)}},"vorname":"Lea{{runde}}"}""")),
+                Task.Run(() => PatchAsync(client, $$"""{"version":{{version}},"alterWert":{{Json(nachname)}},"nachname":"Feuerstein{{runde}}"}""")));
+            foreach (var antwort in antworten)
+            {
+                using (antwort)
+                {
+                    Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
+                }
+            }
+
+            vorname = $"Lea{runde}";
+            nachname = $"Feuerstein{runde}";
+            using var laden = await client.GetAsync("/api/ich/profil", Abbruch);
+            var profil = await JsonAsync(laden);
+            Assert.Equal(vorname, profil.GetProperty("vorname").GetString());
+            Assert.Equal(nachname, profil.GetProperty("nachname").GetString());
+            version = profil.GetProperty("version").GetUInt32();
+        }
+
+        static string Json(string? wert) => wert is null ? "null" : $"\"{wert}\"";
+    }
+
     [Theory]
     [InlineData(100, HttpStatusCode.OK)]
     [InlineData(101, HttpStatusCode.BadRequest)]
