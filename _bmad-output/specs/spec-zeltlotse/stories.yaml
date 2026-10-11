@@ -1,0 +1,246 @@
+- id: "0-1"
+  title: "Gerüst der Lösung mit Modulen, Pipeline und Architekturtests"
+  description: "Lösung, Aspire, zehn Modulpaare und SharedKernel (Kennungen, Uhr, Outbox/Inbox) mit Mediator-Pipeline nach ARCHITECTURE-SPINE.md AD-1 bis AD-4, AD-27, AD-28. Architekturtests nach AD-24 laufen ab dem ersten Build."
+  spec_checkpoint: true
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "0-2"
+  title: "Querschnitt Datenschutz und Web-Sicherheit"
+  description: "Verschlüsselung je Person für [Besonders]-Felder, geschwärzte Logs, Sicherheitsprotokoll, Cookie/Antiforgery/Header/Rate-Limiting und Datei-Adapter (AD-14, AD-15, AD-22, AD-25). Grundlage für alle Constraints zu Datenschutz in SPEC.md."
+  spec_checkpoint: true
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "0-3"
+  title: "Client-Grundlagen: Komponenten, Autosave, PWA-Hülle"
+  description: "ELKW-Komponentenbibliothek, Autosave-Baustein, Freizeit-Kontext-Dienst, offline startende PWA-Hülle mit Notfall-Box 112 und Gerüst der öffentlichen Seiten (AD-5, AD-18, AD-29; DESIGN.md). Keine Fachfunktion."
+  spec_checkpoint: true
+  done_checkpoint: true
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "1-1"
+  title: "Konto mit Login-Link, Login-Code und optionalem Passwort"
+  description: "Eine Person, ein Profil; Anmeldung per Mail-Link mit Code, optional Passwort (CAP-1, FR-1, FR-2)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle). Zusätzlich Playwright-Ende-zu-Ende-Test für den Login in Handy-Größe mit axe-Prüfung auf WCAG 2.2 AA (AD-30)."
+- id: "1-2"
+  title: "Organisationen und Org-Rollen"
+  description: "Global Admin legt Organisationen an und lädt den ersten Org-Admin ein; Org-Admins ernennen Org-Admins und Org-Überblick (CAP-3, FR-5)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "1-3"
+  title: "Freizeit anlegen, Leitung einsetzen, Phasen"
+  description: "Org-Admin legt Freizeiten an und setzt Leitungen ein; Phasen und Kontext-Endpunkt je Freizeit (CAP-3, FR-6, FR-45 Phasenberechnung, AD-17, AD-29)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "1-4"
+  title: "Familienkonto und Übergabe mit 18"
+  description: "Eltern verwalten Kinder unter 18, holen einen zweiten Elternteil dazu und übergeben das Profil ab 18 (CAP-2, FR-3, FR-4)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "1-5"
+  title: "Nachweise mit einmaliger Einsicht"
+  description: "Nachweise am Profil, Org-Richtlinie mit Gültigkeit, einmalige Einsicht, nur die Bestätigung bleibt, Freigabe an mehrere Organisationen (CAP-4, FR-8 bis FR-10, FR-12, AD-9)."
+  spec_checkpoint: true
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "1-6"
+  title: "Warnung und Erinnerung bei Nachweisen"
+  description: "Leitung sieht fehlende und ablaufende Nachweise und erinnert per Knopfdruck (CAP-5, FR-11)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "1-7"
+  title: "Zugriffsprotokoll, Auskunft, Export, Löschen"
+  description: "Zugriffsprotokoll, Datenauskunft, Export PDF/CSV, Konto löschen und täglicher Lösch-Dienst mit Org-Fristen (CAP-6, FR-13, FR-14, NFR-5, AD-16)."
+  spec_checkpoint: true
+  done_checkpoint: true
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "2-1"
+  title: "Freizeitseite und Vertrauensseite"
+  description: "Öffentliche Freizeitseite mit Team und Anzeige „ausgebucht“, Vertrauensseite aus den Einstellungen (CAP-7, FR-15, FR-66, FR-67)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "2-2"
+  title: "Anmeldung über Anmeldelinks, als Gast und mit Gast-Link"
+  description: "Anmeldelinks für Teilnehmende und Mitarbeitende, Gast-Anmeldung, Geschwister, Teilnahmebedingungen, Konto aus Daten, Gast-Link (CAP-8, FR-16 bis FR-19, AD-11)."
+  spec_checkpoint: true
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle). Zusätzlich Playwright-Ende-zu-Ende-Test für die Gast-Anmeldung in Handy-Größe mit axe-Prüfung auf WCAG 2.2 AA (AD-30)."
+- id: "2-3"
+  title: "Anmeldungen bestätigen und absagen"
+  description: "Leitung bestätigt oder sagt ab, Mails und Status, Absagen nur über Leitung, Mitarbeitende werden Org-Mitglied (CAP-9, CAP-3, FR-7, FR-20, FR-21)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "2-4"
+  title: "Freizeitpass zusammenstellen und ausfüllen"
+  description: "Fester Fragenkatalog, Auswahl durch die Leitung getrennt nach Teilnehmenden und Mitarbeitenden, Ausfüllen, Vorausfüllen und „Stimmt das noch?“ (CAP-11, CAP-12, FR-22, FR-23, AD-10)."
+  spec_checkpoint: true
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "2-5"
+  title: "Freigabe und Freigabefenster"
+  description: "Befristete, auf abgefragte Fragen begrenzte Sicht von Leitung und Team, Freigabefenster, Team-Notizen bleiben in der Freizeit (CAP-13, FR-24, FR-26, AD-8)."
+  spec_checkpoint: true
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "2-6"
+  title: "Leitungs-Cockpit und Erinnerungen"
+  description: "Cockpit mit Anmeldestand und Warnhinweisen, Erinnerungen per Knopfdruck (CAP-14, FR-25, FR-27)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "2-7"
+  title: "Dokumente und Elterninfo"
+  description: "Dokumente am Kontext mit drei Sichtbarkeiten, eingebundene Org-Dokumente, Suche, Elterninfo im Konto und über den Gast-Link (CAP-25, CAP-10, FR-43, FR-68)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "2-8"
+  title: "Notfall: Sicherheitskette und Schnellsuche"
+  description: "Notfall-Button mit Sicherheitskette aus den Freizeit-Einstellungen, Schnellsuche öffnet den Freizeitpass in Sekunden (CAP-15, FR-28, FR-29)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle). Zusätzlich Playwright-Ende-zu-Ende-Test für den Notfall-Ablauf in Handy-Größe mit axe-Prüfung auf WCAG 2.2 AA (AD-30)."
+- id: "2-9"
+  title: "Schutzkonzept bestätigen"
+  description: "Leitung hängt das Schutzkonzept an, Teammitglieder bestätigen „gelesen“ (CAP-16, FR-30)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "2-10"
+  title: "Vorfall-Protokoll und Vorfall-Notiz"
+  description: "Unveränderliche Vorfall-Einträge, sofort für die Leitung sichtbar, Archiv nach Abschluss mit Löschfrist (CAP-17, FR-31). Entnahmen auf die Verlustliste folgen in 3-4."
+  spec_checkpoint: true
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "2-11"
+  title: "Notfallordner drucken"
+  description: "Druckansicht je Kind mit Notfallkontakten und relevanten Angaben, A4 schwarz-weiß (CAP-18, FR-33)."
+  spec_checkpoint: false
+  done_checkpoint: true
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "3-1"
+  title: "Wochenraster und Programmpunkte"
+  description: "Wochenraster mit festen Mahlzeiten, gemeinsame Planung, „Ich übernehme“ (CAP-19, FR-34, FR-35)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "3-2"
+  title: "Material am Programmpunkt"
+  description: "Material mit vier Zuständen und „Ich bringe das mit“, Gesamt-Materialliste (CAP-20, FR-36, FR-69)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "3-3"
+  title: "Inventar und Reservierung"
+  description: "Inventar der Organisation, Reservierung für Zeiträume, Konflikthinweis ohne Lösung in Zeltlotse (CAP-21, FR-37)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "3-4"
+  title: "Schäden, Verluste und Anschaffungswünsche"
+  description: "Schadens- und Verlustliste während der ganzen Freizeit, Erste-Hilfe-Entnahmen aus dem Vorfall-Protokoll, Anschaffungswünsche (CAP-22, CAP-17, FR-32, FR-38)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "3-5"
+  title: "Aufgaben und Aufgaben-Vorlagen"
+  description: "Aufgaben mit Titel und Phase, selbst übernehmen, „Meine Aufgaben“, Org-Vorlagen hin und zurück (CAP-23, FR-39, FR-40)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "3-6"
+  title: "Programmbibliothek"
+  description: "Bewusst ablegen und samt Material und Aufgaben in andere Freizeiten übernehmen (CAP-24, FR-41)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "3-7"
+  title: "Module pro Freizeit schalten"
+  description: "Verpflegung, Finanzen und Teilnehmer-Zugang je Freizeit schaltbar, serverseitig wirksam, Daten bleiben (CAP-26, FR-44, AD-20)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "3-8"
+  title: "Freizeit abschließen"
+  description: "Abschluss durch die Leitung mit Inline-Warnung bei offenen Punkten, Status „gelaufen“ mit Schreibschutz und Ausnahmen (CAP-27, FR-45, AD-17)."
+  spec_checkpoint: false
+  done_checkpoint: true
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "4-1"
+  title: "Rezepte mit Skalierung"
+  description: "Rezepte mit Basis-Personenzahl, Zutaten mit Allergenen, Hochrechnung auf die Freizeit (CAP-28, FR-46)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "4-2"
+  title: "Gerichte vormerken und Einkaufsliste"
+  description: "Gerichte an Mahlzeiten, Einkaufsliste mit Allergen-Abgleich und Ersatzportionen, Hand-Anpassung, Tausch nur nach Bestätigung (CAP-29, FR-47 bis FR-50)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "4-3"
+  title: "Einkauf freigeben und abhaken"
+  description: "Küche gibt Tage und Posten frei, Einkaufende haken ab (CAP-30, FR-51)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "4-4"
+  title: "Küchen-Tagesansicht und Restetag"
+  description: "Tagesansicht mit Allergien und Sonderkost, spontaner Restetag (CAP-31, FR-52, FR-53)."
+  spec_checkpoint: false
+  done_checkpoint: true
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "5-1"
+  title: "Kalkulation und Beitragsrechner"
+  description: "Sechs Kategorien, Verpflegungs-Tagessatz, Einnahmeposten, Beitragsrechner mit Reglern und Balken (CAP-32, FR-54 bis FR-57)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "5-2"
+  title: "Belege, Soll-Ist und Erstattung"
+  description: "Belege als Foto oder von Hand, Soll-Ist-Vergleich und Erstattungsübersicht je Person (CAP-33, FR-58, FR-59)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "5-3"
+  title: "Beitrag bezahlt abhaken"
+  description: "Teammitglieder haken bezahlte Beiträge ab, Zeltlotse vermerkt wer (CAP-34, FR-60)."
+  spec_checkpoint: false
+  done_checkpoint: true
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "6-1"
+  title: "Kanäle Team und Alle mit Push"
+  description: "Zwei Kanäle, Inline-Bestätigung vor Nachrichten in „Alle“, Web-Push (CAP-35, FR-61, AD-21)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "6-2"
+  title: "„Alle informieren?“ bei Verschiebung"
+  description: "Verschobener Programmpunkt fragt nach, ohne Bestätigung geht nichts raus, Hinweis „noch nicht mitgeteilt“ (CAP-36, FR-62)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "6-3"
+  title: "Ansagen-Zettel und Besprechungsnotizen"
+  description: "Ansagen für das Essen sammeln, Besprechungspunkte notieren und abhaken (CAP-37, FR-63)."
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "6-4"
+  title: "Teilnehmer-Zugang per QR-Code"
+  description: "QR-Code ohne Konto, Gast-Sitzung nur lesend außer eigenem Push-Abo, endet mit der Freizeit (CAP-38, FR-64, AD-11, AD-12)."
+  spec_checkpoint: true
+  done_checkpoint: false
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
+- id: "6-5"
+  title: "Offline-Modus"
+  description: "Verschlüsselt offline lesbar: Küchen-Tagesansicht, Notfallkarte, Sicherheitskette; Vorfall-Protokoll offline schreibbar; Löschen auf dem Gerät (CAP-39, FR-65, AD-18)."
+  spec_checkpoint: true
+  done_checkpoint: true
+  invoke_dev_with: "Testgetrieben: Test vor dem Code; jeder Endpunkt mit HTTP-Tests gegen echtes PostgreSQL inklusive der Pflichtfälle nach AD-30 (falsche Rolle 403, fremde Organisation 404, Token-Fälle)."
