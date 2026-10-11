@@ -1,0 +1,27 @@
+# Team-Overrides für bmad-build-auto (Zeltlotse, autonomer Lauf).
+# Merge-Regeln siehe .claude/skills/bmad-build-auto/customize.toml.
+
+[workflow]
+
+persistent_facts = [
+  """Modellwahl für Subagenten (nur Claude-5.5-Familie; im Agent-Tool die Aliase opus = Opus 5.5, sonnet = Sonnet 5.5, haiku = Haiku 5.5; nie fable oder ältere Modelle). Im Zweifel immer das stärkere Modell.
+- opus: Umsetzung einer Story (Implementierungs-Subagent), alle Review-Layer in Schritt 4 (Pflicht: gleiche Fähigkeit wie die Sitzung), Fehlersuche bei roten Tests, alles mit Sicherheit, Datenschutz, Rechten, Verschlüsselung, Mandantentrennung oder Architekturregeln.
+- sonnet: Code-Erkundung mit verdichteter Zusammenfassung in Schritt 2, Kompilieren von Kontext, Formulieren von Doku-Texten nach fertiger Umsetzung, Auswerten langer Test- oder Build-Ausgaben.
+- haiku: rein mechanische Aufgaben ohne Urteil: Dateien und Symbole auflisten, Vorkommen zählen, Screenshot-Dateien auf Vollständigkeit prüfen, Formatierungen.
+Ein Subagent, dessen Aufgabe Urteil über Korrektheit verlangt, ist nie haiku.""",
+  """Definition of Done jeder Story (SPEC.md, Constraint „Autonom baubar“): `dotnet test` vollständig grün inklusive Architekturtests; bei Stories mit Oberfläche zusätzlich Doku-Seite in doku/ geschrieben oder ergänzt, Demo-Daten und Playwright-Screenshot-Tests (Kategorie Doku, Handy und Laptop) erweitert, Screenshots erzeugt und `npm run build` in doku/ fehlerfrei. Fehlt etwas davon, ist die Story nicht done.""",
+  """Autonomer Lauf: Es gibt keinen Menschen zum Fragen. Entscheidungen, die SPEC.md, ihre Begleitdokumente und ARCHITECTURE-SPINE.md offenlassen, triffst du selbst nach den Leitprinzipien (einfach, keine Speziallogik) und hältst sie im Story-Spec unter Design Notes fest. HALT mit blocked nur, wenn eine Entscheidung einer Spec- oder Architekturregel widerspräche oder die Umgebung fehlt (z. B. Docker, SDK).""",
+  """Umgebung: Windows 11, PowerShell 7 und Git Bash; .NET-SDK laut global.json; Docker Desktop für Testcontainers und Aspire; Node.js für doku/. Branch des Laufs: mvp. Nie auf main committen, nie pushen (das macht der Orchestrator).""",
+]
+
+implementation_handoff = """
+Launch a subagent with model `opus` and no prior conversation context, with this prompt:
+
+> Read {spec_file} fully and implement it — the spec is the sole source of truth. Load every file listed in its frontmatter `context:` before you start.
+>
+> Work test-first. A story is only done when the whole test suite is green, and — if it adds or changes user interface — its page in doku/ is written, demo data and Playwright screenshot tests (category Doku, phone and laptop) are extended, screenshots are generated, and `npm run build` in doku/ succeeds.
+>
+> You may launch your own helper subagents only with model `sonnet` (exploration, summarizing long build or test output) or `haiku` (purely mechanical listing or counting); never delegate implementation judgment to them.
+>
+> When done, report what you changed, how you verified it, and anything left incomplete or risky.
+"""
