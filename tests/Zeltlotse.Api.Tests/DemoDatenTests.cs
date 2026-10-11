@@ -48,9 +48,18 @@ public sealed class DemoDatenTests(PostgresContainer postgres)
 
         Assert.Equal(HttpStatusCode.OK, (await zweiterClient.GetAsync("/health", Abbruch)).StatusCode);
         // Story 1-1: je Demo-Person mit Mail ein Konto und ein Profil mit Namen, nicht doppelt; Kinder ohne Mail bekommen nichts.
-        Assert.Equal(8L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM konten.konto"));
-        Assert.Equal(8L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.person"));
-        Assert.Equal(8L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.personen_schluessel"));
+        Assert.Equal(9L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM konten.konto"));
+        Assert.Equal(9L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.person"));
+        Assert.Equal(9L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.personen_schluessel"));
+
+        // Story 1-2: Gerd ist Global Admin, eine Organisation, Andrea Org-Admin, eine offene Einladung; nichts doppelt.
+        Assert.Equal(["gerd.betreiber@example.org"], await MailsAsync(verbindung, "SELECT \"Mail\" FROM konten.konto WHERE \"GlobalAdmin\""));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.organisation WHERE \"Name\" = 'Jugendwerk Musterstadt' AND \"EingerichtetAm\" IS NOT NULL"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.organisation"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.org_rolle"));
+        Assert.Equal(await AnmeldeHelfer.PersonIdAsync(verbindung, "andrea.beispiel@example.org"), await AnmeldeHelfer.WertAsync<Guid>(verbindung, "SELECT \"PersonId\" FROM organisationen.org_rolle WHERE \"Rolle\" = 1"));
+        Assert.Equal(["vorstand@example.org"], await MailsAsync(verbindung, "SELECT \"Mail\" FROM organisationen.org_einladung WHERE \"Status\" = 1 AND \"Rolle\" = 2"));
+        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.org_einladung"));
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,
             "SELECT count(*) FROM konten.konto k LEFT JOIN personen.person p ON p.\"Id\" = k.\"PersonId\" WHERE p.\"Id\" IS NULL OR p.\"Vorname\" IS NULL OR p.\"Nachname\" IS NULL"));
@@ -73,6 +82,22 @@ public sealed class DemoDatenTests(PostgresContainer postgres)
 
         Assert.Equal(HttpStatusCode.OK, profil.StatusCode);
         Assert.Equal("Jonas", (await AnmeldeHelfer.JsonAsync(profil)).GetProperty("vorname").GetString());
+    }
+
+    [Fact]
+    public async Task Gerd_ist_nur_mit_Demo_Daten_Global_Admin()
+    {
+        var verbindung = await postgres.NeueDatenbankAsync();
+        await using (var mitDemo = new ZeltlotseApiFactory(verbindung))
+        {
+            mitDemo.Einstellungen[Schalter] = "true";
+            _ = mitDemo.CreateClient();
+        }
+
+        await using var ohneDemo = new ZeltlotseApiFactory(verbindung);
+        _ = ohneDemo.CreateClient();
+
+        Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM konten.konto WHERE \"GlobalAdmin\""));
     }
 
     [Fact]
@@ -136,6 +161,8 @@ public sealed class DemoDatenTests(PostgresContainer postgres)
         Assert.Equal(2, personen.Count(p => p.Rolle == DemoRolle.Eltern));
         Assert.Equal(3, personen.Count(p => p.Rolle == DemoRolle.Kind));
         Assert.Single(personen, p => p.Rolle == DemoRolle.OrgAdmin);
+        Assert.Single(personen, p => p.Rolle == DemoRolle.GlobalAdmin);
+        Assert.EndsWith("@example.org", DemoKatalog.UeberblickEinladung, StringComparison.Ordinal);
 
         // Alle Erwachsenen haben eine Mail-Adresse, Kinder unter 18 keine (sie haben kein eigenes Konto).
         Assert.All(personen.Where(p => p.Rolle != DemoRolle.Kind), p => Assert.NotNull(p.Mail));
@@ -148,5 +175,20 @@ public sealed class DemoDatenTests(PostgresContainer postgres)
         var familien = personen.Where(p => p.Rolle == DemoRolle.Eltern).Select(p => p.Familie).ToHashSet();
         Assert.All(personen.Where(p => p.Rolle == DemoRolle.Kind), k => Assert.Contains(k.Familie, familien));
         Assert.All(personen, p => Assert.False(string.IsNullOrWhiteSpace(p.Vorname + p.Nachname)));
+    }
+
+    private static async Task<List<string>> MailsAsync(string verbindung, string sql)
+    {
+        await using var db = new Npgsql.NpgsqlConnection(verbindung);
+        await db.OpenAsync(Abbruch);
+        await using var befehl = new Npgsql.NpgsqlCommand(sql, db);
+        await using var leser = await befehl.ExecuteReaderAsync(Abbruch);
+        var mails = new List<string>();
+        while (await leser.ReadAsync(Abbruch))
+        {
+            mails.Add(leser.GetString(0));
+        }
+
+        return mails;
     }
 }

@@ -6,6 +6,7 @@ using Zeltlotse.Konten.Domaene;
 using Zeltlotse.Konten.Sitzungen;
 using Zeltlotse.SharedKernel.Commands;
 using Zeltlotse.SharedKernel.Sicherheitsprotokoll;
+using Zeltlotse.SharedKernel.Zugangslinks;
 
 namespace Zeltlotse.Konten.Passwort;
 

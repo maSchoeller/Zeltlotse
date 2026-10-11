@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Konten.Anmelden;
+using Zeltlotse.Konten.Contracts.Konten;
 using Zeltlotse.Konten.Contracts.Sitzungen;
 using Zeltlotse.Konten.Daten;
 using Zeltlotse.Konten.Domaene;
@@ -26,6 +27,7 @@ public static class KontenModul
         services.AddModul<KontenDbContext, KontenLeseDbContext>(Name, Schema);
         services.AddSingleton<IPasswordHasher<Konto>>(_ => PasswortRegel.NeuerHasher());
         services.AddScoped<IKontoPruefung, KontoPruefung>();
+        services.AddScoped<IKontoLesen, KontoLesen>();
         return services;
     }
 

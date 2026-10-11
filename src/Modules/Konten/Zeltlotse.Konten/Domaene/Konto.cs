@@ -12,7 +12,7 @@ internal sealed class Konto
 
     public Guid Id { get; private init; }
 
-    /// <summary>Normalisiert (getrimmt, klein) und eindeutig, siehe <see cref="MailAdresse"/>.</summary>
+    /// <summary>Normalisiert (getrimmt, klein) und eindeutig, siehe <see cref="SharedKernel.Zugangslinks.MailAdresse"/>.</summary>
     public string Mail { get; private init; } = "";
 
     public Guid PersonId { get; private init; }
@@ -25,6 +25,12 @@ internal sealed class Konto
 
     public DateTimeOffset AngelegtAm { get; private init; }
 
+    /// <summary>
+    /// Global Admin (Betreiber): legt Organisationen an und lädt den ersten Org-Admin ein. Quelle ist die Konfiguration
+    /// <c>Zeltlotse:GlobalAdmins</c>; der Abgleich beim Start schreibt sie hierher (<see cref="Anmelden.GlobalAdminsAbgleichen"/>).
+    /// </summary>
+    public bool GlobalAdmin { get; private set; }
+
     public static Konto Anlegen(Guid id, string normalisierteMail, Guid personId, DateTimeOffset jetzt) => new()
     {
         Id = id,
@@ -33,6 +39,9 @@ internal sealed class Konto
         SitzungsStempel = Guid.NewGuid(),
         AngelegtAm = jetzt,
     };
+
+    /// <summary>Setzt oder entfernt das Global-Admin-Kennzeichen.</summary>
+    public void GlobalAdminSetzen(bool globalAdmin) => GlobalAdmin = globalAdmin;
 
     /// <summary>Legt das Passwort fest; alle bisherigen Sitzungen werden ungültig.</summary>
     public void PasswortFestlegen(string passwortHash)

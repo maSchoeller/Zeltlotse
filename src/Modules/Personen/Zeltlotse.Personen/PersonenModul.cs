@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Zeltlotse.Personen.Contracts.Namen;
 using Zeltlotse.Personen.Daten;
 using Zeltlotse.Personen.Profil;
 using Zeltlotse.Personen.Schluessel;
@@ -21,6 +22,7 @@ public static class PersonenModul
     {
         services.AddModul<PersonenDbContext, PersonenLeseDbContext>(Name, Schema);
         services.AddScoped<IPersonenSchluesselQuelle, PersonenSchluesselQuelle>();
+        services.AddScoped<IPersonenNamen, PersonenNamen>();
         return services;
     }
 

@@ -8,7 +8,7 @@ namespace Zeltlotse.App.Features.Konten;
 /// <summary>
 /// Gemeinsamer Schritt nach jeder erfolgreichen Anmeldung (Link, Code, Passwort) und nach dem Abmelden: Antiforgery-Token
 /// verwerfen (es hängt an der Identität), nach der Anmeldung <c>POST /api/ich/profil</c> (AD-2: der Client verbindet Konto
-/// und Person) und weiter zur Startseite bzw. zur Seite „Anmelden“.
+/// und Person) und weiter zum Rückweg (z. B. der Einladung) bzw. zur Startseite; nach dem Abmelden zur Seite „Anmelden“.
 /// </summary>
 public sealed class AnmeldungAbschluss(
     AntiforgeryHandler antiforgery, PersonenApiClient personen, KontenApiClient konten, AppSitzung sitzung, NavigationManager navigation)
@@ -35,7 +35,7 @@ public sealed class AnmeldungAbschluss(
             sitzung.Anmelden(null);
         }
 
-        navigation.NavigateTo("./");
+        navigation.NavigateTo(sitzung.RueckwegNehmen() ?? "./");
     }
 
     /// <summary>Abmelden; auch wenn der Aufruf scheitert, endet die Sitzung auf dem Gerät und es geht zur Seite „Anmelden“.</summary>

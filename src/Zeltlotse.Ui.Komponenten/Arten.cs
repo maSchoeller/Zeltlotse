@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Components;
+
 namespace Zeltlotse.Ui.Komponenten;
 
 /// <summary>Art eines <see cref="Knopf"/>: Standard (Hauptaktion), Outline (Nebenaktion), Text (tertiär).</summary>
@@ -53,3 +55,9 @@ public sealed record NavPunkt(string Text, string Href, bool Aktiv = false, int?
 
 /// <summary>Eine Gruppe der Seitennavigation mit Dachzeile.</summary>
 public sealed record NavGruppe(string Dachzeile, IReadOnlyList<NavPunkt> Punkte);
+
+/// <summary>Eine Spalte einer <see cref="Datentabelle{TZeile}"/>: Titel (Spaltenkopf und Bezeichnung in der Handy-Ansicht) und Inhalt je Zeile.</summary>
+public sealed record Spalte<TZeile>(string Titel, RenderFragment<TZeile> Inhalt);
+
+/// <summary>Eine Option einer <see cref="Auswahl"/>: gespeicherter Wert und sichtbarer Text.</summary>
+public sealed record AuswahlOption(string Wert, string Text);

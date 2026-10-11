@@ -1,0 +1,49 @@
+@attribute [NurInteraktiv]
+@* Auswahl (DESIGN.md → Formular): Radiogruppe als fieldset mit legend, je Option eine ELKW-choice. Ein Fehler „Fehler: …“
+   steht unter den Optionen und ist über aria-describedby an die Gruppe gebunden. *@
+<fieldset class="elkw-fieldset zl-auswahl" aria-describedby="@(Fehler is null ? null : FehlerId)">
+    <legend>@Legende</legend>
+    @foreach (var option in Optionen)
+    {
+        <label class="elkw-choice">
+            <input type="radio" name="@Name" value="@option.Wert" checked="@(option.Wert == Wert)"
+                   disabled="@Deaktiviert" @onchange="@(() => WaehlenAsync(option.Wert))" />
+            @option.Text
+        </label>
+    }
+    @if (Fehler is not null)
+    {
+        <span class="elkw-field-error" id="@FehlerId">Fehler: @Fehler</span>
+    }
+</fieldset>
+
+@code {
+    private readonly string _vorgabeName = Kennungen.Neu("auswahl");
+
+    [Parameter, EditorRequired] public string Legende { get; set; } = "";
+
+    [Parameter, EditorRequired] public IReadOnlyList<AuswahlOption> Optionen { get; set; } = [];
+
+    /// <summary>Name der Radiogruppe; ohne Angabe eine eindeutige Kennung.</summary>
+    [Parameter] public string? Gruppe { get; set; }
+
+    /// <summary>Der gewählte Wert oder <c>null</c>, solange nichts gewählt ist.</summary>
+    [Parameter] public string? Wert { get; set; }
+
+    [Parameter] public EventCallback<string> WertGeaendert { get; set; }
+
+    /// <summary>Fehlertext ohne Präfix, z. B. „Rolle fehlt.“; angezeigt als „Fehler: Rolle fehlt.“.</summary>
+    [Parameter] public string? Fehler { get; set; }
+
+    [Parameter] public bool Deaktiviert { get; set; }
+
+    private string Name => Gruppe ?? _vorgabeName;
+
+    private string FehlerId => Name + "-fehler";
+
+    private async Task WaehlenAsync(string wert)
+    {
+        Wert = wert;
+        await WertGeaendert.InvokeAsync(wert);
+    }
+}

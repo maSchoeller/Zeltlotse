@@ -53,6 +53,13 @@ Nachweise wie Führungszeugnis, JuLeiCa (Jugendleiter-Card) oder Erste-Hilfe-Bes
 
 Zum Konto speichert Zeltlotse die Mail-Adresse und, falls festgelegt, ein Passwort nur als Prüfwert, aus dem sich das Passwort nicht zurückrechnen lässt. Login-Links und Login-Codes stehen ebenfalls nur als Prüfwert in der Datenbank und gelten 15 Minuten.
 
+## Organisationen und Rollen
+
+- **Einladungen:** Eine Einladung als Org-Admin oder Org-Überblick speichert die **Mail-Adresse**, an die sie ging, die Rolle und wer eingeladen hat. Der Link selbst steht nur als Prüfwert in der Datenbank und gilt 7 Tage. Angenommen werden kann er nur mit einem Konto unter genau dieser Mail-Adresse.
+- **Org-Admin:** sieht von den Personen mit einer Rolle in der Organisation nur **Vor- und Nachname** und die Rolle, keine Profile und keine Mail-Adressen. Bei offenen Einladungen sieht er die eingeladene Mail-Adresse.
+- **Global Admin:** sieht nur die Namen der Organisationen und ob sie eingerichtet sind, **keine Personendaten**.
+- **Rollenvergaben** und fehlgeschlagene Versuche, eine Einladung anzunehmen, stehen im Sicherheitsprotokoll, nur mit Kennungen.
+
 ## Wo die Daten liegen
 
 Alle Daten und Sicherungen liegen **ausschließlich in der EU**. Besonders schützenswerte Angaben wie Freizeitpass-Antworten und Nachweise sind verschlüsselt gespeichert.

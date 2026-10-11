@@ -1,0 +1,122 @@
+@page "/organisationen"
+@using Zeltlotse.Api.Contracts.Organisationen
+@inject OrganisationenApiClient Organisationen
+@* Organisationen (EXPERIENCE.md → Flächen „Organisationen (Global Admin)“, FR-5): schlichte Verwaltungsfläche aus
+   Datentabelle und Formular. Organisation anlegen lädt den ersten Org-Admin per Mail ein. Ohne Global Admin (403) ist die
+   Seite nicht verfügbar; die Rechte prüft der Server. *@
+<PageTitle>Organisationen – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <h1>Organisationen</h1>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+
+    @if (_liste is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else if (_liste.Count == 0)
+    {
+        <LeerZustand Satz="Noch keine Organisation angelegt." />
+    }
+    else
+    {
+        <Datentabelle TZeile="OrganisationZeile" Beschriftung="Organisationen" Spalten="Spalten" Zeilen="_liste" />
+    }
+
+    <Card Titel="Organisation anlegen">
+        @if (_gespeichert)
+        {
+            <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+                <p>Die Organisation ist angelegt, die Einladung ist verschickt.</p>
+            </Meldung>
+        }
+        <Formular Absenden="AnlegenAsync">
+            <Feld Label="Name der Organisation" Id="organisation-name" Wert="@_name" Fehler="@_nameFehler"
+                  @oninput="@(e => _name = e.Value?.ToString())" />
+            <Feld Label="Mail-Adresse des ersten Org-Admins" Id="organisation-mail" Typ="email" Wert="@_mail" Fehler="@_mailFehler"
+                  autocomplete="off" @oninput="@(e => _mail = e.Value?.ToString())" />
+            <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Anlegen und einladen</Knopf>
+        </Formular>
+    </Card>
+}
+
+@code {
+    private static readonly IReadOnlyList<Spalte<OrganisationZeile>> Spalten =
+    [
+        new("Name", o => @<text>@o.Name</text>),
+        new("Stand", o => o.Eingerichtet
+            ? @<Status Wort="Eingerichtet" Art="StatusArt.Erfolg" />
+            : @<Status Wort="Einladung offen" Art="StatusArt.Offen" />),
+    ];
+
+    private List<OrganisationZeile>? _liste;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private bool _gespeichert;
+    private string? _name;
+    private string? _mail;
+    private string? _nameFehler;
+    private string? _mailFehler;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await NeuLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    private async Task NeuLadenAsync()
+    {
+        _liste = await Organisationen.ListeLadenAsync();
+        _nichtVerfuegbar = _liste is null;
+    }
+
+    private async Task AnlegenAsync()
+    {
+        _uebertraegt = true;
+        _gespeichert = false;
+        _aktionFehler = false;
+        try
+        {
+            var ergebnis = await Organisationen.AnlegenAsync(_name, _mail);
+            _nameFehler = ergebnis.NameFehler;
+            _mailFehler = ergebnis.MailFehler;
+            if (ergebnis.Id is not null)
+            {
+                _gespeichert = true;
+                _name = null;
+                _mail = null;
+                await NeuLadenAsync();
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

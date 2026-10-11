@@ -8,6 +8,10 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Zeltlotse.SharedKernel\Zeltlotse.SharedKernel.csproj" />
     <ProjectReference Include="..\Zeltlotse.Organisationen.Contracts\Zeltlotse.Organisationen.Contracts.csproj" />
+    <!-- Pfeile aus AD-2: Organisationen liest Konten (Mail-Bindung der Einladung) und Personen (Namen der Rolleninhaber). -->
+    <ProjectReference Include="..\..\Konten\Zeltlotse.Konten.Contracts\Zeltlotse.Konten.Contracts.csproj" />
+    <ProjectReference Include="..\..\Personen\Zeltlotse.Personen.Contracts\Zeltlotse.Personen.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

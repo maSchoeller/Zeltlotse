@@ -11,7 +11,7 @@ using Zeltlotse.Konten.Daten;
 namespace Zeltlotse.Konten.Migrationen
 {
     [DbContext(typeof(KontenDbContext))]
-    internal partial class KontenDbContextModelSnapshot : ModelSnapshot
+    partial class KontenDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -30,6 +30,9 @@ namespace Zeltlotse.Konten.Migrationen
 
                     b.Property<DateTimeOffset>("AngelegtAm")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("GlobalAdmin")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Mail")
                         .IsRequired()

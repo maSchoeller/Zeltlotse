@@ -2,6 +2,7 @@ using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Zeltlotse.SharedKernel.Rechte;
 using Zeltlotse.SharedKernel.Web;
 using Zeltlotse.Testing;
 using static Zeltlotse.Api.Tests.AnmeldeHelfer;
@@ -31,6 +32,7 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
     private static readonly string[] Organisationsuebergreifend =
     [
         "GET /api/ich/konto",
+        "GET /api/ich/organisationen",
         "GET /api/ich/profil",
         "PATCH /api/ich/profil",
         "POST /api/ich/profil",
@@ -63,6 +65,38 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
     }
 
     [Fact]
+    public async Task Annehmen_der_Org_Einladung_ist_angemeldet_und_zugriffsbegrenzt()
+    {
+        var endpunkte = await EndpunkteAsync();
+
+        var annehmen = Assert.Single(endpunkte, e => e.Name == "POST /api/organisationen/einladungen/annehmen");
+        Assert.Contains(
+            annehmen.Endpunkt.Metadata.OfType<Microsoft.AspNetCore.RateLimiting.EnableRateLimitingAttribute>(),
+            r => r.PolicyName == Zugriffsbegrenzung.Richtlinie);
+        Assert.NotEmpty(annehmen.Endpunkt.Metadata.GetOrderedMetadata<IAuthorizeData>());
+    }
+
+    [Fact]
+    public async Task Jede_Route_mit_orgId_traegt_NurOrgRolle_und_die_Guid_Einschraenkung()
+    {
+        var endpunkte = await EndpunkteAsync();
+
+        var mitOrg = endpunkte.Where(e => e.Endpunkt.RoutePattern.Parameters.Any(p => p.Name == Rechtemerkmale.OrgRouteWert)).ToList();
+        Assert.Equal(3, mitOrg.Count);
+        Assert.All(mitOrg, e =>
+        {
+            Assert.NotNull(e.Endpunkt.Metadata.GetMetadata<NurOrgRolleMetadaten>());
+            Assert.Contains("{orgId:guid}", e.Pfad, StringComparison.Ordinal);
+        });
+        Assert.All(
+            endpunkte.Where(e => e.Endpunkt.Metadata.GetMetadata<NurOrgRolleMetadaten>() is not null),
+            e => Assert.Contains(e, mitOrg));
+        Assert.Equal(
+            ["GET /api/organisationen", "POST /api/organisationen"],
+            endpunkte.Where(e => e.Endpunkt.Metadata.GetMetadata<NurGlobalAdminMetadaten>() is not null).Select(e => e.Name).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
     public async Task Endpunkte_unter_api_ich_sind_namentlich_bekannt_und_organisationsuebergreifend_markiert()
     {
         var endpunkte = await EndpunkteAsync();
@@ -83,7 +117,9 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
 
         foreach (var (name, methode, pfad, _) in endpunkte)
         {
-            using var antwort = await SendenAsync(client, new HttpMethod(methode), pfad, methode == "GET" ? null : "{}");
+            // Routenwerte (z. B. {orgId:guid}) bekommen eine Kennung, damit die Route passt.
+            var aufruf = System.Text.RegularExpressions.Regex.Replace(pfad, @"\{[^}]+\}", Guid.CreateVersion7().ToString());
+            using var antwort = await SendenAsync(client, new HttpMethod(methode), aufruf, methode == "GET" ? null : "{}");
 
             Assert.True(antwort.StatusCode == HttpStatusCode.Unauthorized, $"{name}: {antwort.StatusCode}");
             Assert.Equal("application/problem+json", antwort.Content.Headers.ContentType?.MediaType);

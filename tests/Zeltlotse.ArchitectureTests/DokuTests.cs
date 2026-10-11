@@ -55,7 +55,7 @@ public sealed class DokuTests
     [Fact]
     public void Negativ_fehlende_Pflichtseiten_werden_erkannt_und_Endungen_ohne_Gross_Klein()
     {
-        string[] dateien = ["eltern/index.MD", "mitarbeitende/index.mdx", "leitung/index.md", "kueche/uebersicht.md", @"org-admin\index.md"];
+        string[] dateien = ["eltern/index.MD", "mitarbeitende/index.mdx", "leitung/index.md", "kueche/uebersicht.md", @"org-admin\index.md", "betreiber/index.md"];
 
         var fehlend = DokuRegeln.FehlendeSeiten(dateien).ToList();
 

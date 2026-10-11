@@ -45,6 +45,53 @@ public sealed class StartpruefungTests(PostgresContainer postgres)
         }
     }
 
+    [Theory]
+    [InlineData("keine-mail")]
+    [InlineData("Gerd <gerd.betreiber@example.org>")]
+    [InlineData("")]
+    public async Task Ungueltige_Mail_in_GlobalAdmins_bricht_den_Start_ab_und_nennt_den_Schluessel(string wert)
+    {
+        var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync());
+        factory.Einstellungen["Zeltlotse:GlobalAdmins:0"] = "gerd.betreiber@example.org";
+        factory.Einstellungen["Zeltlotse:GlobalAdmins:1"] = wert;
+
+        var fehler = await StartScheitertAsync(factory);
+
+        Assert.Contains("Zeltlotse:GlobalAdmins", fehler, StringComparison.Ordinal);
+        Assert.DoesNotContain("gerd.betreiber", fehler, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GlobalAdmins_als_Einzelwert_statt_Liste_bricht_den_Start_ab_und_nennt_den_Schluessel()
+    {
+        var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync());
+        factory.Einstellungen["Zeltlotse:GlobalAdmins"] = "gerd.betreiber@example.org";
+
+        var fehler = await StartScheitertAsync(factory);
+
+        Assert.Contains("Zeltlotse:GlobalAdmins", fehler, StringComparison.Ordinal);
+        Assert.DoesNotContain("gerd.betreiber", fehler, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GlobalAdmins_aus_der_Konfiguration_bekommen_beim_Start_Konto_und_Kennzeichen_ohne_Liste_niemand()
+    {
+        var verbindung = await postgres.NeueDatenbankAsync();
+        await using (var mitListe = new ZeltlotseApiFactory(verbindung))
+        {
+            mitListe.Einstellungen["Zeltlotse:GlobalAdmins:0"] = " Gerd.Betreiber@example.org ";
+            _ = mitListe.CreateClient();
+        }
+
+        Assert.True(await AnmeldeHelfer.WertAsync<bool>(verbindung, "SELECT \"GlobalAdmin\" FROM konten.konto WHERE \"Mail\" = 'gerd.betreiber@example.org'"));
+
+        await using var ohneListe = new ZeltlotseApiFactory(verbindung);
+        _ = ohneListe.CreateClient();
+
+        Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM konten.konto WHERE \"GlobalAdmin\""));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM konten.konto"));
+    }
+
     [Fact]
     public async Task EnableSensitiveDataLogging_bricht_ausserhalb_von_Testing_den_Start_ab()
     {

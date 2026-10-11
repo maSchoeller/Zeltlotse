@@ -104,7 +104,8 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
         using var konto = await client.GetAsync("/api/ich/konto", Abbruch);
         Assert.Equal(HttpStatusCode.OK, konto.StatusCode);
         var json = await JsonAsync(konto);
-        Assert.Equal(["hatPasswort", "mail"], Namen(json));
+        Assert.Equal(["erlaubt", "hatPasswort", "mail"], Namen(json));
+        Assert.Equal(0, json.GetProperty("erlaubt").GetArrayLength());
         Assert.Equal(Unbekannt, json.GetProperty("mail").GetString());
         Assert.False(json.GetProperty("hatPasswort").GetBoolean());
         Assert.Equal(1L, await ProtokollAsync(verbindung, SicherheitsEreignisArt.Anmeldung, await PersonIdAsync(verbindung, Unbekannt)));

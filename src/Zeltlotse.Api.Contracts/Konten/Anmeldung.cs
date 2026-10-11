@@ -22,7 +22,11 @@ public sealed record PasswortAnmeldung(string? Mail, string? Passwort);
 /// <summary>Antwort von <c>GET /api/ich/konto</c>.</summary>
 /// <param name="Mail">Die Mail-Adresse des Kontos.</param>
 /// <param name="HatPasswort">Ob ein Passwort festgelegt ist.</param>
-public sealed record KontoAntwort(string Mail, bool HatPasswort);
+/// <param name="Erlaubt">
+/// Erlaubte <see cref="Gemeinsam.Aktionsschluessel"/> außerhalb einer Organisation (bisher nur
+/// <c>organisationen-anlegen</c> für Global Admins); <c>null</c> nur bei einer älteren Server-Version.
+/// </param>
+public sealed record KontoAntwort(string Mail, bool HatPasswort, IReadOnlyList<string>? Erlaubt = null);
 
 /// <summary>Körper von <c>PUT /api/ich/konto/passwort</c>: das neue Passwort, 10 bis 200 Zeichen.</summary>
 public sealed record PasswortFestlegen(string? Passwort);

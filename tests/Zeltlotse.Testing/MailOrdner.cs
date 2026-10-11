@@ -6,12 +6,15 @@ namespace Zeltlotse.Testing;
 /// <summary>Eine gelesene Mail aus dem Ordner-Adapter.</summary>
 public sealed record GeleseneMail(string An, string Betreff, string Text)
 {
-    /// <summary>Der Login-Link aus der Mail (<c>…/app/anmelden/link/&lt;token&gt;</c>).</summary>
+    /// <summary>
+    /// Der Link aus der Mail: Login-Link (<c>…/app/anmelden/link/&lt;token&gt;</c>) oder Einladungslink
+    /// (<c>…/app/einladung/&lt;token&gt;</c>).
+    /// </summary>
     public string Link => LoginMailMuster.Link().Match(Text) is { Success: true } treffer
         ? treffer.Value
-        : throw new InvalidOperationException("Die Mail enthält keinen Login-Link.");
+        : throw new InvalidOperationException("Die Mail enthält keinen Login- oder Einladungslink.");
 
-    /// <summary>Das Token aus dem Login-Link.</summary>
+    /// <summary>Das Token aus dem Link.</summary>
     public string Token => Link[(Link.LastIndexOf('/') + 1)..];
 
     /// <summary>Der sechsstellige Login-Code aus der Mail.</summary>
@@ -79,7 +82,7 @@ public sealed class MailOrdner(string ordner)
 
 internal static partial class LoginMailMuster
 {
-    [GeneratedRegex(@"https?://\S+/app/anmelden/link/[A-Za-z0-9_-]+")]
+    [GeneratedRegex(@"https?://\S+/app/(?:anmelden/link|einladung)/[A-Za-z0-9_-]+")]
     public static partial Regex Link();
 
     [GeneratedRegex(@"Login-Code: (\d{6})")]

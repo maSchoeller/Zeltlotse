@@ -1,13 +1,29 @@
 @page "/"
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Organisationen
 @inject PersonenApiClient Personen
+@inject KontenApiClient Konten
+@inject OrganisationenApiClient Organisationen
 @inject AppSitzung Sitzung
-@* Startseite (EXPERIENCE.md → Voice and Tone: Begrüßung mit Vornamen, darunter ein neutraler Satz). Ohne Sitzung (401)
-   leitet der Sitzungs-Handler zur Seite „Anmelden“; offline bleibt die Begrüßung ohne Namen. *@
+@* Startseite (EXPERIENCE.md → Voice and Tone: Begrüßung mit Vornamen, darunter ein neutraler Satz). Für Global Admins
+   (erlaubte Aktion „organisationen-anlegen“, AD-29) der Weg zu „Organisationen“; je eigener Organisation eine Card.
+   Ohne Sitzung (401) leitet der Sitzungs-Handler zur Seite „Anmelden“; offline bleibt die Begrüßung ohne Namen. *@
 <PageTitle>Zeltlotse</PageTitle>
 
 <h1>@Begruessung</h1>
 @if (_geladen)
 {
+    @if (_organisationenAnlegen)
+    {
+        <Knopf Href="organisationen" Ansichtswechsel="true">Organisationen verwalten</Knopf>
+    }
+    @foreach (var organisation in _organisationen)
+    {
+        <Card Titel="@organisation.Name">
+            <p>Rolle: @Anzeige.Rollen(organisation.Rollen)</p>
+            <Knopf Href="@($"organisationen/{organisation.OrganisationId}")" Ansichtswechsel="true">Organisation öffnen</Knopf>
+        </Card>
+    }
     <p>Noch keine Freizeit geöffnet.</p>
 }
 else
@@ -18,26 +34,59 @@ else
 @code {
     private string? _vorname;
     private bool _geladen;
+    private bool _organisationenAnlegen;
+    private IReadOnlyList<MeineOrganisation> _organisationen = [];
 
     private string Begruessung => string.IsNullOrWhiteSpace(_vorname) ? "Hallo" : $"Hallo, {_vorname}";
 
     protected override async Task OnInitializedAsync()
+    {
+        if (await ProfilAsync())
+        {
+            await Task.WhenAll(ErlaubtAsync(), OrganisationenAsync());
+        }
+
+        _geladen = true;
+    }
+
+    /// <summary>Das eigene Profil; <c>false</c> ohne Sitzung (der Sitzungs-Handler führt zur Anmeldung) oder offline.</summary>
+    private async Task<bool> ProfilAsync()
     {
         try
         {
             var profil = await Personen.ProfilLadenOderAnlegenAsync();
             _vorname = profil.Vorname;
             Sitzung.Anmelden(profil.Vorname);
+            return true;
         }
-        catch (HttpRequestException)
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
         {
-            // 401: Der Sitzungs-Handler führt zur Anmeldung. Offline: Begrüßung ohne Namen.
+            return false;
         }
-        catch (TaskCanceledException)
-        {
-            // Zeitüberschreitung (offline).
-        }
+    }
 
-        _geladen = true;
+    private async Task ErlaubtAsync()
+    {
+        try
+        {
+            var konto = await Konten.KontoLadenAsync();
+            _organisationenAnlegen = konto.Erlaubt?.Contains(Aktionsschluessel.OrganisationenAnlegen) == true;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // Ohne Antwort kein Knopf; die Startseite bleibt nutzbar.
+        }
+    }
+
+    private async Task OrganisationenAsync()
+    {
+        try
+        {
+            _organisationen = await Organisationen.MeineLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // Ohne Antwort keine Cards; die Startseite bleibt nutzbar.
+        }
     }
 }

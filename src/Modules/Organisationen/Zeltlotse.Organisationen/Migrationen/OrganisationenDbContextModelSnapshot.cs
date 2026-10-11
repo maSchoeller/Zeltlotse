@@ -11,7 +11,7 @@ using Zeltlotse.Organisationen.Daten;
 namespace Zeltlotse.Organisationen.Migrationen
 {
     [DbContext(typeof(OrganisationenDbContext))]
-    internal partial class OrganisationenDbContextModelSnapshot : ModelSnapshot
+    partial class OrganisationenDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -22,6 +22,96 @@ namespace Zeltlotse.Organisationen.Migrationen
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Zeltlotse.Organisationen.Domaene.OrgEinladung", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AngelegtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EingeladenVon")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("GueltigBis")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Mail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Rolle")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("OrganisationId", "Mail");
+
+                    b.ToTable("org_einladung", "organisationen");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Organisationen.Domaene.OrgRolle", b =>
+                {
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Rolle")
+                        .HasColumnType("smallint");
+
+                    b.Property<DateTimeOffset>("VergebenAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("OrganisationId", "PersonId", "Rolle");
+
+                    b.HasIndex("PersonId");
+
+                    b.ToTable("org_rolle", "organisationen");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Organisationen.Domaene.Organisation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AngelegtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("EingerichtetAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("organisation", "organisationen");
+                });
 
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.InboxEintrag", b =>
                 {

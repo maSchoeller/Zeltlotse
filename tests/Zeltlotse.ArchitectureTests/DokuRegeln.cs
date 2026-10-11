@@ -9,8 +9,8 @@ namespace Zeltlotse.ArchitectureTests;
 /// </summary>
 internal static partial class DokuRegeln
 {
-    /// <summary>Die fünf Rollen-Ordner der Gliederung; jeder hat eine Überblicksseite <c>index</c>.</summary>
-    public static readonly IReadOnlyList<string> RollenOrdner = ["eltern", "mitarbeitende", "leitung", "kueche", "org-admin"];
+    /// <summary>Die sechs Rollen-Ordner der Gliederung; jeder hat eine Überblicksseite <c>index</c>.</summary>
+    public static readonly IReadOnlyList<string> RollenOrdner = ["eltern", "mitarbeitende", "leitung", "kueche", "org-admin", "betreiber"];
 
     /// <summary>Seiten, die es immer geben muss (ohne Endung, relativ zu <c>doku/src/content/docs</c>).</summary>
     public static IEnumerable<string> PflichtSeiten =>

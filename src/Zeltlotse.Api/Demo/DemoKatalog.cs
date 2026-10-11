@@ -9,6 +9,9 @@ internal static class DemoKatalog
 {
     public static DemoOrganisation Organisation { get; } = new("Jugendwerk Musterstadt");
 
+    /// <summary>Offene Einladung als Org-Überblick (von Andrea), ohne Konto dahinter.</summary>
+    public const string UeberblickEinladung = "vorstand@example.org";
+
     public static DemoFreizeit Freizeit { get; } = new(
         "Zeltlager Sommer 2027",
         "Zeltplatz am Mühlbach, Musterhausen",
@@ -17,6 +20,7 @@ internal static class DemoKatalog
 
     public static IReadOnlyList<DemoPerson> Personen { get; } =
     [
+        new("Gerd", "Betreiber", DemoRolle.GlobalAdmin, "gerd.betreiber@example.org"),
         new("Andrea", "Beispiel", DemoRolle.OrgAdmin, "andrea.beispiel@example.org"),
         new("Jonas", "Hüttner", DemoRolle.Leitung, "jonas.huettner@example.org"),
         new("Miriam", "Zeltner", DemoRolle.Leitung, "miriam.zeltner@example.org"),
@@ -35,9 +39,13 @@ internal sealed record DemoOrganisation(string Name);
 
 internal sealed record DemoFreizeit(string Name, string Ort, DateOnly Beginn, DateOnly Ende);
 
-/// <summary>Rolle einer Demo-Person; <see cref="Kind"/> ist ein Kind unter 18 im Familienkonto, ohne eigenes Konto.</summary>
+/// <summary>
+/// Rolle einer Demo-Person; <see cref="Kind"/> ist ein Kind unter 18 im Familienkonto, ohne eigenes Konto.
+/// <see cref="GlobalAdmin"/> ist der Betreiber (nur bei aktiven Demo-Daten Global Admin).
+/// </summary>
 internal enum DemoRolle
 {
+    GlobalAdmin,
     OrgAdmin,
     Leitung,
     Team,

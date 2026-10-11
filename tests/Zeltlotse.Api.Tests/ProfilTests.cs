@@ -202,7 +202,7 @@ public sealed class ProfilTests(PostgresContainer postgres)
         Assert.Equal(["nachname", "version", "vorname"], Namen(p));
         Assert.Equal("Anna", p.GetProperty("vorname").GetString());
         var k = await JsonAsync(konto);
-        Assert.Equal(["hatPasswort", "mail"], Namen(k));
+        Assert.Equal(["erlaubt", "hatPasswort", "mail"], Namen(k));
         Assert.Equal("a@example.org", k.GetProperty("mail").GetString());
         Assert.DoesNotContain("Bernd", p.GetRawText(), StringComparison.Ordinal);
     }

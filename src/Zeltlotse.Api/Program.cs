@@ -69,13 +69,16 @@ builder.Services.AddMediator(options =>
 builder.Services.AddZeltlotseModule();
 builder.Services.AddSingleton<ModulMigrationen>();
 builder.Services.AddSingleton<DemoDaten>();
+builder.Services.AddSingleton<GlobalAdmins>();
 
 var app = builder.Build();
 
 Startpruefung.Ausfuehren(app.Services, app.Environment);
 await app.Services.GetRequiredService<ModulMigrationen>().AnwendenAsync();
 await app.Services.GetRequiredService<DemoDaten>().EinspielenAsync();
+await app.Services.GetRequiredService<GlobalAdmins>().AbgleichenAsync();
 
+// Start: Prüfung, Migrationen, Demo-Daten, Abgleich der Global Admins (FR-5).
 // Reihenfolge (AD-5, AD-12, AD-22, AD-25): Versions- und Sicherheits-Header sowie Proxy-Auswertung zuerst, dann Fehlerform
 // (HTML-Seite außerhalb von /api), Rückfall der Web-App auf index.html, Routing, Cookie-Richtlinie, Zugriffsbegrenzung,
 // Sitzung (Authentifizierung, Autorisierung) und zuletzt der Antiforgery-Zwang vor den Endpunkten.

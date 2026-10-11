@@ -6,6 +6,7 @@ using Zeltlotse.Konten.Anmelden;
 using Zeltlotse.Konten.Contracts.Sitzungen;
 using Zeltlotse.Konten.Daten;
 using Zeltlotse.Konten.Domaene;
+using Zeltlotse.SharedKernel.Zugangslinks;
 using Zeltlotse.Konten.Passwort;
 using Zeltlotse.Konten.Sitzungen;
 using Zeltlotse.Testing;
@@ -40,7 +41,7 @@ public sealed class KontenCommandTests(PostgresContainer postgres) : IAsyncLifet
         var anfrage = await LesenAsync(db => db.LoginAnfragen.SingleAsync(a => a.Id == neu.AnfrageId, Abbruch));
         Assert.Equal("paul@example.org", anfrage.Mail);
         Assert.Equal("paul@example.org", neu.Mail);
-        Assert.Equal(Geheimnisse.TokenHash("login", neu.Token), anfrage.TokenHash);
+        Assert.Equal(Zugangslink.TokenHash("login", neu.Token), anfrage.TokenHash);
         Assert.Equal(Geheimnisse.CodeHash(anfrage.Id, neu.Code), anfrage.CodeHash);
         Assert.Equal(_factory.Uhr.GetUtcNow() + TimeSpan.FromMinutes(15), anfrage.GueltigBis);
         Assert.Equal(LoginAnfrageStatus.Offen, anfrage.Status);
@@ -198,6 +199,74 @@ public sealed class KontenCommandTests(PostgresContainer postgres) : IAsyncLifet
         Assert.NotEqual(alt, neu);
         Assert.Equal(1, Convert.FromBase64String(neu)[0]);
     }
+
+    [Fact]
+    public async Task Global_Admins_abgleichen_setzt_das_Kennzeichen_legt_fehlende_Konten_an_und_entfernt_es_bei_allen_anderen()
+    {
+        var vorhanden = await SendenAsync(new KontoSicherstellen("gerd.betreiber@example.org"));
+        var anderes = await SendenAsync(new KontoSicherstellen("andrea.beispiel@example.org"));
+
+        var erster = await SendenAsync(new GlobalAdminsAbgleichen([" Gerd.Betreiber@example.org", "neu@example.org"]));
+
+        Assert.Equal(new GlobalAdminAbgleich(2, 1), erster);
+        Assert.True(await GlobalAdminAsync("gerd.betreiber@example.org"));
+        Assert.True(await GlobalAdminAsync("neu@example.org"));
+        Assert.False(await GlobalAdminAsync("andrea.beispiel@example.org"));
+        var neu = await LesenAsync(db => db.Konten.SingleAsync(k => k.Mail == "neu@example.org", Abbruch));
+        Assert.NotEqual(neu.Id, neu.PersonId);
+        Assert.Equal(3, await LesenAsync(db => db.Konten.CountAsync(Abbruch)));
+        // Rollenvergabe je geändertem Konto: Gerd vergeben, neues Konto angelegt.
+        Assert.Equal(2, await ProtokollAsync(Zeltlotse.SharedKernel.Sicherheitsprotokoll.SicherheitsEreignisArt.Rollenvergabe));
+
+        // Aus der Konfiguration entfernt: Kennzeichen weg, Konto bleibt; ein zweiter Lauf legt nichts doppelt an.
+        var zweiter = await SendenAsync(new GlobalAdminsAbgleichen(["andrea.beispiel@example.org"]));
+
+        Assert.Equal(new GlobalAdminAbgleich(1, 0), zweiter);
+        Assert.False(await GlobalAdminAsync("gerd.betreiber@example.org"));
+        Assert.False(await GlobalAdminAsync("neu@example.org"));
+        Assert.True(await GlobalAdminAsync("andrea.beispiel@example.org"));
+        Assert.Equal(3, await LesenAsync(db => db.Konten.CountAsync(Abbruch)));
+        Assert.Equal(vorhanden.PersonId, await LesenAsync(db => db.Konten.Where(k => k.Id == vorhanden.KontoId).Select(k => k.PersonId).SingleAsync(Abbruch)));
+        Assert.NotEqual(anderes.KontoId, vorhanden.KontoId);
+        // Andrea vergeben, Gerd und neu entzogen.
+        Assert.Equal(5, await ProtokollAsync(Zeltlotse.SharedKernel.Sicherheitsprotokoll.SicherheitsEreignisArt.Rollenvergabe));
+
+        // Ohne Änderung kein Eintrag.
+        await SendenAsync(new GlobalAdminsAbgleichen(["andrea.beispiel@example.org"]));
+        Assert.Equal(5, await ProtokollAsync(Zeltlotse.SharedKernel.Sicherheitsprotokoll.SicherheitsEreignisArt.Rollenvergabe));
+
+        // Leere Liste: niemand ist Global Admin.
+        await SendenAsync(new GlobalAdminsAbgleichen([]));
+        Assert.Equal(0, await LesenAsync(db => db.Konten.CountAsync(k => k.GlobalAdmin, Abbruch)));
+        Assert.Equal(6, await ProtokollAsync(Zeltlotse.SharedKernel.Sicherheitsprotokoll.SicherheitsEreignisArt.Rollenvergabe));
+        Assert.Equal(2L, await WertAsync("SELECT count(*) FROM betrieb.sicherheitsprotokoll WHERE \"Art\" = 4 AND \"PersonId\" = @p", anderes.PersonId));
+    }
+
+    private async Task<long> WertAsync(string sql, Guid personId)
+    {
+        await using var verbindung = new Npgsql.NpgsqlConnection(_verbindung);
+        await verbindung.OpenAsync(Abbruch);
+        await using var befehl = new Npgsql.NpgsqlCommand(sql, verbindung);
+        befehl.Parameters.AddWithValue("p", personId);
+        return (long)(await befehl.ExecuteScalarAsync(Abbruch))!;
+    }
+
+    [Fact]
+    public async Task Konto_lesen_liefert_Global_Admin_und_Mail_des_Kontos()
+    {
+        var konto = await SendenAsync(new KontoSicherstellen("Gerd.Betreiber@example.org"));
+        await SendenAsync(new GlobalAdminsAbgleichen(["gerd.betreiber@example.org"]));
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var lesen = scope.ServiceProvider.GetRequiredService<Zeltlotse.Konten.Contracts.Konten.IKontoLesen>();
+        Assert.True(await lesen.IstGlobalAdminAsync(konto.KontoId, Abbruch));
+        Assert.Equal("gerd.betreiber@example.org", await lesen.MailAsync(konto.KontoId, Abbruch));
+        Assert.False(await lesen.IstGlobalAdminAsync(Guid.CreateVersion7(), Abbruch));
+        Assert.Null(await lesen.MailAsync(Guid.CreateVersion7(), Abbruch));
+    }
+
+    private Task<bool> GlobalAdminAsync(string mail) =>
+        LesenAsync(db => db.Konten.Where(k => k.Mail == mail).Select(k => k.GlobalAdmin).SingleAsync(Abbruch));
 
     private async Task<T> SendenAsync<T>(ICommand<T> command)
     {

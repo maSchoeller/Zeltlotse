@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Design;
 using Zeltlotse.Konten.Domaene;
 using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Mandanten;
+using Zeltlotse.SharedKernel.Zugangslinks;
 
 namespace Zeltlotse.Konten.Daten;
 

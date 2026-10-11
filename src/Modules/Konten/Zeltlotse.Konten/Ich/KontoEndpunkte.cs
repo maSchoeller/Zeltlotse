@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Zeltlotse.Api.Contracts.Gemeinsam;
 using Zeltlotse.Api.Contracts.Konten;
 using Zeltlotse.Konten.Daten;
 using Zeltlotse.Konten.Passwort;
@@ -10,7 +11,11 @@ using Zeltlotse.SharedKernel.Anmeldung;
 
 namespace Zeltlotse.Konten.Ich;
 
-/// <summary><c>GET /api/ich/konto</c>: Mail-Adresse und ob ein Passwort festgelegt ist, nur für das eigene Konto (AD-26).</summary>
+/// <summary>
+/// <c>GET /api/ich/konto</c>: Mail-Adresse, ob ein Passwort festgelegt ist, und die erlaubten Aktionen (AD-29), nur für das
+/// eigene Konto (AD-26). <c>organisationen-anlegen</c> steht genau dann darin, wenn das Konto Global Admin ist – dasselbe
+/// Kennzeichen prüft der Host für <c>.NurGlobalAdmin()</c>.
+/// </summary>
 internal static class KontoLadenEndpunkt
 {
     public static async Task<Results<Ok<KontoAntwort>, NotFound>> Laden(IAngemeldet angemeldet, KontenLeseDbContext db, CancellationToken abbruch)
@@ -18,9 +23,15 @@ internal static class KontoLadenEndpunkt
         var kontoId = angemeldet.KontoId;
         var konto = await db.Konten
             .Where(k => k.Id == kontoId)
-            .Select(k => new KontoAntwort(k.Mail, k.PasswortHash != null))
+            .Select(k => new { k.Mail, HatPasswort = k.PasswortHash != null, k.GlobalAdmin })
             .SingleOrDefaultAsync(abbruch);
-        return konto is null ? TypedResults.NotFound() : TypedResults.Ok(konto);
+        if (konto is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        IReadOnlyList<string> erlaubt = konto.GlobalAdmin ? [Aktionsschluessel.OrganisationenAnlegen] : [];
+        return TypedResults.Ok(new KontoAntwort(konto.Mail, konto.HatPasswort, erlaubt));
     }
 }
 

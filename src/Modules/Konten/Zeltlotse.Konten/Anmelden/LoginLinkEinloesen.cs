@@ -4,6 +4,7 @@ using Zeltlotse.Konten.Domaene;
 using Zeltlotse.Konten.Sitzungen;
 using Zeltlotse.SharedKernel.Commands;
 using Zeltlotse.SharedKernel.Sicherheitsprotokoll;
+using Zeltlotse.SharedKernel.Zugangslinks;
 
 namespace Zeltlotse.Konten.Anmelden;
 
@@ -23,9 +24,9 @@ internal sealed class LoginLinkEinloesenHandler(KontenDbContext db, TimeProvider
     public async ValueTask<SitzungsDaten?> Handle(LoginLinkEinloesenCommand command, CancellationToken cancellationToken)
     {
         LoginAnfrage? anfrage = null;
-        if (Geheimnisse.KannTokenSein(command.Token))
+        if (Zugangslink.KannTokenSein(command.Token))
         {
-            var hash = Geheimnisse.TokenHash(Geheimnisse.LoginZweck, command.Token!);
+            var hash = Zugangslink.TokenHash(Geheimnisse.LoginZweck, command.Token!);
             anfrage = await AnfrageSperre.PerTokenHashAsync(db.LoginAnfragen, hash, cancellationToken);
         }
 

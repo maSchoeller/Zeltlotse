@@ -24,7 +24,8 @@ internal sealed class DbKontextVerzeichnis(IServiceCollection services)
 /// <summary>
 /// Prüfungen vor den Migrationen; jeder Verstoß bricht den Start ab, ohne Geheimnisse zu nennen:
 /// Hauptschlüssel (AD-14), HMAC-Schlüssel der Logs (AD-22), Demo-Daten nur in <c>Development</c>/<c>Testing</c> (NFR-20),
-/// Mail-Versand (Art, Ordner-Adapter nur in <c>Development</c>/<c>Testing</c>) und öffentliche Adresse und – außerhalb der Umgebung <c>Testing</c> –
+/// Mail-Versand (Art, Ordner-Adapter nur in <c>Development</c>/<c>Testing</c>), öffentliche Adresse, gültige Mail-Adressen in
+/// <c>Zeltlotse:GlobalAdmins</c> und – außerhalb der Umgebung <c>Testing</c> –
 /// keine DbContexts mit <c>EnableSensitiveDataLogging</c>/<c>EnableDetailedErrors</c> und keine Verbindung
 /// mit <c>Include Error Detail=true</c> (AD-22).
 /// </summary>
@@ -39,6 +40,7 @@ internal static class Startpruefung
         DemoDatenPruefen(dienste.GetRequiredService<IConfiguration>(), umgebung);
         MailRegistrierung.Pruefen(dienste.GetRequiredService<IConfiguration>(), umgebung, TestUmgebung);
         AdressePruefen(dienste.GetRequiredService<IConfiguration>(), umgebung);
+        GlobalAdmins.Pruefen(dienste.GetRequiredService<IConfiguration>());
 
         if (umgebung.IsEnvironment(TestUmgebung))
         {

@@ -4,6 +4,7 @@ using Zeltlotse.Konten.Daten;
 using Zeltlotse.Konten.Domaene;
 using Zeltlotse.SharedKernel;
 using Zeltlotse.SharedKernel.Commands;
+using Zeltlotse.SharedKernel.Zugangslinks;
 
 namespace Zeltlotse.Konten.Anmelden;
 

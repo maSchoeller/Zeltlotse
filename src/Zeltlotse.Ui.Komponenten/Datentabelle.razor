@@ -1,0 +1,38 @@
+@typeparam TZeile
+@* Datentabelle (DESIGN.md → Datentabelle, EXPERIENCE.md): ELKW-Tabelle mit Beschriftung (caption, nur für Screenreader
+   sichtbar), Spaltenköpfen und je Zelle der Spaltenbezeichnung als data-label: Auf dem Handy stapelt die Tabelle die Zellen
+   und zeigt die Bezeichnung vor dem Wert. Ohne Ereignis-Handler, also auch statisch tauglich. *@
+<div class="elkw-table-wrap">
+    <table class="elkw-table elkw-table--stack">
+        <caption class="zl-nur-vorlesen">@Beschriftung</caption>
+        <thead>
+            <tr>
+                @foreach (var spalte in Spalten)
+                {
+                    <th scope="col">@spalte.Titel</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var zeile in Zeilen)
+            {
+                <tr>
+                    @foreach (var spalte in Spalten)
+                    {
+                        <td data-label="@spalte.Titel">@spalte.Inhalt(zeile)</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    /// <summary>Beschriftung der Tabelle für Screenreader, z. B. „Organisationen“.</summary>
+    [Parameter, EditorRequired] public string Beschriftung { get; set; } = "";
+
+    /// <summary>Die Spalten in Reihenfolge: Titel und Inhalt je Zeile.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<Spalte<TZeile>> Spalten { get; set; } = [];
+
+    [Parameter, EditorRequired] public IReadOnlyList<TZeile> Zeilen { get; set; } = [];
+}

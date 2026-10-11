@@ -2,6 +2,8 @@ using System.Net;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
 using Zeltlotse.Api.Contracts.Gemeinsam;
+using Zeltlotse.Api.Rechte;
+using Zeltlotse.SharedKernel.Rechte;
 
 namespace Zeltlotse.Api.Sicherheit;
 
@@ -26,6 +28,7 @@ internal static class WebSicherheit
         });
         services.AddZugriffsbegrenzung();
         services.AddSitzung();
+        services.AddScoped<IKontextRollen, KontextRollen>();
 
         // Weitergeleitete Header nur von konfigurierten Proxy-Adressen; die eingebauten Loopback-Vorgaben fallen weg.
         services.AddOptions<ForwardedHeadersOptions>()
@@ -60,10 +63,12 @@ internal static class WebSicherheit
     }
 
     /// <summary>
-    /// Nach dem Routing: Cookie-Richtlinie, Zugriffsbegrenzung, Sitzung (Authentifizierung und Autorisierung, AD-12) und
-    /// zuletzt der Antiforgery-Zwang. Er prüft das Token gegen die angemeldete Identität; eine Anfrage ohne Sitzung an einen
-    /// angemeldeten Endpunkt endet schon vorher mit <c>401</c>.
+    /// Nach dem Routing: Cookie-Richtlinie, Zugriffsbegrenzung, Sitzung (Authentifizierung und Autorisierung, AD-12), die
+    /// zentrale Rechteprüfung mit dem Mandanten-Kontext aus der Route (AD-6, AD-12) und zuletzt der Antiforgery-Zwang. Er
+    /// prüft das Token gegen die angemeldete Identität; eine Anfrage ohne Sitzung an einen angemeldeten Endpunkt endet schon
+    /// vorher mit <c>401</c>, eine ohne Recht mit <c>403</c>/<c>404</c>. Alles läuft vor der Modellbindung der Endpunkte.
     /// </summary>
     public static IApplicationBuilder UseWebSicherheitNachRouting(this IApplicationBuilder app) =>
-        app.UseCookiePolicy().UseRateLimiter().UseAuthentication().UseAuthorization().UseMiddleware<AntiforgeryZwang>();
+        app.UseCookiePolicy().UseRateLimiter().UseAuthentication().UseAuthorization()
+            .UseMiddleware<RechtePruefung>().UseMiddleware<AntiforgeryZwang>();
 }

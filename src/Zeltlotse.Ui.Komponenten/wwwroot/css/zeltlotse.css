@@ -76,6 +76,8 @@ html.elkw[data-stil="nahbar"] .elkw-app__main :is(.elkw-surface, .elkw-card, .el
 
 /* Abstände zwischen Bausteinen im Arbeitsbereich: Meldung oder Card vor dem nächsten Baustein */
 .elkw-app__main :is(.elkw-card, .elkw-alert) + :is(.elkw-card, .elkw-alert, .zl-formular, .elkw-btn, p) { margin-top: var(--elkw-space-m); }
+/* Tabelle, Leer-Zustand, Knopf oder Absatz vor einer Card (z. B. Liste über dem Formular, Knopf über den Organisationen) */
+.elkw-app__main :is(.elkw-table-wrap, .elkw-empty, .elkw-btn, p) + .elkw-card { margin-top: var(--elkw-space-m); }
 
 /* Felder untereinander außerhalb eines Formulars (z. B. Autosave-Felder in einer Card) */
 :not(.zl-formular) > .elkw-field + .elkw-field { margin-top: var(--elkw-space-s); }
@@ -134,3 +136,11 @@ a.zl-gross:not(.elkw-btn) { display: inline-flex; align-items: center; }
 .zl-oeffentlich-spalte { max-width: 75ch; margin: 0 auto; padding: 0 var(--elkw-space-m); }
 .zl-oeffentlich-kopf { padding: var(--elkw-header-pad) 0; border-bottom: 1px solid var(--elkw-light); background: var(--elkw-white); }
 .zl-oeffentlich-inhalt { padding-top: var(--elkw-space-l); padding-bottom: var(--elkw-space-xl); }
+
+/* ---------- Datentabelle und Auswahl ---------- */
+/* Nur für Screenreader sichtbar (z. B. die Beschriftung der Datentabelle). */
+.zl-nur-vorlesen { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* Die Auswahl steht im Formular wie ein Feld: Legende in der Größe eines Labels. */
+.zl-auswahl { margin: 0; }
+.zl-auswahl legend { font-size: var(--elkw-fs-small); font-weight: 400; margin-bottom: 0.25rem; }
+.zl-auswahl .elkw-choice { min-height: 24px; }

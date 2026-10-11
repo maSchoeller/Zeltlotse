@@ -1,7 +1,13 @@
 using Mediator;
+using Microsoft.EntityFrameworkCore;
 using Zeltlotse.Api.Contracts.Personen;
 using Zeltlotse.Konten.Anmelden;
+using Zeltlotse.Organisationen.Daten;
+using Zeltlotse.Organisationen.Einladungen;
+using Zeltlotse.Organisationen.Verwaltung;
 using Zeltlotse.Personen.Profil;
+using Zeltlotse.SharedKernel.Mandanten;
+using Zeltlotse.SharedKernel.Rechte;
 
 namespace Zeltlotse.Api.Demo;
 
@@ -15,6 +21,9 @@ namespace Zeltlotse.Api.Demo;
 /// Eingespielt wird nur über die Commands der Module (Mediator, AD-27), nie direkt in Tabellen. Jede Fach-Story ergänzt
 /// hier ihre Commands und macht sie idempotent. Bisher (Story 1-1): je Demo-Person mit Mail ein Konto und ein Profil mit
 /// Vor- und Nachnamen; eine vorhandene Mail-Adresse wird übersprungen. Kinder ohne Mail bekommen hier nichts (Familie: 1-4).
+/// Story 1-2: Fehlt die Demo-Organisation, legt Gerd (Betreiber) sie an und lädt Andrea ein; Andrea nimmt an (Org-Admin) und
+/// lädt <see cref="DemoKatalog.UeberblickEinladung"/> als Org-Überblick ein (bleibt offen). Gerd wird Global Admin erst im
+/// Abgleich danach (<see cref="Start.GlobalAdmins"/>).
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -47,6 +56,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             }
         }
 
+        await OrganisationAsync(abbruch);
+
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
     }
@@ -73,6 +84,31 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         }
 
         return true;
+    }
+
+    /// <summary>Die Demo-Organisation mit Andrea als Org-Admin und einer offenen Einladung; nichts, wenn es sie schon gibt.</summary>
+    private async Task OrganisationAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var name = DemoKatalog.Organisation.Name;
+        if (await dienste.GetRequiredService<OrganisationenLeseDbContext>().Organisationen.AnyAsync(o => o.Name == name, abbruch))
+        {
+            return;
+        }
+
+        var sender = dienste.GetRequiredService<ISender>();
+        var betreiber = DemoKatalog.Personen.Single(p => p.Rolle == DemoRolle.GlobalAdmin);
+        var orgAdmin = DemoKatalog.Personen.Single(p => p.Rolle == DemoRolle.OrgAdmin);
+        var gerd = await sender.Send(new KontoSicherstellen(betreiber.Mail!), abbruch);
+        var andrea = await sender.Send(new KontoSicherstellen(orgAdmin.Mail!), abbruch);
+
+        var einladung = await sender.Send(new OrganisationAnlegenCommand(name, orgAdmin.Mail, gerd.PersonId), abbruch);
+        _ = await sender.Send(new EinladungAnnehmenCommand(einladung.Token, andrea.KontoId, andrea.PersonId), abbruch)
+            ?? throw new InvalidOperationException("Demo-Organisation: Die Einladung ließ sich nicht annehmen.");
+
+        dienste.GetRequiredService<MandantenKontext>().Setzen(einladung.OrganisationId);
+        await sender.Send(new EinladungAnlegenCommand(einladung.OrganisationId, DemoKatalog.UeberblickEinladung, OrgRolle.OrgUeberblick, andrea.PersonId), abbruch);
     }
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Demo-Daten eingespielt ({AnzahlPersonen} Personen im Katalog, {NeueKonten} neue Konten).")]

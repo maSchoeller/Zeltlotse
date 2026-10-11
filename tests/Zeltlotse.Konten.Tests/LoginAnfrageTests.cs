@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Time.Testing;
 using Zeltlotse.Konten.Domaene;
+using Zeltlotse.SharedKernel.Zugangslinks;
 
 namespace Zeltlotse.Konten.Tests;
 
@@ -75,25 +76,25 @@ public sealed class LoginAnfrageTests
     [Fact]
     public void Token_hat_43_Zeichen_base64url_und_ist_jedes_Mal_neu()
     {
-        var tokens = Enumerable.Range(0, 50).Select(_ => Geheimnisse.NeuesToken()).ToList();
+        var tokens = Enumerable.Range(0, 50).Select(_ => Zugangslink.NeuesToken()).ToList();
 
         Assert.All(tokens, t => Assert.Matches("^[A-Za-z0-9_-]{43}$", t));
-        Assert.All(tokens, t => Assert.True(Geheimnisse.KannTokenSein(t)));
+        Assert.All(tokens, t => Assert.True(Zugangslink.KannTokenSein(t)));
         Assert.Equal(tokens.Count, tokens.Distinct(StringComparer.Ordinal).Count());
-        Assert.False(Geheimnisse.KannTokenSein(tokens[0] + "A"));
-        Assert.False(Geheimnisse.KannTokenSein(tokens[0][..42] + "="));
-        Assert.False(Geheimnisse.KannTokenSein(null));
+        Assert.False(Zugangslink.KannTokenSein(tokens[0] + "A"));
+        Assert.False(Zugangslink.KannTokenSein(tokens[0][..42] + "="));
+        Assert.False(Zugangslink.KannTokenSein(null));
     }
 
     [Fact]
     public void Der_Zweck_steckt_im_Token_Hash()
     {
-        var token = Geheimnisse.NeuesToken();
+        var token = Zugangslink.NeuesToken();
 
-        var login = Geheimnisse.TokenHash("login", token);
+        var login = Zugangslink.TokenHash("login", token);
 
         Assert.Equal(SHA256.HashData(Encoding.UTF8.GetBytes("login:" + token)), login);
-        Assert.NotEqual(login, Geheimnisse.TokenHash("einladung", token));
+        Assert.NotEqual(login, Zugangslink.TokenHash("einladung", token));
         Assert.Equal(32, login.Length);
     }
 

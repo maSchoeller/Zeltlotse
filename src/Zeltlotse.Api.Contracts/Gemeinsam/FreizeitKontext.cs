@@ -49,7 +49,14 @@ public enum FunktionsSchalter
 }
 
 /// <summary>
-/// Schlüssel der Aktionen in <see cref="FreizeitKontext.Erlaubt"/> (AD-29). Jede Fach-Story trägt ihre Schlüssel hier ein;
-/// noch gibt es keine. Ändert sich nur mit einer Änderung der Architektur-Spine (AD-5).
+/// Schlüssel der erlaubten Aktionen (AD-29) in <see cref="FreizeitKontext.Erlaubt"/> und den <c>erlaubt</c>-Listen der
+/// Antworten. Jede Fach-Story trägt ihre Schlüssel hier ein. Ändert sich nur mit einer Änderung der Architektur-Spine (AD-5).
 /// </summary>
-public static class Aktionsschluessel;
+public static class Aktionsschluessel
+{
+    /// <summary>Organisationen anlegen und den ersten Org-Admin einladen (Global Admin, in <c>GET /api/ich/konto</c>).</summary>
+    public const string OrganisationenAnlegen = "organisationen-anlegen";
+
+    /// <summary>Rollen der Organisation sehen und Personen einladen (Org-Admin, in <c>GET /api/organisationen/{orgId}</c>).</summary>
+    public const string OrgRollenVergeben = "org-rollen-vergeben";
+}

@@ -5,6 +5,7 @@ using Zeltlotse.Konten.Daten;
 using Zeltlotse.Konten.Domaene;
 using Zeltlotse.SharedKernel;
 using Zeltlotse.SharedKernel.Commands;
+using Zeltlotse.SharedKernel.Zugangslinks;
 
 namespace Zeltlotse.Konten.Anmelden;
 
@@ -23,7 +24,7 @@ internal sealed record NeueLoginAnfrage(Guid AnfrageId, string Mail, string Toke
     public override string ToString() => $"NeueLoginAnfrage({AnfrageId})";
 }
 
-internal sealed partial class LoginAnfrageAnlegenValidator : AbstractValidator<LoginAnfrageAnlegen>
+internal sealed class LoginAnfrageAnlegenValidator : AbstractValidator<LoginAnfrageAnlegen>
 {
     public LoginAnfrageAnlegenValidator()
     {
@@ -31,22 +32,9 @@ internal sealed partial class LoginAnfrageAnlegenValidator : AbstractValidator<L
             .Must(m => !string.IsNullOrWhiteSpace(m)).WithMessage("Mail-Adresse fehlt.")
             .DependentRules(() => RuleFor(c => c.Mail!.Trim())
                 .MaximumLength(MailAdresse.MaximaleLaenge).WithMessage("Die Mail-Adresse ist zu lang.")
-                .Must(IstReineMailAdresse).WithMessage("Das ist keine gültige Mail-Adresse.")
+                .Must(MailAdresse.IstReineMailAdresse).WithMessage("Das ist keine gültige Mail-Adresse.")
                 .OverridePropertyName(nameof(LoginAnfrageAnlegen.Mail)));
     }
-}
-
-internal sealed partial class LoginAnfrageAnlegenValidator
-{
-    /// <summary>
-    /// Nur eine nackte Adresse: kein Anzeigename (<c>x&lt;andere@y.de&gt;</c>), keine Liste, keine Anführungszeichen, keine
-    /// Leerzeichen. So geht die Mail genau an die gespeicherte Adresse.
-    /// </summary>
-    internal static bool IstReineMailAdresse(string mail) =>
-        !mail.Any(z => char.IsWhiteSpace(z) || z is '"' or ',' or ';' or '<' or '>')
-        && System.Net.Mail.MailAddress.TryCreate(mail, out var adresse)
-        && string.IsNullOrEmpty(adresse.DisplayName)
-        && string.Equals(adresse.Address, mail, StringComparison.Ordinal);
 }
 
 internal sealed class LoginAnfrageAnlegenHandler(KontenDbContext db, TimeProvider uhr)
@@ -66,10 +54,10 @@ internal sealed class LoginAnfrageAnlegenHandler(KontenDbContext db, TimeProvide
         }
 
         var id = Kennung.Neu(uhr);
-        var token = Geheimnisse.NeuesToken();
+        var token = Zugangslink.NeuesToken();
         var code = Geheimnisse.NeuerCode();
         db.LoginAnfragen.Add(LoginAnfrage.Anlegen(
-            id, mail, Geheimnisse.TokenHash(Geheimnisse.LoginZweck, token), Geheimnisse.CodeHash(id, code), jetzt));
+            id, mail, Zugangslink.TokenHash(Geheimnisse.LoginZweck, token), Geheimnisse.CodeHash(id, code), jetzt));
         return new NeueLoginAnfrage(id, mail, token, code);
     }
 }
