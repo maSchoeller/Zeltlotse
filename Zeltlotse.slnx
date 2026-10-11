@@ -2,9 +2,13 @@
   <Folder Name="/src/">
     <Project Path="src/Zeltlotse.Api.Contracts/Zeltlotse.Api.Contracts.csproj" />
     <Project Path="src/Zeltlotse.Api/Zeltlotse.Api.csproj" />
+    <Project Path="src/Zeltlotse.App/Zeltlotse.App.csproj" />
     <Project Path="src/Zeltlotse.AppHost/Zeltlotse.AppHost.csproj" />
     <Project Path="src/Zeltlotse.ServiceDefaults/Zeltlotse.ServiceDefaults.csproj" />
+    <Project Path="src/Zeltlotse.Public/Zeltlotse.Public.csproj" />
     <Project Path="src/Zeltlotse.SharedKernel/Zeltlotse.SharedKernel.csproj" />
+    <Project Path="src/Zeltlotse.Ui/Zeltlotse.Ui.csproj" />
+    <Project Path="src/Zeltlotse.Ui.Komponenten/Zeltlotse.Ui.Komponenten.csproj" />
   </Folder>
   <Folder Name="/src/Modules/Konten/">
     <Project Path="src/Modules/Konten/Zeltlotse.Konten/Zeltlotse.Konten.csproj" />
@@ -49,9 +53,11 @@
   <Folder Name="/tests/">
     <Project Path="tests/Zeltlotse.Api.Tests/Zeltlotse.Api.Tests.csproj" />
     <Project Path="tests/Zeltlotse.ArchitectureTests/Zeltlotse.ArchitectureTests.csproj" />
+    <Project Path="tests/Zeltlotse.E2E.Tests/Zeltlotse.E2E.Tests.csproj" />
     <Project Path="tests/Zeltlotse.Personen.Tests/Zeltlotse.Personen.Tests.csproj" />
     <Project Path="tests/Zeltlotse.SharedKernel.Tests/Zeltlotse.SharedKernel.Tests.csproj" />
     <Project Path="tests/Zeltlotse.Testing/Zeltlotse.Testing.csproj" />
     <Project Path="tests/Zeltlotse.Testmodul/Zeltlotse.Testmodul.csproj" />
+    <Project Path="tests/Zeltlotse.Ui.Tests/Zeltlotse.Ui.Tests.csproj" />
   </Folder>
 </Solution>

@@ -8,12 +8,17 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
     <!-- S3-Adapter (AD-15, AD-23): einziger Ort mit anbieterspezifischem Dateispeicher-Code. -->
     <PackageReference Include="AWSSDK.S3" />
+    <!-- Auslieferung der Web-App unter /app (AD-5): Blazor-WebAssembly-Dateien eines referenzierten Projekts. -->
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Zeltlotse.ServiceDefaults\Zeltlotse.ServiceDefaults.csproj" />
     <ProjectReference Include="..\Zeltlotse.SharedKernel\Zeltlotse.SharedKernel.csproj" />
     <ProjectReference Include="..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
+    <!-- Clients unter derselben Adresse (AD-5): Web-App unter /app, öffentliche Seiten unter /. -->
+    <ProjectReference Include="..\Zeltlotse.App\Zeltlotse.App.csproj" />
+    <ProjectReference Include="..\Zeltlotse.Public\Zeltlotse.Public.csproj" />
     <ProjectReference Include="..\Modules\Konten\Zeltlotse.Konten\Zeltlotse.Konten.csproj" />
     <ProjectReference Include="..\Modules\Personen\Zeltlotse.Personen\Zeltlotse.Personen.csproj" />
     <ProjectReference Include="..\Modules\Organisationen\Zeltlotse.Organisationen\Zeltlotse.Organisationen.csproj" />

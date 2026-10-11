@@ -1,0 +1,21 @@
+@page "/nicht-verfuegbar"
+@* Ziel der Statuscode-Seiten außerhalb von /api (EXPERIENCE.md → „Keine Berechtigung“): immer mit Status 404. *@
+<PageTitle>Nicht verfügbar – Zeltlotse</PageTitle>
+
+<h1>Diese Seite ist nicht verfügbar.</h1>
+<p><a href="/">Zur Startseite</a></p>
+
+@code {
+    /// <summary>Pfad der Seite; der Host leitet unbekannte Pfade außerhalb von <c>/api</c> hierher um.</summary>
+    public const string Pfad = "/nicht-verfuegbar";
+
+    [CascadingParameter] public HttpContext? HttpKontext { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (HttpKontext is { Response.HasStarted: false } kontext)
+        {
+            kontext.Response.StatusCode = StatusCodes.Status404NotFound;
+        }
+    }
+}

@@ -1,0 +1,9 @@
+<!-- Negativ-Fixture: ein Client mit Referenz auf Modul-Contracts und SharedKernel (verletzt AD-5/AD-24). -->
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <ItemGroup>
+    <ProjectReference Include="..\Modules\Personen\Zeltlotse.Personen\Zeltlotse.Personen.csproj" />
+    <ProjectReference Include="..\Modules\Personen\Zeltlotse.Personen.Contracts\Zeltlotse.Personen.Contracts.csproj" />
+    <ProjectReference Include="..\Zeltlotse.SharedKernel\Zeltlotse.SharedKernel.csproj" />
+    <ProjectReference Include="..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
+  </ItemGroup>
+</Project>

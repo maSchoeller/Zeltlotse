@@ -1,0 +1,124 @@
+@charset "utf-8";
+/* ==========================================================================
+   Zeltlotse – Ergänzungen zur ELKW-Bibliothek (DESIGN.md)
+   Nach elkw-fonts.css, elkw-tokens.css, elkw-components.css, elkw-app.css und elkw-nahbar.css laden.
+   1. Pfeil ohne data:-Bild (CSP)        2. Kontrast-Korrekturen (WCAG 2.2 AA)
+   3. Dunkelmodus (*-dark-Token)          4. Zeltlotse-Bausteine mit Präfix zl-
+   Keine Schatten, keine Verläufe, keine Pills.
+   ========================================================================== */
+
+/* ---------- 1. Pfeil der Knöpfe als eigene Datei statt data:-URI (CSP ohne data:) ---------- */
+html.elkw { --elkw-arrow: url("pfeil.svg"); }
+
+/* ---------- 2. Kontrast-Korrekturen (DESIGN.md → Colors → Korrigierte Werte) ---------- */
+/* Feldrahmen in action (4,59:1) statt akzent-40 (1,69:1) */
+html.elkw[data-stil="nahbar"] :is(input:not([type=checkbox]):not([type=radio]), select, textarea) { border-color: var(--elkw-action); }
+/* Blaugrüne Schrift nur auf Weiß: auf dem Grundton schwarz */
+html.elkw[data-stil="nahbar"] .elkw-app__main > .elkw-kicker,
+html.elkw[data-stil="nahbar"] .elkw-ground .elkw-kicker { color: var(--elkw-text); }
+html.elkw[data-stil="nahbar"] .elkw-app__main a:not([class]) { color: var(--elkw-text); }
+html.elkw[data-stil="nahbar"] .elkw-app__main :is(.elkw-surface, .elkw-card, .elkw-alert, .elkw-empty) a:not([class]) { color: var(--elkw-action); }
+
+/* ---------- 3. Dunkelmodus: folgt der Geräteeinstellung, nur *-dark-Token aus DESIGN.md ---------- */
+@media (prefers-color-scheme: dark) {
+  html.elkw[data-farbwelt][data-stil] {
+    color-scheme: dark;
+    /* Flächen und Kanten */
+    --elkw-ground: #0F1719;          /* ground-dark */
+    --elkw-white: #1D2A2E;           /* surface-dark */
+    --elkw-light: #2B3F44;           /* light-dark */
+    --elkw-neutral-10: #253539;      /* neutral-10-dark */
+    --elkw-border: #668E97;          /* border-dark */
+    --elkw-table-border: #2B3F44;    /* table-border-dark */
+    --elkw-line-on-light: #668E97;   /* line-on-light-dark */
+    /* Akzent-Stufen (im Dunkeln umgekehrt) */
+    --elkw-akzent-10: #0F1719;
+    --elkw-akzent-20: #2B3F44;
+    --elkw-akzent-40: #668E97;
+    --elkw-akzent-60: #83B4BF;
+    --elkw-akzent-80: #ADCDD4;
+    --elkw-akzent: #83B4BF;          /* akzent-dark */
+    --elkw-on-akzent: #0E1A1D;       /* on-akzent-dark */
+    --elkw-contrast: #83B4BF;        /* contrast-dark */
+    --elkw-on-contrast: #000000;     /* on-contrast-dark */
+    /* Text und Bedienung */
+    --elkw-text: #EAF2F4;            /* text-dark */
+    --elkw-dunkelgrau: #ADCDD4;      /* text-muted-dark */
+    --elkw-primary: #255F6C;         /* primary-dark */
+    --elkw-on-primary: #FFFFFF;      /* on-primary-dark */
+    --elkw-action: #83B4BF;          /* action-dark */
+    --elkw-on-action: #0E1A1D;       /* on-action-dark */
+    --elkw-neutral-40: #5C616B;      /* neutral-40-dark */
+    --elkw-neutral-60: #A3A7B1;      /* neutral-60-dark = status-offen-dark */
+    --elkw-focus: #FFFF00;           /* focus-dark */
+    /* Statusfarben */
+    --elkw-status-fehler: #FF6B81;   /* status-fehler-dark */
+    --elkw-status-warnung: #DC9018;  /* status-warnung-dark */
+    --elkw-status-erfolg: #7DB39E;   /* status-erfolg-dark */
+    --elkw-status-hinweis: #83B4BF;  /* status-hinweis-dark */
+    --elkw-error: #FF6B6B;           /* error-field-dark */
+  }
+  /* Flächen eine Stufe heller als der Grund, immer mit Kante */
+  html.elkw[data-stil] :is(.elkw-surface, .elkw-card, .elkw-alert, .elkw-empty) { border: 1px solid var(--elkw-border); }
+}
+
+/* ---------- 4. Zeltlotse-Bausteine ---------- */
+
+/* Wortmarke und App-Leiste */
+.zl-wortmarke { font-weight: 600; font-size: 18px; line-height: 36px; color: var(--elkw-text); text-decoration: none; white-space: nowrap; }
+.zl-appleiste { flex-wrap: nowrap; }
+.zl-freizeitname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--elkw-fs-small); }
+.zl-notfall-eintrag { margin: 0 0 0 auto; padding-top: 0; padding-bottom: 0; font-weight: 600; }
+.zl-notfall-eintrag .elkw-status { color: inherit; }
+.zl-notfall-eintrag[aria-current] { text-decoration: underline; text-underline-offset: 4px; }
+
+/* App-Rahmen ohne Seitennavigation und mit unterer Navigation */
+.zl-app--ohne-nav { grid-template-columns: minmax(0, 1fr); grid-template-areas: "bar" "main"; }
+.zl-app__unten { position: sticky; bottom: 0; }
+@media (min-width: 1024px) { .zl-app__unten { display: none; } }
+
+/* Seitennavigation: abgesetzter Punkt am Ende */
+.elkw-sidenav .zl-sidenav-abgesetzt { margin-top: var(--elkw-space-m); padding-top: var(--elkw-space-xs); border-top: 1px solid var(--elkw-light); }
+
+/* Untere Navigation: fünf gleich breite Punkte, nur Text, mindestens 44 px hoch */
+.zl-untere-navigation ul { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; }
+.zl-untere-navigation a { display: flex; align-items: center; justify-content: center; min-height: 44px; padding: 0.5rem 0.15rem; color: var(--elkw-on-primary); font-size: var(--elkw-fs-small); line-height: 1.5; text-align: center; text-decoration: none; }
+.zl-untere-navigation a[aria-current] { font-weight: 600; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+
+/* Offline-Leiste und ausgegraute Bereiche */
+.zl-offline-leiste { padding: 0.35rem var(--elkw-space-m); background: var(--elkw-light); color: var(--elkw-text); font-size: var(--elkw-fs-small); line-height: 1.5; }
+.zl-offline-leiste p { margin: 0; }
+.zl-offline-satz { margin: 0 0 var(--elkw-space-xs); font-weight: 600; }
+.zl-offline-bereich--aus { opacity: 0.5; }
+
+/* Notfall-Box: roter Balken, Knopf bleibt blaugrün; Knopf und Telefon-Link mindestens 44 px hoch */
+.zl-notfall-box { --status: var(--elkw-status-fehler); }
+.elkw-alert.zl-notfall-box > * + * { margin-top: var(--elkw-space-xs); }
+.zl-gross { min-height: 44px; }
+a.zl-gross:not(.elkw-btn) { display: inline-flex; align-items: center; }
+
+/* Balken mit Statuswort */
+.zl-balken + .zl-balken { margin-top: var(--elkw-space-s); }
+.zl-balken__kopf { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 1rem; }
+.zl-balken__kopf strong { font-weight: 600; }
+.zl-zahl { font-variant-numeric: tabular-nums; }
+.zl-balken__spur { display: block; width: 100%; height: 0.75rem; margin: 0.35rem 0; background: var(--elkw-light); }
+.zl-balken--gross .zl-balken__spur { height: 1.25rem; }
+.zl-balken__fuellung { fill: var(--elkw-akzent); }
+.zl-balken--warnung .zl-balken__fuellung { fill: var(--elkw-status-warnung); }
+.zl-balken--fehler .zl-balken__fuellung { fill: var(--elkw-status-fehler); }
+
+/* Inline-Bestätigung: an Ort und Stelle, in Breite der Zeile */
+.zl-bestaetigung { padding: var(--elkw-space-s) var(--elkw-space-m); background: var(--elkw-neutral-10); border-radius: var(--elkw-radius); }
+.zl-bestaetigung__satz { margin: 0 0 var(--elkw-space-xs); }
+
+/* Speicher-Hinweis an der Stelle des Feldhinweises */
+.zl-speicher-hinweis { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin: 0.25rem 0 0; font-size: var(--elkw-fs-small); line-height: 1.5; color: var(--elkw-dunkelgrau); }
+.zl-speicher-hinweis .elkw-btn { margin: 0; font-size: inherit; line-height: 1.5; }
+.zl-speicher-hinweis .elkw-btn--text { padding: 0; }
+.zl-speicher-hinweis--fehler { color: var(--elkw-text); font-weight: 600; }
+
+/* Öffentliche Seiten: eine Spalte, höchstens 75 Zeichen, Name der Organisation oben */
+.zl-oeffentlich-spalte { max-width: 75ch; margin: 0 auto; padding: 0 var(--elkw-space-m); }
+.zl-oeffentlich-kopf { padding: var(--elkw-header-pad) 0; border-bottom: 1px solid var(--elkw-light); background: var(--elkw-white); }
+.zl-oeffentlich-inhalt { padding-top: var(--elkw-space-l); padding-bottom: var(--elkw-space-xl); }

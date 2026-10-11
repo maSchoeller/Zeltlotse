@@ -1,0 +1,7 @@
+@* Sprunglink (EXPERIENCE.md → Accessibility Floor): erstes Element jeder Seite, erscheint bei Tastaturfokus. *@
+<a class="elkw-skiplink" href="@Ziel">Zum Inhalt springen</a>
+
+@code {
+    /// <summary>Ziel mit Fragment; in Seiten mit <c>base</c>-Element den vollen Pfad der Seite voranstellen.</summary>
+    [Parameter] public string Ziel { get; set; } = "#" + AppRahmen.InhaltId;
+}

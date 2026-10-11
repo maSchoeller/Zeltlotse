@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Time.Testing;
 using Zeltlotse.Api.Betrieb;
+using Zeltlotse.Public;
 using Zeltlotse.SharedKernel.Outbox;
 
 namespace Zeltlotse.Testing;
@@ -17,7 +18,8 @@ namespace Zeltlotse.Testing;
 /// <summary>
 /// Startet den API-Host gegen eine Test-Datenbank, mit künstlicher Uhr und ohne periodische Hintergrunddienste.
 /// Die Outbox wird in Tests ausdrücklich mit <see cref="OutboxJetztZustellenAsync"/> abgearbeitet.
-/// Der Client spricht <c>https://localhost</c>, damit <c>Secure</c>-Cookies gesetzt und zurückgeschickt werden.
+/// Der Client spricht <c>https://localhost</c>, damit <c>Secure</c>-Cookies gesetzt und zurückgeschickt werden;
+/// die öffentlichen Seiten erreichen die API über den Handler des Testservers.
 /// </summary>
 /// <param name="verbindungsZeichenfolge">Test-Datenbank.</param>
 /// <param name="mitZustellDienst">Nur für Tests der Host-Verdrahtung: periodische Hintergrunddienste nicht entfernen.</param>
@@ -57,6 +59,10 @@ public sealed class ZeltlotseApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(Umgebung);
+
+        // Statikdateien der Clients (Web-App, Komponenten) aus dem Build-Manifest, wie in der Entwicklung;
+        // veröffentlicht liegen sie in wwwroot (E2E-Tests).
+        builder.UseStaticWebAssets();
         builder.UseSetting("ConnectionStrings:zeltlotse", _verbindungsZeichenfolge);
         foreach (var (schluessel, wert) in Einstellungen)
         {
@@ -68,6 +74,13 @@ public sealed class ZeltlotseApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Uhr);
             services.AddTransient<IStartupFilter, AbsenderIpSetzen>();
+
+            // Die öffentlichen Seiten rufen die API über den Testserver statt über ein Netzwerk-Socket auf.
+            services.Configure<PublicSeitenOptionen>(optionen =>
+            {
+                optionen.Basisadresse = ClientOptions.BaseAddress;
+                optionen.PrimaerHandler = () => Server.CreateHandler();
+            });
 
             foreach (var zusatz in ZusatzDienste)
             {

@@ -1,0 +1,9 @@
+<!-- Negativ-Fixture: Ui.Komponenten mit Projektreferenz und fremdem Paket (verletzt AD-29). -->
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+    <ProjectReference Include="..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
+  </ItemGroup>
+</Project>

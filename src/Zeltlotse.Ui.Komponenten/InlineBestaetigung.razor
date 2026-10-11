@@ -1,0 +1,81 @@
+@attribute [NurInteraktiv]
+@* Inline-Bestätigung (EXPERIENCE.md → Interaction Primitives): Der Auslöser klappt an Ort und Stelle auf: Satz,
+   „Ja, …“ ohne Pfeil, „Nein“ als Outline. Der Fokus springt auf „Nein“; „Nein“ oder Escape klappen zu und geben
+   den Fokus an den Auslöser zurück. Kein Dialog, kein Pop-up. *@
+@if (_offen)
+{
+    <div class="zl-bestaetigung" @onkeydown="Taste">
+        <p class="zl-bestaetigung__satz">@Satz</p>
+        <div class="elkw-actions">
+            <Knopf @onclick="JaAsync">@JaText</Knopf>
+            <Knopf @ref="_nein" Art="KnopfArt.Outline" @onclick="Zuklappen">Nein</Knopf>
+        </div>
+    </div>
+}
+else
+{
+    <Knopf @ref="_ausloeser" Art="@AusloeserArt" @onclick="Aufklappen">@AusloeserText</Knopf>
+}
+
+@code {
+    private bool _offen;
+    private Knopf? _ausloeser;
+    private Knopf? _nein;
+    private bool _fokusAufNein;
+    private bool _fokusAufAusloeser;
+
+    /// <summary>Beschriftung des Auslösers, z. B. „Alle informieren“.</summary>
+    [Parameter, EditorRequired] public string AusloeserText { get; set; } = "";
+
+    [Parameter] public KnopfArt AusloeserArt { get; set; } = KnopfArt.Standard;
+
+    /// <summary>Kurze Frage, z. B. „Alle informieren?“.</summary>
+    [Parameter, EditorRequired] public string Satz { get; set; } = "";
+
+    /// <summary>Beschriftung der Bestätigung, z. B. „Ja, informieren“.</summary>
+    [Parameter, EditorRequired] public string JaText { get; set; } = "";
+
+    /// <summary>Wird nach „Ja, …“ ausgelöst; danach klappt die Bestätigung zu.</summary>
+    [Parameter] public EventCallback Bestaetigt { get; set; }
+
+    private void Aufklappen()
+    {
+        _offen = true;
+        _fokusAufNein = true;
+    }
+
+    private void Zuklappen()
+    {
+        _offen = false;
+        _fokusAufAusloeser = true;
+    }
+
+    private async Task JaAsync()
+    {
+        _offen = false;
+        _fokusAufAusloeser = true;
+        await Bestaetigt.InvokeAsync();
+    }
+
+    private void Taste(KeyboardEventArgs taste)
+    {
+        if (taste.Key == "Escape")
+        {
+            Zuklappen();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_fokusAufNein && _nein is not null)
+        {
+            _fokusAufNein = false;
+            await _nein.Element.FocusAsync();
+        }
+        else if (_fokusAufAusloeser && _ausloeser is not null)
+        {
+            _fokusAufAusloeser = false;
+            await _ausloeser.Element.FocusAsync();
+        }
+    }
+}

@@ -10,7 +10,10 @@ namespace Zeltlotse.Testing;
 /// </summary>
 public sealed class PostgresContainer : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:18.6").Build();
+    // Jede Test-Factory öffnet eigene Verbindungs-Pools; parallel laufende Testklassen brauchen mehr als die Vorgabe 100.
+    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:18.6")
+        .WithCommand("-c", "max_connections=500")
+        .Build();
 
     public string VerbindungsZeichenfolge => _container.GetConnectionString();
 

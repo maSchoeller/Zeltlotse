@@ -1,0 +1,41 @@
+@using System.Globalization
+@* Balken mit Statuswort (DESIGN.md): Kopfzeile mit Bezeichnung und Zahl, Spur mit Füllung, darunter das Statuswort.
+   Der Balken ist für Screenreader verborgen; die Breite steht als SVG-Attribut (CSP: keine style-Attribute). *@
+<div class="@Klassen">
+    <div class="zl-balken__kopf"><strong>@Bezeichnung</strong><span class="zl-zahl">@Zahl</span></div>
+    <svg class="zl-balken__spur" aria-hidden="true" focusable="false"><rect class="zl-balken__fuellung" x="0" y="0" height="100%" width="@Breite" /></svg>
+    <Status Wort="@Statuswort" Art="@StatusArtVonBalken" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Bezeichnung { get; set; } = "";
+
+    /// <summary>Die Zahl als Text, z. B. „42 von 60“.</summary>
+    [Parameter, EditorRequired] public string Zahl { get; set; } = "";
+
+    /// <summary>Füllung in Prozent; Werte außerhalb von 0–100 werden begrenzt.</summary>
+    [Parameter] public double Prozent { get; set; }
+
+    [Parameter, EditorRequired] public string Statuswort { get; set; } = "";
+
+    [Parameter] public BalkenArt Art { get; set; } = BalkenArt.Normal;
+
+    /// <summary>Große Variante für die Hauptzahl einer Fläche.</summary>
+    [Parameter] public bool Gross { get; set; }
+
+    private string Breite => Math.Clamp(double.IsNaN(Prozent) ? 0 : Prozent, 0, 100).ToString("0.##", CultureInfo.InvariantCulture) + "%";
+
+    private StatusArt StatusArtVonBalken => Art switch
+    {
+        BalkenArt.Warnung => StatusArt.Warnung,
+        BalkenArt.Fehler => StatusArt.Fehler,
+        _ => StatusArt.Aktiv,
+    };
+
+    private string Klassen => string.Join(' ', new[]
+    {
+        "zl-balken",
+        Art switch { BalkenArt.Warnung => "zl-balken--warnung", BalkenArt.Fehler => "zl-balken--fehler", _ => null },
+        Gross ? "zl-balken--gross" : null,
+    }.Where(k => k is not null));
+}

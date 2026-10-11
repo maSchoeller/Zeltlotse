@@ -1,0 +1,25 @@
+@* Leer-Zustand (DESIGN.md, EXPERIENCE.md): ein sachlicher Satz und ein Standard-Knopf für den nächsten Schritt.
+   Statisch mit KnopfHref (Link); für eine Aktion an Ort und Stelle einen eigenen Knopf als ChildContent übergeben. *@
+<div class="elkw-empty">
+    <p>@Satz</p>
+    @if (ChildContent is not null)
+    {
+        @ChildContent
+    }
+    else if (KnopfText is not null)
+    {
+        <Knopf Href="@KnopfHref" Ansichtswechsel="@(KnopfHref is not null)">@KnopfText</Knopf>
+    }
+</div>
+
+@code {
+    /// <summary>z. B. „Noch keine Programmpunkte.“</summary>
+    [Parameter, EditorRequired] public string Satz { get; set; } = "";
+
+    /// <summary>z. B. „Ersten Programmpunkt anlegen“.</summary>
+    [Parameter] public string? KnopfText { get; set; }
+
+    [Parameter] public string? KnopfHref { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

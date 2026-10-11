@@ -1,0 +1,36 @@
+@* Seitennavigation am Laptop (DESIGN.md, EXPERIENCE.md): Gruppen mit Dachzeile, aria-current am aktiven Punkt,
+   Anzahl als reiner Text, ein abgesetzter Punkt am Ende (Einstellungen). Keine Icons. *@
+<nav class="elkw-sidenav" aria-label="@Bezeichnung">
+    @foreach (var (gruppe, index) in Gruppen.Select((g, i) => (g, i)))
+    {
+        <p class="elkw-kicker elkw-sidenav__group" id="@($"{_id}-{index}")">@gruppe.Dachzeile</p>
+        <ul aria-labelledby="@($"{_id}-{index}")">
+            @foreach (var punkt in gruppe.Punkte)
+            {
+                <li>@Punkt(punkt)</li>
+            }
+        </ul>
+    }
+    @if (Abgesetzt is not null)
+    {
+        <ul class="zl-sidenav-abgesetzt">
+            <li>@Punkt(Abgesetzt)</li>
+        </ul>
+    }
+</nav>
+
+@code {
+    private readonly string _id = Kennungen.Neu("nav");
+
+    [Parameter] public IReadOnlyList<NavGruppe> Gruppen { get; set; } = [];
+
+    /// <summary>Mit Linie abgesetzter Punkt ganz unten (Einstellungen).</summary>
+    [Parameter] public NavPunkt? Abgesetzt { get; set; }
+
+    [Parameter] public string Bezeichnung { get; set; } = "Bereiche";
+
+    private static RenderFragment Punkt(NavPunkt punkt) => @<a href="@punkt.Href" aria-current="@(punkt.Aktiv ? "page" : null)">@(punkt.Text)@if (punkt.Anzahl is { } anzahl)
+        {
+            <span class="elkw-count">@anzahl</span>
+        }</a>;
+}

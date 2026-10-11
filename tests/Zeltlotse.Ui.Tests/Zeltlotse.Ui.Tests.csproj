@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <!-- bUnit-Tests der Komponenten-Bibliothek, der App-Bausteine und des App-Layouts (AD-30). -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <Using Include="Xunit" />
+    <PackageReference Include="bunit" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Zeltlotse.Ui.Komponenten\Zeltlotse.Ui.Komponenten.csproj" />
+    <ProjectReference Include="..\..\src\Zeltlotse.Ui\Zeltlotse.Ui.csproj" />
+    <ProjectReference Include="..\..\src\Zeltlotse.App\Zeltlotse.App.csproj" />
+  </ItemGroup>
+
+</Project>

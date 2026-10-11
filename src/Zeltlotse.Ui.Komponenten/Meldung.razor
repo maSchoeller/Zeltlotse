@@ -1,0 +1,23 @@
+@* Meldung (DESIGN.md, EXPERIENCE.md): Titel immer mit Doppelpunkt; Fehler mit role="alert", sonst role="status". *@
+<section class="elkw-alert @Klasse" role="@(Art == MeldungArt.Fehler ? "alert" : "status")">
+    <span class="elkw-alert__title">@TitelMitDoppelpunkt</span>
+    @ChildContent
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string Titel { get; set; } = "";
+
+    [Parameter] public MeldungArt Art { get; set; } = MeldungArt.Hinweis;
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string TitelMitDoppelpunkt => Titel.TrimEnd().TrimEnd(':') + ":";
+
+    private string Klasse => Art switch
+    {
+        MeldungArt.Erfolg => "elkw-alert--erfolg",
+        MeldungArt.Warnung => "elkw-alert--warnung",
+        MeldungArt.Fehler => "elkw-alert--fehler",
+        _ => "elkw-alert--hinweis",
+    };
+}

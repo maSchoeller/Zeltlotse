@@ -1,0 +1,18 @@
+@* Wurzel der öffentlichen Seiten: statisch servergerendert, ohne Skripte (kein blazor.web.js), ohne base-Element,
+   damit der Sprunglink „#inhalt“ auf jeder Seite auf die eigene Seite zeigt. *@
+<!DOCTYPE html>
+<html lang="de" class="elkw" data-farbwelt="09" data-stil="nahbar" data-dichte="arbeiten">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <Stile />
+    <HeadOutlet />
+</head>
+<body>
+    <Router AppAssembly="typeof(Wurzel).Assembly">
+        <Found Context="routeData">
+            <RouteView RouteData="routeData" DefaultLayout="typeof(OeffentlichesLayout)" />
+        </Found>
+    </Router>
+</body>
+</html>

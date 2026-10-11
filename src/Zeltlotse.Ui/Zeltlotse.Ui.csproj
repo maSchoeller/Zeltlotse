@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <!--
+    Gemeinsame App-Bausteine (AD-29): Autosave-Baustein, typisierte API-Clients je Modul, Freizeit-Kontext,
+    Transport-Handler der Web-App. Referenziert nur Ui.Komponenten und Api.Contracts.
+  -->
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zeltlotse.Ui.Komponenten\Zeltlotse.Ui.Komponenten.csproj" />
+    <ProjectReference Include="..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Zeltlotse.Ui.Tests" />
+  </ItemGroup>
+
+</Project>

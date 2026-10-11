@@ -1,0 +1,17 @@
+@* Status (DESIGN.md): Wort in normaler Schrift plus Quadrat in der Statusfarbe; Farbe nie allein. *@
+<span class="elkw-status @Klasse">@Wort</span>
+
+@code {
+    [Parameter, EditorRequired] public string Wort { get; set; } = "";
+
+    [Parameter] public StatusArt Art { get; set; } = StatusArt.Offen;
+
+    private string Klasse => Art switch
+    {
+        StatusArt.Aktiv => "elkw-status--aktiv",
+        StatusArt.Erfolg => "elkw-status--erfolg",
+        StatusArt.Warnung => "elkw-status--warnung",
+        StatusArt.Fehler => "elkw-status--fehler",
+        _ => "elkw-status--offen",
+    };
+}

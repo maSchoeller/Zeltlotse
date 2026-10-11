@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <!--
+    Web-App (AD-5, AD-18): eigenständige Blazor-WebAssembly-PWA nach der offiziellen PWA-Vorlage, Basispfad /app/.
+    Der API-Host liefert die Dateien aus. Abweichung von der Vorlage: keine Inline-Import-Map (CSP), deshalb
+    keine Platzhalter-Ersetzung im HTML und keine Fingerabdrücke in den Dateinamen von _framework.
+  -->
+
+  <PropertyGroup>
+    <StaticWebAssetBasePath>app</StaticWebAssetBasePath>
+    <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zeltlotse.Ui.Komponenten\Zeltlotse.Ui.Komponenten.csproj" />
+    <ProjectReference Include="..\Zeltlotse.Ui\Zeltlotse.Ui.csproj" />
+    <ProjectReference Include="..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Zeltlotse.Ui.Tests" />
+  </ItemGroup>
+
+</Project>

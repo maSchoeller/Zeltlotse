@@ -1,0 +1,84 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject AppVerbindung Verbindung
+@inject NeueVersion NeueVersion
+@inject IBrowser Browser
+@inject NavigationManager Navigation
+@* Layout der Web-App (AD-18, AD-5, AD-22): App-Rahmen mit App-Leiste; offline die Offline-Leiste, die Notfall-Box
+   mit 112 und die übrigen Inhalte ausgegraut; bei abweichender Server-Version der Hinweis „Neu laden“; eine
+   Fehlergrenze, die unerwartete Fehler meldet. *@
+<Sprunglink Ziel="@SprungZiel" />
+<AppRahmen>
+    <Leiste>
+        <AppLeiste StartHref="./" />
+    </Leiste>
+    <UnterDerLeiste>
+        @if (Verbindung.Offline)
+        {
+            <OfflineLeiste Text="@Verbindung.OfflineText" />
+        }
+    </UnterDerLeiste>
+    <ChildContent>
+        @if (NeueVersion.Da)
+        {
+            <Meldung Titel="Hinweis">
+                <p>Eine neue Version von Zeltlotse ist da.</p>
+                <Knopf @onclick="NeuLadenAsync">Neu laden</Knopf>
+            </Meldung>
+        }
+        @if (Verbindung.Offline)
+        {
+            <NotfallBox Satz="@NotfallSatzOffline" />
+        }
+        <MeldendeFehlergrenze @ref="_grenze">
+            <ChildContent>
+                <OfflineBereich Offline="@Verbindung.Offline">
+                    @Body
+                </OfflineBereich>
+            </ChildContent>
+            <ErrorContent>
+                <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                    <p>Die Ansicht konnte nicht angezeigt werden.</p>
+                    <Knopf @onclick="NeuLadenAsync">Neu laden</Knopf>
+                </Meldung>
+            </ErrorContent>
+        </MeldendeFehlergrenze>
+    </ChildContent>
+</AppRahmen>
+
+@code {
+    private MeldendeFehlergrenze? _grenze;
+
+    /// <summary>Satz der Notfall-Box offline vor V6 (EXPERIENCE.md → „Offline vor V6“).</summary>
+    public const string NotfallSatzOffline = "Offline gilt der ausgedruckte Notfallordner.";
+
+    // Mit base href="/app/" zeigte "#inhalt" auf /app/; der Sprunglink nennt deshalb die aktuelle Seite.
+    private string SprungZiel => Navigation.Uri.Split('#')[0] + "#" + AppRahmen.InhaltId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Verbindung.Geaendert += Neuzeichnen;
+        NeueVersion.Gemeldet += Neuzeichnen;
+        Navigation.LocationChanged += Seitenwechsel;
+        await Verbindung.StartenAsync();
+    }
+
+    private void Neuzeichnen() => _ = InvokeAsync(StateHasChanged);
+
+    // Nach einem Fehler zeigt die nächste Seite wieder ihren Inhalt.
+    private void Seitenwechsel(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>
+        _ = InvokeAsync(() =>
+        {
+            _grenze?.Recover();
+            StateHasChanged();
+        });
+
+    private async Task NeuLadenAsync() => await Browser.NeuLadenAsync();
+
+    public void Dispose()
+    {
+        Verbindung.Geaendert -= Neuzeichnen;
+        NeueVersion.Gemeldet -= Neuzeichnen;
+        Navigation.LocationChanged -= Seitenwechsel;
+    }
+}

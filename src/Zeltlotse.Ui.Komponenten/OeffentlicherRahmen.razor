@@ -1,0 +1,16 @@
+@* Rahmen der öffentlichen Seiten (DESIGN.md → Layout „Öffentliche Seiten“): Sprunglink, oben der Name der
+   Organisation, darunter eine Spalte mit höchstens 75 Zeichen Textbreite, ohne App-Navigation. Statisch tauglich. *@
+<Sprunglink />
+<header class="zl-oeffentlich-kopf">
+    <div class="zl-oeffentlich-spalte"><span class="zl-wortmarke">@Organisation</span></div>
+</header>
+<main class="zl-oeffentlich-spalte zl-oeffentlich-inhalt" id="@AppRahmen.InhaltId" tabindex="-1">
+    @ChildContent
+</main>
+
+@code {
+    /// <summary>Name der Organisation; Vorgabe „Zeltlotse“.</summary>
+    [Parameter] public string Organisation { get; set; } = "Zeltlotse";
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

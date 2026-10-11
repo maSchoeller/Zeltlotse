@@ -15,6 +15,9 @@ public static class Problemcodes
     /// <summary><c>400</c>: Ändernde Anfrage ohne gültiges Antiforgery-Token und ohne gültige Dienst-Kennung (AD-25).</summary>
     public const string AntiforgeryUngueltig = "antiforgery-ungueltig";
 
+    /// <summary><c>409</c>: Der Wert desselben Felds hat sich seit der mitgeschickten Version geändert (AD-19).</summary>
+    public const string Konflikt = "konflikt";
+
     /// <summary><c>429</c>: Zu viele Anfragen; <c>Retry-After</c> nennt die Wartezeit in Sekunden.</summary>
     public const string Zugriffsbegrenzt = "zugriffsbegrenzt";
 

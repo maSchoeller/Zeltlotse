@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Api.Contracts.Betrieb;
@@ -37,6 +38,14 @@ internal sealed class TestEndpunkte : IZusatzEndpunkte
             kontext.Response.Cookies.Append("zeltlotse", "1");
             return TypedResults.NoContent();
         });
+    }
+
+    /// <summary>Ein Formular außerhalb von <c>/api</c>: <c>[FromForm]</c> verlangt das Antiforgery-Token (Formularfeld von Blazor).</summary>
+    /// <summary>Dazu ein GET, der einen beliebigen Status ohne Körper liefert.</summary>
+    public void AbbildenAusserhalbApi(IEndpointRouteBuilder app)
+    {
+        app.MapPost("/test/formular", ([FromForm] string? wert) => TypedResults.Ok(new { wert }));
+        app.MapGet("/test/status/{code:int}", (int code) => Results.StatusCode(code));
     }
 
     public static void Registrieren(IServiceCollection services) => services.AddSingleton<IZusatzEndpunkte, TestEndpunkte>();

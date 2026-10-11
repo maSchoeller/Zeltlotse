@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Zeltlotse.Api.Auslieferung;
 using Zeltlotse.Api.Contracts.Gemeinsam;
 using Zeltlotse.SharedKernel.Commands;
 
@@ -87,6 +88,7 @@ internal static class FehlerRegistrierung
         return services;
     }
 
+    /// <summary>Ausnahmen als ProblemDetails; Statuscode-Seiten unter <c>/api</c> als ProblemDetails, sonst als HTML-Seite.</summary>
     public static IApplicationBuilder UseFehlerform(this IApplicationBuilder app) =>
-        app.UseExceptionHandler().UseStatusCodePages();
+        app.UseExceptionHandler().UseStatuscodeSeiten();
 }

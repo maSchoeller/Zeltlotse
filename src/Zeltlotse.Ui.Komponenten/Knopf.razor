@@ -1,0 +1,45 @@
+@* Knopf (DESIGN.md → Button): Standard, Outline oder Text; Pfeil nur bei Ansichtswechsel. Mit Href ein Link, sonst ein <button>.
+   Nicht erkannte Attribute (auch @onclick) landen am Element; der Baustein selbst hat keine Ereignis-Handler. *@
+@if (Href is not null)
+{
+    <a @ref="Element" @attributes="Attribute" class="@Klassen" href="@(Deaktiviert ? null : Href)" aria-disabled="@(Deaktiviert ? "true" : null)">@ChildContent</a>
+}
+else
+{
+    <button @ref="Element" @attributes="Attribute" type="@Typ" class="@Klassen" disabled="@Deaktiviert">@ChildContent</button>
+}
+
+@code {
+    [Parameter] public KnopfArt Art { get; set; } = KnopfArt.Standard;
+
+    /// <summary>Führt zu einer anderen Ansicht: zeigt den Pfeil. Aktionen an Ort und Stelle bleiben ohne Pfeil.</summary>
+    [Parameter] public bool Ansichtswechsel { get; set; }
+
+    /// <summary>Gesetzt: der Knopf wird ein Link.</summary>
+    [Parameter] public string? Href { get; set; }
+
+    /// <summary>Typ des <c>button</c>-Elements: <c>button</c> (Vorgabe) oder <c>submit</c>.</summary>
+    [Parameter] public string Typ { get; set; } = "button";
+
+    /// <summary>Nur offline in ausgegrauten Bereichen und während einer Übertragung.</summary>
+    [Parameter] public bool Deaktiviert { get; set; }
+
+    /// <summary>Volle Breite.</summary>
+    [Parameter] public bool Block { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? Attribute { get; set; }
+
+    /// <summary>Das gerenderte Element, z. B. um den Fokus zu setzen.</summary>
+    public ElementReference Element { get; private set; }
+
+    private string Klassen => string.Join(' ', new[]
+    {
+        "elkw-btn",
+        Art switch { KnopfArt.Outline => "elkw-btn--outline", KnopfArt.Text => "elkw-btn--text", _ => null },
+        Ansichtswechsel ? null : "elkw-btn--noarrow",
+        Block ? "elkw-btn--block" : null,
+        Attribute?.TryGetValue("class", out var zusatz) == true ? zusatz?.ToString() : null,
+    }.Where(k => !string.IsNullOrWhiteSpace(k)));
+}

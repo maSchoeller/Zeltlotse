@@ -1,0 +1,6 @@
+@* Negativ-Fixture: Razor-Datei mit style-Attribut, style-Block, Inline-Skript und Bibliotheksklassen außerhalb von Ui.Komponenten. *@
+<style>.rot { color: red; }</style>
+<div class="elkw-surface" style="width: 40%">Inhalt</div>
+<span class="zl-offline-leiste">Offline</span>
+<script>alert(1)</script>
+<script src="js/erlaubt.js"></script>

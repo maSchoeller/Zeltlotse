@@ -1,0 +1,36 @@
+@attribute [NurInteraktiv]
+@* Speicher-Hinweis (DESIGN.md, EXPERIENCE.md, AD-19): kleiner Text an der Stelle des Feldhinweises, kein Toast.
+   Gespeichert (mit oder ohne „Rückgängig“), Konflikt („Inzwischen geändert – neu laden?“) und Gescheitert
+   („Nicht gespeichert.“ mit „Erneut versuchen“). Hinweise mit role="status", Fehler mit role="alert".
+   Während einer Übertragung sind die Knöpfe deaktiviert. *@
+@switch (Zustand)
+{
+    case SpeicherZustand.Gespeichert:
+        <p class="zl-speicher-hinweis" role="status">@("Gespeichert")@if (MitRueckgaengig)
+            {
+                <text> · </text><Knopf Art="KnopfArt.Text" Deaktiviert="@Uebertraegt" @onclick="Rueckgaengig">Rückgängig</Knopf>
+            }</p>
+        break;
+    case SpeicherZustand.Konflikt:
+        <p class="zl-speicher-hinweis" role="status">Inzwischen geändert – neu laden? <Knopf Art="KnopfArt.Text" Deaktiviert="@Uebertraegt" @onclick="NeuLaden">Neu laden</Knopf></p>
+        break;
+    case SpeicherZustand.Gescheitert:
+        <p class="zl-speicher-hinweis zl-speicher-hinweis--fehler" role="alert">Nicht gespeichert. <Knopf Deaktiviert="@Uebertraegt" @onclick="ErneutVersuchen">Erneut versuchen</Knopf></p>
+        break;
+}
+
+@code {
+    [Parameter] public SpeicherZustand Zustand { get; set; }
+
+    /// <summary>Nur bei „Gespeichert“: zeigt den Textbutton „Rückgängig“.</summary>
+    [Parameter] public bool MitRueckgaengig { get; set; }
+
+    /// <summary>Eine Übertragung läuft: Knöpfe deaktiviert.</summary>
+    [Parameter] public bool Uebertraegt { get; set; }
+
+    [Parameter] public EventCallback Rueckgaengig { get; set; }
+
+    [Parameter] public EventCallback NeuLaden { get; set; }
+
+    [Parameter] public EventCallback ErneutVersuchen { get; set; }
+}

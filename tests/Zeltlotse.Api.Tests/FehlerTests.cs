@@ -70,15 +70,13 @@ public sealed class FehlerTests(PostgresContainer postgres)
         Assert.Equal("Fünf Ziffern.", fehler.GetProperty("adresse.plz")[0].GetString());
     }
 
-    [Theory]
-    [InlineData("/gibt-es-nicht")]
-    [InlineData("/api/gibt-es-nicht")]
-    public async Task Unbekannte_Adresse_ergibt_404_ProblemDetails_mit_traceId(string pfad)
+    [Fact]
+    public async Task Unbekannte_Adresse_unter_api_ergibt_404_ProblemDetails_mit_traceId()
     {
         await using var factory = await FactoryAsync();
         using var client = factory.CreateClient();
 
-        using var antwort = await client.GetAsync(pfad, Abbruch);
+        using var antwort = await client.GetAsync("/api/gibt-es-nicht", Abbruch);
 
         Assert.Equal(HttpStatusCode.NotFound, antwort.StatusCode);
         var problem = await ProblemAsync(antwort);

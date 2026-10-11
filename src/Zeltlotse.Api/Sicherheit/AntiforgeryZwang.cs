@@ -7,6 +7,8 @@ namespace Zeltlotse.Api.Sicherheit;
 /// <summary>
 /// Zentraler Schutz gegen gefälschte Anfragen (AD-25): Jede Anfrage mit POST, PUT, PATCH oder DELETE unter <c>/api</c>
 /// braucht ein gültiges Antiforgery-Token im Header <c>X-Zeltlotse-Antiforgery</c> (Cookie <c>__Host-Zeltlotse-Antiforgery</c>).
+/// Ändernde Anfragen an Endpunkte mit Antiforgery-Metadaten außerhalb von <c>/api</c> (Blazor-Formulare) dürfen das Token
+/// auch als Formularfeld tragen.
 /// Einzige Ausnahme: die gültige Dienst-Kennung der öffentlichen Seiten. Eine vorhandene, aber falsche Dienst-Kennung
 /// fällt nicht auf das Token zurück.
 /// </summary>
@@ -30,11 +32,14 @@ internal sealed class AntiforgeryZwang(RequestDelegate weiter)
             return;
         }
 
-        // Nur der Header zählt: ohne ihn kein Rückfall auf ein Formularfeld (und kein Puffern großer anonymer Körper).
+        // Unter /api zählt nur der Header: ohne ihn kein Rückfall auf ein Formularfeld (und kein Puffern großer anonymer
+        // Körper). Außerhalb von /api (nur Endpunkte mit Antiforgery-Metadaten, z. B. Blazor-Formulare der öffentlichen
+        // Seiten) gilt auch das Formularfeld-Token von Blazor.
         var gueltig = kontext.Request.Headers.TryGetValue(Kopfzeilen.Dienst, out var dienst)
             ? dienstKennung.Pruefen(dienst.ToString())
-            : !string.IsNullOrEmpty(kontext.Request.Headers[Kopfzeilen.Antiforgery])
-              && await antiforgery.IsRequestValidAsync(kontext);
+            : ApiPfad.Ist(kontext.Request.Path)
+                ? !string.IsNullOrEmpty(kontext.Request.Headers[Kopfzeilen.Antiforgery]) && await antiforgery.IsRequestValidAsync(kontext)
+                : await antiforgery.IsRequestValidAsync(kontext);
 
         if (!gueltig)
         {

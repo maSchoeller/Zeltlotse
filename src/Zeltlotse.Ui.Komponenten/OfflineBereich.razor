@@ -1,0 +1,15 @@
+@* Offline-Bereich (EXPERIENCE.md → State Patterns „Offline“): Offline ist der Inhalt ausgegraut (50 % Deckkraft),
+   nicht bedienbar (inert) und mit dem Satz „Offline nicht verfügbar.“ versehen. Der Inhalt bleibt erhalten. *@
+@if (Offline)
+{
+    <p class="zl-offline-satz">Offline nicht verfügbar.</p>
+}
+<div class="@(Offline ? "zl-offline-bereich zl-offline-bereich--aus" : "zl-offline-bereich")" inert="@Offline">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public bool Offline { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

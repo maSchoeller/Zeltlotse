@@ -1,0 +1,22 @@
+@* Die Stylesheets der Komponenten-Bibliothek in der vorgeschriebenen Reihenfolge (Schrift, Tokens, Bausteine,
+   App-Ebene, Stil „nahbar“, Zeltlotse-Ergänzungen). Für Seiten mit eigenem head-Element (öffentliche Seiten). *@
+@foreach (var datei in Dateien)
+{
+    <link rel="stylesheet" href="@(Basis + datei)" />
+}
+
+@code {
+    /// <summary>Die Dateien relativ zu <c>_content/Zeltlotse.Ui.Komponenten/</c>.</summary>
+    public static readonly IReadOnlyList<string> Dateien =
+    [
+        "elkw-fonts.css",
+        "css/elkw-tokens.css",
+        "css/elkw-components.css",
+        "css/elkw-app.css",
+        "css/elkw-nahbar.css",
+        "css/zeltlotse.css",
+    ];
+
+    /// <summary>Pfad der Bibliothek, mit abschließendem Schrägstrich.</summary>
+    [Parameter] public string Basis { get; set; } = "/_content/Zeltlotse.Ui.Komponenten/";
+}

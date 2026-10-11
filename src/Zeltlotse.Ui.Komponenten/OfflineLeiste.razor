@@ -1,0 +1,7 @@
+@* Offline-Leiste (DESIGN.md): schmale Leiste direkt unter der App-Leiste, kleine Schrift, kein Statusrot. *@
+<div class="zl-offline-leiste" role="status"><p>@Text</p></div>
+
+@code {
+    /// <summary>z. B. „Offline – zuletzt aktualisiert 14:32 Uhr“.</summary>
+    [Parameter, EditorRequired] public string Text { get; set; } = "";
+}

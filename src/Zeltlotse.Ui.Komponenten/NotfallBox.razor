@@ -1,0 +1,21 @@
+@* Notfall-Box (DESIGN.md, EXPERIENCE.md): Meldungs-Box mit rotem Balken, Titel „Im Notfall:“, ein Satz, optional der
+   Knopf „Notfallhilfe öffnen“ (nur mit Ziel, bleibt blaugrün) und der Telefon-Link „Notruf 112“. Knopf und Link
+   sind mindestens 44 px hoch. Statisch tauglich. *@
+<section class="elkw-alert zl-notfall-box" aria-labelledby="@_titelId">
+    <span class="elkw-alert__title" id="@_titelId">Im Notfall:</span>
+    <p>@Satz</p>
+    @if (Ziel is not null)
+    {
+        <Knopf Href="@Ziel" Ansichtswechsel="true" Block="true" class="zl-gross">Notfallhilfe öffnen</Knopf>
+    }
+    <p class="zl-notfall-box__notruf"><a class="elkw-link zl-gross" href="tel:112">Notruf 112</a></p>
+</section>
+
+@code {
+    private readonly string _titelId = Kennungen.Neu("notfall");
+
+    [Parameter, EditorRequired] public string Satz { get; set; } = "";
+
+    /// <summary>Ziel des Knopfs „Notfallhilfe öffnen“ (Sicherheitskette); ohne Ziel kein Knopf.</summary>
+    [Parameter] public string? Ziel { get; set; }
+}

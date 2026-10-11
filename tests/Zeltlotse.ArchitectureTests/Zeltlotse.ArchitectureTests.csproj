@@ -15,11 +15,17 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Zeltlotse.Api\Zeltlotse.Api.csproj" />
     <ProjectReference Include="..\Zeltlotse.Testmodul\Zeltlotse.Testmodul.csproj" />
+    <!-- Clients (AD-5, AD-29): damit ihre Assemblies im Ausgabeordner liegen und geprüft werden. -->
+    <ProjectReference Include="..\..\src\Zeltlotse.Ui.Komponenten\Zeltlotse.Ui.Komponenten.csproj" />
+    <ProjectReference Include="..\..\src\Zeltlotse.Ui\Zeltlotse.Ui.csproj" />
+    <ProjectReference Include="..\..\src\Zeltlotse.App\Zeltlotse.App.csproj" />
+    <ProjectReference Include="..\..\src\Zeltlotse.Public\Zeltlotse.Public.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- Negativ-Fixtures fuer Projektdatei-Regeln: werden gelesen, nicht gebaut -->
     <None Include="Negativ\**\*.xml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Negativ\**\*.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

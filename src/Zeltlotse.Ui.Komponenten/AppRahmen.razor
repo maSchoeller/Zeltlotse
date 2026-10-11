@@ -1,0 +1,46 @@
+@* App-Rahmen (DESIGN.md → Layout): oben die App-Leiste (darunter ggf. die Offline-Leiste), am Laptop links die
+   Seitennavigation, rechts der Arbeitsbereich; am Handy unten die untere Navigation. Nur der Arbeitsbereich scrollt. *@
+<div class="@Klassen">
+    <div class="elkw-app__bar">
+        @Leiste
+        @UnterDerLeiste
+    </div>
+    @if (Navigation is not null)
+    {
+        <div class="elkw-app__nav">@Navigation</div>
+    }
+    <main class="elkw-app__main" id="@InhaltId" tabindex="-1">
+        @ChildContent
+    </main>
+    @if (UntereNavigation is not null)
+    {
+        <div class="zl-app__unten">@UntereNavigation</div>
+    }
+</div>
+
+@code {
+    /// <summary>Kennung des Arbeitsbereichs; Ziel des Sprunglinks.</summary>
+    public const string InhaltId = "inhalt";
+
+    /// <summary>Die App-Leiste.</summary>
+    [Parameter] public RenderFragment? Leiste { get; set; }
+
+    /// <summary>Direkt unter der App-Leiste, z. B. die Offline-Leiste.</summary>
+    [Parameter] public RenderFragment? UnterDerLeiste { get; set; }
+
+    /// <summary>Seitennavigation am Laptop.</summary>
+    [Parameter] public RenderFragment? Navigation { get; set; }
+
+    /// <summary>Untere Navigation am Handy.</summary>
+    [Parameter] public RenderFragment? UntereNavigation { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string Klassen => string.Join(' ', new[]
+    {
+        "elkw-app",
+        "zl-app",
+        Navigation is null ? "zl-app--ohne-nav" : null,
+        UntereNavigation is null ? null : "zl-app--mit-unten",
+    }.Where(k => k is not null));
+}

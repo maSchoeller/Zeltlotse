@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <!--
+    Reine ELKW-Darstellungsbausteine mit CSS und Schrift (AD-29). Keine Projektreferenz und nur die zwei
+    Pakete unten; kennt weder API noch Datenformen. Wird von der Web-App (WebAssembly) und den öffentlichen
+    Seiten (statisches Server-Rendering) genutzt.
+  -->
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+  </ItemGroup>
+
+</Project>

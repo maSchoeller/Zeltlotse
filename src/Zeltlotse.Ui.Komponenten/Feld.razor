@@ -1,0 +1,57 @@
+@* Eingabefeld (DESIGN.md, EXPERIENCE.md): Label sichtbar darüber, Hinweis darunter; ein Fehler „Fehler: …“ setzt
+   aria-invalid und aria-describedby. Weitere Attribute (auch Ereignisse) landen am input-Element. *@
+<div class="elkw-field">
+    <label for="@KennungFeld">@Label</label>
+    <input @attributes="Attribute" id="@KennungFeld" name="@Name" type="@Typ" value="@Wert" disabled="@Deaktiviert"
+           aria-invalid="@(Fehler is null ? null : "true")" aria-describedby="@Beschrieben" />
+    @if (Hinweis is not null)
+    {
+        <span class="elkw-hint" id="@HinweisId">@Hinweis</span>
+    }
+    @if (Fehler is not null)
+    {
+        <span class="elkw-field-error" id="@FehlerId">Fehler: @Fehler</span>
+    }
+    @UnterDemFeld
+</div>
+
+@code {
+    private readonly string _vorgabeId = Kennungen.Neu("feld");
+
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+
+    [Parameter] public string? Name { get; set; }
+
+    [Parameter] public string? Id { get; set; }
+
+    [Parameter] public string Typ { get; set; } = "text";
+
+    [Parameter] public string? Wert { get; set; }
+
+    [Parameter] public string? Hinweis { get; set; }
+
+    /// <summary>Fehlertext ohne Präfix, z. B. „Geburtsdatum fehlt.“; angezeigt als „Fehler: Geburtsdatum fehlt.“.</summary>
+    [Parameter] public string? Fehler { get; set; }
+
+    [Parameter] public bool Deaktiviert { get; set; }
+
+    /// <summary>Platz an der Stelle des Feldhinweises, z. B. für den Speicher-Hinweis.</summary>
+    [Parameter] public RenderFragment? UnterDemFeld { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? Attribute { get; set; }
+
+    private string KennungFeld => Id ?? _vorgabeId;
+
+    private string HinweisId => KennungFeld + "-hinweis";
+
+    private string FehlerId => KennungFeld + "-fehler";
+
+    private string? Beschrieben
+    {
+        get
+        {
+            var text = string.Join(' ', new[] { Hinweis is null ? null : HinweisId, Fehler is null ? null : FehlerId }.Where(t => t is not null));
+            return text.Length == 0 ? null : text;
+        }
+    }
+}

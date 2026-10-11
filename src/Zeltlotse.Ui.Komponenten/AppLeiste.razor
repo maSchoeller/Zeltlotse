@@ -1,0 +1,23 @@
+@* App-Leiste (DESIGN.md): weiß, Wortmarke „Zeltlotse“ als Link, optional der Name der Freizeit, optional rechts der
+   Eintrag „Notfall“ mit rotem Statusquadrat (nur vom Start- bis zum Enddatum). Kein ELKW-Logo. *@
+<header class="elkw-appbar zl-appleiste">
+    <a class="zl-wortmarke" href="@StartHref">Zeltlotse</a>
+    @if (FreizeitName is not null)
+    {
+        <span class="zl-freizeitname">@FreizeitName</span>
+    }
+    @if (NotfallHref is not null)
+    {
+        <Knopf Art="KnopfArt.Text" Href="@NotfallHref" class="zl-notfall-eintrag"><Status Art="StatusArt.Fehler" Wort="Notfall" /></Knopf>
+    }
+</header>
+
+@code {
+    /// <summary>Ziel der Wortmarke: Startseite der Freizeit bzw. die rollenabhängige Startseite.</summary>
+    [Parameter] public string StartHref { get; set; } = "./";
+
+    [Parameter] public string? FreizeitName { get; set; }
+
+    /// <summary>Ziel des Notfall-Eintrags (Sicherheitskette); ohne Ziel kein Eintrag.</summary>
+    [Parameter] public string? NotfallHref { get; set; }
+}

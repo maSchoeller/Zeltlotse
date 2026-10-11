@@ -1,0 +1,24 @@
+{
+  "name": "Zeltlotse",
+  "short_name": "Zeltlotse",
+  "lang": "de",
+  "id": "/app/",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "background_color": "#EAF2F4",
+  "theme_color": "#307F91",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    }
+  ]
+}

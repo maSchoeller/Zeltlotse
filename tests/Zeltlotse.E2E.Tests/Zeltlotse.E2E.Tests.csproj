@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Ende-zu-Ende-Tests (AD-30): Playwright mit axe gegen den veröffentlichten API-Host (Web-App, öffentliche Seiten,
+    API unter einer Adresse). Der Host wird einmal je Lauf mit dotnet publish gebaut, weil das Asset-Manifest des
+    Service Workers nur beim Veröffentlichen entsteht, und als eigener Prozess gestartet.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <Using Include="Xunit" />
+    <PackageReference Include="Microsoft.Playwright" />
+    <PackageReference Include="Deque.AxeCore.Playwright" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Nur für den PostgreSQL-Container der Tests; der Host läuft als eigener Prozess aus dem veröffentlichten Stand. -->
+    <ProjectReference Include="..\Zeltlotse.Testing\Zeltlotse.Testing.csproj" />
+  </ItemGroup>
+
+</Project>

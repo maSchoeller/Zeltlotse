@@ -1,0 +1,24 @@
+@* Untere Navigation am Handy (DESIGN.md, EXPERIENCE.md): genau fünf gleich breite Punkte, nur Text, keine Icons,
+   aria-current am aktiven Punkt, mindestens 44 px hoch. *@
+<nav class="elkw-bg-1 zl-untere-navigation" aria-label="@Bezeichnung">
+    <ul>
+        @foreach (var punkt in Punkte)
+        {
+            <li><a href="@punkt.Href" aria-current="@(punkt.Aktiv ? "page" : null)">@punkt.Text</a></li>
+        }
+    </ul>
+</nav>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<NavPunkt> Punkte { get; set; } = [];
+
+    [Parameter] public string Bezeichnung { get; set; } = "Hauptbereiche";
+
+    protected override void OnParametersSet()
+    {
+        if (Punkte.Count != 5)
+        {
+            throw new ArgumentException("Die untere Navigation hat genau fünf Punkte.", nameof(Punkte));
+        }
+    }
+}
