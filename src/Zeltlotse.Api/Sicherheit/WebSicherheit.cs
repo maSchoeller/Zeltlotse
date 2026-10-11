@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
 using Zeltlotse.Api.Contracts.Gemeinsam;
 using Zeltlotse.Api.Rechte;
+using Zeltlotse.SharedKernel.Anmeldung;
 using Zeltlotse.SharedKernel.Rechte;
 
 namespace Zeltlotse.Api.Sicherheit;
@@ -29,6 +30,7 @@ internal static class WebSicherheit
         services.AddZugriffsbegrenzung();
         services.AddSitzung();
         services.AddScoped<IKontextRollen, KontextRollen>();
+        services.AddScoped<IAngemeldeteMail, AngemeldeteMail>();
 
         // Weitergeleitete Header nur von konfigurierten Proxy-Adressen; die eingebauten Loopback-Vorgaben fallen weg.
         services.AddOptions<ForwardedHeadersOptions>()

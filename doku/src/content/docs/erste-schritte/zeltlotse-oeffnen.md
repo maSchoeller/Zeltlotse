@@ -14,11 +14,11 @@ Zeltlotse besteht aus zwei Teilen unter derselben Adresse:
 
 Die Web-App liegt unter der Adresse von Zeltlotse mit dem Zusatz `/app/`. Ohne Anmeldung erscheint zuerst die Seite „Anmelden“; wie das per Login-Link, Login-Code oder Passwort geht, steht unter [Anmelden](/erste-schritte/anmelden/).
 
-Nach dem Anmelden begrüßt die Startseite mit dem Vornamen, etwa „Hallo, Jonas“, und zeigt, welche Freizeit gerade geöffnet ist. Solange keine Freizeit gewählt ist, steht dort „Noch keine Freizeit geöffnet.“ Oben rechts in der App-Leiste führt der Vorname zur Seite „Konto“.
+Nach dem Anmelden begrüßt die Startseite mit dem Vornamen, etwa „Hallo, Jonas“. Darunter steht für jede eigene Freizeit eine Card mit Zeitraum, Phase, eigener Rolle und dem Knopf **Freizeit öffnen** (siehe [Freizeit öffnen](/leitung/freizeit-oeffnen/)). Ohne eigene Freizeit steht dort „Noch keine Freizeit geöffnet.“ Oben rechts in der App-Leiste führt der Vorname zur Seite „Konto“.
 
-![Startseite der Web-App am Handy nach dem Anmelden mit „Hallo, Jonas“ und dem Hinweis „Noch keine Freizeit geöffnet.“](../../../assets/screenshots/app-start-handy.png)
+![Startseite der Web-App am Handy nach dem Anmelden mit „Hallo, Jonas“ und der Card „Zeltlager Sommer 2027“ mit Zeitraum, Phase „in Vorbereitung“, „Rolle: Leitung“ und dem Knopf „Freizeit öffnen“](../../../assets/screenshots/app-start-handy.png)
 
-![Startseite der Web-App am Laptop nach dem Anmelden mit „Hallo, Jonas“, dem Hinweis „Noch keine Freizeit geöffnet.“ und dem Vornamen oben rechts](../../../assets/screenshots/app-start-laptop.png)
+![Startseite der Web-App am Laptop mit „Hallo, Jonas“, der Card der Freizeit und dem Vornamen oben rechts](../../../assets/screenshots/app-start-laptop.png)
 
 ## Am Handy installieren
 

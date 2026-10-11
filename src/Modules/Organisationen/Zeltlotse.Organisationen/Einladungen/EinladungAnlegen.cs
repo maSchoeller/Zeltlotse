@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Zeltlotse.Organisationen.Daten;
 using Zeltlotse.SharedKernel.Commands;
 using Zeltlotse.SharedKernel.Mandanten;
+using Zeltlotse.SharedKernel.Zugangslinks;
 using OrgRolleArt = Zeltlotse.SharedKernel.Rechte.OrgRolle;
 
 namespace Zeltlotse.Organisationen.Einladungen;

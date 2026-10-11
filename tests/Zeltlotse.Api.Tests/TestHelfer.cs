@@ -9,6 +9,7 @@ using Zeltlotse.Api.Contracts.Betrieb;
 using Zeltlotse.Api.Contracts.Gemeinsam;
 using Zeltlotse.SharedKernel.Commands;
 using Zeltlotse.SharedKernel.Dateien;
+using Zeltlotse.SharedKernel.Rechte;
 using Zeltlotse.Testing;
 
 namespace Zeltlotse.Api.Tests;
@@ -34,6 +35,9 @@ internal sealed class TestEndpunkte : IZusatzEndpunkte
         api.MapPost("/test/upload", async (IFormFile datei) =>
             TypedResults.Ok(new { art = (await DateiPruefung.LesenUndPruefenAsync(datei)).Art?.ToString() }));
         api.MapGet("/test/ausnahme-mit-token/{token}", string (string token) => throw new InvalidOperationException("mit Token"));
+        // AD-30: der 403-Zweig der Freizeit-Rechteprüfung (Leitung an einem Endpunkt nur für das Team).
+        api.MapGet($"/test/nur-team/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}", () => TypedResults.Ok(new { ok = true }))
+            .NurFreizeitRolle(Zeltlotse.SharedKernel.Rechte.FreizeitRolle.Team);
         api.MapGet("/test/keks-ohne-praefix", (HttpContext kontext) =>
         {
             kontext.Response.Cookies.Append("zeltlotse", "1");

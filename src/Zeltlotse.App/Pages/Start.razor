@@ -1,12 +1,15 @@
 @page "/"
 @using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Freizeiten
 @using Zeltlotse.Api.Contracts.Organisationen
 @inject PersonenApiClient Personen
+@inject FreizeitenApiClient Freizeiten
 @inject KontenApiClient Konten
 @inject OrganisationenApiClient Organisationen
 @inject AppSitzung Sitzung
 @* Startseite (EXPERIENCE.md → Voice and Tone: Begrüßung mit Vornamen, darunter ein neutraler Satz). Für Global Admins
-   (erlaubte Aktion „organisationen-anlegen“, AD-29) der Weg zu „Organisationen“; je eigener Organisation eine Card.
+   (erlaubte Aktion „organisationen-anlegen“, AD-29) der Weg zu „Organisationen“; je eigener Freizeit eine Card („Meine
+   Freizeiten“, FR-45) vor den Cards der eigenen Organisationen.
    Ohne Sitzung (401) leitet der Sitzungs-Handler zur Seite „Anmelden“; offline bleibt die Begrüßung ohne Namen. *@
 <PageTitle>Zeltlotse</PageTitle>
 
@@ -17,6 +20,15 @@
     {
         <Knopf Href="organisationen" Ansichtswechsel="true">Organisationen verwalten</Knopf>
     }
+    @foreach (var freizeit in _freizeiten)
+    {
+        <Card Titel="@freizeit.Name">
+            <p>Zeitraum: @Anzeige.Zeitraum(freizeit.ErsterTag, freizeit.LetzterTag)</p>
+            <p><Status Wort="@Anzeige.Phase(freizeit.Phase)" Art="@Anzeige.PhaseArt(freizeit.Phase)" /></p>
+            <p>Rolle: @Anzeige.Rollen(freizeit.Rollen)</p>
+            <Knopf Href="@($"freizeiten/{freizeit.FreizeitId}")" Ansichtswechsel="true">Freizeit öffnen</Knopf>
+        </Card>
+    }
     @foreach (var organisation in _organisationen)
     {
         <Card Titel="@organisation.Name">
@@ -24,7 +36,10 @@
             <Knopf Href="@($"organisationen/{organisation.OrganisationId}")" Ansichtswechsel="true">Organisation öffnen</Knopf>
         </Card>
     }
-    <p>Noch keine Freizeit geöffnet.</p>
+    @if (_freizeiten.Count == 0)
+    {
+        <p>Noch keine Freizeit geöffnet.</p>
+    }
 }
 else
 {
@@ -36,6 +51,7 @@ else
     private bool _geladen;
     private bool _organisationenAnlegen;
     private IReadOnlyList<MeineOrganisation> _organisationen = [];
+    private IReadOnlyList<MeineFreizeit> _freizeiten = [];
 
     private string Begruessung => string.IsNullOrWhiteSpace(_vorname) ? "Hallo" : $"Hallo, {_vorname}";
 
@@ -43,7 +59,7 @@ else
     {
         if (await ProfilAsync())
         {
-            await Task.WhenAll(ErlaubtAsync(), OrganisationenAsync());
+            await Task.WhenAll(ErlaubtAsync(), FreizeitenAsync(), OrganisationenAsync());
         }
 
         _geladen = true;
@@ -75,6 +91,18 @@ else
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
         {
             // Ohne Antwort kein Knopf; die Startseite bleibt nutzbar.
+        }
+    }
+
+    private async Task FreizeitenAsync()
+    {
+        try
+        {
+            _freizeiten = await Freizeiten.MeineLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // Ohne Antwort keine Cards; die Startseite bleibt nutzbar.
         }
     }
 

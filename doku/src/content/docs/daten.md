@@ -19,7 +19,7 @@ Org-Admin und Org-Überblick sehen keine Freizeitpässe, außer in Freizeiten, i
 
 ## Freigabefenster: wann die Einsicht endet
 
-Die Einsicht ist befristet. Das **Freigabefenster** endet nach einem festen Zeitraum, den die Organisation festlegt. Dieser Zeitraum beginnt am **Ende des letzten Freizeittages**. Er wird beim Anlegen der Freizeit festgeschrieben und lässt sich danach nicht mehr ändern.
+Die Einsicht ist befristet. Das **Freigabefenster** endet nach einem festen Zeitraum, den die Organisation festlegt. Dieser Zeitraum beginnt am **Ende des letzten Freizeittages** (24:00 Uhr deutscher Zeit). Er wird beim Anlegen der Freizeit festgeschrieben und lässt sich danach nicht mehr ändern. Solange eine Organisation keinen eigenen Zeitraum festgelegt hat, gilt die Vorgabe von **30 Tagen**. Beispiel: Endet eine Freizeit am 13.08.2027, hat sie Einsicht bis einschließlich 12.09.2027.
 
 Eltern und Teilnehmende sehen, bis wann die Freizeit Einsicht hat. Nach dem Ende des Freigabefensters sieht die Freizeit den Freizeitpass nicht mehr. Der Freizeitpass selbst bleibt bei der Person und wird bei der nächsten Freizeit vorausgefüllt.
 
@@ -59,6 +59,12 @@ Zum Konto speichert Zeltlotse die Mail-Adresse und, falls festgelegt, ein Passwo
 - **Org-Admin:** sieht von den Personen mit einer Rolle in der Organisation nur **Vor- und Nachname** und die Rolle, keine Profile und keine Mail-Adressen. Bei offenen Einladungen sieht er die eingeladene Mail-Adresse.
 - **Global Admin:** sieht nur die Namen der Organisationen und ob sie eingerichtet sind, **keine Personendaten**.
 - **Rollenvergaben** und fehlgeschlagene Versuche, eine Einladung anzunehmen, stehen im Sicherheitsprotokoll, nur mit Kennungen.
+
+## Freizeiten und Leitung
+
+- **Leitungs-Einladungen:** Eine Einladung als Leitung einer Freizeit speichert die **Mail-Adresse**, an die sie ging, die Freizeit und wer eingeladen hat. Der Link steht nur als Prüfwert in der Datenbank, gilt 7 Tage und nur einmal und lässt sich nur mit einem Konto unter genau dieser Mail-Adresse annehmen.
+- **Org-Admin:** sieht von der Leitung einer Freizeit nur **Vor- und Nachname**, keine Profile und keine Mail-Adressen, und keine Inhalte der Freizeit. Bei offenen Leitungs-Einladungen sieht er die eingeladene Mail-Adresse.
+- **Org-Überblick:** sieht nur Name, Zeitraum und Phase der Freizeiten.
 
 ## Wo die Daten liegen
 

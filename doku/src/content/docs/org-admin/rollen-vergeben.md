@@ -13,17 +13,17 @@ Nach dem Anmelden zeigt die Startseite für jede eigene Organisation eine Card m
 
 ![Startseite am Laptop mit der Card der Organisation](../../../assets/screenshots/app-start-org-admin-laptop.png)
 
-Oben stehen der Name der Organisation und die eigene Rolle. Der Org-Admin sieht darunter drei Bereiche:
+Oben stehen der Name der Organisation und die eigene Rolle, darunter die **Freizeiten** der Organisation und das Formular **Freizeit anlegen** (siehe [Freizeit anlegen](/org-admin/freizeit-anlegen/)). Für die Rollen sieht der Org-Admin danach drei Bereiche:
 
 - **Rollen:** wer in der Organisation welche Rolle hat, mit Vor- und Nachname. Hat eine Person im Profil noch keinen Namen eingetragen, steht dort „Name fehlt“.
 - **Offene Einladungen:** Mail-Adresse, Rolle und bis wann die Einladung gilt („gültig bis …“). Angenommene und abgelaufene Einladungen stehen hier nicht mehr.
 - **Person einladen:** das Formular für neue Einladungen.
 
-Der **Org-Überblick** sieht auf dieser Seite nur den Namen der Organisation und seine Rolle.
+Der **Org-Überblick** sieht auf dieser Seite nur den Namen der Organisation, seine Rolle und die Liste der Freizeiten.
 
-![Seite „Jugendwerk Musterstadt“ am Handy mit den Bereichen „Rollen“, „Offene Einladungen“ und „Person einladen“](../../../assets/screenshots/organisation-handy.png)
+![Seite „Jugendwerk Musterstadt“ am Handy mit den Bereichen „Freizeiten“, „Freizeit anlegen“, „Rollen“, „Offene Einladungen“ und „Person einladen“](../../../assets/screenshots/organisation-handy.png)
 
-![Seite der Organisation am Laptop mit den Tabellen „Rollen“ und „Offene Einladungen“ und dem Formular „Person einladen“](../../../assets/screenshots/organisation-laptop.png)
+![Seite der Organisation am Laptop mit der Tabelle „Freizeiten“, den Tabellen „Rollen“ und „Offene Einladungen“ und den Formularen](../../../assets/screenshots/organisation-laptop.png)
 
 ## Person einladen
 

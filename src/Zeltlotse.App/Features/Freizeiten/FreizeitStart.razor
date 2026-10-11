@@ -1,0 +1,71 @@
+@page "/freizeiten/{FreizeitId:guid}"
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Ui.Kontext
+@inject FreizeitKontextDienst Kontext
+@inject FreizeitenApiClient Freizeiten
+@* Startseite der Freizeit (FR-45, AD-29): Name, Phase, Zeitraum, eigene Rolle aus dem Freizeit-Kontext, die Leitung und bis
+   wann die Freizeit Einsicht in Freizeitpässe hat (Freigabefenster). Der Client setzt die Ansicht aus dem Kontext-Endpunkt
+   und dem Endpunkt der Freizeit zusammen (AD-2). 403/404 → „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>@(_freizeit?.Name ?? "Freizeit") – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else if (_freizeit is null || _kontext is null)
+{
+    <h1>Freizeit</h1>
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+    else
+    {
+        <Ladezustand />
+    }
+}
+else
+{
+    <h1>@_freizeit.Name</h1>
+    <p><Status Wort="@Anzeige.Phase(_kontext.Phase)" Art="@Anzeige.PhaseArt(_kontext.Phase)" /></p>
+    <p>Zeitraum: @Anzeige.Zeitraum(_freizeit.ErsterTag, _freizeit.LetzterTag)</p>
+    <p>Rolle: @Anzeige.Rollen(_kontext.Rollen)</p>
+    @if (_freizeit.Leitung.Count > 0)
+    {
+        <p>Leitung: @string.Join(", ", _freizeit.Leitung.Select(l => Anzeige.Name(l.Vorname, l.Nachname)))</p>
+    }
+    <p>Einsicht in Freizeitpässe bis @Anzeige.Datum(_freizeit.FreigabeBis)</p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    private FreizeitAntwort? _freizeit;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _freizeit = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var freizeit = Freizeiten.LadenAsync(FreizeitId);
+            await Task.WhenAll(kontext, freizeit);
+            (_kontext, _freizeit) = (kontext.Result, freizeit.Result);
+            _nichtVerfuegbar = _kontext is null || _freizeit is null;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+}

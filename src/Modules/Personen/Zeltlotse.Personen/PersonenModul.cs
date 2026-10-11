@@ -2,11 +2,14 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Personen.Contracts.Namen;
+using Zeltlotse.Freizeiten.Contracts.Events;
 using Zeltlotse.Personen.Daten;
+using Zeltlotse.Personen.Freizeitrollen;
 using Zeltlotse.Personen.Profil;
 using Zeltlotse.Personen.Schluessel;
 using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Datenschutz;
+using Zeltlotse.SharedKernel.Ereignisse;
 using Zeltlotse.SharedKernel.Web;
 
 namespace Zeltlotse.Personen;
@@ -23,6 +26,7 @@ public static class PersonenModul
         services.AddModul<PersonenDbContext, PersonenLeseDbContext>(Name, Schema);
         services.AddScoped<IPersonenSchluesselQuelle, PersonenSchluesselQuelle>();
         services.AddScoped<IPersonenNamen, PersonenNamen>();
+        services.EmpfaengtEreignis<FreizeitRolleGeaendert, FreizeitRolleUebernehmen>();
         return services;
     }
 

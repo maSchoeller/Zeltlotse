@@ -6,7 +6,7 @@ sidebar:
   order: 0
 ---
 
-**Wer:** meist zwei Personen pro Freizeit, die der Org-Admin einsetzt. Beide haben die gleichen Rechte.
+**Wer:** meist zwei Personen pro Freizeit, die der Org-Admin per Einladung einsetzt. Beide haben die gleichen Rechte. Wie die Einladung angenommen wird und was die Startseite der Freizeit zeigt, steht unter [Freizeit öffnen](/leitung/freizeit-oeffnen/).
 
 ## Was die Leitung in Zeltlotse darf
 

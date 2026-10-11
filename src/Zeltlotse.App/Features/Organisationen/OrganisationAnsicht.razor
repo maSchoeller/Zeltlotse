@@ -2,7 +2,8 @@
 @using Zeltlotse.Api.Contracts.Gemeinsam
 @using Zeltlotse.Api.Contracts.Organisationen
 @inject OrganisationenApiClient Organisationen
-@* Organisation (EXPERIENCE.md → Flächen „Organisation verwalten“, FR-5): Name und eigene Rolle; nur mit der erlaubten
+@* Organisation (EXPERIENCE.md → Flächen „Organisation verwalten“, FR-5, FR-6): Name, eigene Rolle und die Freizeiten der
+   Organisation (FreizeitenKarten); nur mit der erlaubten
    Aktion „org-rollen-vergeben“ (AD-29) die Rollen, die offenen Einladungen und das Formular „Person einladen“. Die
    Oberfläche entscheidet nur über „erlaubt“, nie über die Rollen. 403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>@(_organisation?.Name ?? "Organisation") – Zeltlotse</PageTitle>
@@ -36,6 +37,8 @@ else
             <p>@AnmeldungAbschluss.FehlerText</p>
         </Meldung>
     }
+
+    <FreizeitenKarten OrgId="OrgId" />
 
     @if (RollenVergeben)
     {

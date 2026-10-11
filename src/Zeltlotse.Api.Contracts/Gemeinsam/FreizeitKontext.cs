@@ -59,4 +59,10 @@ public static class Aktionsschluessel
 
     /// <summary>Rollen der Organisation sehen und Personen einladen (Org-Admin, in <c>GET /api/organisationen/{orgId}</c>).</summary>
     public const string OrgRollenVergeben = "org-rollen-vergeben";
+
+    /// <summary>Freizeiten anlegen (Org-Admin, in <c>GET /api/organisationen/{orgId}/freizeiten</c>).</summary>
+    public const string FreizeitenAnlegen = "freizeiten-anlegen";
+
+    /// <summary>Freizeit verwalten und die Leitung einladen (Org-Admin, in <c>GET /api/organisationen/{orgId}/freizeiten</c>).</summary>
+    public const string LeitungEinsetzen = "leitung-einsetzen";
 }

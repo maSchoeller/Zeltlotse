@@ -2,4 +2,9 @@
 
   <!-- Nur serverintern: lesende Schnittstellen, DTOs zwischen Modulen und Ereignisse (.Events). -->
 
+  <ItemGroup>
+    <!-- Für das serverinterne Enum FreizeitRolle (AD-12). -->
+    <ProjectReference Include="..\..\..\Zeltlotse.SharedKernel\Zeltlotse.SharedKernel.csproj" />
+  </ItemGroup>
+
 </Project>

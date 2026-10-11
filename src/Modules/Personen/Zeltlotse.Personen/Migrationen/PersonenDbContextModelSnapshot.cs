@@ -11,7 +11,7 @@ using Zeltlotse.Personen.Daten;
 namespace Zeltlotse.Personen.Migrationen
 {
     [DbContext(typeof(PersonenDbContext))]
-    internal partial class PersonenDbContextModelSnapshot : ModelSnapshot
+    partial class PersonenDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -22,6 +22,27 @@ namespace Zeltlotse.Personen.Migrationen
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Zeltlotse.Personen.Freizeitrollen.FreizeitRolle", b =>
+                {
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Rolle")
+                        .HasColumnType("smallint");
+
+                    b.HasKey("FreizeitId", "PersonId");
+
+                    b.HasIndex("PersonId");
+
+                    b.ToTable("freizeit_rolle", "personen");
+                });
 
             modelBuilder.Entity("Zeltlotse.Personen.Profil.Person", b =>
                 {

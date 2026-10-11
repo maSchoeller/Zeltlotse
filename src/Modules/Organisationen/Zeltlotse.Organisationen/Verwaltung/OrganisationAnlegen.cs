@@ -5,6 +5,7 @@ using Zeltlotse.Organisationen.Domaene;
 using Zeltlotse.Organisationen.Einladungen;
 using Zeltlotse.SharedKernel;
 using Zeltlotse.SharedKernel.Commands;
+using Zeltlotse.SharedKernel.Zugangslinks;
 using OrgRolleArt = Zeltlotse.SharedKernel.Rechte.OrgRolle;
 
 namespace Zeltlotse.Organisationen.Verwaltung;

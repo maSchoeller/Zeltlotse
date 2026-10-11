@@ -8,6 +8,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Zeltlotse.SharedKernel\Zeltlotse.SharedKernel.csproj" />
     <ProjectReference Include="..\Zeltlotse.Freizeiten.Contracts\Zeltlotse.Freizeiten.Contracts.csproj" />
+    <!-- Pfeil aus AD-2: Freizeiten liest Personen (Namen der Leitung). -->
+    <ProjectReference Include="..\..\Personen\Zeltlotse.Personen.Contracts\Zeltlotse.Personen.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

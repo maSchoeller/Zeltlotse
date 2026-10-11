@@ -29,9 +29,15 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
 
         await E2EHilfe.PerLinkAnmeldenAsync(seite, host, DemoMail);
         await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Hallo, Jonas");
-        await Assertions.Expect(seite.GetByText("Noch keine Freizeit geöffnet.")).ToBeVisibleAsync();
+        // Story 1-3: Jonas ist Leitung der Demo-Freizeit; die Startseite zeigt sie als Card statt „Noch keine Freizeit geöffnet.“
+        var card = seite.Locator(".elkw-card").Filter(new() { HasText = "Zeltlager Sommer 2027" });
+        await Assertions.Expect(card).ToContainTextAsync("Rolle: Leitung", new() { Timeout = 60_000 });
+        await Assertions.Expect(card).ToContainTextAsync("Zeitraum: 02.08.2027 – 13.08.2027");
+        await Assertions.Expect(card.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByText("Noch keine Freizeit geöffnet.")).ToHaveCountAsync(0);
         await Assertions.Expect(seite.Locator("header a.zl-konto-link")).ToHaveTextAsync("Jonas");
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
 
         await BildAsync(seite, "app-start", geraet);
     }
@@ -49,7 +55,9 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await seite.ReloadAsync();
         await seite.WaitForFunctionAsync("() => navigator.serviceWorker.controller !== null", null, new() { Timeout = 60_000 });
         await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Hallo, Jonas", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" })).ToBeVisibleAsync(new() { Timeout = 60_000 });
 
+        // Offline lädt die Startseite keine Freizeiten (keine API-Antworten im Speicher, AD-18) und bleibt beim Hinweis.
         await kontext.SetOfflineAsync(true);
         await seite.ReloadAsync();
 
@@ -163,6 +171,11 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(seite.Locator("tbody tr").Filter(new() { HasText = "Andrea Beispiel" })).ToContainTextAsync("Org-Admin", new() { Timeout = 60_000 });
         await Assertions.Expect(seite.Locator("tbody tr").Filter(new() { HasText = "vorstand@example.org" })).ToContainTextAsync("gültig bis");
         await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Einladung schicken" })).ToBeVisibleAsync();
+        // Story 1-3: Card „Freizeiten“ mit der Demo-Freizeit und das Formular „Freizeit anlegen“.
+        var freizeit = seite.Locator("tbody tr").Filter(new() { HasText = "Zeltlager Sommer 2027" });
+        await Assertions.Expect(freizeit).ToContainTextAsync("02.08.2027 – 13.08.2027");
+        await Assertions.Expect(freizeit).ToContainTextAsync("in Vorbereitung");
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Freizeit anlegen" })).ToBeVisibleAsync();
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await E2EHilfe.AxeAsync(seite);
 
@@ -202,6 +215,65 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await E2EHilfe.AxeAsync(seite);
 
         await BildAsync(seite, "app-start-org-admin", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Freizeit_Verwalten(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, OrgAdminMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Organisation öffnen" }).ClickAsync();
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Zeltlager Sommer 2027" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByText("Zeitraum: 02.08.2027 – 13.08.2027")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.Locator("tbody tr").Filter(new() { HasText = "Jonas Hüttner" })).ToHaveCountAsync(1, new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("tbody tr").Filter(new() { HasText = "Miriam Zeltner" })).ToHaveCountAsync(1);
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Einladung schicken" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Zur Organisation" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "freizeit-verwalten", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Leitung_Einladung(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        // Die Seite vor dem Klick: Der Aufruf nimmt nichts an, das Token im Link ist darum beliebig.
+        await seite.GotoAsync(new Uri(host.Adresse, "/app/leitung/" + new string('x', 43)).ToString());
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Leitung übernehmen", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Einladung annehmen" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "leitung-einladung", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Freizeit_Start(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, DemoMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByText("Rolle: Leitung")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByText("Zeitraum: 02.08.2027 – 13.08.2027")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByText("Leitung: Jonas Hüttner, Miriam Zeltner")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByText("Einsicht in Freizeitpässe bis 12.09.2027")).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "freizeit-start", geraet);
     }
 
     private static (int Breite, int Hoehe) Groesse(string geraet) => geraet switch

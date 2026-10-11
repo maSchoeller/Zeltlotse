@@ -1,0 +1,151 @@
+@page "/organisationen/{OrgId:guid}/freizeiten/{FreizeitId:guid}"
+@using Zeltlotse.Api.Contracts.Freizeiten
+@inject FreizeitenApiClient Freizeiten
+@* Freizeit verwalten (FR-6, Org-Admin): Name, Zeitraum und Phase, die Leitung nur mit Namen, offene Einladungen und
+   „Leitung einladen“. Keine Inhalte der Freizeit (AD-12). 403/404 → „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>@(_freizeit?.Name ?? "Freizeit") – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else if (_freizeit is null)
+{
+    <h1>Freizeit</h1>
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+    else
+    {
+        <Ladezustand />
+    }
+}
+else
+{
+    <h1>@_freizeit.Name</h1>
+    <p>Zeitraum: @Anzeige.Zeitraum(_freizeit.ErsterTag, _freizeit.LetzterTag)</p>
+    <p>Phase: <Status Wort="@Anzeige.Phase(_freizeit.Phase)" Art="@Anzeige.PhaseArt(_freizeit.Phase)" /></p>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+
+    <Card Titel="Leitung">
+        @if (_freizeit.Leitung.Count == 0)
+        {
+            <LeerZustand Satz="Noch keine Leitung eingesetzt." />
+        }
+        else
+        {
+            <Datentabelle TZeile="LeitungsPerson" Beschriftung="Leitung" Spalten="LeitungsSpalten" Zeilen="_freizeit.Leitung" />
+        }
+    </Card>
+
+    <Card Titel="Offene Einladungen">
+        @if (_freizeit.Einladungen.Count == 0)
+        {
+            <LeerZustand Satz="Keine offenen Einladungen." />
+        }
+        else
+        {
+            <Datentabelle TZeile="OffeneLeitungsEinladung" Beschriftung="Offene Einladungen" Spalten="EinladungsSpalten" Zeilen="_freizeit.Einladungen" />
+        }
+    </Card>
+
+    <Card Titel="Leitung einladen">
+        @if (_eingeladen)
+        {
+            <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+                <p>Die Einladung ist verschickt.</p>
+            </Meldung>
+        }
+        <Formular Absenden="EinladenAsync">
+            <Feld Label="Mail-Adresse" Id="leitung-mail" Typ="email" Wert="@_mail" Fehler="@_mailFehler"
+                  autocomplete="off" @oninput="@(e => _mail = e.Value?.ToString())" />
+            <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Einladung schicken</Knopf>
+        </Formular>
+    </Card>
+
+    <p><a href="@($"organisationen/{OrgId}")">Zur Organisation</a></p>
+}
+
+@code {
+    private static readonly IReadOnlyList<Spalte<LeitungsPerson>> LeitungsSpalten =
+    [
+        new("Name", p => @<text>@Anzeige.Name(p.Vorname, p.Nachname)</text>),
+    ];
+
+    private static readonly IReadOnlyList<Spalte<OffeneLeitungsEinladung>> EinladungsSpalten =
+    [
+        new("Mail-Adresse", e => @<text>@e.Mail</text>),
+        new("Gültigkeit", e => @<text>gültig bis @Anzeige.Datum(e.GueltigBis)</text>),
+    ];
+
+    private FreizeitVerwaltung? _freizeit;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private bool _eingeladen;
+    private string? _mail;
+    private string? _mailFehler;
+
+    [Parameter] public Guid OrgId { get; set; }
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _freizeit = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _eingeladen = false;
+        try
+        {
+            await NeuLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    private async Task NeuLadenAsync()
+    {
+        var freizeit = await Freizeiten.VerwaltungLadenAsync(OrgId, FreizeitId);
+        _nichtVerfuegbar = freizeit is null;
+        _freizeit = freizeit ?? _freizeit;
+    }
+
+    private async Task EinladenAsync()
+    {
+        _uebertraegt = true;
+        _eingeladen = false;
+        _aktionFehler = false;
+        try
+        {
+            var ergebnis = await Freizeiten.LeitungEinladenAsync(OrgId, FreizeitId, _mail);
+            _mailFehler = ergebnis.MailFehler;
+            if (ergebnis.Id is not null)
+            {
+                _eingeladen = true;
+                _mail = null;
+                await NeuLadenAsync();
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

@@ -31,6 +31,7 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
     /// <summary>Die personenbezogenen Endpunkte über Organisationen hinweg (AD-26), namentlich.</summary>
     private static readonly string[] Organisationsuebergreifend =
     [
+        "GET /api/ich/freizeiten",
         "GET /api/ich/konto",
         "GET /api/ich/organisationen",
         "GET /api/ich/profil",
@@ -77,12 +78,43 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
     }
 
     [Fact]
+    public async Task Annehmen_der_Leitungs_Einladung_ist_angemeldet_und_zugriffsbegrenzt()
+    {
+        var endpunkte = await EndpunkteAsync();
+
+        var annehmen = Assert.Single(endpunkte, e => e.Name == "POST /api/freizeiten/leitung/annehmen");
+        Assert.Contains(
+            annehmen.Endpunkt.Metadata.OfType<Microsoft.AspNetCore.RateLimiting.EnableRateLimitingAttribute>(),
+            r => r.PolicyName == Zugriffsbegrenzung.Richtlinie);
+        Assert.NotEmpty(annehmen.Endpunkt.Metadata.GetOrderedMetadata<IAuthorizeData>());
+    }
+
+    [Fact]
+    public async Task Jede_Freizeit_Route_traegt_NurFreizeitRolle_und_die_Guid_Einschraenkung_und_kein_Endpunkt_beide_Merkmale()
+    {
+        var endpunkte = await EndpunkteAsync();
+
+        // Freizeit-Routen: freizeitId ohne orgId. Org-Routen mit freizeitId (Verwaltung) prüfen die Org-Rolle.
+        var mitFreizeit = endpunkte.Where(e => e.Endpunkt.RoutePattern.Parameters.Any(p => p.Name == Rechtemerkmale.FreizeitRouteWert)).ToList();
+        var freizeitRouten = mitFreizeit.Where(e => e.Endpunkt.RoutePattern.Parameters.All(p => p.Name != Rechtemerkmale.OrgRouteWert)).ToList();
+        Assert.Equal(["GET /api/freizeiten/{freizeitId:guid}", "GET /api/freizeiten/{freizeitId:guid}/kontext"], freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
+        Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));
+        Assert.All(freizeitRouten, e => Assert.NotNull(e.Endpunkt.Metadata.GetMetadata<NurFreizeitRolleMetadaten>()));
+        Assert.All(
+            endpunkte.Where(e => e.Endpunkt.Metadata.GetMetadata<NurFreizeitRolleMetadaten>() is not null),
+            e => Assert.Contains(e, freizeitRouten));
+        Assert.DoesNotContain(
+            endpunkte,
+            e => e.Endpunkt.Metadata.GetMetadata<NurFreizeitRolleMetadaten>() is not null && e.Endpunkt.Metadata.GetMetadata<NurOrgRolleMetadaten>() is not null);
+    }
+
+    [Fact]
     public async Task Jede_Route_mit_orgId_traegt_NurOrgRolle_und_die_Guid_Einschraenkung()
     {
         var endpunkte = await EndpunkteAsync();
 
         var mitOrg = endpunkte.Where(e => e.Endpunkt.RoutePattern.Parameters.Any(p => p.Name == Rechtemerkmale.OrgRouteWert)).ToList();
-        Assert.Equal(3, mitOrg.Count);
+        Assert.Equal(7, mitOrg.Count);
         Assert.All(mitOrg, e =>
         {
             Assert.NotNull(e.Endpunkt.Metadata.GetMetadata<NurOrgRolleMetadaten>());

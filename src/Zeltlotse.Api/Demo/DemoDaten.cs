@@ -1,6 +1,9 @@
 using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Zeltlotse.Api.Contracts.Personen;
+using Zeltlotse.Freizeiten.Daten;
+using Zeltlotse.Freizeiten.Leitung;
+using Zeltlotse.Freizeiten.Verwaltung;
 using Zeltlotse.Konten.Anmelden;
 using Zeltlotse.Organisationen.Daten;
 using Zeltlotse.Organisationen.Einladungen;
@@ -24,6 +27,9 @@ namespace Zeltlotse.Api.Demo;
 /// Story 1-2: Fehlt die Demo-Organisation, legt Gerd (Betreiber) sie an und lädt Andrea ein; Andrea nimmt an (Org-Admin) und
 /// lädt <see cref="DemoKatalog.UeberblickEinladung"/> als Org-Überblick ein (bleibt offen). Gerd wird Global Admin erst im
 /// Abgleich danach (<see cref="Start.GlobalAdmins"/>).
+/// Story 1-3: Fehlt in der Demo-Organisation die Freizeit <see cref="DemoKatalog.Freizeit"/>, legt Andrea sie an und lädt
+/// die Personen mit <see cref="DemoRolle.Leitung"/> ein; jede nimmt ihre Einladung per Command an. Die Ereignisse stellt der
+/// normale Zustelldienst zu.
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -57,6 +63,7 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         }
 
         await OrganisationAsync(abbruch);
+        await FreizeitAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -109,6 +116,37 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
 
         dienste.GetRequiredService<MandantenKontext>().Setzen(einladung.OrganisationId);
         await sender.Send(new EinladungAnlegenCommand(einladung.OrganisationId, DemoKatalog.UeberblickEinladung, OrgRolle.OrgUeberblick, andrea.PersonId), abbruch);
+    }
+
+    /// <summary>Die Demo-Freizeit mit Jonas und Miriam als Leitung; nichts, wenn es sie in der Demo-Organisation schon gibt.</summary>
+    private async Task FreizeitAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var organisationId = await dienste.GetRequiredService<OrganisationenLeseDbContext>().Organisationen
+            .Where(o => o.Name == DemoKatalog.Organisation.Name)
+            .Select(o => o.Id)
+            .SingleAsync(abbruch);
+        var mandant = dienste.GetRequiredService<MandantenKontext>();
+        mandant.Setzen(organisationId);
+        var freizeit = DemoKatalog.Freizeit;
+        if (await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten.AnyAsync(f => f.Name == freizeit.Name, abbruch))
+        {
+            return;
+        }
+
+        var sender = dienste.GetRequiredService<ISender>();
+        var orgAdmin = DemoKatalog.Personen.Single(p => p.Rolle == DemoRolle.OrgAdmin);
+        var andrea = await sender.Send(new KontoSicherstellen(orgAdmin.Mail!), abbruch);
+        var freizeitId = await sender.Send(new FreizeitAnlegenCommand(organisationId, freizeit.Name, freizeit.Beginn, freizeit.Ende, andrea.PersonId), abbruch);
+        foreach (var leitung in DemoKatalog.Personen.Where(p => p.Rolle == DemoRolle.Leitung))
+        {
+            var konto = await sender.Send(new KontoSicherstellen(leitung.Mail!), abbruch);
+            mandant.Setzen(organisationId);
+            var einladung = await sender.Send(new LeitungEinladenCommand(organisationId, freizeitId, leitung.Mail, andrea.PersonId), abbruch);
+            _ = await sender.Send(new LeitungAnnehmenCommand(einladung.Token, leitung.Mail, konto.PersonId), abbruch)
+                ?? throw new InvalidOperationException("Demo-Freizeit: Die Leitungs-Einladung ließ sich nicht annehmen.");
+        }
     }
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Demo-Daten eingespielt ({AnzahlPersonen} Personen im Katalog, {NeueKonten} neue Konten).")]

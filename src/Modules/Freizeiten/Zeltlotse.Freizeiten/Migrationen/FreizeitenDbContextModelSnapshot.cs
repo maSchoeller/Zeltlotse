@@ -11,7 +11,7 @@ using Zeltlotse.Freizeiten.Daten;
 namespace Zeltlotse.Freizeiten.Migrationen
 {
     [DbContext(typeof(FreizeitenDbContext))]
-    internal partial class FreizeitenDbContextModelSnapshot : ModelSnapshot
+    partial class FreizeitenDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -22,6 +22,120 @@ namespace Zeltlotse.Freizeiten.Migrationen
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Zeltlotse.Freizeiten.Domaene.Freizeit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("AbgeschlossenAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("AngelegtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("AngelegtVon")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("ErsterTag")
+                        .HasColumnType("date");
+
+                    b.Property<long>("Folgenummer")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("FreigabeIntervallTage")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("LetzterTag")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.ToTable("freizeit", "freizeiten");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Freizeiten.Domaene.FreizeitRolle", b =>
+                {
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Rolle")
+                        .HasColumnType("smallint");
+
+                    b.Property<DateTimeOffset>("VergebenAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("FreizeitId", "PersonId");
+
+                    b.HasIndex("PersonId");
+
+                    b.ToTable("freizeit_rolle", "freizeiten");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Freizeiten.Domaene.LeitungsEinladung", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AngelegtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EingeladenVon")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("GueltigBis")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Mail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("FreizeitId", "Mail");
+
+                    b.ToTable("leitungs_einladung", "freizeiten");
+                });
 
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.InboxEintrag", b =>
                 {
@@ -120,6 +234,15 @@ namespace Zeltlotse.Freizeiten.Migrationen
                     b.ToTable("outbox_zustellung", "freizeiten");
                 });
 
+            modelBuilder.Entity("Zeltlotse.Freizeiten.Domaene.FreizeitRolle", b =>
+                {
+                    b.HasOne("Zeltlotse.Freizeiten.Domaene.Freizeit", null)
+                        .WithMany("Rollen")
+                        .HasForeignKey("FreizeitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.Zustellung", b =>
                 {
                     b.HasOne("Zeltlotse.SharedKernel.Outbox.OutboxNachricht", null)
@@ -127,6 +250,11 @@ namespace Zeltlotse.Freizeiten.Migrationen
                         .HasForeignKey("EreignisId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Zeltlotse.Freizeiten.Domaene.Freizeit", b =>
+                {
+                    b.Navigation("Rollen");
                 });
 #pragma warning restore 612, 618
         }

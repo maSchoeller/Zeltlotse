@@ -1,0 +1,125 @@
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using System.Globalization
+@inject FreizeitenApiClient Freizeiten
+@* Freizeiten auf der Seite der Organisation (FR-6): Card „Freizeiten“ für jede Org-Rolle (nur Name, Zeitraum, Phase); der
+   Name führt nur mit der erlaubten Aktion „leitung-einsetzen“ zur Verwaltung, die Card „Freizeit anlegen“ gibt es nur mit
+   „freizeiten-anlegen“ (AD-29). Antwortet der Server mit 403/404, bleibt der Bereich leer. *@
+@if (_aktionFehler)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>@AnmeldungAbschluss.FehlerText</p>
+    </Meldung>
+}
+
+@if (_liste is not null)
+{
+    <Card Titel="Freizeiten">
+        @if (_liste.Freizeiten.Count == 0)
+        {
+            <LeerZustand Satz="Noch keine Freizeit angelegt." />
+        }
+        else
+        {
+            <Datentabelle TZeile="FreizeitZeile" Beschriftung="Freizeiten" Spalten="Spalten" Zeilen="_liste.Freizeiten" />
+        }
+    </Card>
+
+    @if (Darf(Aktionsschluessel.FreizeitenAnlegen))
+    {
+        <Card Titel="Freizeit anlegen">
+            @if (_gespeichert)
+            {
+                <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+                    <p>Die Freizeit ist angelegt.</p>
+                </Meldung>
+            }
+            <Formular id="freizeit-anlegen" Absenden="AnlegenAsync">
+                <Feld Label="Name der Freizeit" Id="freizeit-name" Wert="@_name" Fehler="@_nameFehler"
+                      @oninput="@(e => _name = e.Value?.ToString())" />
+                <Feld Label="Erster Tag" Id="freizeit-erster-tag" Typ="date" Wert="@_ersterTag" Fehler="@_ersterTagFehler"
+                      @oninput="@(e => _ersterTag = e.Value?.ToString())" />
+                <Feld Label="Letzter Tag" Id="freizeit-letzter-tag" Typ="date" Wert="@_letzterTag" Fehler="@_letzterTagFehler"
+                      @oninput="@(e => _letzterTag = e.Value?.ToString())" />
+                <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Freizeit anlegen</Knopf>
+            </Formular>
+        </Card>
+    }
+}
+
+@code {
+    private FreizeitenListe? _liste;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private bool _gespeichert;
+    private string? _name;
+    private string? _ersterTag;
+    private string? _letzterTag;
+    private string? _nameFehler;
+    private string? _ersterTagFehler;
+    private string? _letzterTagFehler;
+
+    [Parameter, EditorRequired] public Guid OrgId { get; set; }
+
+    private IReadOnlyList<Spalte<FreizeitZeile>> Spalten =>
+    [
+        new("Name", f => Darf(Aktionsschluessel.LeitungEinsetzen)
+            ? @<a href="@($"organisationen/{OrgId}/freizeiten/{f.Id}")">@f.Name</a>
+            : @<text>@f.Name</text>),
+        new("Zeitraum", f => @<text>@Anzeige.Zeitraum(f.ErsterTag, f.LetzterTag)</text>),
+        new("Phase", f => @<Status Wort="@Anzeige.Phase(f.Phase)" Art="@Anzeige.PhaseArt(f.Phase)" />),
+    ];
+
+    private bool Darf(string schluessel) => _liste?.Erlaubt.Contains(schluessel) == true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _liste = null;
+        _aktionFehler = false;
+        _gespeichert = false;
+        try
+        {
+            await NeuLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    private async Task NeuLadenAsync() => _liste = await Freizeiten.ListeLadenAsync(OrgId);
+
+    /// <summary>Wert eines Datumsfelds (<c>yyyy-MM-dd</c>); alles andere gilt als fehlend, den Fehler meldet der Server am Feld.</summary>
+    private static DateOnly? Tag(string? wert) =>
+        DateOnly.TryParseExact(wert, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var tag) ? tag : null;
+
+    private async Task AnlegenAsync()
+    {
+        _uebertraegt = true;
+        _gespeichert = false;
+        _aktionFehler = false;
+        try
+        {
+            var ergebnis = await Freizeiten.AnlegenAsync(OrgId, _name, Tag(_ersterTag), Tag(_letzterTag));
+            _nameFehler = ergebnis.NameFehler;
+            _ersterTagFehler = ergebnis.ErsterTagFehler;
+            _letzterTagFehler = ergebnis.LetzterTagFehler;
+            if (ergebnis.Id is not null)
+            {
+                _gespeichert = true;
+                _name = null;
+                _ersterTag = null;
+                _letzterTag = null;
+                await NeuLadenAsync();
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

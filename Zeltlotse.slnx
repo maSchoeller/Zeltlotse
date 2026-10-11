@@ -51,9 +51,11 @@
     <Project Path="src/Modules/Kanaele/Zeltlotse.Kanaele.Contracts/Zeltlotse.Kanaele.Contracts.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Zeltlotse.Ablaeufe.Tests/Zeltlotse.Ablaeufe.Tests.csproj" />
     <Project Path="tests/Zeltlotse.Api.Tests/Zeltlotse.Api.Tests.csproj" />
     <Project Path="tests/Zeltlotse.ArchitectureTests/Zeltlotse.ArchitectureTests.csproj" />
     <Project Path="tests/Zeltlotse.E2E.Tests/Zeltlotse.E2E.Tests.csproj" />
+    <Project Path="tests/Zeltlotse.Freizeiten.Tests/Zeltlotse.Freizeiten.Tests.csproj" />
     <Project Path="tests/Zeltlotse.Konten.Tests/Zeltlotse.Konten.Tests.csproj" />
     <Project Path="tests/Zeltlotse.Organisationen.Tests/Zeltlotse.Organisationen.Tests.csproj" />
     <Project Path="tests/Zeltlotse.Personen.Tests/Zeltlotse.Personen.Tests.csproj" />
