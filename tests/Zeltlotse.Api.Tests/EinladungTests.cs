@@ -199,6 +199,34 @@ public sealed class EinladungTests(PostgresContainer postgres)
     }
 
     [Fact]
+    public async Task Ich_Organisationen_liefert_bei_mehreren_Organisationen_je_Eintrag_nur_dessen_Rollen_nach_Name()
+    {
+        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        using var gerd = await AngemeldeterClientAsync(factory, Gerd);
+        var (zeltlager, andrea) = await OrganisationMitOrgAdminAsync(factory, gerd, "Zeltlager", Andrea);
+        using (andrea)
+        {
+            var bezirk = await AnlegenAsync(gerd, "Bezirk", Andrea);
+            using (var antwort = await AnnehmenAsync(andrea, Token(factory, Andrea)))
+            {
+                Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
+            }
+
+            await EinladenAsync(andrea, bezirk, Andrea, OrgRolle.OrgUeberblick);
+            using (var antwort = await AnnehmenAsync(andrea, Token(factory, Andrea)))
+            {
+                Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
+            }
+
+            var eintraege = (await JsonAsync(await andrea.GetAsync("/api/ich/organisationen", Abbruch))).EnumerateArray().ToList();
+
+            Assert.Equal([bezirk, zeltlager], eintraege.Select(e => e.GetProperty("organisationId").GetGuid()));
+            Assert.Equal(["OrgAdmin", "OrgUeberblick"], eintraege[0].GetProperty("rollen").EnumerateArray().Select(r => r.GetString()));
+            Assert.Equal(["OrgAdmin"], eintraege[1].GetProperty("rollen").EnumerateArray().Select(r => r.GetString()));
+        }
+    }
+
+    [Fact]
     public async Task Annehmen_ist_zugriffsbegrenzt()
     {
         await using var factory = AnmeldeHelfer.Factory(await postgres.NeueDatenbankAsync(), mitZugriffsbegrenzung: true);

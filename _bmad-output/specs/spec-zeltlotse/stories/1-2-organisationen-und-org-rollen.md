@@ -5,7 +5,7 @@ created: '2026-10-11'
 status: 'done'
 baseline_revision: '9cd8cff761a63e4b55f435d3f996ad8d48a29bf5'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Zeltlotse-2026-10-10/EXPERIENCE.md'
@@ -186,6 +186,42 @@ deferred:
   - `[false]` `[reject]` (intent) Org-Überblick ohne eigene Doku-Seite — beschrieben in `org-admin/index.md` und `rollen-vergeben.md`; die Rolle hat in dieser Story keine eigene Aufgabe.
   - `[false]` `[reject]` (intent) Ergänzungen über die Einzeiler-Absicht hinaus — alle vom Spec und von AD-11/AD-12/AD-29 verlangt.
 
+### 2026-10-11 — Review pass (Folgedurchlauf)
+- verdicts: 32 findings — high 0, medium 2, low 24, false 6, maybe-false 0
+- findings:
+  - `[low]` `[reject]` (blind) Mail-Fehler nach dem Anlegen, Wiederholung erzeugt doppelte Organisation — carried: gleiche Lage wie im ersten Pass (blind „Mail-Versand“/edge „Duplikat“), Code unverändert.
+  - `[low]` `[reject]` (blind) Erster Org-Admin ohne Weg zum erneuten Einladen — carried: wie erster Pass, unter Restrisiken.
+  - `[medium]` `[reject]` (blind) Falsche Einladungen und Rollen lassen sich nicht zurücknehmen — außerhalb der Absicht: das Intent-Contract schließt „Entziehen von Rollen, Zurückziehen von Einladungen“ ausdrücklich aus (nicht in FR-5).
+  - `[low]` `[reject]` (blind) Keine Zugriffsbegrenzung an den Mail-versendenden Endpunkten — carried: wie erster Pass.
+  - `[false]` `[reject]` (blind) Ausstellen von Einladungen und Anlegen von Organisationen fehlen im Sicherheitsprotokoll — `org_einladung` hält Organisation, Mail, Rolle, `EingeladenVon` und Zeitpunkt jeder Einladung fest; das Intent-Contract legt die Protokoll-Ereignisse (`Rollenvergabe` beim Annehmen, `LinkEinloesungFehlgeschlagen`) abschließend fest, beide sind da.
+  - `[low]` `[reject]` (blind) `Rollenvergabe` außerhalb der Command-Transaktion und auch bei schon vorhandener Rolle — Protokoll nach dem Annehmen verlangt der Spec bei jedem gültigen Annehmen (Matrix-Zeile, Bezug = Einladung); `ISicherheitsprotokoll` schreibt in eigener Transaktion, ein Verschieben in den Handler machte es nicht atomar. Ausfall genau zwischen zwei Schreibvorgängen ist selten.
+  - `[low]` `[reject]` (blind) Keine Fremdschlüssel/Check-Constraints/Teilindex in den neuen Tabellen — carried für den Teil „parallel ausgestellte Einladungen“ (wie erster Pass); verwaiste Zeilen entstehen nicht, weil es keinen Lösch-Pfad für Organisationen gibt und Zeilen nur über Commands entstehen.
+  - `[low]` `[reject]` (blind) Start mit mehreren Instanzen ohne Sperre — carried: AD-1/AD-23 ein Prozess, ein Container.
+  - `[low]` `[reject]` (blind) Demo-Organisation nach Teilabbruch nicht ergänzt — carried: wie erster Pass.
+  - `[medium]` `[defer]` (blind) Einladungen werden nie gelöscht — carried: schon in `deferred` (Lösch-Dienst 1-7), nicht erneut zurückgestellt.
+  - `[low]` `[reject]` (blind) „Gespeichert“ und „Fehler“ gleichzeitig, wenn das Neuladen nach erfolgreichem Speichern scheitert — beide Aussagen stimmen (gespeichert ja, Liste nicht aktualisiert); nur bei Netzabbruch genau zwischen zwei Anfragen.
+  - `[low]` `[reject]` (blind) Rollen-Texte und Mail-Prüfung doppelt (`OrgRechte.Text`/`Anzeige.Rolle`, `MailRegel`/`LoginAnfrageAnlegenValidator`) — Texte heute gleich, gemeinsame Bausteine (`MailAdresse.IstReineMailAdresse`, `MaximaleLaenge`) werden genutzt; die Zusammenlegung wäre ein Umbau, keine direkte Korrektur. Die „umgekehrte Längenprüfung“ in `MailRegel` ist Absicht (nur eine Meldung je Feld).
+  - `[low]` `[reject]` (blind) Sortierung in der Datenbank vs. `CurrentCulture` im Speicher — betrifft zwei verschiedene Seiten; Abweichung nur bei Umlauten/Groß-Klein in Grenzfällen, kosmetisch.
+  - `[low]` `[reject]` (blind) `OrgRechte.Server` bildet Unbekanntes auf `(OrgRolle)(-1)` ab — gewollt, damit `IsInEnum` mit Feldfehler antwortet; der Fall `"rolle":99` ist per HTTP-Test belegt. Neue Rollen bringen ohnehin Tests mit.
+  - `[false]` `[reject]` (blind) Modell-Snapshot verliert `internal` — eine Klasse auf oberster Ebene ohne Modifizierer ist in C# `internal`; die Sichtbarkeit ändert sich nicht, Architekturtests grün.
+  - `[low]` `[reject]` (blind) Einladungsablauf: zweiter Klick nach dem Rückweg, keine Vorschau von Organisation/Rolle, Login-Link verliert den Rückweg — carried: wie erster Pass (Vorschau, Login-Link im neuen Tab); „POST erst beim Klick“ verlangt das Intent-Contract.
+  - `[low]` `[reject]` (edge) Mail-Fehler nach Anlegen der Organisation — carried.
+  - `[low]` `[reject]` (edge) Mail-Fehler nach dem Einladen — carried.
+  - `[low]` `[reject]` (edge) Gleichzeitiges Ausstellen lässt zwei offene Einladungen bestehen — carried.
+  - `[low]` `[reject]` (edge) Gleichzeitiges Annehmen zweier Einladungen gleicher Rolle → Primärschlüssel-Verletzung — carried.
+  - `[low]` `[reject]` (edge) Protokoll-Schreiben scheitert nach dem Annehmen → 500, Wiederholung 404 — gleiche Ursache wie blind „`Rollenvergabe` außerhalb der Transaktion“, verworfen.
+  - `[low]` `[reject]` (edge) Demo-Daten nach Teilabbruch — carried.
+  - `[low]` `[reject]` (edge) Zwei Hosts starten gleichzeitig — carried.
+  - `[low]` `[reject]` (edge) `JsonException` bei unbekannter Rolle von neuerem Server — Web-App und API werden gemeinsam vom selben Host ausgeliefert; heute nicht erreichbar.
+  - `[low]` `[reject]` (edge) Veralteter Rückweg, wenn die Anmeldung erst viel später in derselben App-Sitzung erfolgt — Ziel ist immer ein eigener Pfad (`IstEigenerPfad`), Schaden keiner; Fix wäre zusätzliche Logik.
+  - `[low]` `[patch]` (verification-gap) Längenregel der Mail (254/255) für Anlegen und Einladen ungetestet — Test `Mail_mit_254_Zeichen_geht_mit_255_nicht` in `OrganisationenCommandTests` ergänzt (Anlegen und Einladen, beide Grenzen).
+  - `[low]` `[patch]` (verification-gap) `GET /api/ich/organisationen` nie mit Rollen in mehreren Organisationen getestet — HTTP-Test `Ich_Organisationen_liefert_bei_mehreren_Organisationen_je_Eintrag_nur_dessen_Rollen_nach_Name` ergänzt (zwei Organisationen, zwei Rollen in einer, Reihenfolge nach Name).
+  - `[low]` `[reject]` (verification-gap, other) `Rollenvergabe` außerhalb der Command-Transaktion — gleiche Ursache wie blind, verworfen.
+  - `[false]` `[reject]` (intent) Zweite Umgehung des Mandantenfilters in `GET /api/ich/organisationen` widerspreche „einzige Stelle“ — die Endpunkt-Tabelle des Intent-Contracts schreibt diesen Endpunkt mit `.Organisationsuebergreifend()` selbst vor; der Satz „einzige Stelle“ steht beim Annehmen und meint die Token-Suche des Moduls.
+  - `[false]` `[reject]` (intent) Kein Browser-Durchlauf der ganzen Kette — carried: AD-30 verlangt Ende-zu-Ende-Tests nur für Gast-Anmeldung, Login und Notfall.
+  - `[false]` `[reject]` (intent) Rückweg gilt für jede Seite mit 401, nicht nur für die Einladung — das Intent-Contract verlangt den Rückweg zur Einladung und verbietet keinen allgemeinen; der allgemeine Mechanismus erfüllt ihn und ist gegen fremde Ziele geschützt.
+  - `[false]` `[reject]` (intent) Doku-Build nicht im Diff belegt — carried; in diesem Pass erneut gelaufen (Exit-Code 0, 13 Seiten).
+
 ## Design Notes
 
 - **Global Admin aus der Konfiguration:** Die Spine legt das Kennzeichen in Konten, sagt aber nicht, wie es entsteht. Selbstregistrierung ist zurückgestellt (NFR-19); eine Oberfläche zum Ernennen gäbe es nur für den Betreiber selbst. Einfachste Lösung ohne Speziallogik: Die Konfiguration ist die Quelle, der Abgleich beim Start schreibt sie ins Kennzeichen. Demo: Gerd Betreiber nur bei aktiven Demo-Daten.
@@ -245,3 +281,22 @@ Status: done
 - Siehe `deferred`: Einladungen werden bis zum Lösch-Dienst (1-7) nicht gelöscht.
 - Rückweg zur Einladung nur nach Anmeldung per Code oder Passwort; per Login-Link im neuen Tab muss der Einladungslink erneut geöffnet werden.
 - PostgreSQL Row Level Security (AD-6, Stufe 2) bleibt bis zum Start als Dienst zurückgestellt.
+
+### Folgedurchlauf 2026-10-11
+
+**Zusammenfassung:** Erneute Review-Runde auf die fertige Story (4 Layer: Blind, Edge Case, Verification Gap, Intent). Keine Änderung am Produktcode; zwei fehlende Tests ergänzt.
+
+**Geänderte Dateien:**
+- `tests/Zeltlotse.Organisationen.Tests/OrganisationenCommandTests.cs` – Test der Mail-Längengrenze (254 geht, 255 nicht) für Anlegen und Einladen.
+- `tests/Zeltlotse.Api.Tests/EinladungTests.cs` – HTTP-Test `GET /api/ich/organisationen` mit Rollen in zwei Organisationen (je Eintrag nur eigene Rollen, sortiert nach Name).
+
+**Review:** 32 Befunde (high 0, medium 2, low 24, false 6). Gepatcht: 2 Einträge, beide low (gepatcht: high 0, medium 0, low 2). Zurückgestellt: nichts Neues (Löschen alter Einladungen steht schon in `deferred`). Verworfen mit Begründung im Review Triage Log: Zurücknehmen von Einladungen/Rollen (vom Intent ausgeschlossen), Protokoll-Eintrag außerhalb der Transaktion, fehlende Fremdschlüssel, doppelte Meldung nach gescheitertem Neuladen, doppelte Texte/Prüfregeln, Sortier-Abweichung, `OrgRechte.Server`, `JsonException` bei fremder Rolle, veralteter Rückweg sowie die aus dem ersten Pass übernommenen Befunde; `false`: Sicherheitsprotokoll beim Ausstellen, Snapshot-Sichtbarkeit, zweite Filter-Umgehung, Browser-Durchlauf, allgemeiner Rückweg, Doku-Build.
+
+**Folge-Review empfohlen:** nein – Folgedurchlauf ohne gepatchten high-Befund; die Arbeit ist konvergiert.
+
+**Verifikation:**
+- `dotnet build Zeltlotse.slnx --no-incremental`: 0 Warnungen, 0 Fehler.
+- `dotnet test`: 768 von 768 grün.
+- `npm ci` und `npm run build` in `doku/`: Exit-Code 0, 13 Seiten, `betreiber/`, `org-admin/einladung-annehmen/`, `org-admin/rollen-vergeben/` gebaut. Doku, Demo-Daten und Screenshot-Tests waren schon vollständig; in diesem Pass unverändert (nur pixelweise neu erzeugte Offline-Screenshots verworfen).
+
+**Restrisiken:** unverändert wie oben.

@@ -268,6 +268,34 @@ public sealed class OrganisationenCommandTests(PostgresContainer postgres) : IAs
     }
 
     [Fact]
+    public async Task Mail_mit_254_Zeichen_geht_mit_255_nicht()
+    {
+        var zuLang = await Assert.ThrowsAsync<ValidierungsAusnahme>(() => SendenAsync(new OrganisationAnlegenCommand("A", MailMitLaenge(255), Gerd)));
+        Assert.Equal(["Die Mail-Adresse ist zu lang."], zuLang.Fehler["mail"]);
+
+        var a = await SendenAsync(new OrganisationAnlegenCommand("A", MailMitLaenge(254), Gerd));
+
+        var einladungZuLang = await Assert.ThrowsAsync<ValidierungsAusnahme>(() =>
+            SendenAsync(new EinladungAnlegenCommand(a.OrganisationId, MailMitLaenge(255), OrgRolleArt.OrgUeberblick, Gerd), a.OrganisationId));
+        Assert.Equal(["Die Mail-Adresse ist zu lang."], einladungZuLang.Fehler["mail"]);
+        await SendenAsync(new EinladungAnlegenCommand(a.OrganisationId, MailMitLaenge(254), OrgRolleArt.OrgUeberblick, Gerd), a.OrganisationId);
+    }
+
+    /// <summary>Gültige Mail-Adresse genau dieser Länge (Domain aus Teilen mit höchstens 50 Zeichen).</summary>
+    private static string MailMitLaenge(int laenge)
+    {
+        var rest = laenge - "a@".Length - ".de".Length;
+        var domain = "";
+        while (rest > 50)
+        {
+            domain += new string('b', 49) + ".";
+            rest -= 50;
+        }
+
+        return "a@" + domain + new string('b', rest) + ".de";
+    }
+
+    [Fact]
     public async Task Gleichzeitiges_Annehmen_derselben_Einladung_gelingt_genau_einmal()
     {
         var neu = await SendenAsync(new OrganisationAnlegenCommand("Jugendwerk", "andrea.beispiel@example.org", Gerd));
