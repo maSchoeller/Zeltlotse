@@ -16,4 +16,8 @@
     <ProjectReference Include="..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Zeltlotse.Api.Tests" />
+  </ItemGroup>
+
 </Project>

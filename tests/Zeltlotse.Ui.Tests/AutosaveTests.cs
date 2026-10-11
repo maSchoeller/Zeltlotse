@@ -171,6 +171,32 @@ public sealed class AutosaveTests : BunitContext
     }
 
     [Fact]
+    public void Erneut_versuchen_nach_gescheitertem_Rueckgaengig_sendet_das_Rueckgaengig_unveraendert()
+    {
+        var versuche = 0;
+        _server.Bei(r => r.Method == HttpMethod.Patch, _ => ++versuche switch
+        {
+            1 => Task.FromResult(Gespeichert(8, "titel", "Nachtwanderung")()),
+            2 => Task.FromResult(NachgebildeterHandler.Problem(HttpStatusCode.InternalServerError, "unerwarteter-fehler")),
+            _ => Task.FromResult(Gespeichert(9, "titel", "Geländespiel")()),
+        });
+        var feld = Feld();
+        Aendern(feld, "Nachtwanderung");
+        feld.Find("p[role=status] button").Click();
+        Assert.StartsWith("Nicht gespeichert.", feld.Find("p[role=alert]").TextContent, StringComparison.Ordinal);
+
+        feld.Find("p[role=alert] button").Click();
+
+        Assert.Equal(3, _server.Anfragen.Count);
+        Assert.Equal(_server.Anfragen[1].Koerper, _server.Anfragen[2].Koerper);
+        var koerper = Koerper(_server.Anfragen[2]);
+        Assert.Equal("Nachtwanderung", koerper.GetProperty("alterWert").GetString());
+        Assert.Equal("Geländespiel", koerper.GetProperty("titel").GetString());
+        Assert.Equal("Gespeichert", feld.Find("p[role=status]").TextContent);
+        Assert.Empty(feld.FindAll("button"));
+    }
+
+    [Fact]
     public void Waehrend_der_Uebertragung_ist_der_Knopf_deaktiviert()
     {
         var antwort = new TaskCompletionSource<HttpResponseMessage>();

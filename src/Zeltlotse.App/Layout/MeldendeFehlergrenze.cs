@@ -35,17 +35,28 @@ public sealed partial class MeldendeFehlergrenze : ErrorBoundary
         }
     }
 
-    /// <summary>Typname der Ausnahme, auf die erlaubten Zeichen der API beschränkt.</summary>
-    internal static string Fehlerart(Exception ausnahme) =>
-        UnerlaubteZeichen().Replace(ausnahme.GetType().Name, "_");
+    // Längengrenzen der Formprüfung von POST /api/betrieb/fehler.
+    private const int FehlerartLaenge = 100;
+    private const int SeitenLaenge = 2000;
 
-    /// <summary>Pfad der Seite ohne Abfrage und Fragment.</summary>
+    /// <summary>Typname der Ausnahme, auf die erlaubten Zeichen und die Länge der API beschränkt.</summary>
+    internal static string Fehlerart(Exception ausnahme) =>
+        Kuerzen(UnerlaubteZeichen().Replace(ausnahme.GetType().Name, "_"), FehlerartLaenge);
+
+    /// <summary>Pfad der Seite ohne Abfrage und Fragment, auf die erlaubten Zeichen und die Länge der API beschränkt.</summary>
     internal static string Seite(string adresse) =>
-        Uri.TryCreate(adresse, UriKind.Absolute, out var uri) ? uri.AbsolutePath : "/";
+        Uri.TryCreate(adresse, UriKind.Absolute, out var uri)
+            ? Kuerzen(UnerlaubteSeitenZeichen().Replace(uri.AbsolutePath, "_"), SeitenLaenge)
+            : "/";
+
+    private static string Kuerzen(string text, int laenge) => text.Length > laenge ? text[..laenge] : text;
 
     /// <summary>Neue Trace-ID: 16 Zufallsbytes als 32 Hex-Zeichen.</summary>
     internal static string NeueTraceId() => Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16));
 
     [GeneratedRegex("[^A-Za-z0-9._:-]")]
     private static partial Regex UnerlaubteZeichen();
+
+    [GeneratedRegex("[^A-Za-z0-9/._~%-]")]
+    private static partial Regex UnerlaubteSeitenZeichen();
 }

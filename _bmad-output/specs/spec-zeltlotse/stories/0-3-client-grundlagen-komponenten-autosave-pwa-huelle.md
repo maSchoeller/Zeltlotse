@@ -5,13 +5,20 @@ created: '2026-10-11'
 status: 'done'
 baseline_revision: '0bd702dc75b482241b5599baedcf4358506a211a'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Zeltlotse-2026-10-10/DESIGN.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Zeltlotse-2026-10-10/EXPERIENCE.md'
 warnings: [oversized]
-deferred: []
+deferred:
+  - summary: >-
+      AntiforgeryZwang setzt den internen Framework-Schlüssel "__AntiforgeryMiddlewareWithEndpointInvoked" von Hand.
+    evidence: |-
+      Der Schlüssel ist kein öffentlicher Vertrag von ASP.NET Core; benennt ein Framework-Update ihn um, werfen alle Blazor-Formular-Endpunkte. Die Formular-Tests in ClientAuslieferungTests fallen dann um, aber ohne klare Ursache. Stammt aus Story 0-2 (schon in der Baseline vorhanden), nicht aus 0-3.
+    location: >-
+      src/Zeltlotse.Api/Sicherheit/AntiforgeryZwang.cs:65
+    severity: low
 ---
 
 <intent-contract>
@@ -219,6 +226,52 @@ deferred: []
   - `[false]` `[reject]` (intent) AD-30-Pflichtfälle 403/404/Token nur clientseitig, Token-Tests betreffen Antiforgery — 0-3 legt keinen Endpunkt der Arten Organisation/Freizeit, persönlich oder Token an (Kontext-Endpunkt 1-3, `stories.yaml`: keine Fachfunktion); alle neuen Auslieferungen haben HTTP-Tests gegen echtes PostgreSQL.
   - `[false]` `[reject]` (intent) „Test zuerst“ am Diff nicht nachprüfbar — Prozessaussage, kein Defekt.
 
+### 2026-10-11 — Review pass
+- verdicts: 42 findings — high 0, medium 1, low 35, false 6, maybe-false 0
+- findings:
+  - `[low]` `[reject]` (blind) Offline-Zustand nach einem Netzfehler bleibt bis zur nächsten Antwort; der ausgegraute Bereich schickt selbst keine Anfrage — so verlangt es die Intent („bis zum nächsten Erfolg“). Heute ruft keine App-Seite regelmäßig die API auf, Neuladen hilft. Ein Probe-Mechanismus wäre neue Logik; mit der ersten API-nutzenden Seite (1-1) erneut prüfen.
+  - `[low]` `[reject]` (blind) „Neu laden“ erzwingt kein Service-Worker-Update — carried: wie „Neu laden, während der neue Service Worker noch installiert“ (verworfen).
+  - `[low]` `[reject]` (blind) Gescheiterter Interop-Start legt die App ohne Fehleranzeige lahm (kein `#blazor-error-ui`, zwischengespeicherte Tasks) — carried: wie „Kein `#blazor-error-ui`“ (verworfen).
+  - `[low]` `[reject]` (blind) `AutosaveFeld` überschreibt ungespeicherte Eingaben, wenn die Seite neue Parameter übergibt — das Feld meldet keine Version nach außen; neue Werte kommen nur über „Neu laden“, wie die Intent es will. Kein Aufrufer existiert; Fix wäre ein zusätzlicher Zustand.
+  - `[low]` `[reject]` (blind) Jede API-Antwort zeichnet das Layout neu und schreibt `localStorage` — carried (verworfen).
+  - `[low]` `[reject]` (blind) Scheiternder `ErfolgMeldenAsync` macht eine gute Antwort zur Ausnahme — carried: wie „`ErfolgMeldenAsync` wirft bei JS-Fehler“ (verworfen).
+  - `[low]` `[reject]` (blind) `X-Zeltlotse-Version` verrät jedem Besucher den genauen Commit — die Intent verlangt den Header an jeder Antwort (AD-5); ein Fix widerspräche ihr.
+  - `[low]` `[defer]` (blind) `AntiforgeryZwang` hängt am internen Framework-Schlüssel `__AntiforgeryMiddlewareWithEndpointInvoked` — schon in der Baseline aus 0-2 vorhanden; die Tests würden ein Umbenennen bemerken; zurückgestellt.
+  - `[low]` `[reject]` (blind) `AddZeltlotseUi` erzeugt `HttpClient`-Instanzen, die nie entsorgt werden — `disposeHandler: false`, der Primär-Handler gehört dem Singleton; den Rest räumt der GC ohne messbaren Schaden ab; Fix wäre eine andere Registrierung.
+  - `[low]` `[reject]` (blind) Loopback-Adresse bricht bei reiner HTTPS-Bindung — carried: wie „Unix-Socket oder nur HTTPS-Bindung“ (verworfen).
+  - `[low]` `[patch]` (blind) Kein `<link rel="icon">`: jeder Besuch fragt `/favicon.ico` an und bekommt die 404-Seite — Icon-Link in `index.html` der App und in `Wurzel.razor` von Public; HTTP-Test prüft Link und Auslieferung. Maskable-Icon und `theme-color` sind kosmetisch und verworfen.
+  - `[low]` `[patch]` (blind) Wiederholen eines gescheiterten Rückgängig ist ungetestet; Klick auf „Rückgängig“ direkt nach dem Tippen kann verschluckt werden — bUnit-Test für „Erneut versuchen“ nach gescheitertem Rückgängig ergänzt (Verhalten war schon richtig). Das verschluckte Klicken ist verworfen: Der Blur speichert die neue Eingabe, danach steht ein frisches „Rückgängig“ bereit.
+  - `[low]` `[reject]` (edge) App-Pfad mit Punkt im letzten Segment ergibt 404 — carried (verworfen).
+  - `[low]` `[reject]` (edge) `/APP/…` (andere Schreibweise) liefert `index.html`, `base href` passt nicht — niemand tippt das; die Statikdatei-Routen sind ebenfalls unabhängig von Groß- und Kleinschreibung, ein vollständiger Fix wäre mehr als eine direkte Korrektur.
+  - `[low]` `[reject]` (edge) Gescheiterter Start in `AppVerbindung` bleibt zwischengespeichert — carried (verworfen).
+  - `[low]` `[patch]` (edge) `ZuletztAktualisiert ??= await …`: Ein Erfolg während des Lesens wird vom älteren gespeicherten Zeitpunkt überschrieben — erst lesen, dann zuweisen; bUnit-Test mit angehaltenem Lesen.
+  - `[low]` `[patch]` (edge) Online-Wechsel zwischen `IstOnlineAsync` und dem Start der Beobachtung geht verloren — erst beobachten, dann lesen; Test prüft die Reihenfolge.
+  - `[low]` `[reject]` (edge) `ErfolgMeldenAsync` wirft nach erfolgreicher Antwort — carried (verworfen).
+  - `[low]` `[reject]` (edge) 502/503/504 vom Proxy gelten als „online“ — die Intent definiert offline über Netzfehler; ein ausgefallenes Backend hinter dem Proxy ist kein Alltag, jede Fachfunktion zeigt dann ihren Fehler; Fix wäre ein zusätzlicher Zweig.
+  - `[low]` `[reject]` (edge) Gescheiterter Modul-Import in `JsBrowser` bleibt zwischengespeichert — carried (verworfen).
+  - `[low]` `[reject]` (edge) `DotNetObjectReference` bleibt hängen, wenn `onlineBeobachten` wirft — nur bei kaputtem eigenem JS-Modul; Fix wäre ein zusätzlicher try/catch.
+  - `[low]` `[reject]` (edge) `DisposeAsync` wirft bei gescheitertem Modul — carried: wie „Andere `JSException` beim Entsorgen“ (verworfen).
+  - `[low]` `[reject]` (edge) Neu laden ohne wartenden Service Worker lädt die alte App — carried (verworfen).
+  - `[low]` `[reject]` (edge) Offline-Aufruf von `/app` ohne Schrägstrich liegt außerhalb des SW-Bereichs — `start_url` und Weiterleitung führen auf `/app/`; ein größerer Bereich verlangte, den Service Worker zu verlegen.
+  - `[low]` `[patch]` (edge) `Seite` der Fehlermeldung enthält Zeichen, die die API ablehnt (z. B. `:`, `;`, `@`, `+`, `!`), die Meldung wird still verworfen — unerlaubte Zeichen werden zu `_`, Länge auf 2000 gekürzt; Theorie-Test.
+  - `[low]` `[patch]` (edge) Typname über 100 Zeichen wird von der API abgelehnt — gleiche Ursache (Fehlergrenze hält die Formprüfung der API nicht ein), mitbehoben: auf 100 gekürzt; Test.
+  - `[low]` `[reject]` (edge) Feldname `version`/`alterWert` — carried (verworfen).
+  - `[false]` `[reject]` (edge) 2xx ohne Körper (204) gilt als gescheitert — carried: AD-19 verlangt `200` mit Körper.
+  - `[low]` `[reject]` (edge) Andere 4xx (400, 403, 404, 422) zeigen „Erneut versuchen“ — heute gibt es keinen AD-19-Endpunkt; ein eigener Ergebnistyp wäre neue Logik; mit dem ersten bearbeitbaren Endpunkt festlegen.
+  - `[low]` `[reject]` (edge) Neue Parameter während eines laufenden PATCH, die alte Antwort überschreibt sie — kein Aufrufer existiert; Fix wäre ein Generationszähler.
+  - `[low]` `[reject]` (edge) Rückgängig oder Erneut versuchen während `_uebertraegt` — der Knopf ist schon deaktiviert gerendert, bevor das nächste Ereignis kommt; ein Wächter schützte einen nicht gezeigten Zustand.
+  - `[low]` `[reject]` (edge) Deaktivierter Link-Knopf führt `@onclick` aus — carried (verworfen).
+  - `[low]` `[reject]` (edge) HTTPS-Wildcard wird zu `127.0.0.1`, TLS passt nicht — carried (verworfen).
+  - `[medium]` `[patch]` (vgap) `PublicApiTransport.EigeneAdresse` läuft in keinem Test — `InternalsVisibleTo` für `Zeltlotse.Api.Tests` in Public; Theorie über `+`, `*`, `0.0.0.0`, `[::]`, `localhost`, HTTP vor HTTPS und leere Adressliste.
+  - `[low]` `[patch]` (vgap) Methodenprüfung der Statuscode-Seiten ungetestet — HTTP-Tests: POST/PUT/DELETE an `/gibt-es-nicht` ergeben 405 mit `Allow: GET, HEAD` als ProblemDetails (nicht die HTML-Seite), HEAD ergibt 404 mit Sicherheits-Headern.
+  - `[low]` `[reject]` (vgap) Nachricht `aktivieren` zwischen Seite und Service Worker ungetestet — ein echter Test bräuchte zwei veröffentlichte Stände im E2E-Aufbau; gehört zum verworfenen „Neu laden“-Pfad.
+  - `[false]` `[reject]` (intent) AD-30-Fälle „falsche Rolle 403“ und „fremde Organisation 404“ fehlen — carried: 0-3 legt keinen Endpunkt mit Rolle oder Organisation an; die Intent verbietet ihn.
+  - `[low]` `[patch]` (intent) Die Antiforgery-Kette der App läuft nie gegen den echten Host — zwei HTTP-Tests gegen echtes PostgreSQL: `AntiforgeryHandler` mit Cookies holt das Token einmal, nach Ablauf einmal neu (204); ohne Cookie zweimal 400, der zweite geht als `HttpRequestException` an den Aufrufer. Beide waren sofort grün (Lücke, kein Defekt).
+  - `[false]` `[reject]` (intent) Kontext 200/403/404 nur gegen einen nachgebildeten Server — der Kontext-Endpunkt ist laut Intent verboten (kommt mit 1-3); es gibt keinen echten Server, gegen den man testen könnte.
+  - `[false]` `[reject]` (intent) Autosave nur gegen einen nachgebildeten Server — die Intent verbietet Fach-Endpunkte; kein PATCH-Endpunkt existiert.
+  - `[false]` `[reject]` (intent) Server- und Client-Hälfte der Versionserkennung nie zusammen getestet — der echte Host sendet immer die passende Version; beide Hälften sind je für sich gegen ihren Vertrag getestet.
+  - `[false]` `[reject]` (intent) „Test zuerst“ am Diff nicht nachprüfbar — carried: Prozessaussage, kein Defekt.
+
 ## Design Notes
 
 - **Baustein-Regeln (bUnit-Prüfpunkte):**
@@ -323,3 +376,32 @@ Das Zusammenspiel mit einem echten AD-19-Endpunkt gibt es erst mit der ersten be
 - Der Zeitpunkt „zuletzt aktualisiert“ über `localStorage` ist im Browser ungeprüft, weil noch keine App-Seite die API aufruft.
 - Die Versionserkennung setzt einen Build mit Git-Commit voraus (Container-Build ist offen).
 - Doku-Seite, Demo-Daten und Screenshots folgen mit 0-4 (Design Notes).
+
+### Folgedurchlauf 2026-10-11
+
+**Zusammenfassung:** Zweiter Review-Durchlauf auf die fertige Story mit vier Review-Layern. Kein Befund lag in der Intent oder im Spec. Gepatcht wurden kleine Lücken, jeweils mit dem Test zuerst:
+- Die Fehlergrenze hält die Formprüfung der API ein (erlaubte Zeichen, Längen).
+- Der Start der Verbindung verliert keinen Online-Wechsel und keinen frischen Zeitpunkt mehr.
+- App und öffentliche Seiten nennen ein Icon (keine 404 mehr für `/favicon.ico`).
+- Neue Tests für die eigene Adresse von Public, für ändernde Methoden und HEAD an unbekannte Pfade, für „Erneut versuchen“ nach gescheitertem Rückgängig und für die Antiforgery-Kette der App gegen den echten Host.
+
+**Dateien:**
+- `src/Zeltlotse.App/Layout/MeldendeFehlergrenze.cs` – Seite und Fehlerart auf erlaubte Zeichen und Längen der API gekürzt.
+- `src/Zeltlotse.App/Verbindung/AppVerbindung.cs` – erst lesen, dann zuweisen; erst beobachten, dann den Online-Status lesen.
+- `src/Zeltlotse.App/wwwroot/index.html`, `src/Zeltlotse.Public/Wurzel.razor` – `<link rel="icon">`.
+- `src/Zeltlotse.Public/Zeltlotse.Public.csproj` – `InternalsVisibleTo` für `Zeltlotse.Api.Tests`.
+- `tests/Zeltlotse.Api.Tests/ClientAuslieferungTests.cs` – neue HTTP-Tests gegen echtes PostgreSQL (Icon, Methoden an unbekannte Pfade, eigene Adresse, Antiforgery der App mit Token-Abruf, Ablauf und zweitem 400).
+- `tests/Zeltlotse.Ui.Tests/AppLayoutTests.cs`, `AutosaveTests.cs`, `NachgebildeterBrowser.cs` – neue bUnit- und Unit-Tests; angehaltenes Lesen und Aufruf-Reihenfolge im nachgebildeten Browser.
+
+**Review:** 42 Befunde (high 0, medium 1, low 35, false 6, maybe-false 0). Gepatcht: 8 Einträge (medium 1, low 7). Zurückgestellt: 1 (interner Antiforgery-Schlüssel aus 0-2). Alle übrigen Befunde sind mit Begründung im Review Triage Log verworfen; ein Teil davon ist aus dem ersten Durchlauf übernommen („carried“).
+
+**AD-30 (Hinweis des Aufrufers):** Die Token-Fälle laufen jetzt auch für die App-Seite gegen den echten Host mit PostgreSQL: Token einmal je Start, nach Ablauf einmal neu holen, zweites 400 an den Aufrufer. Die Fälle „falsche Rolle 403“ und „fremde Organisation 404“ haben in 0-3 weiter keinen Gegenstand, weil kein Endpunkt mit Rolle oder Organisation entsteht.
+
+**Folge-Review empfohlen:** nein. Im Folgedurchlauf wurde kein high-Eintrag gepatcht (gepatcht: high 0, medium 1, low 7).
+
+**Verifikation:** `dotnet build Zeltlotse.slnx --no-incremental` ergibt 0 Warnungen und 0 Fehler. `dotnet test` ergibt 452 von 452 grün, inklusive Architektur-, bUnit- und Playwright-Tests. Die neuen Tests waren vor der Korrektur rot, außer bei den reinen Testlücken (Rückgängig wiederholen, Antiforgery-Kette der App); die waren sofort grün.
+
+**Restrisiken:**
+- Die Offline-Anzeige erholt sich nach einem Netzfehler erst mit der nächsten erfolgreichen Antwort. Mit der ersten API-nutzenden Seite (1-1) prüfen.
+- Andere 4xx-Antworten im Autosave zeigen „Erneut versuchen“. Mit dem ersten AD-19-Endpunkt festlegen.
+- Die Restrisiken aus dem ersten Durchlauf (Aspire-Prüfung, Vorlagen-Icons, `localStorage`-Zeitpunkt im Browser, Container-Build, Doku in 0-4) gelten weiter.

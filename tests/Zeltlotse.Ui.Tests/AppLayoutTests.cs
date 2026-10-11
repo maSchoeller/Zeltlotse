@@ -114,6 +114,31 @@ public sealed class AppLayoutTests : BunitContext
     }
 
     [Fact]
+    public async Task Ein_Erfolg_waehrend_des_Starts_wird_nicht_vom_gespeicherten_Zeitpunkt_ueberschrieben()
+    {
+        _browser.Zuletzt = _uhr.GetUtcNow().AddHours(-3);
+        _browser.LesenAnhalten = new TaskCompletionSource();
+        await using var verbindung = new AppVerbindung(_browser, _uhr);
+
+        var start = verbindung.StartenAsync();
+        await verbindung.ErfolgMeldenAsync();
+        _browser.LesenAnhalten.SetResult();
+        await start;
+
+        Assert.Equal(_uhr.GetUtcNow(), verbindung.ZuletztAktualisiert);
+    }
+
+    [Fact]
+    public async Task Der_Start_beobachtet_den_Online_Status_bevor_er_ihn_liest()
+    {
+        await using var verbindung = new AppVerbindung(_browser, _uhr);
+
+        await verbindung.StartenAsync();
+
+        Assert.Equal([nameof(IBrowser.OnlineBeobachtenAsync), nameof(IBrowser.IstOnlineAsync)], _browser.Aufrufe);
+    }
+
+    [Fact]
     public void Offline_Text_rechnet_in_Europe_Berlin_auch_im_Winter()
     {
         Assert.Equal("Offline – zuletzt aktualisiert 09:05 Uhr", AppVerbindung.OfflineTextFuer(new DateTimeOffset(2027, 1, 10, 8, 5, 0, TimeSpan.Zero)));
@@ -229,6 +254,21 @@ public sealed class AppLayoutTests : BunitContext
         Assert.Equal("FehlerMitGenerik_1", MeldendeFehlergrenze.Fehlerart(new FehlerMitGenerik<int>()));
     }
 
+    [Theory]
+    [InlineData("https://lager.example/app/a:b;c@d,e+f=g!h$i'j(k)l*m?x=1#oben", "/app/a_b_c_d_e_f_g_h_i_j_k_l_m")]
+    [InlineData("https://lager.example/app/freizeiten/0190a0f0-0000-7000-8000-000000000001/personen%20liste", "/app/freizeiten/0190a0f0-0000-7000-8000-000000000001/personen%20liste")]
+    public void Seite_enthaelt_nur_die_Zeichen_die_die_API_annimmt(string adresse, string erwartet) =>
+        Assert.Equal(erwartet, MeldendeFehlergrenze.Seite(adresse));
+
+    [Fact]
+    public void Seite_und_Fehlerart_bleiben_in_den_Laengengrenzen_der_API()
+    {
+        var seite = MeldendeFehlergrenze.Seite("https://lager.example/" + new string('a', 3000));
+
+        Assert.Equal(2000, seite.Length);
+        Assert.Equal(100, MeldendeFehlergrenze.Fehlerart(new FehlerMitSehrLangemNamenDerDieGrenzeDerApiVonHundertZeichenUeberschreitetUndDeshalbGekuerztWerdenMussAmEnde()).Length);
+    }
+
     private sealed class Werfer : ComponentBase
     {
         protected override void OnInitialized() => throw new InvalidOperationException("Erika Muster hat Erdnussallergie");
@@ -236,5 +276,7 @@ public sealed class AppLayoutTests : BunitContext
 
 #pragma warning disable CA1032, CA1064, S3376 // Nur für den Test: Typname mit Backtick.
     private sealed class FehlerMitGenerik<T> : Exception;
+
+    private sealed class FehlerMitSehrLangemNamenDerDieGrenzeDerApiVonHundertZeichenUeberschreitetUndDeshalbGekuerztWerdenMussAmEnde : Exception;
 #pragma warning restore CA1032, CA1064, S3376
 }

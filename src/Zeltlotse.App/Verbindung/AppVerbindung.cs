@@ -37,14 +37,17 @@ public sealed class AppVerbindung(IBrowser browser, TimeProvider uhr) : IVerbind
 
     private async Task StartAsync()
     {
-        ZuletztAktualisiert ??= await browser.ZuletztAktualisiertLesenAsync();
-        _browserOnline = await browser.IstOnlineAsync();
+        // Erst lesen, dann zuweisen: Eine Antwort während des Lesens hat den neueren Zeitpunkt.
+        var gespeichert = await browser.ZuletztAktualisiertLesenAsync();
+        ZuletztAktualisiert ??= gespeichert;
+        // Erst beobachten, dann lesen: So geht kein Wechsel zwischen Lesen und Beobachten verloren.
         _beobachtung = await browser.OnlineBeobachtenAsync(online =>
         {
             _browserOnline = online;
             Geaendert?.Invoke();
             return Task.CompletedTask;
         });
+        _browserOnline = await browser.IstOnlineAsync();
         Geaendert?.Invoke();
     }
 

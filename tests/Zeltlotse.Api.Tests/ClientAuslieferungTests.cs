@@ -2,11 +2,17 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Mvc.Testing.Handlers;
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Api.Contracts.Gemeinsam;
+using Zeltlotse.Public;
 using Zeltlotse.Testing;
 using Zeltlotse.Ui.Api;
+using Zeltlotse.Ui.Transport;
 using static Zeltlotse.Api.Tests.TestHelfer;
 
 namespace Zeltlotse.Api.Tests;
@@ -94,6 +100,37 @@ public sealed partial class ClientAuslieferungTests(PostgresContainer postgres)
         Assert.Contains("Diese Seite ist nicht verfügbar.", html, StringComparison.Ordinal);
         Assert.Contains("lang=\"de\"", html, StringComparison.Ordinal);
         Assert.DoesNotContain("<script", html, StringComparison.OrdinalIgnoreCase);
+        PruefeSicherheitsHeader(antwort);
+    }
+
+    [Theory]
+    [InlineData("POST")]
+    [InlineData("PUT")]
+    [InlineData("DELETE")]
+    public async Task Aendernde_Anfrage_an_unbekannten_Pfad_ausserhalb_von_api_ergibt_ProblemDetails_statt_der_HTML_Seite(string methode)
+    {
+        await using var factory = await FactoryAsync();
+        using var client = factory.CreateClient();
+
+        using var anfrage = new HttpRequestMessage(new HttpMethod(methode), "/gibt-es-nicht");
+        using var antwort = await client.SendAsync(anfrage, Abbruch);
+
+        // Außerhalb von /api gibt es nur GET/HEAD-Seiten: ändernde Methoden bekommen 405 mit Allow, als ProblemDetails.
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, antwort.StatusCode);
+        Assert.Equal(["GET", "HEAD"], antwort.Content.Headers.Allow.Order(StringComparer.Ordinal));
+        Assert.Equal(405, (await ProblemAsync(antwort)).GetProperty("status").GetInt32());
+    }
+
+    [Fact]
+    public async Task HEAD_an_unbekannten_Pfad_ausserhalb_von_api_ergibt_404()
+    {
+        await using var factory = await FactoryAsync();
+        using var client = factory.CreateClient();
+
+        using var anfrage = new HttpRequestMessage(HttpMethod.Head, "/gibt-es-nicht");
+        using var antwort = await client.SendAsync(anfrage, Abbruch);
+
+        Assert.Equal(HttpStatusCode.NotFound, antwort.StatusCode);
         PruefeSicherheitsHeader(antwort);
     }
 
@@ -202,6 +239,23 @@ public sealed partial class ClientAuslieferungTests(PostgresContainer postgres)
     }
 
     [Theory]
+    [InlineData("/")]
+    [InlineData("/app/")]
+    public async Task Startseite_und_Web_App_nennen_ein_Icon_das_ausgeliefert_wird(string pfad)
+    {
+        await using var factory = await FactoryAsync();
+        using var client = factory.CreateClient();
+        var html = await client.GetStringAsync(pfad, Abbruch);
+
+        var icon = IconMuster().Match(html);
+
+        Assert.True(icon.Success, "kein <link rel=\"icon\">");
+        using var datei = await client.GetAsync(new Uri(new Uri("https://localhost" + pfad), icon.Groups[1].Value), Abbruch);
+        Assert.Equal(HttpStatusCode.OK, datei.StatusCode);
+        Assert.Equal("image/png", datei.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Theory]
     [InlineData("/", HttpStatusCode.OK)]
     [InlineData("/app/", HttpStatusCode.OK)]
     [InlineData("/app/_framework/blazor.webassembly.js", HttpStatusCode.OK)]
@@ -275,6 +329,65 @@ public sealed partial class ClientAuslieferungTests(PostgresContainer postgres)
         Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
     }
 
+    [Theory]
+    [InlineData("http://+:8080", "http://127.0.0.1:8080/")]
+    [InlineData("http://*:8080", "http://127.0.0.1:8080/")]
+    [InlineData("http://0.0.0.0:8080", "http://127.0.0.1:8080/")]
+    [InlineData("http://[::]:8080", "http://127.0.0.1:8080/")]
+    [InlineData("http://localhost:5000", "http://localhost:5000/")]
+    [InlineData("https://+:8443;http://+:8080", "http://127.0.0.1:8080/")]
+    public void Public_nutzt_ohne_Basisadresse_die_eigene_HTTP_Adresse_des_Hosts_mit_Loopback_statt_Platzhalter(string bindungen, string erwartet)
+    {
+        var server = new NachgebildeterServer(bindungen.Split(';'));
+
+        Assert.Equal(new Uri(erwartet), PublicApiTransport.EigeneAdresse(server));
+    }
+
+    [Fact]
+    public void Public_ohne_Basisadresse_und_ohne_eigene_Adresse_wirft()
+    {
+        Assert.Throws<InvalidOperationException>(() => PublicApiTransport.EigeneAdresse(new NachgebildeterServer([])));
+    }
+
+    [Fact]
+    public async Task Antiforgery_der_App_holt_das_Token_einmal_und_nach_Ablauf_einmal_neu_gegen_den_echten_Host()
+    {
+        await using var factory = await FactoryAsync();
+        var kekse = new CookieContainerHandler();
+        var tokenAbrufe = new ZaehlenderHandler("/api/betrieb/antiforgery");
+        using var client = factory.CreateDefaultClient(factory.ClientOptions.BaseAddress, new AntiforgeryHandler(), kekse, tokenAbrufe);
+        var betrieb = new BetriebApiClient(client);
+
+        // Erster und zweiter ändernder Aufruf: ein Token-Abruf je App-Start, beide angenommen (sonst wirft FehlerMeldenAsync).
+        await betrieb.FehlerMeldenAsync(GueltigeMeldung(), Abbruch);
+        await betrieb.FehlerMeldenAsync(GueltigeMeldung(), Abbruch);
+        Assert.Equal(1, tokenAbrufe.Anzahl);
+
+        // Token abgelaufen (Antiforgery-Cookie weg): der Server antwortet 400 antiforgery-ungueltig, der Handler holt einmal neu.
+        foreach (Cookie keks in kekse.Container.GetAllCookies())
+        {
+            keks.Expired = true;
+        }
+
+        await betrieb.FehlerMeldenAsync(GueltigeMeldung(), Abbruch);
+        Assert.Equal(2, tokenAbrufe.Anzahl);
+    }
+
+    [Fact]
+    public async Task Antiforgery_der_App_ohne_Cookie_scheitert_beim_zweiten_400_mit_dem_Fehler_des_Servers()
+    {
+        await using var factory = await FactoryAsync();
+        var tokenAbrufe = new ZaehlenderHandler("/api/betrieb/antiforgery");
+        // Ohne Cookie-Behandlung passt das Token nie: beide Versuche ergeben 400, der zweite geht an den Aufrufer.
+        using var client = factory.CreateDefaultClient(factory.ClientOptions.BaseAddress, new AntiforgeryHandler(), tokenAbrufe);
+        var betrieb = new BetriebApiClient(client);
+
+        var fehler = await Assert.ThrowsAsync<HttpRequestException>(() => betrieb.FehlerMeldenAsync(GueltigeMeldung(), Abbruch));
+
+        Assert.Equal(HttpStatusCode.BadRequest, fehler.StatusCode);
+        Assert.Equal(2, tokenAbrufe.Anzahl);
+    }
+
     [Fact]
     public async Task Formular_ausserhalb_von_api_mit_Formular_Token_ergibt_200()
     {
@@ -344,6 +457,51 @@ public sealed partial class ClientAuslieferungTests(PostgresContainer postgres)
         Assert.Equal("no-referrer", Assert.Single(antwort.Headers.GetValues("Referrer-Policy")));
         Assert.Equal("nosniff", Assert.Single(antwort.Headers.GetValues("X-Content-Type-Options")));
     }
+
+    /// <summary>Server, der nur seine Adressen kennt (für die eigene Adresse der öffentlichen Seiten).</summary>
+    private sealed class NachgebildeterServer : IServer
+    {
+        public NachgebildeterServer(IEnumerable<string> adressen)
+        {
+            var feature = new ServerAddressesFeature();
+            foreach (var adresse in adressen)
+            {
+                feature.Addresses.Add(adresse);
+            }
+
+            Features.Set<IServerAddressesFeature>(feature);
+        }
+
+        public IFeatureCollection Features { get; } = new FeatureCollection();
+
+        public Task StartAsync<TContext>(IHttpApplication<TContext> application, CancellationToken cancellationToken)
+            where TContext : notnull => Task.CompletedTask;
+
+        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public void Dispose()
+        {
+        }
+    }
+
+    /// <summary>Zählt die Anfragen an einen Pfad.</summary>
+    private sealed class ZaehlenderHandler(string pfad) : DelegatingHandler
+    {
+        public int Anzahl { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.RequestUri?.AbsolutePath == pfad)
+            {
+                Anzahl++;
+            }
+
+            return base.SendAsync(request, cancellationToken);
+        }
+    }
+
+    [GeneratedRegex("<link rel=\"icon\"[^>]* href=\"([^\"]+)\"")]
+    private static partial Regex IconMuster();
 
     [GeneratedRegex("<link rel=\"stylesheet\" href=\"([^\"]+)\"")]
     private static partial Regex StylesheetMuster();

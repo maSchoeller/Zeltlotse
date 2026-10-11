@@ -13,21 +13,41 @@ internal sealed class NachgebildeterBrowser : IBrowser
 
     public int NeuGeladen { get; private set; }
 
+    /// <summary>Hält das Lesen des Zeitpunkts an, bis der Test es freigibt.</summary>
+    public TaskCompletionSource? LesenAnhalten { get; set; }
+
+    /// <summary>Reihenfolge der Aufrufe beim Start der Verbindung.</summary>
+    public List<string> Aufrufe { get; } = [];
+
     public Task MeldenAsync(bool online)
     {
         Online = online;
         return _geaendert?.Invoke(online) ?? Task.CompletedTask;
     }
 
-    public ValueTask<bool> IstOnlineAsync() => ValueTask.FromResult(Online);
+    public ValueTask<bool> IstOnlineAsync()
+    {
+        Aufrufe.Add(nameof(IstOnlineAsync));
+        return ValueTask.FromResult(Online);
+    }
 
     public ValueTask<IAsyncDisposable> OnlineBeobachtenAsync(Func<bool, Task> geaendert)
     {
+        Aufrufe.Add(nameof(OnlineBeobachtenAsync));
         _geaendert = geaendert;
         return ValueTask.FromResult<IAsyncDisposable>(new Ende(() => _geaendert = null));
     }
 
-    public ValueTask<DateTimeOffset?> ZuletztAktualisiertLesenAsync() => ValueTask.FromResult(Zuletzt);
+    public async ValueTask<DateTimeOffset?> ZuletztAktualisiertLesenAsync()
+    {
+        var zuletzt = Zuletzt;
+        if (LesenAnhalten is not null)
+        {
+            await LesenAnhalten.Task;
+        }
+
+        return zuletzt;
+    }
 
     public ValueTask ZuletztAktualisiertSchreibenAsync(DateTimeOffset zeitpunkt)
     {
