@@ -20,6 +20,7 @@ Fachbegriffe gelten in Oberfläche und Code so wie hier (Code: deutsche Fachbegr
 | **Sicherheitskette** | Anleitung hinter dem Notfall-Button: was jetzt zu tun ist und wen man anruft. |
 | **Schutzkonzept** | Dokument, das die Leitung anhängt und dessen Lektüre jedes Teammitglied mit „gelesen“ bestätigt. |
 | **Anmeldelink für Teilnehmende / für Mitarbeitende** | Die zwei teilbaren Links einer Freizeit zur Anmeldung ohne Installation. |
+| **Gast-Link** | Link aus der Eingangsmail einer Gast-Anmeldung: Freizeitpass ausfüllen, Status sehen, Elterninfo lesen; gilt bis Ende des Freigabefensters. |
 | **Teilnehmer-Zugang (per QR-Code)** | Modul, mit dem Teilnehmende auf der Freizeit ohne Konto Wochenübersicht, allgemeine Infos und Kanal „Alle“ sehen. |
 | **Programmbibliothek** | Sammlung gelungener Programmpunkte einer Organisation, bewusst abgelegt und übernehmbar. |
 | **Inventar** | Material der Organisation, das Freizeiten für einen Zeitraum reservieren. |

@@ -119,7 +119,7 @@ flowchart TD
 - **Rule:**
   - **API:** Der Server bietet nach außen nur JSON unter `/api` an. SignalR kommt dort später bei Bedarf hinzu.
   - **Web-App** (`Zeltlotse.App`): eine eigenständige Blazor-WebAssembly-PWA nach der offiziellen PWA-Vorlage unter `/app`. Sie umfasst alles nach dem Login und den QR-Teilnehmerzugang.
-  - **Öffentliche Seiten** (`Zeltlotse.Public`): Freizeitseite, Anmeldelinks, Gast-Anmeldung, Vertrauensseite und Elterninfo-Link. Sie werden statisch auf dem Server gerendert, ohne WebAssembly, und holen ihre Daten über die API.
+  - **Öffentliche Seiten** (`Zeltlotse.Public`): Freizeitseite, Anmeldelinks, Gast-Anmeldung, Vertrauensseite und Gast-Link (Freizeitpass als klassisches Formular). Sie werden statisch auf dem Server gerendert, ohne WebAssembly, und holen ihre Daten über die API.
   - **Gemeinsame Grundlagen:** Beide Clients nutzen ausschließlich `Zeltlotse.Ui.Komponenten`, `Zeltlotse.Ui` und `Zeltlotse.Api.Contracts`. Modul-Projekte und Modul-Contracts referenzieren sie nie.
   - **Eine Adresse, ein Prozess:** API, öffentliche Seiten und die Dateien der Web-App laufen in einer ASP.NET-Core-Anwendung unter derselben Adresse (`/api`, `/`, `/app`), mit einem Reverse Proxy davor (AD-23).
   - **Public bleibt Client:** Die öffentlichen Seiten holen ihre Daten auch im selben Prozess nur über ihren HTTP-Client an `/api`, nie über Modul-Klassen. Diese Aufrufe tragen die Dienst-Kennung `PublicSeiten`, die der API-Host nur aus dem eigenen Prozess annimmt. Sie reichen die IP des Besuchers für die Zugriffsbegrenzung durch. So lässt sich Public später ohne Codeänderung in einen eigenen Container ziehen.
@@ -197,7 +197,7 @@ flowchart TD
   | Familien-Einladung | einmal | 7 Tage | Mail-Adresse | zweiter Elternteil |
   | Profil-Übergabe 18 | einmal | 14 Tage | Mail-Adresse | Besitzwechsel |
   | Anmeldelink Teilnehmende / Mitarbeitende | mehrfach, teilbar | bis Freizeitende | Freizeit | nur Anmeldung absenden; **Rechte entstehen erst mit der Bestätigung durch die Leitung** |
-  | Elterninfo-Link | mehrfach | bis Ende des Freigabefensters | Anmeldung | nur lesen |
+  | Gast-Link | mehrfach | bis Ende des Freigabefensters | Anmeldung | Freizeitpass der angemeldeten Person ausfüllen und ändern, Anmeldestatus und Elterninfo lesen (FR-17, FR-68); sonst nichts |
   | QR-Teilnehmerzugang | mehrfach, teilbar | bis Freizeitende | Freizeit | Tausch gegen Gast-Sitzung (AD-12) |
 
 ### AD-12 – Anmelden und Rechte [ADOPTED]
@@ -207,7 +207,7 @@ flowchart TD
 - **Rule:**
   - **Anmeldung:** ASP.NET Core Identity. Standard ist der Login-Link mit Code (AD-11), optional mit Passwort.
   - **Sitzung:** Sie läuft über ein Cookie, nach den Regeln in AD-25. Im Browser-Speicher liegen keine Tokens. Die Sitzung gleitet lange mit, damit sie im Lager nicht abläuft.
-  - **Prüfung bei jeder Anfrage:** Jeder Endpunkt prüft die Rechte auf dem Server über eine zentrale Autorisierungs-Richtlinie, im Kontext **Organisation**, **Freizeit**, **Person/Familie**, **QR-Gast** oder **prüfende Person**.
+  - **Prüfung bei jeder Anfrage:** Jeder Endpunkt prüft die Rechte auf dem Server über eine zentrale Autorisierungs-Richtlinie, im Kontext **Organisation**, **Freizeit**, **Person/Familie**, **QR-Gast**, **Gast-Link** oder **prüfende Person**.
   - **Herkunft der Rollen:** Die Rollen ermittelt der API-Host bei jeder Anfrage über `IKontextRollen` (Schnittstelle in `SharedKernel`, umgesetzt aus `Organisationen.Contracts` und `Freizeiten.Contracts`). In der Sitzung werden keine Rollen zwischengespeichert.
   - **QR-Gast:** Das QR-Token wird einmal gegen ein eigenes Gast-Cookie getauscht. Es enthält nur die Freizeit und eine Geräte-Kennung und erlaubt nur Lesen, mit einer Ausnahme: das eigene Push-Abo.
   - **Org-Rollen:** Org-Admin und Org-Überblick verschaffen keine Einsicht in die Inhalte einer Freizeit, wenn die Person dort nicht selbst mitarbeitet. Der Global Admin hat keinen Zugriff auf Freizeit- oder Personendaten.

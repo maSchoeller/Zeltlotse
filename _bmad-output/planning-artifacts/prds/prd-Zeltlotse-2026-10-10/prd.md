@@ -2,7 +2,7 @@
 title: PRD Zeltlotse
 status: final
 created: 2026-10-10
-updated: 2026-10-10
+updated: 2026-10-11
 ---
 
 # PRD: Zeltlotse
@@ -352,13 +352,13 @@ Gruppiert nach den Bausteinen V1–V6 (siehe Vision). IDs sind dauerhaft und wer
 - **FR-15** Jede Freizeit hat eine öffentliche Freizeitseite mit Beschreibung und Team (Bild, Herkunft).
 - **FR-16** Jede Freizeit hat zwei teilbare Anmeldelinks: den Anmeldelink für Teilnehmende und den Anmeldelink für Mitarbeitende. Beide funktionieren ohne Installation.
 - **FR-67** Ist die Höchstzahl an Teilnehmenden erreicht, zeigt die Freizeitseite „ausgebucht“. Anmelden ist trotzdem möglich, aber ohne Aussicht auf Zusage, bis die Leitung jemanden bestätigt.
-- **FR-17** Anmeldung ist als Gast ohne Konto möglich. Danach bietet Zeltlotse an, mit einem Klick ein Konto aus den Daten zu erstellen.
+- **FR-17** Anmeldung ist als Gast ohne Konto möglich. Danach bietet Zeltlotse an, mit einem Klick ein Konto aus den Daten zu erstellen. Wer Gast bleibt, erhält mit der Eingangsmail einen Gast-Link: Darüber füllt er den Freizeitpass aus und ändert ihn, sieht den Anmeldestatus und liest die Elterninfo (FR-68). Der Link gilt bis zum Ende des Freigabefensters.
 - **FR-18** Unter 18 meldet ein Elternteil an, Volljährige melden sich selbst an. Geschwister werden nacheinander über denselben Anmeldelink angemeldet.
 - **FR-19** Beim Absenden werden die Teilnahmebedingungen digital bestätigt.
 - **FR-20** Nach dem Absenden sieht die anmeldende Person „Anmeldung eingegangen“. Die Leitung bestätigt die Anmeldung oder sagt ab. Die Person erhält eine Bestätigungs- oder Absage-Mail und sieht den Status in Zeltlotse. Eine Warteliste gibt es nicht.
 - **FR-21** Absagen sind in Zeltlotse nicht möglich; angezeigt werden Mail und Telefon der Leitung. Die Leitung trägt Absagen ein und bestätigt selbst, wer nachrückt.
 - **FR-66** Jede Freizeit hat eine Vertrauensseite. Sie erklärt in Klartext, welche Daten erhoben werden, wer sie sieht und wann sie verschwinden. Zeltlotse erzeugt sie aus den Einstellungen der Freizeit und der Organisation.
-- **FR-68** Elterninfo: Infobrief, Packliste und Notfallnummern der Freizeit (Sichtbarkeit „Eltern und Teilnehmende“, FR-43) sehen Eltern in ihrem Konto. Wer als Gast angemeldet hat, bekommt sie per Link in der Mail.
+- **FR-68** Elterninfo: Infobrief, Packliste und Notfallnummern der Freizeit (Sichtbarkeit „Eltern und Teilnehmende“, FR-43) sehen Eltern in ihrem Konto. Wer als Gast angemeldet hat, sieht sie über den Gast-Link (FR-17).
 
 #### Freizeitpass
 

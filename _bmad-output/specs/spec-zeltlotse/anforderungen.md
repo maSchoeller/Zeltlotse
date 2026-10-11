@@ -1,6 +1,6 @@
 # Anforderungen – Zeltlotse MVP
 
-Detailregeln zu den Capabilities in `SPEC.md`. IDs stammen aus dem PRD und sind dauerhaft: nie neu vergeben, gestrichene IDs bleiben als Platzhalter. Verfeinerungen aus UX- und Architektur-Lauf sind mit *(UX)* bzw. *(Arch)* markiert.
+Detailregeln zu den Capabilities in `SPEC.md`. IDs stammen aus dem PRD und sind dauerhaft: nie neu vergeben, gestrichene IDs bleiben als Platzhalter. Verfeinerungen aus UX- und Architektur-Lauf sind mit *(UX)* bzw. *(Arch)* markiert, Entscheidungen aus dem Spec-Lauf mit *(Spec)*.
 
 ## Leitprinzipien
 
@@ -37,13 +37,13 @@ Detailregeln zu den Capabilities in `SPEC.md`. IDs stammen aus dem PRD und sind 
 - **FR-15** Jede Freizeit hat eine öffentliche Freizeitseite mit Beschreibung und Team (Bild, Herkunft).
 - **FR-16** Jede Freizeit hat zwei teilbare Anmeldelinks (Teilnehmende, Mitarbeitende), beide ohne Installation. Mitarbeitende können jederzeit dazukommen, auch wenn die Freizeit voll ist.
 - **FR-67** Ist die Höchstzahl an Teilnehmenden erreicht, zeigt die Freizeitseite „ausgebucht“ (neutral, kein Fehler *(UX)*). Anmelden bleibt möglich, ohne Aussicht auf Zusage, bis die Leitung jemanden bestätigt.
-- **FR-17** Anmeldung als Gast ohne Konto; danach Angebot, mit einem Klick ein Konto aus den Daten zu erstellen.
+- **FR-17** Anmeldung als Gast ohne Konto; danach Angebot, mit einem Klick ein Konto aus den Daten zu erstellen. Ohne Konto erhält der Gast mit der Eingangsmail einen Gast-Link: Freizeitpass ausfüllen und ändern, Anmeldestatus sehen, Elterninfo lesen; gültig bis Ende des Freigabefensters *(Spec)*.
 - **FR-18** Unter 18 meldet ein Elternteil an, Volljährige melden sich selbst an. Geschwister nacheinander über denselben Link; „Weiteres Kind anmelden“ übernimmt Elternangaben nur in derselben Sitzung *(UX)*.
 - **FR-19** Beim Absenden werden die Teilnahmebedingungen digital bestätigt.
 - **FR-20** Nach dem Absenden: „Anmeldung eingegangen“. Die Leitung bestätigt oder sagt ab; die Person erhält Bestätigungs- oder Absage-Mail und sieht den Status in Zeltlotse. Keine Warteliste.
 - **FR-21** Absagen nicht in Zeltlotse; angezeigt werden Mail und Telefon der Leitung. Die Leitung trägt Absagen ein und bestätigt selbst, wer nachrückt. Eine Absage beendet die Freigabe des Freizeitpasses sofort *(Arch)*.
 - **FR-66** Vertrauensseite je Freizeit: in Klartext, welche Daten erhoben werden, wer sie sieht, wann sie verschwinden; erzeugt aus den Einstellungen von Freizeit und Organisation.
-- **FR-68** Elterninfo: Infobrief, Packliste, Notfallnummern (Sichtbarkeit „Eltern und Teilnehmende“) im Elternkonto; Gast-Anmeldende per Link in der Mail.
+- **FR-68** Elterninfo: Infobrief, Packliste, Notfallnummern (Sichtbarkeit „Eltern und Teilnehmende“) im Elternkonto; Gast-Anmeldende über ihren Gast-Link (FR-17).
 
 ### Freizeitpass
 

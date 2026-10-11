@@ -53,13 +53,13 @@ Die MVP umfasst alle sechs Bausteine; sie legen nur die Bau-Reihenfolge fest (V1
   - **success:** Ist die Höchstzahl erreicht, zeigt die Freizeitseite „ausgebucht“ und nimmt Anmeldungen ohne Aussicht auf Zusage weiter an; die Vertrauensseite ändert sich mit den Einstellungen von Freizeit und Organisation.
 - **CAP-8**
   - **intent:** Eltern und Volljährige melden über den Anmeldelink für Teilnehmende bzw. für Mitarbeitende ohne Installation an, auch als Gast ohne Konto, Geschwister nacheinander, mit digitaler Bestätigung der Teilnahmebedingungen. (FR-16, FR-17, FR-18, FR-19)
-  - **success:** Eine Gast-Anmeldung am Handy gelingt ohne Konto; danach bietet Zeltlotse an, mit einem Klick ein Konto aus den Daten zu erstellen. Eine Wiederanmeldung mit Konto dauert unter 3 Minuten (NFR-17).
+  - **success:** Eine Gast-Anmeldung am Handy gelingt ohne Konto; danach bietet Zeltlotse an, mit einem Klick ein Konto aus den Daten zu erstellen. Bleibt es beim Gast, füllt er über den Gast-Link aus der Eingangsmail den Freizeitpass aus und sieht den Anmeldestatus, bis das Freigabefenster endet. Eine Wiederanmeldung mit Konto dauert unter 3 Minuten (NFR-17).
 - **CAP-9**
   - **intent:** Die Leitung bestätigt Anmeldungen oder sagt ab; die Person bekommt Mail und Status, Absagen laufen nur über die Leitung, die selbst bestimmt, wer nachrückt. (FR-20, FR-21)
   - **success:** Nach dem Absenden steht „Anmeldung eingegangen“; nach Bestätigung kommt eine Mail und der Status ändert sich. Wer absagen will, sieht nur Mail und Telefon der Leitung. Es gibt keine Warteliste.
 - **CAP-10**
-  - **intent:** Eltern sehen Infobrief, Packliste und Notfallnummern der Freizeit in ihrem Konto; Gast-Anmeldende bekommen sie per Link in der Mail. (FR-68)
-  - **success:** Ein Dokument mit Sichtbarkeit „Eltern und Teilnehmende“ ist im Elternkonto und über den Elterninfo-Link lesbar.
+  - **intent:** Eltern sehen Infobrief, Packliste und Notfallnummern der Freizeit in ihrem Konto; Gast-Anmeldende sehen sie über ihren Gast-Link. (FR-68)
+  - **success:** Ein Dokument mit Sichtbarkeit „Eltern und Teilnehmende“ ist im Elternkonto und über den Gast-Link lesbar.
 - **CAP-11**
   - **intent:** Die Leitung stellt den Freizeitpass aus dem Fragenbaukasten zusammen, getrennt für Teilnehmende und Mitarbeitende, ohne Pflichtkern. (FR-22)
   - **success:** Nur die gewählten Fragen werden erhoben und sind für die Freizeit sichtbar; fragt die Leitung keine Allergien ab, bleibt der Allergen-Abgleich der Küche leer.
@@ -193,5 +193,4 @@ Die MVP umfasst alle sechs Bausteine; sie legen nur die Bau-Reihenfolge fest (V1
 
 ## Open Questions
 
-- Wie füllt ein Gast ohne Konto nach dem Absenden den Freizeitpass aus (NS-1 Schritt 5) und sieht den Status (FR-20)? Die Architektur kennt keinen Gast-Zugangslink, der Elterninfo-Link ist nur lesend (Abgleich PRD, Befund B-3).
 - OP-6 (zurückgestellt, blockiert die MVP nicht): Datenschutzmodell (NFR-4: geteilte Verantwortung, AVV-Vorlage, Datenschutzerklärung) fachlich prüfen lassen, bevor Zeltlotse als Dienst für fremde Organisationen startet. Verantwortlich: Marvin.
