@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.Personen.Daten;
+using Zeltlotse.Personen.Schluessel;
+using Zeltlotse.SharedKernel.Daten;
+using Zeltlotse.SharedKernel.Datenschutz;
 
 namespace Zeltlotse.Personen;
 
@@ -15,6 +17,7 @@ public static class PersonenModul
     public static IServiceCollection AddPersonenModul(this IServiceCollection services)
     {
         services.AddModul<PersonenDbContext, PersonenLeseDbContext>(Name, Schema);
+        services.AddScoped<IPersonenSchluesselQuelle, PersonenSchluesselQuelle>();
         return services;
     }
 

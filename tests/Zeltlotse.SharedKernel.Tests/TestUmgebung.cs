@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
+using System.Security.Cryptography;
 using Zeltlotse.SharedKernel;
+using Zeltlotse.SharedKernel.Datenschutz;
 using Zeltlotse.SharedKernel.Mandanten;
 using Zeltlotse.SharedKernel.Outbox;
 using Zeltlotse.SharedKernel.Pipeline;
@@ -32,6 +34,11 @@ internal sealed class TestUmgebung : IAsyncDisposable
 
     public EmpfangsStoerung Stoerung => Dienste.GetRequiredService<EmpfangsStoerung>();
 
+    /// <summary>Personen-Schlüssel im Speicher statt in der Tabelle des Moduls Personen.</summary>
+    public SpeicherSchluesselQuelle Schluessel => Dienste.GetRequiredService<SpeicherSchluesselQuelle>();
+
+    public Hauptschluessel Hauptschluessel => Dienste.GetRequiredService<Hauptschluessel>();
+
     public static async Task<TestUmgebung> ErstellenAsync(PostgresContainer postgres, Action<IServiceCollection>? vorTestmodul = null)
     {
         var verbindung = await postgres.NeueDatenbankAsync();
@@ -40,9 +47,15 @@ internal sealed class TestUmgebung : IAsyncDisposable
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton<IConfiguration>(new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:zeltlotse"] = verbindung })
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:zeltlotse"] = verbindung,
+                [Hauptschluessel.Konfigurationsschluessel] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
+            })
             .Build());
         services.AddSingleton<TimeProvider>(uhr);
+        services.AddSingleton<SpeicherSchluesselQuelle>();
+        services.AddSingleton<IPersonenSchluesselQuelle>(sp => sp.GetRequiredService<SpeicherSchluesselQuelle>());
         services.AddMediator(options =>
         {
             options.Namespace = "Zeltlotse.SharedKernel.Tests.Mediator";

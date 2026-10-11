@@ -15,6 +15,14 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
   </ItemGroup>
+  <ItemGroup Label="Datenschutz, Protokoll und Dateien (AD-14, AD-15, AD-22)">
+    <PackageVersion Include="Microsoft.Extensions.Compliance.Abstractions" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.Compliance.Redaction" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.Telemetry" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.Telemetry.Abstractions" Version="10.10.0" />
+    <!-- S3-Adapter (nur im API-Host); aktuelle stabile Version beim Anlegen (Story 0-2) -->
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.2" />
+  </ItemGroup>
   <ItemGroup Label="Aspire und ServiceDefaults">
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.1" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />
@@ -33,5 +41,8 @@
     <PackageVersion Include="TngTech.ArchUnitNET.xUnitV3" Version="0.13.4" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.10.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
+    <PackageVersion Include="Testcontainers" Version="4.16.0" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.Testing" Version="10.10.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.19.1" />
   </ItemGroup>
 </Project>

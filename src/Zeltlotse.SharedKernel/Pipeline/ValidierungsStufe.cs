@@ -1,4 +1,3 @@
-using System.Text.Json;
 using FluentValidation;
 using Mediator;
 using Zeltlotse.SharedKernel.Commands;
@@ -24,15 +23,12 @@ public sealed class ValidierungsStufe<TMessage, TResponse>(IEnumerable<IValidato
 
         if (fehler.Count > 0)
         {
-            throw new ValidierungsAusnahme(fehler
-                .GroupBy(f => JsonName(f.PropertyName))
-                .ToDictionary(g => g.Key, g => g.Select(f => f.ErrorMessage).ToArray()));
+            throw ValidierungsAusnahme.Aus(fehler);
         }
 
         return await next(message, cancellationToken);
     }
 
     /// <summary>„Adresse.Strasse“ → „adresse.strasse“, „Posten[0].Name“ → „posten[0].name“.</summary>
-    internal static string JsonName(string eigenschaft) =>
-        string.Join('.', eigenschaft.Split('.').Select(JsonNamingPolicy.CamelCase.ConvertName));
+    internal static string JsonName(string eigenschaft) => ValidierungsAusnahme.JsonName(eigenschaft);
 }

@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
+using Zeltlotse.SharedKernel.Datenschutz;
 using Zeltlotse.SharedKernel.Mandanten;
 
 namespace Zeltlotse.SharedKernel.Daten;
@@ -21,6 +22,13 @@ public abstract class ModulDbContextBasis(DbContextOptions optionen, IMandantenK
 
     /// <summary>Entitäten des Moduls; schreibender und lesender Kontext rufen dieselbe Konfiguration auf.</summary>
     protected abstract void ModellKonfigurieren(ModelBuilder modelBuilder);
+
+    /// <summary>AD-14: Chiffretext der zentralen Verschlüsselung liegt immer als <c>bytea</c> in der Datenbank.</summary>
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        base.ConfigureConventions(configurationBuilder);
+        configurationBuilder.Properties<Geschuetzt>().HaveConversion<GeschuetztKonverter>().HaveColumnType("bytea");
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

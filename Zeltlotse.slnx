@@ -49,6 +49,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Zeltlotse.Api.Tests/Zeltlotse.Api.Tests.csproj" />
     <Project Path="tests/Zeltlotse.ArchitectureTests/Zeltlotse.ArchitectureTests.csproj" />
+    <Project Path="tests/Zeltlotse.Personen.Tests/Zeltlotse.Personen.Tests.csproj" />
     <Project Path="tests/Zeltlotse.SharedKernel.Tests/Zeltlotse.SharedKernel.Tests.csproj" />
     <Project Path="tests/Zeltlotse.Testing/Zeltlotse.Testing.csproj" />
     <Project Path="tests/Zeltlotse.Testmodul/Zeltlotse.Testmodul.csproj" />

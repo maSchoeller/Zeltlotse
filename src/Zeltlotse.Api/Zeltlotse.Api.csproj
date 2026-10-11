@@ -6,6 +6,8 @@
     <PackageReference Include="Mediator.SourceGenerator" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
     <!-- Startprojekt fuer dotnet ef (Migrationen der Module). -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    <!-- S3-Adapter (AD-15, AD-23): einziger Ort mit anbieterspezifischem Dateispeicher-Code. -->
+    <PackageReference Include="AWSSDK.S3" />
   </ItemGroup>
 
   <ItemGroup>

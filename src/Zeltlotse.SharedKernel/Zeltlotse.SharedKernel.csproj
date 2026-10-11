@@ -6,6 +6,15 @@
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <!--
+      AD-22: Der erweiterte [LoggerMessage]-Generator aus Telemetry.Abstractions schwärzt klassifizierte Parameter.
+      PrivateAssets="none" gibt den Generator an jedes Projekt weiter, das den SharedKernel nutzt (alle Module),
+      sonst liefe dort der Standard-Generator und [Personenbezogen] bliebe wirkungslos.
+    -->
+    <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" PrivateAssets="none" />
+    <PackageReference Include="Microsoft.Extensions.Compliance.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Compliance.Redaction" />
+    <PackageReference Include="Microsoft.Extensions.Telemetry" />
   </ItemGroup>
 
   <ItemGroup>

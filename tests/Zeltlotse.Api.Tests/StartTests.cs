@@ -31,6 +31,11 @@ public sealed class StartTests(PostgresContainer postgres)
                 Assert.Contains($"{schema}.{tabelle}", tabellen);
             }
         }
+
+        // Schema betrieb des API-Hosts (AD-22): Sicherheitsprotokoll mit eigener Migrations-Historie.
+        Assert.Contains("betrieb.sicherheitsprotokoll", tabellen);
+        Assert.Contains("betrieb.__EFMigrationsHistory", tabellen);
+        Assert.Contains("personen.personen_schluessel", tabellen);
     }
 
     [Fact]
@@ -85,7 +90,7 @@ public sealed class StartTests(PostgresContainer postgres)
         var teile = new List<string>();
         await using var verbindung = new NpgsqlConnection(verbindungsZeichenfolge);
         await verbindung.OpenAsync();
-        foreach (var schema in Schemas)
+        foreach (var schema in Schemas.Append("betrieb"))
         {
             await using var befehl = new NpgsqlCommand(
                 $"SELECT string_agg(\"MigrationId\", ',' ORDER BY \"MigrationId\") FROM \"{schema}\".\"__EFMigrationsHistory\"", verbindung);

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
@@ -40,7 +42,12 @@ public static class Extensions
         builder.Logging.AddOpenTelemetry(logging =>
         {
             logging.IncludeFormattedMessage = true;
-            logging.IncludeScopes = true;
+
+            // AD-22: Scopes von ASP.NET Core tragen den Rohpfad (RequestPath) samt Token-Segmenten; sie gehen nicht in den Export.
+            logging.IncludeScopes = false;
+
+            // AD-22: Ausnahmen gehen nur mit ihrem Typ hinaus, nie mit Nachricht oder Stacktrace (auch die der Frameworks).
+            logging.AddProcessor(new LogBereinigung());
         });
 
         builder.Services.AddOpenTelemetry()
@@ -52,13 +59,20 @@ public static class Extensions
             })
             .WithTracing(tracing =>
             {
+                // AD-22: Ausnahmen nicht als Span-Ereignis mit Nachricht aufzeichnen; Rohpfad, Abfrage und URL entfernt
+                // die TelemetrieBereinigung vor jedem Exporter (eingehend und ausgehend), es bleibt nur http.route.
                 tracing.AddSource(builder.Environment.ApplicationName)
                     .AddAspNetCoreInstrumentation(aspNetCore =>
+                    {
+                        aspNetCore.RecordException = false;
                         aspNetCore.Filter = context =>
                             !context.Request.Path.StartsWithSegments(HealthEndpointPath)
-                            && !context.Request.Path.StartsWithSegments(AlivenessEndpointPath))
-                    .AddHttpClientInstrumentation();
+                            && !context.Request.Path.StartsWithSegments(AlivenessEndpointPath);
+                    })
+                    .AddHttpClientInstrumentation(http => http.RecordException = false)
+                    .AddProcessor(new TelemetrieBereinigung());
             });
+        AusnahmeEreignisBereinigung.Aktivieren();
 
         builder.AddOpenTelemetryExporters();
 
@@ -91,12 +105,14 @@ public static class Extensions
     /// </summary>
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        app.MapHealthChecks(HealthEndpointPath);
+        // Nur lesende Methoden: Health-Endpunkte liegen außerhalb von /api und damit außerhalb des Antiforgery-Zwangs.
+        string[] lesend = [HttpMethods.Get, HttpMethods.Head];
+        app.MapHealthChecks(HealthEndpointPath).WithMetadata(new HttpMethodMetadata(lesend));
 
         app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
         {
             Predicate = r => r.Tags.Contains("live"),
-        });
+        }).WithMetadata(new HttpMethodMetadata(lesend));
 
         return app;
     }

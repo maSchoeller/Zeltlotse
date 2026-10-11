@@ -9,6 +9,7 @@
     <PackageReference Include="xunit.v3" />
     <Using Include="Xunit" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />
     <!-- eigener Mediator-Generator: belegt, dass er interne Handler ueber InternalsVisibleTo findet (AD-27) -->
     <PackageReference Include="Mediator.SourceGenerator" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
   </ItemGroup>

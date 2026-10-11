@@ -7,7 +7,7 @@ namespace Zeltlotse.Api.Tests;
 public sealed class MigrationsReihenfolgeTests(PostgresContainer postgres)
 {
     [Fact]
-    public async Task Host_wendet_Migrationen_in_fester_Modulreihenfolge_an()
+    public async Task Host_wendet_Migrationen_in_fester_Modulreihenfolge_an_und_danach_betrieb()
     {
         var verbindung = await postgres.NeueDatenbankAsync();
         await using var factory = new ZeltlotseApiFactory(verbindung);
@@ -16,7 +16,7 @@ public sealed class MigrationsReihenfolgeTests(PostgresContainer postgres)
         var reihenfolge = factory.Services.GetRequiredService<ModulMigrationen>().AngewendeteReihenfolge;
 
         Assert.Equal(
-            ["Konten", "Personen", "Organisationen", "Freizeiten", "Inventar", "Sicherheit", "Programm", "Kueche", "Finanzen", "Kanaele"],
+            ["Konten", "Personen", "Organisationen", "Freizeiten", "Inventar", "Sicherheit", "Programm", "Kueche", "Finanzen", "Kanaele", "Betrieb"],
             reihenfolge);
     }
 

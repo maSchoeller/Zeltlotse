@@ -70,18 +70,7 @@ public sealed class SchemaTests
         foreach (var kontextTyp in kontextTypen)
         {
             var db = (DbContext)scope.ServiceProvider.GetRequiredService(kontextTyp);
-            var fremd = db.Model.GetEntityTypes()
-                .Where(e => e.GetTableName() is not null && e.GetSchema() != schema)
-                .Select(e => $"{kontextTyp.Name}: {e.Name} -> {e.GetSchema()}.{e.GetTableName()}")
-                .Concat(db.Model.GetSequences().Where(s => s.Schema != schema).Select(s => $"{kontextTyp.Name}: Sequenz {s.Name}"))
-                .ToList();
-            Assert.Empty(fremd);
-
-            var relational = db.GetService<IDbContextOptions>().Extensions.OfType<Microsoft.EntityFrameworkCore.Infrastructure.RelationalOptionsExtension>().Single();
-            if (typeof(ModulDbContext).IsAssignableFrom(kontextTyp))
-            {
-                Assert.Equal(schema, relational.MigrationsHistoryTableSchema);
-            }
+            Assert.Empty(DatenschutzRegeln.FremdeSchemas(db, schema));
         }
     }
 }

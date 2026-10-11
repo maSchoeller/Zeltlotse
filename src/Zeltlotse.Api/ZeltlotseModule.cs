@@ -1,3 +1,4 @@
+using Zeltlotse.Api.Betrieb;
 using Zeltlotse.Finanzen;
 using Zeltlotse.Freizeiten;
 using Zeltlotse.Inventar;
@@ -27,9 +28,11 @@ internal static class ZeltlotseModule
             .AddFinanzenModul()
             .AddKanaeleModul();
 
-    public static IEndpointRouteBuilder MapZeltlotseEndpoints(this IEndpointRouteBuilder app)
+    /// <summary>Bindet die Endpunkte der Module und die Betriebs-Endpunkte des Hosts unter <c>/api</c> ein; liefert die Gruppe.</summary>
+    public static RouteGroupBuilder MapZeltlotseEndpoints(this IEndpointRouteBuilder app)
     {
         var api = app.MapGroup("/api");
+        api.MapBetriebEndpoints();
         api.MapKontenEndpoints();
         api.MapPersonenEndpoints();
         api.MapOrganisationenEndpoints();
@@ -40,6 +43,6 @@ internal static class ZeltlotseModule
         api.MapKuecheEndpoints();
         api.MapFinanzenEndpoints();
         api.MapKanaeleEndpoints();
-        return app;
+        return api;
     }
 }

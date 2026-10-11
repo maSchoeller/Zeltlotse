@@ -11,7 +11,7 @@ using Zeltlotse.Testmodul.Daten;
 namespace Zeltlotse.Testmodul.Migrationen
 {
     [DbContext(typeof(TestmodulDbContext))]
-    internal partial class TestmodulDbContextModelSnapshot : ModelSnapshot
+    partial class TestmodulDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -165,6 +165,9 @@ namespace Zeltlotse.Testmodul.Migrationen
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<byte[]>("Vertraulich")
+                        .HasColumnType("bytea");
 
                     b.HasKey("Id");
 
