@@ -14,6 +14,7 @@ Branch: `mvp` · Start: 2026-10-11 12:30 · Ende: –
 | 2026-10-11 16:18 | 0-3 | done | ja (done, keiner mehr) | grün 452/452 / entfällt | 2be3eeb | Doku-Seite und Screenshots der App-Hülle folgen mit 0-4; offen für 1-1: Offline-Markierung nach Netzfehler, Autosave-Verhalten bei 400/403/404 |
 | 2026-10-11 16:57 | 0-4 | done | nein (nicht empfohlen) | grün 487/487 / grün (9 Seiten) | 11bc38d | Sitzung hat nicht selbst committet, sondern nach Commit-Freigabe gefragt (CLAUDE.md-Regel); Orchestrator hat committet. npm audit: 10 mittlere Warnungen in Doku-Build-Abhängigkeiten; Demo-Freizeit mit festem Datum Aug. 2027 |
 | 2026-10-11 18:36 | 1-1 | done | ja (done, keiner mehr) | grün 650/650 / grün (10 Seiten) | dd5bb54 | Regression erzeugt Offline-Screenshots mit Rendering-Rauschen neu (zurückgesetzt). Offen: Login-Mail-Begrenzung nur je IP, nicht je Adresse (vor Betrieb entscheiden) |
+| 2026-10-11 20:14 | 1-2 | done | ja (done, keiner mehr) | grün 768/768 / grün (13 Seiten) | f541fef | Offen: abgelaufene Erst-Einladung einer Org nicht neu sendbar; alte Einladungen nie gelöscht (→ 1-7); nach Login-Link aus Mail muss der Einladungslink erneut geöffnet werden |
 
 ## Entscheidungen im Lauf
 
