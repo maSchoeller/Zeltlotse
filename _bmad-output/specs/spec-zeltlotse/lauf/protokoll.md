@@ -10,6 +10,7 @@ Branch: `mvp` · Start: 2026-10-11 12:30 · Ende: –
 |---|---|---|---|---|---|---|
 | 2026-10-11 12:30 | 0-1 | Abbruch (Umgebung) | – | – | – | Claude-CLI: „OAuth session expired and could not be refreshed“; Story-Sitzung startet nicht. Lauf gestoppt, nach erneuter Anmeldung (`claude` → `/login`) fortsetzen. |
 | 2026-10-11 13:31 | 0-1 | done | ja (done, keiner mehr) | grün 102/102 / entfällt | eebea36 | Neustart nach CLI-Anmeldung; Folge-Review: Lese-Kontext DB-seitig schreibgeschützt |
+| 2026-10-11 14:47 | 0-2 | done | ja (done, keiner mehr) | grün 255/255 / entfällt | ea47879 | Offen für 0-3: Antiforgery-Header vs. Formularfeld, Rate-Limit 20/min/IP im Lager-WLAN; Backup-Restore stellt gelöschte Personenschlüssel wieder her (zurückgestellt) |
 
 ## Entscheidungen im Lauf
 
