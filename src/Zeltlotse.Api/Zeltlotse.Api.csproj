@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <PackageReference Include="Mediator.Abstractions" />
+    <!-- Der einzige Ort mit dem Mediator-Generator (AD-27). -->
+    <PackageReference Include="Mediator.SourceGenerator" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+    <!-- Startprojekt fuer dotnet ef (Migrationen der Module). -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zeltlotse.ServiceDefaults\Zeltlotse.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Zeltlotse.SharedKernel\Zeltlotse.SharedKernel.csproj" />
+    <ProjectReference Include="..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
+    <ProjectReference Include="..\Modules\Konten\Zeltlotse.Konten\Zeltlotse.Konten.csproj" />
+    <ProjectReference Include="..\Modules\Personen\Zeltlotse.Personen\Zeltlotse.Personen.csproj" />
+    <ProjectReference Include="..\Modules\Organisationen\Zeltlotse.Organisationen\Zeltlotse.Organisationen.csproj" />
+    <ProjectReference Include="..\Modules\Freizeiten\Zeltlotse.Freizeiten\Zeltlotse.Freizeiten.csproj" />
+    <ProjectReference Include="..\Modules\Sicherheit\Zeltlotse.Sicherheit\Zeltlotse.Sicherheit.csproj" />
+    <ProjectReference Include="..\Modules\Programm\Zeltlotse.Programm\Zeltlotse.Programm.csproj" />
+    <ProjectReference Include="..\Modules\Inventar\Zeltlotse.Inventar\Zeltlotse.Inventar.csproj" />
+    <ProjectReference Include="..\Modules\Kueche\Zeltlotse.Kueche\Zeltlotse.Kueche.csproj" />
+    <ProjectReference Include="..\Modules\Finanzen\Zeltlotse.Finanzen\Zeltlotse.Finanzen.csproj" />
+    <ProjectReference Include="..\Modules\Kanaele\Zeltlotse.Kanaele\Zeltlotse.Kanaele.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Zeltlotse.Api.Tests" />
+  </ItemGroup>
+
+</Project>

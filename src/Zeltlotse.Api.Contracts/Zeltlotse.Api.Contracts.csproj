@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Datenformen der HTTP-API, ein Ordner je Modul (Namensraum Zeltlotse.Api.Contracts.<Modul>) und Gemeinsam/.
+    Keine Projekt- und keine Paketreferenzen (AD-5); die Ordner entstehen mit den ersten Typen der Fach-Stories.
+  -->
+
+</Project>

@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Nur serverintern: lesende Schnittstellen, DTOs zwischen Modulen und Ereignisse (.Events). -->
+
+</Project>

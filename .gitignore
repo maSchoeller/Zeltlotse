@@ -1,0 +1,22 @@
+# Build-Ausgaben
+bin/
+obj/
+artifacts/
+TestResults/
+*.trx
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Doku (Node)
+node_modules/
+doku/dist/
+doku/.astro/
+
+# Sonstiges
+.DS_Store
+Thumbs.db

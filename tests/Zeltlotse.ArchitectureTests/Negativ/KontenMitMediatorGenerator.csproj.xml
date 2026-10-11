@@ -1,0 +1,10 @@
+<!-- Negativ-Fixture: ein Modul-Projekt bindet den Mediator-Generator ein (verletzt AD-27). -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Mediator.Abstractions" />
+    <PackageReference Include="Mediator.SourceGenerator" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Zeltlotse.SharedKernel\Zeltlotse.SharedKernel.csproj" />
+  </ItemGroup>
+</Project>

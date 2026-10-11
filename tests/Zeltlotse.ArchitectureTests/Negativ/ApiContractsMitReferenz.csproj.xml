@@ -1,0 +1,6 @@
+<!-- Negativ-Fixture: Api.Contracts mit Projekt-Referenz (verletzt AD-5). -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Zeltlotse.SharedKernel\Zeltlotse.SharedKernel.csproj" />
+  </ItemGroup>
+</Project>

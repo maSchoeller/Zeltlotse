@@ -1,0 +1,11 @@
+<!-- Negativ-Fixture: Programm referenziert das Modul-Projekt Küche statt dessen Contracts (verletzt AD-2). -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Mediator.Abstractions" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Zeltlotse.SharedKernel\Zeltlotse.SharedKernel.csproj" />
+    <ProjectReference Include="..\Zeltlotse.Programm.Contracts\Zeltlotse.Programm.Contracts.csproj" />
+    <ProjectReference Include="..\..\Kueche\Zeltlotse.Kueche\Zeltlotse.Kueche.csproj" />
+  </ItemGroup>
+</Project>

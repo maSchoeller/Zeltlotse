@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Mediator.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Zeltlotse.SharedKernel\Zeltlotse.SharedKernel.csproj" />
+    <ProjectReference Include="..\Zeltlotse.Sicherheit.Contracts\Zeltlotse.Sicherheit.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Zeltlotse.Api" />
+    <InternalsVisibleTo Include="Zeltlotse.Sicherheit.Tests" />
+  </ItemGroup>
+
+</Project>

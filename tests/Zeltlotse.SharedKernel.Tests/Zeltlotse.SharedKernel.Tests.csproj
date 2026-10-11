@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <Using Include="Xunit" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <!-- eigener Mediator-Generator: belegt, dass er interne Handler ueber InternalsVisibleTo findet (AD-27) -->
+    <PackageReference Include="Mediator.SourceGenerator" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zeltlotse.Testmodul\Zeltlotse.Testmodul.csproj" />
+    <ProjectReference Include="..\Zeltlotse.Testing\Zeltlotse.Testing.csproj" />
+  </ItemGroup>
+
+</Project>

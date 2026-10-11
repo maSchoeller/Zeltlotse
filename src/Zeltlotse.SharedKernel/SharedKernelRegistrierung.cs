@@ -1,0 +1,29 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Zeltlotse.SharedKernel.Ereignisse;
+using Zeltlotse.SharedKernel.Mandanten;
+using Zeltlotse.SharedKernel.Outbox;
+
+namespace Zeltlotse.SharedKernel;
+
+public static class SharedKernelRegistrierung
+{
+    /// <summary>Uhr, Mandanten-Kontext, Ereignis-Katalog und Outbox-Zustellung. Mehrfacher Aufruf ist unschädlich.</summary>
+    public static IServiceCollection AddSharedKernel(this IServiceCollection services)
+    {
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddScoped<MandantenKontext>();
+        services.TryAddScoped<IMandantenKontext>(sp => sp.GetRequiredService<MandantenKontext>());
+        services.TryAddSingleton<EreignisKatalog>();
+        services.TryAddSingleton<IOutboxZustellung, OutboxZustellung>();
+        return services;
+    }
+
+    /// <summary>Periodischer Hintergrunddienst, der die Outboxen aller Module zustellt (nur im API-Host).</summary>
+    public static IServiceCollection AddOutboxZustellDienst(this IServiceCollection services)
+    {
+        services.AddSharedKernel();
+        services.AddHostedService<ZustellDienst>();
+        return services;
+    }
+}

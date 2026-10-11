@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <Using Include="Xunit" />
+    <PackageReference Include="TngTech.ArchUnitNET" />
+    <PackageReference Include="TngTech.ArchUnitNET.xUnitV3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Zeltlotse.Api\Zeltlotse.Api.csproj" />
+    <ProjectReference Include="..\Zeltlotse.Testmodul\Zeltlotse.Testmodul.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Negativ-Fixtures fuer Projektdatei-Regeln: werden gelesen, nicht gebaut -->
+    <None Include="Negativ\**\*.xml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

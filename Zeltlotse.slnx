@@ -1,0 +1,56 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Zeltlotse.Api.Contracts/Zeltlotse.Api.Contracts.csproj" />
+    <Project Path="src/Zeltlotse.Api/Zeltlotse.Api.csproj" />
+    <Project Path="src/Zeltlotse.AppHost/Zeltlotse.AppHost.csproj" />
+    <Project Path="src/Zeltlotse.ServiceDefaults/Zeltlotse.ServiceDefaults.csproj" />
+    <Project Path="src/Zeltlotse.SharedKernel/Zeltlotse.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Konten/">
+    <Project Path="src/Modules/Konten/Zeltlotse.Konten/Zeltlotse.Konten.csproj" />
+    <Project Path="src/Modules/Konten/Zeltlotse.Konten.Contracts/Zeltlotse.Konten.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Personen/">
+    <Project Path="src/Modules/Personen/Zeltlotse.Personen/Zeltlotse.Personen.csproj" />
+    <Project Path="src/Modules/Personen/Zeltlotse.Personen.Contracts/Zeltlotse.Personen.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Organisationen/">
+    <Project Path="src/Modules/Organisationen/Zeltlotse.Organisationen/Zeltlotse.Organisationen.csproj" />
+    <Project Path="src/Modules/Organisationen/Zeltlotse.Organisationen.Contracts/Zeltlotse.Organisationen.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Freizeiten/">
+    <Project Path="src/Modules/Freizeiten/Zeltlotse.Freizeiten/Zeltlotse.Freizeiten.csproj" />
+    <Project Path="src/Modules/Freizeiten/Zeltlotse.Freizeiten.Contracts/Zeltlotse.Freizeiten.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Sicherheit/">
+    <Project Path="src/Modules/Sicherheit/Zeltlotse.Sicherheit/Zeltlotse.Sicherheit.csproj" />
+    <Project Path="src/Modules/Sicherheit/Zeltlotse.Sicherheit.Contracts/Zeltlotse.Sicherheit.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Programm/">
+    <Project Path="src/Modules/Programm/Zeltlotse.Programm/Zeltlotse.Programm.csproj" />
+    <Project Path="src/Modules/Programm/Zeltlotse.Programm.Contracts/Zeltlotse.Programm.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Inventar/">
+    <Project Path="src/Modules/Inventar/Zeltlotse.Inventar/Zeltlotse.Inventar.csproj" />
+    <Project Path="src/Modules/Inventar/Zeltlotse.Inventar.Contracts/Zeltlotse.Inventar.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Kueche/">
+    <Project Path="src/Modules/Kueche/Zeltlotse.Kueche/Zeltlotse.Kueche.csproj" />
+    <Project Path="src/Modules/Kueche/Zeltlotse.Kueche.Contracts/Zeltlotse.Kueche.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Finanzen/">
+    <Project Path="src/Modules/Finanzen/Zeltlotse.Finanzen/Zeltlotse.Finanzen.csproj" />
+    <Project Path="src/Modules/Finanzen/Zeltlotse.Finanzen.Contracts/Zeltlotse.Finanzen.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Kanaele/">
+    <Project Path="src/Modules/Kanaele/Zeltlotse.Kanaele/Zeltlotse.Kanaele.csproj" />
+    <Project Path="src/Modules/Kanaele/Zeltlotse.Kanaele.Contracts/Zeltlotse.Kanaele.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Zeltlotse.Api.Tests/Zeltlotse.Api.Tests.csproj" />
+    <Project Path="tests/Zeltlotse.ArchitectureTests/Zeltlotse.ArchitectureTests.csproj" />
+    <Project Path="tests/Zeltlotse.SharedKernel.Tests/Zeltlotse.SharedKernel.Tests.csproj" />
+    <Project Path="tests/Zeltlotse.Testing/Zeltlotse.Testing.csproj" />
+    <Project Path="tests/Zeltlotse.Testmodul/Zeltlotse.Testmodul.csproj" />
+  </Folder>
+</Solution>
