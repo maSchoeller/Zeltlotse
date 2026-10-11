@@ -9,6 +9,7 @@ using Zeltlotse.Api.Contracts.Betrieb;
 using Zeltlotse.Api.Contracts.Gemeinsam;
 using Zeltlotse.SharedKernel.Commands;
 using Zeltlotse.SharedKernel.Dateien;
+using Zeltlotse.Testing;
 
 namespace Zeltlotse.Api.Tests;
 
@@ -84,6 +85,16 @@ internal static class TestHelfer
     {
         Assert.Equal("application/problem+json", antwort.Content.Headers.ContentType?.MediaType);
         return await antwort.Content.ReadFromJsonAsync<JsonElement>(Abbruch);
+    }
+
+    /// <summary>Erwartet, dass der Host nicht startet, und liefert die Ausnahme als Text.</summary>
+    public static async Task<string> StartScheitertAsync(ZeltlotseApiFactory factory)
+    {
+        await using (factory)
+        {
+            var ausnahme = Assert.ThrowsAny<Exception>(() => factory.CreateClient());
+            return ausnahme.ToString();
+        }
     }
 
     public static string? Code(JsonElement problem) =>

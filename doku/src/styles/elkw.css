@@ -1,0 +1,64 @@
+/*
+  ELKW-Farben für die Anwender-Doku (Farbwelt 09 Blaugrün, Stil nahbar) und Schrift Sarabun.
+  Die Werte stammen nur aus den ELKW-Tokens der App:
+  src/Zeltlotse.Ui.Komponenten/wwwroot/css/elkw-tokens.css (Farbwelt 09, Neutraltöne) und zeltlotse.css (Dunkel-Tokens).
+  Starlight nutzt :root für das dunkle Schema (Vorgabe) und :root[data-theme='light'] für das helle.
+  Kontraste (WCAG 2.2 AA, mindestens 4,5:1): Text und Links auf Grund und Fläche sind in beiden Schemata erfüllt,
+  z. B. Akzent #307F91 auf #FFFFFF 4,6:1, Akzent #83B4BF auf #0F1719 8,0:1 und auf #1D2A2E 6,5:1.
+*/
+
+@font-face { font-family: 'Sarabun'; font-style: normal; font-weight: 300; font-display: swap; src: url('../fonts/Sarabun-Light.ttf') format('truetype'); }
+@font-face { font-family: 'Sarabun'; font-style: italic; font-weight: 300; font-display: swap; src: url('../fonts/Sarabun-LightItalic.ttf') format('truetype'); }
+@font-face { font-family: 'Sarabun'; font-style: normal; font-weight: 400; font-display: swap; src: url('../fonts/Sarabun-Regular.ttf') format('truetype'); }
+@font-face { font-family: 'Sarabun'; font-style: italic; font-weight: 400; font-display: swap; src: url('../fonts/Sarabun-Italic.ttf') format('truetype'); }
+@font-face { font-family: 'Sarabun'; font-style: normal; font-weight: 600; font-display: swap; src: url('../fonts/Sarabun-SemiBold.ttf') format('truetype'); }
+@font-face { font-family: 'Sarabun'; font-style: normal; font-weight: 700; font-display: swap; src: url('../fonts/Sarabun-Bold.ttf') format('truetype'); }
+
+/* Dunkles Schema (Dunkel-Tokens aus DESIGN.md) */
+:root {
+	--sl-font: 'Sarabun', Arial, sans-serif;
+
+	--sl-color-white: #EAF2F4;   /* text-dark */
+	--sl-color-gray-1: #EAF2F4;  /* text-dark */
+	--sl-color-gray-2: #EAF2F4;  /* text-dark: Fließtext */
+	--sl-color-gray-3: #ADCDD4;  /* text-muted-dark */
+	--sl-color-gray-4: #668E97;  /* border-dark */
+	--sl-color-gray-5: #2B3F44;  /* light-dark: Trennlinien, Code-Hintergrund */
+	--sl-color-gray-6: #1D2A2E;  /* surface-dark: Kopf und Seitenleiste */
+	--sl-color-black: #0F1719;   /* ground-dark */
+
+	--sl-color-accent-low: #1D2A2E;   /* surface-dark */
+	--sl-color-accent: #83B4BF;       /* akzent-dark */
+	--sl-color-accent-high: #83B4BF;  /* akzent-dark: Links */
+
+	/* Hinweis-Kästen (:::note) in der Akzentfarbe statt Starlight-Blau */
+	--sl-color-blue-low: #1D2A2E;
+	--sl-color-blue: #83B4BF;
+	--sl-color-blue-high: #EAF2F4;
+}
+
+/* Helles Schema (Farbwelt 09) */
+:root[data-theme='light'] {
+	--sl-color-white: #000000;   /* Text */
+	--sl-color-gray-1: #000000;  /* Text */
+	--sl-color-gray-2: #000000;  /* Text: Fließtext */
+	--sl-color-gray-3: #474F60;  /* Dunkelgrau */
+	--sl-color-gray-4: #6C7280;  /* Dunkelgrau 80 % */
+	--sl-color-gray-5: #B5B9BF;  /* Neutral 40: Trennlinien */
+	--sl-color-gray-6: #EAF2F4;  /* Akzent 10 %: Code-Hintergrund, helle Linien */
+	--sl-color-gray-7: #FFFFFF;  /* Fläche: Kopf */
+	--sl-color-black: #FFFFFF;   /* Fläche: Grund */
+
+	--sl-color-accent-low: #D6E6EA;   /* Akzent 20 % */
+	--sl-color-accent: #307F91;       /* Akzent: Links, aktuelle Seite */
+	--sl-color-accent-high: #000000;  /* Text auf Akzent hell */
+
+	--sl-color-blue-low: #EAF2F4;
+	--sl-color-blue: #307F91;
+	--sl-color-blue-high: #000000;
+}
+
+/* Screenshots mit feiner Kante, damit weiße Bildflächen sich vom Grund abheben */
+.sl-markdown-content img {
+	border: 1px solid var(--sl-color-gray-5);
+}

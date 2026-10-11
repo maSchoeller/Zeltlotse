@@ -1,0 +1,15 @@
+{
+  "name": "zeltlotse-doku",
+  "private": true,
+  "type": "module",
+  "description": "Anwender-Doku von Zeltlotse (Astro Starlight)",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "0.42.6",
+    "astro": "7.3.8"
+  }
+}

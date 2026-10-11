@@ -3,6 +3,7 @@ using Zeltlotse.Api;
 using Zeltlotse.Api.Adapter;
 using Zeltlotse.Api.Auslieferung;
 using Zeltlotse.Api.Betrieb;
+using Zeltlotse.Api.Demo;
 using Zeltlotse.Api.Fehler;
 using Zeltlotse.Api.Sicherheit;
 using Zeltlotse.Api.Start;
@@ -66,11 +67,13 @@ builder.Services.AddMediator(options =>
 
 builder.Services.AddZeltlotseModule();
 builder.Services.AddSingleton<ModulMigrationen>();
+builder.Services.AddSingleton<DemoDaten>();
 
 var app = builder.Build();
 
 Startpruefung.Ausfuehren(app.Services, app.Environment);
 await app.Services.GetRequiredService<ModulMigrationen>().AnwendenAsync();
+await app.Services.GetRequiredService<DemoDaten>().EinspielenAsync();
 
 // Reihenfolge (AD-5, AD-22, AD-25): Versions- und Sicherheits-Header sowie Proxy-Auswertung zuerst, dann Fehlerform
 // (HTML-Seite außerhalb von /api), Rückfall der Web-App auf index.html, Routing, Cookie-Richtlinie, Zugriffsbegrenzung

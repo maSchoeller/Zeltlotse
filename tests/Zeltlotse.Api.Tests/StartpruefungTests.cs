@@ -102,14 +102,5 @@ public sealed class StartpruefungTests(PostgresContainer postgres)
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health", Abbruch)).StatusCode);
     }
 
-    private static async Task<string> StartScheitertAsync(ZeltlotseApiFactory factory)
-    {
-        await using (factory)
-        {
-            var ausnahme = Assert.ThrowsAny<Exception>(() => factory.CreateClient());
-            return ausnahme.ToString();
-        }
-    }
-
     private sealed class GeschwaetzigerKontext(DbContextOptions<GeschwaetzigerKontext> optionen) : DbContext(optionen);
 }

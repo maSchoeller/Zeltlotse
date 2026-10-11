@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Npgsql;
+using Zeltlotse.Api.Demo;
 using Zeltlotse.SharedKernel.Datenschutz;
 
 namespace Zeltlotse.Api.Start;
@@ -20,7 +21,7 @@ internal sealed class DbKontextVerzeichnis(IServiceCollection services)
 
 /// <summary>
 /// Prüfungen vor den Migrationen; jeder Verstoß bricht den Start ab, ohne Geheimnisse zu nennen:
-/// Hauptschlüssel (AD-14), HMAC-Schlüssel der Logs (AD-22) und – außerhalb der Umgebung <c>Testing</c> –
+/// Hauptschlüssel (AD-14), HMAC-Schlüssel der Logs (AD-22), Demo-Daten nur in <c>Development</c>/<c>Testing</c> (NFR-20) und – außerhalb der Umgebung <c>Testing</c> –
 /// keine DbContexts mit <c>EnableSensitiveDataLogging</c>/<c>EnableDetailedErrors</c> und keine Verbindung
 /// mit <c>Include Error Detail=true</c> (AD-22).
 /// </summary>
@@ -32,6 +33,7 @@ internal static class Startpruefung
     {
         _ = dienste.GetRequiredService<Hauptschluessel>();
         ProtokollSchwaerzung.SchluesselPruefen(dienste.GetRequiredService<IConfiguration>());
+        DemoDatenPruefen(dienste.GetRequiredService<IConfiguration>(), umgebung);
 
         if (umgebung.IsEnvironment(TestUmgebung))
         {
@@ -43,6 +45,16 @@ internal static class Startpruefung
         {
             throw new InvalidOperationException(
                 "Außerhalb der Tests verboten (AD-22): " + string.Join("; ", verstoesse));
+        }
+    }
+
+    /// <summary>Demo-Daten (NFR-20) sind nur in <c>Development</c> und <c>Testing</c> erlaubt.</summary>
+    private static void DemoDatenPruefen(IConfiguration konfiguration, IHostEnvironment umgebung)
+    {
+        if (DemoDaten.IstAktiv(konfiguration) && !umgebung.IsDevelopment() && !umgebung.IsEnvironment(TestUmgebung))
+        {
+            throw new InvalidOperationException(
+                $"{DemoDaten.Schalter} ist nur in den Umgebungen Development und {TestUmgebung} erlaubt, nicht in {umgebung.EnvironmentName}.");
         }
     }
 

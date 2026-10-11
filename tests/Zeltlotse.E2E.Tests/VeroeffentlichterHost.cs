@@ -11,7 +11,7 @@ namespace Zeltlotse.E2E.Tests;
 /// <summary>
 /// Veröffentlicht den API-Host einmal je Lauf (<c>dotnet publish -c Release</c> in einen Temp-Ordner; das Asset-Manifest
 /// des Service Workers entsteht nur beim Veröffentlichen) und startet die DLL als Prozess: Umgebung <c>Testing</c>,
-/// Kestrel auf <c>http://127.0.0.1:&lt;frei&gt;</c>, PostgreSQL per Testcontainers, Test-Schlüssel per Umgebungsvariablen.
+/// Kestrel auf <c>http://127.0.0.1:&lt;frei&gt;</c>, PostgreSQL per Testcontainers, Test-Schlüssel und eingeschaltete Demo-Daten per Umgebungsvariablen.
 /// Dazu ein Chromium von Playwright.
 /// </summary>
 public sealed class VeroeffentlichterHost : IAsyncLifetime
@@ -50,6 +50,8 @@ public sealed class VeroeffentlichterHost : IAsyncLifetime
                 ["ConnectionStrings__zeltlotse"] = verbindung,
                 ["Zeltlotse__Verschluesselung__Hauptschluessel"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
                 ["Zeltlotse__Protokoll__HmacSchluessel"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
+                // Doku-Screenshots entstehen aus den erfundenen Demo-Daten (NFR-20).
+                ["Zeltlotse__DemoDaten__Aktiv"] = "true",
             },
         };
         _host = Process.Start(start) ?? throw new InvalidOperationException("Der Host ließ sich nicht starten.");
@@ -185,7 +187,8 @@ public sealed class VeroeffentlichterHost : IAsyncLifetime
         return ((IPEndPoint)listener.LocalEndpoint).Port;
     }
 
-    private static string Wurzel()
+    /// <summary>Wurzel des Repositorys (Ordner mit <c>Zeltlotse.slnx</c>), z. B. für den Bildordner der Doku.</summary>
+    internal static string Wurzel()
     {
         var verzeichnis = new DirectoryInfo(AppContext.BaseDirectory);
         while (verzeichnis is not null && !File.Exists(Path.Combine(verzeichnis.FullName, "Zeltlotse.slnx")))
