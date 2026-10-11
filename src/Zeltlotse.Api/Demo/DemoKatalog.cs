@@ -28,7 +28,7 @@ internal static class DemoKatalog
         new("Tobias", "Wanderer", DemoRolle.Team, "tobias.wanderer@example.org"),
         new("Sara", "Kochlöffel", DemoRolle.Team, "sara.kochloeffel@example.org"),
         new("Katrin", "Muster", DemoRolle.Eltern, "katrin.muster@example.org", Familie: "Muster"),
-        new("Paul", "Muster", DemoRolle.Kind, Mail: null, Familie: "Muster", Geburtsdatum: new DateOnly(2015, 3, 14)),
+        new("Paul", "Muster", DemoRolle.Kind, Mail: null, Familie: "Muster", Geburtsdatum: new DateOnly(2008, 3, 14)),
         new("Emma", "Muster", DemoRolle.Kind, Mail: null, Familie: "Muster", Geburtsdatum: new DateOnly(2017, 9, 2)),
         new("Daniel", "Probst", DemoRolle.Eltern, "daniel.probst@example.org", Familie: "Probst"),
         new("Mia", "Probst", DemoRolle.Kind, Mail: null, Familie: "Probst", Geburtsdatum: new DateOnly(2016, 5, 21)),
@@ -40,7 +40,8 @@ internal sealed record DemoOrganisation(string Name);
 internal sealed record DemoFreizeit(string Name, string Ort, DateOnly Beginn, DateOnly Ende);
 
 /// <summary>
-/// Rolle einer Demo-Person; <see cref="Kind"/> ist ein Kind unter 18 im Familienkonto, ohne eigenes Konto.
+/// Rolle einer Demo-Person; <see cref="Kind"/> ist ein Kinderprofil im Familienkonto, ohne eigenes Konto (Paul ist schon
+/// volljährig, damit Screenshot und Doku „Profil an Paul übergeben“ zeigen, NS-11).
 /// <see cref="GlobalAdmin"/> ist der Betreiber (nur bei aktiven Demo-Daten Global Admin).
 /// </summary>
 internal enum DemoRolle

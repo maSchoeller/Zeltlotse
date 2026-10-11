@@ -66,6 +66,14 @@ Zum Konto speichert Zeltlotse die Mail-Adresse und, falls festgelegt, ein Passwo
 - **Org-Admin:** sieht von der Leitung einer Freizeit nur **Vor- und Nachname**, keine Profile und keine Mail-Adressen, und keine Inhalte der Freizeit. Bei offenen Leitungs-Einladungen sieht er die eingeladene Mail-Adresse.
 - **Org-Überblick:** sieht nur Name, Zeitraum und Phase der Freizeiten.
 
+## Familie und Übergabe
+
+- **Kinderprofile:** Zu einem Kind speichert Zeltlotse Vorname, Nachname (freiwillig) und **Geburtsdatum**. Das Geburtsdatum braucht es für die Grenze von 18 Jahren; daraus berechnet Zeltlotse, ab wann ein Profil übergeben werden kann.
+- **Eltern sehen ihre Kinder nur bis zur Übergabe.** Beide Eltern eines Familienkontos sehen und ändern die Profile der Kinder. Übernimmt ein volljähriges Kind sein Profil, verliert das Familienkonto sofort jeden Zugriff darauf. Andere Personen, auch aus derselben Organisation, sehen die Kinder eines Familienkontos nicht.
+- **Einladung und Übergabe speichern die Mail-Adresse,** an die sie gingen, dazu wer sie ausgelöst hat. Der Link selbst steht nur als Prüfwert in der Datenbank, gilt nur einmal (Einladung 7 Tage, Übergabe 14 Tage) und lässt sich nur mit einem Konto unter genau dieser Mail-Adresse annehmen. Eltern sehen die Mail-Adresse ihrer offenen Einladungen und Übergaben.
+- **Das leere eigene Profil wird beim Übernehmen gelöscht.** Wer mit einer neuen Mail-Adresse ein Konto anlegt, um ein Profil zu übernehmen, bekommt dabei zunächst ein leeres Profil. Beim Übernehmen wird es samt Schlüssel endgültig gelöscht; das Konto gehört danach zum übernommenen Profil. Profile mit Inhalt werden nie zusammengeführt.
+- **Erneute Anmeldung:** Eine Übergabe lässt sich nur auslösen, wenn die letzte Anmeldung höchstens 10 Minuten zurückliegt. Angenommene Einladungen, Übergaben und fehlgeschlagene Versuche stehen im Sicherheitsprotokoll, nur mit Kennungen.
+
 ## Wo die Daten liegen
 
 Alle Daten und Sicherungen liegen **ausschließlich in der EU**. Besonders schützenswerte Angaben wie Freizeitpass-Antworten und Nachweise sind verschlüsselt gespeichert.

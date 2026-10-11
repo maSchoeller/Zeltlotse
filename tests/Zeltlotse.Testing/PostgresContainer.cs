@@ -32,6 +32,13 @@ public sealed class PostgresContainer : IAsyncLifetime
             await befehl.ExecuteNonQueryAsync();
         }
 
-        return new NpgsqlConnectionStringBuilder(VerbindungsZeichenfolge) { Database = name }.ConnectionString;
+        // Jede Test-Datenbank hat eigene Pools; ungenutzte Verbindungen schließen nach Sekunden statt nach 5 Minuten, damit
+        // viele parallel laufende Tests die Grenze max_connections nicht erreichen.
+        return new NpgsqlConnectionStringBuilder(VerbindungsZeichenfolge)
+        {
+            Database = name,
+            ConnectionIdleLifetime = 10,
+            ConnectionPruningInterval = 2,
+        }.ConnectionString;
     }
 }

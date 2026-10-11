@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Zeltlotse.Api.Contracts.Personen;
+using Zeltlotse.Personen.Familien;
 using Zeltlotse.Personen.Freizeitrollen;
 using Zeltlotse.Personen.Profil;
 using Zeltlotse.Personen.Schluessel;
 using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Mandanten;
+using Zeltlotse.SharedKernel.Zugangslinks;
 
 namespace Zeltlotse.Personen.Daten;
 
@@ -18,6 +20,14 @@ internal sealed class PersonenDbContext(DbContextOptions<PersonenDbContext> opti
     public DbSet<Person> Personen => Set<Person>();
 
     public DbSet<FreizeitRolle> FreizeitRollen => Set<FreizeitRolle>();
+
+    public DbSet<Familie> Familien => Set<Familie>();
+
+    public DbSet<FamilienElternteil> Elternteile => Set<FamilienElternteil>();
+
+    public DbSet<FamilienEinladung> FamilienEinladungen => Set<FamilienEinladung>();
+
+    public DbSet<ProfilUebergabe> Uebergaben => Set<ProfilUebergabe>();
 
     protected override string Schema => PersonenModul.Schema;
 
@@ -33,6 +43,14 @@ internal sealed class PersonenLeseDbContext(DbContextOptions<PersonenLeseDbConte
     public DbSet<Person> Personen => Set<Person>();
 
     public DbSet<FreizeitRolle> FreizeitRollen => Set<FreizeitRolle>();
+
+    public DbSet<Familie> Familien => Set<Familie>();
+
+    public DbSet<FamilienElternteil> Elternteile => Set<FamilienElternteil>();
+
+    public DbSet<FamilienEinladung> FamilienEinladungen => Set<FamilienEinladung>();
+
+    public DbSet<ProfilUebergabe> Uebergaben => Set<ProfilUebergabe>();
 
     protected override string Schema => PersonenModul.Schema;
 
@@ -58,6 +76,8 @@ internal static class PersonenModell
             e.Property(p => p.Id).ValueGeneratedNever();
             e.Property(p => p.Vorname).HasMaxLength(ProfilFelder.MaximaleLaenge);
             e.Property(p => p.Nachname).HasMaxLength(ProfilFelder.MaximaleLaenge);
+            // Nur bei Kinderprofilen gesetzt; Eltern lesen ihre Kinder über die Familie.
+            e.HasIndex(p => p.FamilieId);
             // AD-19: Versionsnummer aus xmin, von PostgreSQL bei jeder Änderung weitergezählt.
             e.Property(p => p.Version).IsRowVersion();
         });
@@ -69,6 +89,47 @@ internal static class PersonenModell
             e.HasKey(r => new { r.FreizeitId, r.PersonId });
             e.Property(r => r.Rolle).HasConversion<short>();
             e.HasIndex(r => r.PersonId);
+        });
+
+        modelBuilder.Entity<Familie>(e =>
+        {
+            e.ToTable("familie");
+            e.Property(f => f.Id).ValueGeneratedNever();
+        });
+
+        // Eine Person ist Elternteil in höchstens einer Familie (eindeutiger Index auf PersonId).
+        modelBuilder.Entity<FamilienElternteil>(e =>
+        {
+            e.ToTable("familien_elternteil");
+            e.HasKey(t => new { t.FamilieId, t.PersonId });
+            e.HasIndex(t => t.PersonId).IsUnique();
+            e.HasOne<Familie>().WithMany().HasForeignKey(t => t.FamilieId);
+        });
+
+        modelBuilder.Entity<FamilienEinladung>(e =>
+        {
+            e.ToTable("familien_einladung");
+            e.Property(t => t.Id).ValueGeneratedNever();
+            e.Property(t => t.Mail).HasMaxLength(MailAdresse.MaximaleLaenge);
+            e.Property(t => t.TokenHash).HasColumnType("bytea");
+            e.HasIndex(t => t.TokenHash).IsUnique();
+            e.HasIndex(t => t.FamilieId);
+            e.Property(t => t.Status).HasConversion<short>();
+            e.Property(t => t.Version).IsRowVersion();
+            e.HasOne<Familie>().WithMany().HasForeignKey(t => t.FamilieId);
+        });
+
+        modelBuilder.Entity<ProfilUebergabe>(e =>
+        {
+            e.ToTable("profil_uebergabe");
+            e.Property(t => t.Id).ValueGeneratedNever();
+            e.Property(t => t.Mail).HasMaxLength(MailAdresse.MaximaleLaenge);
+            e.Property(t => t.TokenHash).HasColumnType("bytea");
+            e.HasIndex(t => t.TokenHash).IsUnique();
+            e.HasIndex(t => t.PersonId);
+            e.Property(t => t.Status).HasConversion<short>();
+            e.Property(t => t.Version).IsRowVersion();
+            e.HasOne<Familie>().WithMany().HasForeignKey(t => t.FamilieId);
         });
     }
 }

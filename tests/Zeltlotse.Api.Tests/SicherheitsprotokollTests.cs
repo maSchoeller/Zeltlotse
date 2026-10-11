@@ -73,7 +73,7 @@ public sealed class SicherheitsprotokollTests(PostgresContainer postgres)
     public void Es_gibt_die_geforderten_Arten()
     {
         Assert.Equal(
-            ["Anmeldung", "AnmeldungFehlgeschlagen", "Export", "LinkEinloesungFehlgeschlagen", "Loeschung", "Rollenvergabe"],
+            ["Anmeldung", "AnmeldungFehlgeschlagen", "Export", "LinkEinloesungFehlgeschlagen", "Loeschung", "ProfilUebergabe", "Rollenvergabe"],
             Enum.GetNames<SicherheitsEreignisArt>().Order());
     }
 

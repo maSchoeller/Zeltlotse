@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Zeltlotse.Personen.Contracts.Namen;
 using Zeltlotse.Freizeiten.Contracts.Events;
+using Zeltlotse.Personen.Contracts.Namen;
 using Zeltlotse.Personen.Daten;
+using Zeltlotse.Personen.Familien;
 using Zeltlotse.Personen.Freizeitrollen;
 using Zeltlotse.Personen.Profil;
 using Zeltlotse.Personen.Schluessel;
+using Zeltlotse.SharedKernel.Anmeldung;
 using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Datenschutz;
 using Zeltlotse.SharedKernel.Ereignisse;
@@ -30,13 +32,29 @@ public static class PersonenModul
         return services;
     }
 
-    /// <summary>Bindet die Endpunkte des Moduls in die <c>/api</c>-Gruppe ein; das eigene Profil liegt unter <c>/api/ich/profil</c> (AD-26).</summary>
+    /// <summary>
+    /// Bindet die Endpunkte des Moduls in die <c>/api</c>-Gruppe ein: das eigene Profil unter <c>/api/ich/profil</c> und die
+    /// eigene Familie unter <c>/api/ich/familie</c> (AD-26, organisationsübergreifend), das Annehmen von Familien-Einladung und
+    /// Profil-Übergabe unter <c>/api/personen</c> (angemeldet, zugriffsbegrenzt, AD-11). Das Auslösen der Übergabe verlangt
+    /// eine erneute Anmeldung (AD-25).
+    /// </summary>
     public static IEndpointRouteBuilder MapPersonenEndpoints(this IEndpointRouteBuilder api)
     {
         var profil = api.MapGroup("/ich/profil").Organisationsuebergreifend();
         profil.MapGet("", ProfilLadenEndpunkt.Laden);
         profil.MapPost("", ProfilSicherstellenEndpunkt.Sicherstellen);
         profil.MapPatch("", ProfilFeldAendernEndpunkt.Aendern);
+
+        var familie = api.MapGroup("/ich/familie").Organisationsuebergreifend();
+        familie.MapGet("", FamilieLadenEndpunkt.Laden);
+        familie.MapPost("/kinder", KindAnlegenEndpunkt.Anlegen);
+        familie.MapPatch("/kinder/{personId:guid}", KindFeldAendernEndpunkt.Aendern);
+        familie.MapPost("/einladungen", ElternteilEinladenEndpunkt.Einladen);
+        familie.MapPost("/kinder/{personId:guid}/uebergabe", ProfilUebergebenEndpunkt.Uebergeben).ErneuteAnmeldung();
+
+        var personen = api.MapGroup("/personen");
+        personen.MapPost("/familie/einladungen/annehmen", FamilienEinladungAnnehmenEndpunkt.Annehmen).Zugriffsbegrenzt();
+        personen.MapPost("/uebergabe/annehmen", ProfilUebernehmenEndpunkt.Uebernehmen).Zugriffsbegrenzt();
         return api;
     }
 }

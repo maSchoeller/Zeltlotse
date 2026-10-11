@@ -47,10 +47,11 @@ public sealed class DemoDatenTests(PostgresContainer postgres)
         using var zweiterClient = zweiter.CreateClient();
 
         Assert.Equal(HttpStatusCode.OK, (await zweiterClient.GetAsync("/health", Abbruch)).StatusCode);
-        // Story 1-1: je Demo-Person mit Mail ein Konto und ein Profil mit Namen, nicht doppelt; Kinder ohne Mail bekommen nichts.
+        // Story 1-1: je Demo-Person mit Mail ein Konto und ein Profil mit Namen, nicht doppelt; Kinder ohne Mail bekommen kein Konto.
+        // Story 1-4: dazu die 3 Kinder im Familienkonto, je mit Personen-Schlüssel.
         Assert.Equal(9L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM konten.konto"));
-        Assert.Equal(9L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.person"));
-        Assert.Equal(9L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.personen_schluessel"));
+        Assert.Equal(12L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.person"));
+        Assert.Equal(12L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.personen_schluessel"));
 
         // Story 1-2: Gerd ist Global Admin, eine Organisation, Andrea Org-Admin, eine offene Einladung; nichts doppelt.
         Assert.Equal(["gerd.betreiber@example.org"], await MailsAsync(verbindung, "SELECT \"Mail\" FROM konten.konto WHERE \"GlobalAdmin\""));
@@ -74,6 +75,21 @@ public sealed class DemoDatenTests(PostgresContainer postgres)
         Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.outbox"));
         await zweiter.OutboxJetztZustellenAsync(Abbruch);
         Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeit_rolle WHERE \"Rolle\" = 1 AND \"PersonId\" = ANY(@p)", ("p", leitung)));
+
+        // Story 1-4: zwei Familien mit je einem Elternteil (Katrin, Daniel) und drei Kinder; Paul ist volljährig; nichts doppelt.
+        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.familie"));
+        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.familien_elternteil"));
+        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.person WHERE \"FamilieId\" IS NOT NULL"));
+        foreach (var kind in DemoKatalog.Personen.Where(p => p.Rolle == DemoRolle.Kind))
+        {
+            var eltern = DemoKatalog.Personen.Single(p => p.Rolle == DemoRolle.Eltern && p.Familie == kind.Familie);
+            Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(
+                verbindung,
+                "SELECT count(*) FROM personen.person p JOIN personen.familien_elternteil e ON e.\"FamilieId\" = p.\"FamilieId\" WHERE e.\"PersonId\" = @eltern AND p.\"Vorname\" = @vorname AND p.\"Nachname\" = @nachname AND p.\"Geburtsdatum\" = @geburtsdatum",
+                ("eltern", await AnmeldeHelfer.PersonIdAsync(verbindung, eltern.Mail!)), ("vorname", kind.Vorname), ("nachname", kind.Nachname), ("geburtsdatum", kind.Geburtsdatum!.Value)));
+        }
+
+        Assert.Equal(new DateOnly(2008, 3, 14), DemoKatalog.Personen.Single(p => p.Vorname == "Paul").Geburtsdatum);
 
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,

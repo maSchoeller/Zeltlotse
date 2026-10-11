@@ -10,6 +10,8 @@
     <ProjectReference Include="..\..\..\Zeltlotse.SharedKernel\Zeltlotse.SharedKernel.csproj" />
     <ProjectReference Include="..\Zeltlotse.Konten.Contracts\Zeltlotse.Konten.Contracts.csproj" />
     <ProjectReference Include="..\..\..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
+    <!-- Nur das Ereignis ProfilUebergabeAngenommen (AD-2: Ereignisse darf jedes Modul abonnieren; kein Pfeil zu Personen). -->
+    <ProjectReference Include="..\..\Personen\Zeltlotse.Personen.Contracts\Zeltlotse.Personen.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

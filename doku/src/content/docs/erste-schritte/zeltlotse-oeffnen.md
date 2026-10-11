@@ -14,7 +14,7 @@ Zeltlotse besteht aus zwei Teilen unter derselben Adresse:
 
 Die Web-App liegt unter der Adresse von Zeltlotse mit dem Zusatz `/app/`. Ohne Anmeldung erscheint zuerst die Seite „Anmelden“; wie das per Login-Link, Login-Code oder Passwort geht, steht unter [Anmelden](/erste-schritte/anmelden/).
 
-Nach dem Anmelden begrüßt die Startseite mit dem Vornamen, etwa „Hallo, Jonas“. Darunter steht für jede eigene Freizeit eine Card mit Zeitraum, Phase, eigener Rolle und dem Knopf **Freizeit öffnen** (siehe [Freizeit öffnen](/leitung/freizeit-oeffnen/)). Ohne eigene Freizeit steht dort „Noch keine Freizeit geöffnet.“ Oben rechts in der App-Leiste führt der Vorname zur Seite „Konto“.
+Nach dem Anmelden begrüßt die Startseite mit dem Vornamen, etwa „Hallo, Jonas“. Darunter steht für jede eigene Freizeit eine Card mit Zeitraum, Phase, eigener Rolle und dem Knopf **Freizeit öffnen** (siehe [Freizeit öffnen](/leitung/freizeit-oeffnen/)). Eltern sehen davor die Card **Familie** mit den Namen der Kinder und dem Knopf **Familie öffnen** (siehe [Familienkonto](/eltern/familienkonto/)). Ohne eigene Freizeit steht dort „Noch keine Freizeit geöffnet.“ Oben rechts in der App-Leiste führt der Vorname zur Seite „Konto“.
 
 ![Startseite der Web-App am Handy nach dem Anmelden mit „Hallo, Jonas“ und der Card „Zeltlager Sommer 2027“ mit Zeitraum, Phase „in Vorbereitung“, „Rolle: Leitung“ und dem Knopf „Freizeit öffnen“](../../../assets/screenshots/app-start-handy.png)
 

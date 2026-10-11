@@ -1,3 +1,4 @@
+using System.Globalization;
 using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Zeltlotse.Api.Contracts.Personen;
@@ -8,6 +9,8 @@ using Zeltlotse.Konten.Anmelden;
 using Zeltlotse.Organisationen.Daten;
 using Zeltlotse.Organisationen.Einladungen;
 using Zeltlotse.Organisationen.Verwaltung;
+using Zeltlotse.Personen.Daten;
+using Zeltlotse.Personen.Familien;
 using Zeltlotse.Personen.Profil;
 using Zeltlotse.SharedKernel.Mandanten;
 using Zeltlotse.SharedKernel.Rechte;
@@ -23,13 +26,15 @@ namespace Zeltlotse.Api.Demo;
 /// <remarks>
 /// Eingespielt wird nur über die Commands der Module (Mediator, AD-27), nie direkt in Tabellen. Jede Fach-Story ergänzt
 /// hier ihre Commands und macht sie idempotent. Bisher (Story 1-1): je Demo-Person mit Mail ein Konto und ein Profil mit
-/// Vor- und Nachnamen; eine vorhandene Mail-Adresse wird übersprungen. Kinder ohne Mail bekommen hier nichts (Familie: 1-4).
+/// Vor- und Nachnamen; eine vorhandene Mail-Adresse wird übersprungen. Kinder ohne Mail bekommen hier kein Konto (Familie: Story 1-4).
 /// Story 1-2: Fehlt die Demo-Organisation, legt Gerd (Betreiber) sie an und lädt Andrea ein; Andrea nimmt an (Org-Admin) und
 /// lädt <see cref="DemoKatalog.UeberblickEinladung"/> als Org-Überblick ein (bleibt offen). Gerd wird Global Admin erst im
 /// Abgleich danach (<see cref="Start.GlobalAdmins"/>).
 /// Story 1-3: Fehlt in der Demo-Organisation die Freizeit <see cref="DemoKatalog.Freizeit"/>, legt Andrea sie an und lädt
 /// die Personen mit <see cref="DemoRolle.Leitung"/> ein; jede nimmt ihre Einladung per Command an. Die Ereignisse stellt der
 /// normale Zustelldienst zu.
+/// Story 1-4: Je Demo-Person mit <see cref="DemoRolle.Eltern"/> entstehen die Kinder ihrer Familie per Command (Katrin: Paul und
+/// Emma, Daniel: Mia); ein Kind mit gleichem Vornamen in der Familie wird übersprungen.
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -64,6 +69,10 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
 
         await OrganisationAsync(abbruch);
         await FreizeitAsync(abbruch);
+        foreach (var eltern in DemoKatalog.Personen.Where(p => p.Rolle == DemoRolle.Eltern))
+        {
+            await KinderAsync(eltern, abbruch);
+        }
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -146,6 +155,41 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             var einladung = await sender.Send(new LeitungEinladenCommand(organisationId, freizeitId, leitung.Mail, andrea.PersonId), abbruch);
             _ = await sender.Send(new LeitungAnnehmenCommand(einladung.Token, leitung.Mail, konto.PersonId), abbruch)
                 ?? throw new InvalidOperationException("Demo-Freizeit: Die Leitungs-Einladung ließ sich nicht annehmen.");
+        }
+    }
+
+    /// <summary>
+    /// Die Kinder der Familie eines Demo-Elternteils per <see cref="KindAnlegen"/>; ein Kind mit gleichem Vornamen in der
+    /// Familie wird übersprungen. Ein schon volljähriges Kind (Paul) entsteht wie in der Web-App: anlegen unter 18, dann das
+    /// Geburtsdatum ändern – ab 18 lässt sich kein Kind anlegen, ein geändertes Geburtsdatum darf aber volljährig sein.
+    /// </summary>
+    private async Task KinderAsync(DemoPerson eltern, CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        var uhr = dienste.GetRequiredService<TimeProvider>();
+        var personId = (await sender.Send(new KontoSicherstellen(eltern.Mail!), abbruch)).PersonId;
+        var lesen = dienste.GetRequiredService<PersonenLeseDbContext>();
+        var vorhanden = await lesen.Personen
+            .Where(p => lesen.Elternteile.Any(e => e.PersonId == personId && e.FamilieId == p.FamilieId))
+            .Select(p => p.Vorname)
+            .ToListAsync(abbruch);
+
+        foreach (var kind in DemoKatalog.Personen.Where(p => p.Rolle == DemoRolle.Kind && p.Familie == eltern.Familie && !vorhanden.Contains(p.Vorname)))
+        {
+            var geburtsdatum = kind.Geburtsdatum!.Value;
+            var heute = Volljaehrigkeit.Heute(uhr);
+            var volljaehrig = Volljaehrigkeit.Ist(geburtsdatum, heute);
+            var vorlaeufig = volljaehrig ? heute.AddYears(-Volljaehrigkeit.Alter + 1) : geburtsdatum;
+            var id = await sender.Send(new KindAnlegen(personId, kind.Vorname, kind.Nachname, vorlaeufig), abbruch);
+            if (volljaehrig)
+            {
+                var ergebnis = await sender.Send(new KindFeldAendern(
+                    personId, id, KindFeld.Geburtsdatum, 0, vorlaeufig.ToString(KindFelder.Datumsformat, CultureInfo.InvariantCulture),
+                    geburtsdatum.ToString(KindFelder.Datumsformat, CultureInfo.InvariantCulture)), abbruch);
+                _ = ergebnis as KindAenderung.Gespeichert ?? throw new InvalidOperationException("Demo-Familie: Das Geburtsdatum ließ sich nicht setzen.");
+            }
         }
     }
 

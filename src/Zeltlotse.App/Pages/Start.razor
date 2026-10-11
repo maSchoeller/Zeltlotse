@@ -2,14 +2,15 @@
 @using Zeltlotse.Api.Contracts.Gemeinsam
 @using Zeltlotse.Api.Contracts.Freizeiten
 @using Zeltlotse.Api.Contracts.Organisationen
+@using Zeltlotse.Api.Contracts.Personen
 @inject PersonenApiClient Personen
 @inject FreizeitenApiClient Freizeiten
 @inject KontenApiClient Konten
 @inject OrganisationenApiClient Organisationen
 @inject AppSitzung Sitzung
 @* Startseite (EXPERIENCE.md → Voice and Tone: Begrüßung mit Vornamen, darunter ein neutraler Satz). Für Global Admins
-   (erlaubte Aktion „organisationen-anlegen“, AD-29) der Weg zu „Organisationen“; je eigener Freizeit eine Card („Meine
-   Freizeiten“, FR-45) vor den Cards der eigenen Organisationen.
+   (erlaubte Aktion „organisationen-anlegen“, AD-29) der Weg zu „Organisationen“; für Eltern die Card „Familie“ (FR-3) mit den
+   Namen der Kinder, je eigener Freizeit eine Card („Meine Freizeiten“, FR-45) und danach die Cards der eigenen Organisationen.
    Ohne Sitzung (401) leitet der Sitzungs-Handler zur Seite „Anmelden“; offline bleibt die Begrüßung ohne Namen. *@
 <PageTitle>Zeltlotse</PageTitle>
 
@@ -19,6 +20,20 @@
     @if (_organisationenAnlegen)
     {
         <Knopf Href="organisationen" Ansichtswechsel="true">Organisationen verwalten</Knopf>
+    }
+    @if (_familie is { Eltern.Count: > 0 } familie)
+    {
+        <Card Titel="Familie">
+            @if (familie.Kinder.Count == 0)
+            {
+                <p>Noch keine Kinder im Familienkonto.</p>
+            }
+            else
+            {
+                <p>@string.Join(", ", familie.Kinder.Select(k => Anzeige.Name(k.Vorname, k.Nachname)))</p>
+            }
+            <Knopf Href="familie" Ansichtswechsel="true">Familie öffnen</Knopf>
+        </Card>
     }
     @foreach (var freizeit in _freizeiten)
     {
@@ -52,6 +67,7 @@ else
     private bool _organisationenAnlegen;
     private IReadOnlyList<MeineOrganisation> _organisationen = [];
     private IReadOnlyList<MeineFreizeit> _freizeiten = [];
+    private FamilieAntwort? _familie;
 
     private string Begruessung => string.IsNullOrWhiteSpace(_vorname) ? "Hallo" : $"Hallo, {_vorname}";
 
@@ -59,7 +75,7 @@ else
     {
         if (await ProfilAsync())
         {
-            await Task.WhenAll(ErlaubtAsync(), FreizeitenAsync(), OrganisationenAsync());
+            await Task.WhenAll(ErlaubtAsync(), FamilieAsync(), FreizeitenAsync(), OrganisationenAsync());
         }
 
         _geladen = true;
@@ -91,6 +107,18 @@ else
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
         {
             // Ohne Antwort kein Knopf; die Startseite bleibt nutzbar.
+        }
+    }
+
+    private async Task FamilieAsync()
+    {
+        try
+        {
+            _familie = await Personen.FamilieLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // Ohne Antwort keine Card „Familie“; die Startseite bleibt nutzbar.
         }
     }
 

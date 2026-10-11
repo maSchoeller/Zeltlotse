@@ -64,10 +64,12 @@ internal static class SitzungsRegistrierung
     }
 }
 
-/// <summary><see cref="IAngemeldet"/> aus der Sitzung der laufenden Anfrage; ohne gültige Sitzung beide Werte <c>null</c>.</summary>
+/// <summary><see cref="IAngemeldet"/> aus der Sitzung der laufenden Anfrage; ohne gültige Sitzung alle Werte <c>null</c>.</summary>
 internal sealed class HttpAngemeldet(IHttpContextAccessor anfrage) : IAngemeldet
 {
     public Guid? KontoId => Sitzung.Lesen(anfrage.HttpContext?.User)?.KontoId;
 
     public Guid? PersonId => Sitzung.Lesen(anfrage.HttpContext?.User)?.PersonId;
+
+    public DateTimeOffset? AngemeldetAm => Sitzung.AngemeldetAm(anfrage.HttpContext?.User);
 }

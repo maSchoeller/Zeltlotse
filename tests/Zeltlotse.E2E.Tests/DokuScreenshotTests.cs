@@ -276,6 +276,91 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await BildAsync(seite, "freizeit-start", geraet);
     }
 
+    /// <summary>Elternteil der Demo-Familie „Muster“ mit Paul (volljährig) und Emma (Story 1-4).</summary>
+    private const string ElternMail = "katrin.muster@example.org";
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Familie(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, ElternMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Familie öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Familie", new() { Timeout = 60_000 });
+        var paul = seite.Locator(".elkw-card").Filter(new() { HasText = "Paul Muster" });
+        var emma = seite.Locator(".elkw-card").Filter(new() { HasText = "Emma Muster" });
+        await Assertions.Expect(paul).ToContainTextAsync("Geboren am 14.03.2008", new() { Timeout = 60_000 });
+        await Assertions.Expect(emma).ToContainTextAsync("Geboren am 02.09.2017");
+        // Nur bei Paul (volljährig) steht die Übergabe.
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Profil an Paul übergeben" })).ToHaveCountAsync(1);
+        await Assertions.Expect(emma.GetByRole(AriaRole.Button)).ToHaveCountAsync(0);
+        await Assertions.Expect(seite.Locator("tbody tr").Filter(new() { HasText = "Katrin Muster" })).ToContainTextAsync("Elternteil");
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Kind hinzufügen" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Einladung schicken" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "familie", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Kind_Angaben(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, ElternMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Familie öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await seite.Locator(".elkw-card").Filter(new() { HasText = "Emma Muster" })
+            .GetByRole(AriaRole.Link, new() { Name = "Angaben ändern" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Emma Muster", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByLabel("Vorname")).ToHaveValueAsync("Emma", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByLabel("Nachname")).ToHaveValueAsync("Muster");
+        await Assertions.Expect(seite.GetByLabel("Geburtsdatum")).ToHaveValueAsync("2017-09-02");
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Zurück zur Familie" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "kind-angaben", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Familie_Einladung(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        // Die Seite vor dem Klick: Der Aufruf nimmt nichts an, das Token im Link ist darum beliebig.
+        await seite.GotoAsync(new Uri(host.Adresse, "/app/familie/einladung/" + new string('x', 43)).ToString());
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Familienkonto beitreten", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Einladung annehmen" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "familie-einladung", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Profil_Uebernehmen(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        // Die Seite vor dem Klick: Der Aufruf übernimmt nichts, das Token im Link ist darum beliebig.
+        await seite.GotoAsync(new Uri(host.Adresse, "/app/uebergabe/" + new string('x', 43)).ToString());
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Profil übernehmen", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Profil übernehmen" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "profil-uebernehmen", geraet);
+    }
+
     private static (int Breite, int Hoehe) Groesse(string geraet) => geraet switch
     {
         "handy" => (375, 812),

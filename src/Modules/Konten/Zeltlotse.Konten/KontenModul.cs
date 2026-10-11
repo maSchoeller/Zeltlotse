@@ -9,8 +9,11 @@ using Zeltlotse.Konten.Daten;
 using Zeltlotse.Konten.Domaene;
 using Zeltlotse.Konten.Ich;
 using Zeltlotse.Konten.Passwort;
+using Zeltlotse.Konten.Profil;
 using Zeltlotse.Konten.Sitzungen;
+using Zeltlotse.Personen.Contracts.Events;
 using Zeltlotse.SharedKernel.Daten;
+using Zeltlotse.SharedKernel.Ereignisse;
 using Zeltlotse.SharedKernel.Web;
 
 namespace Zeltlotse.Konten;
@@ -28,6 +31,7 @@ public static class KontenModul
         services.AddSingleton<IPasswordHasher<Konto>>(_ => PasswortRegel.NeuerHasher());
         services.AddScoped<IKontoPruefung, KontoPruefung>();
         services.AddScoped<IKontoLesen, KontoLesen>();
+        services.EmpfaengtEreignis<ProfilUebergabeAngenommen, KontoMitProfilVerbinden>();
         return services;
     }
 

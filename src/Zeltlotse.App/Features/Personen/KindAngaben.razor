@@ -1,0 +1,77 @@
+@page "/familie/kinder/{PersonId:guid}"
+@using System.Globalization
+@using Zeltlotse.Api.Contracts.Personen
+@inject PersonenApiClient Personen
+@* Angaben eines Kindes (FR-3, AD-19): Vorname, Nachname und Geburtsdatum per Autosave am PATCH-Pfad des Kindes. Die Daten
+   kommen aus GET /api/ich/familie; ein Kind außerhalb der eigenen Familie (oder schon übergeben) ist nicht verfügbar. *@
+<PageTitle>@(_kind is null ? "Kind" : Anzeige.Name(_kind.Vorname, _kind.Nachname)) – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else if (_kind is null)
+{
+    <h1>Kind</h1>
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+    else
+    {
+        <Ladezustand />
+    }
+}
+else
+{
+    <h1>@Anzeige.Name(_kind.Vorname, _kind.Nachname)</h1>
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+    <Card>
+        <AutosaveFeld Label="Vorname" Id="kind-vorname" Feldname="@KindFelder.Vorname" Pfad="@PersonenApiClient.KindPfad(PersonId)"
+                      Wert="@_kind.Vorname" Version="@_kind.Version" NeuLaden="NachKonfliktNeuLadenAsync" />
+        <AutosaveFeld Label="Nachname" Id="kind-nachname" Feldname="@KindFelder.Nachname" Pfad="@PersonenApiClient.KindPfad(PersonId)"
+                      Wert="@_kind.Nachname" Version="@_kind.Version" NeuLaden="NachKonfliktNeuLadenAsync" />
+        <AutosaveFeld Label="Geburtsdatum" Id="kind-geburtsdatum" Typ="date" Feldname="@KindFelder.Geburtsdatum" Pfad="@PersonenApiClient.KindPfad(PersonId)"
+                      Wert="@_kind.Geburtsdatum.ToString(KindFelder.Datumsformat, CultureInfo.InvariantCulture)" Version="@_kind.Version"
+                      NeuLaden="NachKonfliktNeuLadenAsync" />
+    </Card>
+    <p><a href="familie">Zurück zur Familie</a></p>
+}
+
+@code {
+    private KindZeile? _kind;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+
+    [Parameter] public Guid PersonId { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kind = null;
+        _nichtVerfuegbar = false;
+        await NachKonfliktNeuLadenAsync();
+    }
+
+    private async Task NachKonfliktNeuLadenAsync()
+    {
+        _aktionFehler = false;
+        try
+        {
+            var familie = await Personen.FamilieLadenAsync();
+            _kind = familie.Kinder.SingleOrDefault(k => k.PersonId == PersonId);
+            _nichtVerfuegbar = _kind is null;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+}

@@ -31,11 +31,16 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
     /// <summary>Die personenbezogenen Endpunkte über Organisationen hinweg (AD-26), namentlich.</summary>
     private static readonly string[] Organisationsuebergreifend =
     [
+        "GET /api/ich/familie",
         "GET /api/ich/freizeiten",
         "GET /api/ich/konto",
         "GET /api/ich/organisationen",
         "GET /api/ich/profil",
+        "PATCH /api/ich/familie/kinder/{personId:guid}",
         "PATCH /api/ich/profil",
+        "POST /api/ich/familie/einladungen",
+        "POST /api/ich/familie/kinder",
+        "POST /api/ich/familie/kinder/{personId:guid}/uebergabe",
         "POST /api/ich/profil",
         "PUT /api/ich/konto/passwort",
     ];
@@ -87,6 +92,30 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
             annehmen.Endpunkt.Metadata.OfType<Microsoft.AspNetCore.RateLimiting.EnableRateLimitingAttribute>(),
             r => r.PolicyName == Zugriffsbegrenzung.Richtlinie);
         Assert.NotEmpty(annehmen.Endpunkt.Metadata.GetOrderedMetadata<IAuthorizeData>());
+    }
+
+    [Theory]
+    [InlineData("POST /api/personen/familie/einladungen/annehmen")]
+    [InlineData("POST /api/personen/uebergabe/annehmen")]
+    public async Task Annehmen_von_Familien_Einladung_und_Profil_Uebergabe_ist_angemeldet_und_zugriffsbegrenzt(string name)
+    {
+        var endpunkte = await EndpunkteAsync();
+
+        var annehmen = Assert.Single(endpunkte, e => e.Name == name);
+        Assert.Contains(
+            annehmen.Endpunkt.Metadata.OfType<Microsoft.AspNetCore.RateLimiting.EnableRateLimitingAttribute>(),
+            r => r.PolicyName == Zugriffsbegrenzung.Richtlinie);
+        Assert.NotEmpty(annehmen.Endpunkt.Metadata.GetOrderedMetadata<IAuthorizeData>());
+    }
+
+    [Fact]
+    public async Task Nur_das_Ausloesen_der_Profil_Uebergabe_verlangt_die_erneute_Anmeldung()
+    {
+        var endpunkte = await EndpunkteAsync();
+
+        Assert.Equal(
+            ["POST /api/ich/familie/kinder/{personId:guid}/uebergabe"],
+            endpunkte.Where(e => e.Endpunkt.Metadata.GetMetadata<Zeltlotse.SharedKernel.Anmeldung.ErneuteAnmeldungMetadaten>() is not null).Select(e => e.Name));
     }
 
     [Fact]

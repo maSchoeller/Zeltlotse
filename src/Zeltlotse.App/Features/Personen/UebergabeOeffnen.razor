@@ -1,0 +1,82 @@
+@page "/uebergabe/{Token}"
+@inject PersonenApiClient Personen
+@inject AnmeldungAbschluss Abschluss
+@* Profil übernehmen aus der Mail an das volljährige Kind (AD-11, FR-4, NS-11): Der Aufruf zeigt nur diese Seite; übernommen
+   wird erst beim Klick (POST). Ohne Sitzung führt der Klick zur Anmeldung und danach hierher zurück. Nach der Übernahme
+   gehört das Konto erst mit der neuen Anmeldung zum Profil; darum „Neu anmelden“ (abmelden, dann „Anmelden“). *@
+<PageTitle>Profil übernehmen – Zeltlotse</PageTitle>
+
+<h1>Profil übernehmen</h1>
+
+@if (_aktionFehler)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>@AnmeldungAbschluss.FehlerText</p>
+    </Meldung>
+}
+@if (_ergebnis == AnnahmeErgebnis.NichtGueltig)
+{
+    <Meldung Titel="Hinweis" Art="MeldungArt.Warnung">
+        <p>Dieser Link ist nicht mehr gültig. Die Eltern können die Übergabe erneut auslösen.</p>
+    </Meldung>
+}
+@if (_ergebnis == AnnahmeErgebnis.Konflikt)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>Dieses Konto hat schon ein eigenes Profil. Zum Übernehmen mit einer Mail-Adresse ohne eigenes Profil anmelden.</p>
+    </Meldung>
+}
+
+@if (_ergebnis == AnnahmeErgebnis.Angenommen)
+{
+    <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+        <p>Das Profil ist übernommen. Zum Abschluss neu anmelden.</p>
+    </Meldung>
+    <Knopf Deaktiviert="@_uebertraegt" @onclick="NeuAnmeldenAsync">Neu anmelden</Knopf>
+}
+else
+{
+    <p>Mit „Profil übernehmen“ gehört das Profil aus dem Familienkonto zum eigenen Konto; die Eltern haben danach keinen Zugriff mehr. Das geht mit der Mail-Adresse, an die der Link ging, und mit einem Konto ohne eigenes Profil. Ohne Anmeldung geht es vorher zur Seite „Anmelden“.</p>
+    <Knopf Deaktiviert="@_uebertraegt" @onclick="UebernehmenAsync">Profil übernehmen</Knopf>
+}
+
+@code {
+    private AnnahmeErgebnis? _ergebnis;
+    private bool _uebertraegt;
+    private bool _aktionFehler;
+
+    /// <summary>Das Token aus dem Link; es verlässt die Seite nur im Körper des POST.</summary>
+    [Parameter] public string Token { get; set; } = "";
+
+    private async Task UebernehmenAsync()
+    {
+        _uebertraegt = true;
+        _aktionFehler = false;
+        _ergebnis = null;
+        try
+        {
+            _ergebnis = await Personen.ProfilUebernehmenAsync(Token);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task NeuAnmeldenAsync()
+    {
+        _uebertraegt = true;
+        try
+        {
+            await Abschluss.AbmeldenAsync();
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

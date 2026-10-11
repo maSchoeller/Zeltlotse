@@ -37,7 +37,7 @@ internal static class KontoLadenEndpunkt
 
 /// <summary>
 /// <c>PUT /api/ich/konto/passwort</c>: Passwort festlegen oder ändern (10–200 Zeichen). Andere Sitzungen enden; die eigene
-/// wird mit dem neuen Sitzungsstempel neu ausgestellt.
+/// wird mit dem neuen Sitzungsstempel und dem bisherigen Zeitpunkt der Anmeldung neu ausgestellt (AD-25).
 /// </summary>
 internal static class PasswortFestlegenEndpunkt
 {
@@ -46,7 +46,7 @@ internal static class PasswortFestlegenEndpunkt
     {
         var kontoId = angemeldet.KontoId ?? throw new InvalidOperationException("Ohne Sitzung erreicht niemand diesen Endpunkt.");
         var sitzung = await sender.Send(new PasswortFestlegenCommand(kontoId, anfrage.Passwort), abbruch);
-        await SitzungAusstellen.AnmeldenAsync(kontext, sitzung);
+        await SitzungAusstellen.NeuAusstellenAsync(kontext, sitzung);
         return TypedResults.NoContent();
     }
 }

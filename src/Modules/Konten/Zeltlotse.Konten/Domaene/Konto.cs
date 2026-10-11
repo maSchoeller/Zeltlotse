@@ -15,7 +15,8 @@ internal sealed class Konto
     /// <summary>Normalisiert (getrimmt, klein) und eindeutig, siehe <see cref="SharedKernel.Zugangslinks.MailAdresse"/>.</summary>
     public string Mail { get; private init; } = "";
 
-    public Guid PersonId { get; private init; }
+    /// <summary>Die Person des Kontos; wechselt nur, wenn ein volljähriges Kind sein Profil übernimmt (<see cref="ProfilUebernehmen"/>).</summary>
+    public Guid PersonId { get; private set; }
 
     /// <summary>Prüfwert im Identity-Hashformat v3; <c>null</c>, solange kein Passwort festgelegt ist.</summary>
     public string? PasswortHash { get; private set; }
@@ -42,6 +43,21 @@ internal sealed class Konto
 
     /// <summary>Setzt oder entfernt das Global-Admin-Kennzeichen.</summary>
     public void GlobalAdminSetzen(bool globalAdmin) => GlobalAdmin = globalAdmin;
+
+    /// <summary>
+    /// Verbindet das Konto mit dem Profil, das ein volljähriges Kind übernommen hat (FR-4, AD-7). Alle bisherigen Sitzungen
+    /// werden ungültig. Gehört das Konto schon zu dieser Person, passiert nichts.
+    /// </summary>
+    public void ProfilUebernehmen(Guid personId)
+    {
+        if (PersonId == personId)
+        {
+            return;
+        }
+
+        PersonId = personId;
+        SitzungsStempel = Guid.NewGuid();
+    }
 
     /// <summary>Legt das Passwort fest; alle bisherigen Sitzungen werden ungültig.</summary>
     public void PasswortFestlegen(string passwortHash)

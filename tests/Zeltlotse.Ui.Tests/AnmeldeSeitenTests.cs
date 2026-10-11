@@ -244,7 +244,7 @@ public sealed class AnmeldeSeitenTests : BunitContext
         cut.WaitForAssertion(() => Assert.Contains("Noch keine Freizeit geöffnet.", cut.Markup, StringComparison.Ordinal));
         Assert.Equal("Hallo", cut.Find("h1").TextContent);
         Assert.Equal(["GET /api/ich/profil", "POST /api/ich/profil"], Aufrufe.Take(2));
-        Assert.Equal(["GET /api/ich/freizeiten", "GET /api/ich/konto", "GET /api/ich/organisationen"], Aufrufe.Skip(2).Order(StringComparer.Ordinal));
+        Assert.Equal(["GET /api/ich/familie", "GET /api/ich/freizeiten", "GET /api/ich/konto", "GET /api/ich/organisationen"], Aufrufe.Skip(2).Order(StringComparer.Ordinal));
         Assert.True(Sitzung.Angemeldet);
     }
 

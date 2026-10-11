@@ -1,0 +1,286 @@
+@page "/familie"
+@using System.Globalization
+@using Zeltlotse.Api.Contracts.Personen
+@inject PersonenApiClient Personen
+@* Familie (FR-3, FR-4, EXPERIENCE.md → Familienübersicht, NS-11): je Kind eine Card mit Geburtsdatum und „Angaben ändern“;
+   nur bei einem volljährigen Kind (der Server rechnet, der Client nie) die Übergabe mit Inline-Bestätigung. Darunter „Kind
+   hinzufügen“, die Eltern mit offenen Einladungen und, solange es weniger als 2 Eltern gibt, „Zweiten Elternteil
+   hinzufügen“. Freizeiten und Anmeldestatus kommen mit der Anmeldung. Ohne frische Anmeldung (401 bei der Übergabe) führt
+   der Sitzungs-Handler zur Anmeldung und danach hierher zurück. *@
+<PageTitle>Familie – Zeltlotse</PageTitle>
+
+<h1>Familie</h1>
+<p><a href="./">Zur Startseite</a></p>
+
+@if (_aktionFehler)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>@AnmeldungAbschluss.FehlerText</p>
+    </Meldung>
+}
+
+@if (_familie is null)
+{
+    @if (!_aktionFehler)
+    {
+        <Ladezustand />
+    }
+}
+else
+{
+    @if (_familie.Kinder.Count == 0)
+    {
+        <LeerZustand Satz="Noch keine Kinder im Familienkonto." />
+    }
+
+    @foreach (var kind in _familie.Kinder)
+    {
+        var stand = Stand(kind.PersonId);
+        <Card Titel="@Anzeige.Name(kind.Vorname, kind.Nachname)">
+            <p>Geboren am @Anzeige.Datum(kind.Geburtsdatum)</p>
+            @if (kind.Uebergabe is { } uebergabe)
+            {
+                <p>Übergabe verschickt an @uebergabe.Mail, gültig bis @Anzeige.Datum(uebergabe.GueltigBis)</p>
+            }
+            <Knopf Art="KnopfArt.Outline" Href="@($"familie/kinder/{kind.PersonId}")" Ansichtswechsel="true">Angaben ändern</Knopf>
+            @if (kind.Volljaehrig)
+            {
+                @if (stand.Verschickt)
+                {
+                    <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+                        <p>Die Übergabe ist verschickt.</p>
+                    </Meldung>
+                }
+                @if (stand.NichtVolljaehrig)
+                {
+                    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                        <p>@Vorname(kind) ist noch nicht volljährig.</p>
+                    </Meldung>
+                }
+                <Feld Label="@($"Mail-Adresse von {Vorname(kind)}")" Id="@($"uebergabe-mail-{kind.PersonId}")" Typ="email" Wert="@stand.Mail"
+                      Fehler="@stand.MailFehler" autocomplete="off" @oninput="@(e => stand.Mail = e.Value?.ToString())" />
+                <InlineBestaetigung AusloeserText="@($"Profil an {Vorname(kind)} übergeben")"
+                                    Satz="@($"Profil an {Vorname(kind)} übergeben? Danach hat das Familienkonto keinen Zugriff mehr.")"
+                                    JaText="Ja, übergeben" Bestaetigt="@(() => UebergebenAsync(kind))" />
+            }
+        </Card>
+    }
+
+    <Card Titel="Kind hinzufügen">
+        @if (_kindHinzugefuegt)
+        {
+            <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+                <p>Das Kind ist hinzugefügt.</p>
+            </Meldung>
+        }
+        <p>* Pflichtfeld</p>
+        <Formular id="kind-hinzufuegen" Absenden="KindHinzufuegenAsync">
+            <Feld Label="Vorname *" Id="kind-vorname" Wert="@_vorname" Fehler="@_vornameFehler" autocomplete="off"
+                  @oninput="@(e => _vorname = e.Value?.ToString())" />
+            <Feld Label="Nachname" Id="kind-nachname" Wert="@_nachname" Fehler="@_nachnameFehler" autocomplete="off"
+                  @oninput="@(e => _nachname = e.Value?.ToString())" />
+            <Feld Label="Geburtsdatum *" Id="kind-geburtsdatum" Typ="date" Wert="@_geburtsdatum" Fehler="@_geburtsdatumFehler"
+                  @oninput="@(e => _geburtsdatum = e.Value?.ToString())" />
+            <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Kind hinzufügen</Knopf>
+        </Formular>
+    </Card>
+
+    @if (ElternZeilen.Count > 0)
+    {
+        <Card Titel="Eltern">
+            <Datentabelle TZeile="ElternZeile" Beschriftung="Eltern" Spalten="ElternSpalten" Zeilen="ElternZeilen" />
+        </Card>
+    }
+
+    @if (_familie.Eltern.Count < 2)
+    {
+        <Card Titel="Zweiten Elternteil hinzufügen">
+            <p>Ein zweiter Elternteil hat im Familienkonto dieselben Rechte. Die Einladung gilt 7 Tage.</p>
+            @if (_eingeladen)
+            {
+                <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+                    <p>Die Einladung ist verschickt.</p>
+                </Meldung>
+            }
+            @if (_voll)
+            {
+                <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                    <p>Das Familienkonto hat schon zwei Eltern.</p>
+                </Meldung>
+            }
+            <Formular id="elternteil-einladen" Absenden="EinladenAsync">
+                <Feld Label="Mail-Adresse" Id="elternteil-mail" Typ="email" Wert="@_mail" Fehler="@_mailFehler"
+                      autocomplete="off" @oninput="@(e => _mail = e.Value?.ToString())" />
+                <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Einladung schicken</Knopf>
+            </Formular>
+        </Card>
+    }
+}
+
+@code {
+    /// <summary>Eine Zeile der Eltern-Tabelle: ein Elternteil oder eine offene Einladung.</summary>
+    private sealed record ElternZeile(string Name, string Stand);
+
+    /// <summary>Eingabe und Rückmeldung der Übergabe je Kind; bleibt über ein Neuladen der Familie erhalten.</summary>
+    private sealed class UebergabeStand
+    {
+        public string? Mail { get; set; }
+
+        public string? MailFehler { get; set; }
+
+        public bool Verschickt { get; set; }
+
+        public bool NichtVolljaehrig { get; set; }
+
+        /// <summary>Eine Übergabe für dieses Kind ist unterwegs; ein zweites „Ja, übergeben“ verschickt keine zweite Mail.</summary>
+        public bool Uebertraegt { get; set; }
+    }
+
+    private static readonly IReadOnlyList<Spalte<ElternZeile>> ElternSpalten =
+    [
+        new("Name oder Mail-Adresse", z => @<text>@z.Name</text>),
+        new("Stand", z => @<text>@z.Stand</text>),
+    ];
+
+    private readonly Dictionary<Guid, UebergabeStand> _uebergaben = [];
+    private FamilieAntwort? _familie;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private bool _kindHinzugefuegt;
+    private string? _vorname;
+    private string? _nachname;
+    private string? _geburtsdatum;
+    private string? _vornameFehler;
+    private string? _nachnameFehler;
+    private string? _geburtsdatumFehler;
+    private bool _eingeladen;
+    private bool _voll;
+    private string? _mail;
+    private string? _mailFehler;
+
+    private IReadOnlyList<ElternZeile> ElternZeilen =>
+    [
+        .. _familie!.Eltern.Select(e => new ElternZeile(Anzeige.Name(e.Vorname, e.Nachname), "Elternteil")),
+        .. _familie.Einladungen.Select(e => new ElternZeile(e.Mail, $"eingeladen, gültig bis {Anzeige.Datum(e.GueltigBis)}")),
+    ];
+
+    private static string Vorname(KindZeile kind) => string.IsNullOrWhiteSpace(kind.Vorname) ? "Kind" : kind.Vorname;
+
+    private UebergabeStand Stand(Guid kind)
+    {
+        if (!_uebergaben.TryGetValue(kind, out var stand))
+        {
+            stand = new UebergabeStand();
+            _uebergaben[kind] = stand;
+        }
+
+        return stand;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await NeuLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    private async Task NeuLadenAsync() => _familie = await Personen.FamilieLadenAsync();
+
+    /// <summary>Wert eines Datumsfelds (<c>yyyy-MM-dd</c>); alles andere gilt als fehlend, den Fehler meldet der Server am Feld.</summary>
+    private static DateOnly? Tag(string? wert) =>
+        DateOnly.TryParseExact(wert, KindFelder.Datumsformat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var tag) ? tag : null;
+
+    private async Task KindHinzufuegenAsync()
+    {
+        _uebertraegt = true;
+        _kindHinzugefuegt = false;
+        _aktionFehler = false;
+        try
+        {
+            var ergebnis = await Personen.KindAnlegenAsync(_vorname, _nachname, Tag(_geburtsdatum));
+            (_vornameFehler, _nachnameFehler, _geburtsdatumFehler) = (ergebnis.VornameFehler, ergebnis.NachnameFehler, ergebnis.GeburtsdatumFehler);
+            if (ergebnis.PersonId is not null)
+            {
+                _kindHinzugefuegt = true;
+                (_vorname, _nachname, _geburtsdatum) = (null, null, null);
+                await NeuLadenAsync();
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task EinladenAsync()
+    {
+        _uebertraegt = true;
+        _eingeladen = false;
+        _voll = false;
+        _aktionFehler = false;
+        try
+        {
+            var ergebnis = await Personen.ElternteilEinladenAsync(_mail);
+            _mailFehler = ergebnis.MailFehler;
+            _voll = ergebnis.Voll;
+            if (ergebnis.Id is not null)
+            {
+                _eingeladen = true;
+                _mail = null;
+                await NeuLadenAsync();
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task UebergebenAsync(KindZeile kind)
+    {
+        var stand = Stand(kind.PersonId);
+        if (stand.Uebertraegt)
+        {
+            return;
+        }
+
+        stand.Uebertraegt = true;
+        stand.Verschickt = false;
+        stand.NichtVolljaehrig = false;
+        _aktionFehler = false;
+        try
+        {
+            var ergebnis = await Personen.ProfilUebergebenAsync(kind.PersonId, stand.Mail);
+            stand.MailFehler = ergebnis.MailFehler;
+            stand.NichtVolljaehrig = ergebnis.NichtVolljaehrig;
+            if (ergebnis.Id is not null)
+            {
+                stand.Verschickt = true;
+                stand.Mail = null;
+                await NeuLadenAsync();
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            stand.Uebertraegt = false;
+        }
+    }
+}

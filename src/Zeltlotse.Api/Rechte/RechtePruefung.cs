@@ -1,4 +1,5 @@
 using Zeltlotse.Freizeiten.Contracts.Rollen;
+using Zeltlotse.SharedKernel.Anmeldung;
 using Zeltlotse.SharedKernel.Mandanten;
 using Zeltlotse.SharedKernel.Rechte;
 
@@ -8,6 +9,8 @@ namespace Zeltlotse.Api.Rechte;
 /// Zentrale Rechteprüfung (AD-6, AD-12) nach Routing und Authentifizierung, vor der Modellbindung: Sie setzt den
 /// Mandanten-Kontext aus der adressierten Ressource und prüft die Endpunkt-Merkmale.
 /// <list type="bullet">
+/// <item><c>.ErneuteAnmeldung()</c>: Anmeldung fehlt oder liegt länger als <see cref="Sitzung.FrischeDauer"/> zurück →
+/// <c>401</c> (AD-25).</item>
 /// <item><c>.NurGlobalAdmin()</c>: kein Global Admin → <c>403</c>.</item>
 /// <item>Routenwert <c>orgId</c>: Mandant = diese Organisation. <c>.NurOrgRolle(…)</c>: keine Rolle in dieser Organisation
 /// (auch unbekannte Organisation, auch Global Admin ohne eigene Rolle) → <c>404</c>; Rolle vorhanden, aber nicht die
@@ -38,6 +41,12 @@ internal sealed class RechtePruefung(RequestDelegate weiter)
         if (organisationId is not null)
         {
             mandant.Setzen(organisationId);
+        }
+
+        if (endpunkt?.Metadata.GetMetadata<ErneuteAnmeldungMetadaten>() is not null && !AnmeldungFrisch(kontext))
+        {
+            kontext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return;
         }
 
         if (endpunkt?.Metadata.GetMetadata<NurGlobalAdminMetadaten>() is not null && !await Rollen().IstGlobalAdminAsync(abbruch))
@@ -77,6 +86,14 @@ internal sealed class RechtePruefung(RequestDelegate weiter)
         }
 
         await weiter(kontext);
+    }
+
+    /// <summary>AD-25: Die Anmeldung der Sitzung liegt höchstens <see cref="Sitzung.FrischeDauer"/> zurück (Uhr über <see cref="TimeProvider"/>).</summary>
+    private static bool AnmeldungFrisch(HttpContext kontext)
+    {
+        var angemeldetAm = Sitzung.AngemeldetAm(kontext.User);
+        var jetzt = kontext.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow();
+        return angemeldetAm is { } am && jetzt - am <= Sitzung.FrischeDauer;
     }
 
     private static Guid? Kennung(HttpContext kontext, string routenWert) =>

@@ -1,0 +1,66 @@
+@page "/familie/einladung/{Token}"
+@inject PersonenApiClient Personen
+@inject NavigationManager Navigation
+@* Einladung ins Familienkonto aus der Mail (AD-11, FR-3): Der Aufruf zeigt nur diese Seite; angenommen wird erst beim Klick
+   (POST), damit Mail-Scanner die Einladung nicht verbrauchen. Ohne Sitzung führt der Klick zur Anmeldung, und die App kehrt
+   danach hierher zurück (Rückweg nur im Speicher). Das Token verlässt die Seite nur im Körper des POST. *@
+<PageTitle>Familienkonto beitreten – Zeltlotse</PageTitle>
+
+<h1>Familienkonto beitreten</h1>
+
+@if (_aktionFehler)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>@AnmeldungAbschluss.FehlerText</p>
+    </Meldung>
+}
+@if (_ergebnis == AnnahmeErgebnis.NichtGueltig)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>Diese Einladung ist nicht mehr gültig oder gilt für eine andere Mail-Adresse.</p>
+    </Meldung>
+}
+@if (_ergebnis == AnnahmeErgebnis.Konflikt)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>Dieses Konto gehört schon zu einer anderen Familie, oder das Familienkonto hat schon zwei Eltern.</p>
+    </Meldung>
+}
+
+<p>Die Einladung gilt für die Mail-Adresse, an die sie ging. Mit „Einladung annehmen“ kommt das eigene Konto als zweiter Elternteil mit denselben Rechten ins Familienkonto; ohne Anmeldung geht es vorher zur Seite „Anmelden“.</p>
+<Knopf Deaktiviert="@_uebertraegt" @onclick="AnnehmenAsync">Einladung annehmen</Knopf>
+
+@code {
+    private AnnahmeErgebnis? _ergebnis;
+    private bool _uebertraegt;
+    private bool _aktionFehler;
+
+    /// <summary>Das Token aus dem Link; es verlässt die Seite nur im Körper des POST.</summary>
+    [Parameter] public string Token { get; set; } = "";
+
+    private async Task AnnehmenAsync()
+    {
+        _uebertraegt = true;
+        _aktionFehler = false;
+        _ergebnis = null;
+        try
+        {
+            var ergebnis = await Personen.FamilienEinladungAnnehmenAsync(Token);
+            if (ergebnis == AnnahmeErgebnis.Angenommen)
+            {
+                Navigation.NavigateTo("familie");
+                return;
+            }
+
+            _ergebnis = ergebnis;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

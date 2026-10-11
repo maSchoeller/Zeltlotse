@@ -9,6 +9,7 @@ public enum SicherheitsEreignisArt : short
     Rollenvergabe = 4,
     Export = 5,
     Loeschung = 6,
+    ProfilUebergabe = 7,
 }
 
 /// <summary>

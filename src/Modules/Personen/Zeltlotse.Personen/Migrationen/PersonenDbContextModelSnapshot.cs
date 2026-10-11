@@ -23,6 +23,134 @@ namespace Zeltlotse.Personen.Migrationen
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Zeltlotse.Personen.Familien.Familie", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AngelegtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("familie", "personen");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Personen.Familien.FamilienEinladung", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AngelegtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EingeladenVon")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FamilieId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("GueltigBis")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Mail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilieId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("familien_einladung", "personen");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Personen.Familien.FamilienElternteil", b =>
+                {
+                    b.Property<Guid>("FamilieId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("FamilieId", "PersonId");
+
+                    b.HasIndex("PersonId")
+                        .IsUnique();
+
+                    b.ToTable("familien_elternteil", "personen");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Personen.Familien.ProfilUebergabe", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AngelegtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EingeladenVon")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FamilieId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Folgenummer")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("GueltigBis")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Mail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilieId");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("profil_uebergabe", "personen");
+                });
+
             modelBuilder.Entity("Zeltlotse.Personen.Freizeitrollen.FreizeitRolle", b =>
                 {
                     b.Property<Guid>("FreizeitId")
@@ -52,6 +180,12 @@ namespace Zeltlotse.Personen.Migrationen
                     b.Property<DateTimeOffset>("AngelegtAm")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("FamilieId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("Geburtsdatum")
+                        .HasColumnType("date");
+
                     b.Property<string>("Nachname")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -67,6 +201,8 @@ namespace Zeltlotse.Personen.Migrationen
                         .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("FamilieId");
 
                     b.ToTable("person", "personen");
                 });
@@ -183,6 +319,33 @@ namespace Zeltlotse.Personen.Migrationen
                     b.HasIndex("ErledigtAm", "NaechsterVersuch");
 
                     b.ToTable("outbox_zustellung", "personen");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Personen.Familien.FamilienEinladung", b =>
+                {
+                    b.HasOne("Zeltlotse.Personen.Familien.Familie", null)
+                        .WithMany()
+                        .HasForeignKey("FamilieId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zeltlotse.Personen.Familien.FamilienElternteil", b =>
+                {
+                    b.HasOne("Zeltlotse.Personen.Familien.Familie", null)
+                        .WithMany()
+                        .HasForeignKey("FamilieId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zeltlotse.Personen.Familien.ProfilUebergabe", b =>
+                {
+                    b.HasOne("Zeltlotse.Personen.Familien.Familie", null)
+                        .WithMany()
+                        .HasForeignKey("FamilieId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.Zustellung", b =>
