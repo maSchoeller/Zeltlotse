@@ -27,8 +27,16 @@ var dateien = builder.AddContainer("dateien", "rustfs/rustfs", "1.0.1")
     .WithVolume("zeltlotse-dateien", "/data")
     .WithHttpHealthCheck("/health", endpointName: "s3");
 
+// Mail-Testserver (AD-23, Story 1-1): Mailpit mit festem Tag, derselbe wie in den Tests (MailpitContainer). Login-Mails
+// landen dort; die Weboberfläche zeigt sie an. Im Betrieb kommt stattdessen der SMTP-Server des Mail-Anbieters.
+var mail = builder.AddContainer("mail", "axllent/mailpit", "v1.31.5")
+    .WithHttpEndpoint(targetPort: 8025, name: "web")
+    .WithEndpoint(targetPort: 1025, name: "smtp", scheme: "tcp")
+    .WithHttpHealthCheck("/livez", endpointName: "web");
+var smtp = mail.GetEndpoint("smtp");
+
 // Profil https: Alle Cookies sind Secure (AD-25), das Antiforgery-Cookie wird nur über HTTPS ausgegeben.
-builder.AddProject<Projects.Zeltlotse_Api>("api", launchProfileName: "https")
+var api = builder.AddProject<Projects.Zeltlotse_Api>("api", launchProfileName: "https")
     .WithReference(datenbank)
     .WaitFor(datenbank)
     .WaitFor(dateien)
@@ -38,6 +46,15 @@ builder.AddProject<Projects.Zeltlotse_Api>("api", launchProfileName: "https")
     .WithEnvironment("Zeltlotse__Dateien__Bucket", "zeltlotse")
     .WithEnvironment("Zeltlotse__Dateien__Zugang", dateienZugang)
     .WithEnvironment("Zeltlotse__Dateien__Geheimnis", dateienGeheimnis)
+    .WaitFor(mail)
+    .WithEnvironment("Zeltlotse__Mail__Art", "Smtp")
+    .WithEnvironment("Zeltlotse__Mail__Absender", "Zeltlotse <zeltlotse@example.org>")
+    .WithEnvironment("Zeltlotse__Mail__Smtp__Host", smtp.Property(EndpointProperty.Host))
+    .WithEnvironment("Zeltlotse__Mail__Smtp__Port", smtp.Property(EndpointProperty.Port))
+    .WithEnvironment("Zeltlotse__Mail__Smtp__Verschluesselung", "None")
     .WithHttpHealthCheck("/health");
+
+// Links in Login-Mails zeigen auf die eigene HTTPS-Adresse des API-Hosts.
+api.WithEnvironment("Zeltlotse__OeffentlicheAdresse", api.GetEndpoint("https"));
 
 builder.Build().Run();

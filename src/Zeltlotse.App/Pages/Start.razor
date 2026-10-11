@@ -1,5 +1,43 @@
 @page "/"
+@inject PersonenApiClient Personen
+@inject AppSitzung Sitzung
+@* Startseite (EXPERIENCE.md → Voice and Tone: Begrüßung mit Vornamen, darunter ein neutraler Satz). Ohne Sitzung (401)
+   leitet der Sitzungs-Handler zur Seite „Anmelden“; offline bleibt die Begrüßung ohne Namen. *@
 <PageTitle>Zeltlotse</PageTitle>
 
-<h1>Zeltlotse</h1>
-<p>Noch keine Freizeit geöffnet.</p>
+<h1>@Begruessung</h1>
+@if (_geladen)
+{
+    <p>Noch keine Freizeit geöffnet.</p>
+}
+else
+{
+    <Ladezustand />
+}
+
+@code {
+    private string? _vorname;
+    private bool _geladen;
+
+    private string Begruessung => string.IsNullOrWhiteSpace(_vorname) ? "Hallo" : $"Hallo, {_vorname}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var profil = await Personen.ProfilLadenOderAnlegenAsync();
+            _vorname = profil.Vorname;
+            Sitzung.Anmelden(profil.Vorname);
+        }
+        catch (HttpRequestException)
+        {
+            // 401: Der Sitzungs-Handler führt zur Anmeldung. Offline: Begrüßung ohne Namen.
+        }
+        catch (TaskCanceledException)
+        {
+            // Zeitüberschreitung (offline).
+        }
+
+        _geladen = true;
+    }
+}

@@ -14,7 +14,7 @@ internal static class BetriebEndpunkte
 {
     public static IEndpointRouteBuilder MapBetriebEndpoints(this IEndpointRouteBuilder api)
     {
-        var betrieb = api.MapGroup("/betrieb");
+        var betrieb = api.MapGroup("/betrieb").AllowAnonymous();
         betrieb.MapGet("/antiforgery", AntiforgeryEndpunkt.Holen).Zugriffsbegrenzt();
         betrieb.MapPost("/fehler", BrowserFehlerEndpunkt.Melden).Zugriffsbegrenzt();
         return api;

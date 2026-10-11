@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Zeltlotse.App.Browser;
 using Zeltlotse.App.Layout;
+using Zeltlotse.App.Sitzung;
 using Zeltlotse.App.Verbindung;
 using Zeltlotse.Ui;
 using Zeltlotse.Ui.Transport;
@@ -31,6 +32,7 @@ public sealed class AppLayoutTests : BunitContext
         Services.AddSingleton<AppVerbindung>();
         Services.AddSingleton<IVerbindung>(sp => sp.GetRequiredService<AppVerbindung>());
         Services.AddSingleton<NeueVersion>();
+        Services.AddSingleton<AppSitzung>();
         Services.AddZeltlotseUi(_ => _server.Client());
     }
 
@@ -49,6 +51,24 @@ public sealed class AppLayoutTests : BunitContext
         Assert.Equal("Zeltlotse", cut.Find("main h1").TextContent);
         Assert.Equal("Zum Inhalt springen", cut.Find("a.elkw-skiplink").TextContent);
         Assert.EndsWith("#inhalt", cut.Find("a.elkw-skiplink").GetAttribute("href"), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task App_Leiste_zeigt_den_Konto_Link_erst_angemeldet_mit_Vornamen_sonst_Konto()
+    {
+        var cut = Layout();
+        Assert.Empty(cut.FindAll("a.zl-konto-link"));
+        var sitzung = Services.GetRequiredService<AppSitzung>();
+
+        await cut.InvokeAsync(() => sitzung.Anmelden("Jonas"));
+        cut.WaitForAssertion(() => Assert.Equal("Jonas", cut.Find("header a.zl-konto-link").TextContent));
+        Assert.Equal("konto", cut.Find("header a.zl-konto-link").GetAttribute("href"));
+
+        await cut.InvokeAsync(() => sitzung.Anmelden(null));
+        cut.WaitForAssertion(() => Assert.Equal("Konto", cut.Find("header a.zl-konto-link").TextContent));
+
+        await cut.InvokeAsync(sitzung.Abmelden);
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("a.zl-konto-link")));
     }
 
     [Fact]

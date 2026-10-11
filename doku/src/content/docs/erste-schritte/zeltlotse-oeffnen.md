@@ -1,6 +1,8 @@
 ---
 title: Zeltlotse öffnen
 description: Web-App im Browser öffnen und am Handy installieren, öffentliche Seiten ohne Installation, Offline-Ansicht mit Notfall-Box.
+sidebar:
+  order: 1
 ---
 
 Zeltlotse besteht aus zwei Teilen unter derselben Adresse:
@@ -10,11 +12,13 @@ Zeltlotse besteht aus zwei Teilen unter derselben Adresse:
 
 ## Web-App im Browser öffnen
 
-Die Web-App liegt unter der Adresse von Zeltlotse mit dem Zusatz `/app/`. Nach dem Öffnen zeigt die Startseite, welche Freizeit gerade geöffnet ist. Solange keine Freizeit gewählt ist, steht dort „Noch keine Freizeit geöffnet.“
+Die Web-App liegt unter der Adresse von Zeltlotse mit dem Zusatz `/app/`. Ohne Anmeldung erscheint zuerst die Seite „Anmelden“; wie das per Login-Link, Login-Code oder Passwort geht, steht unter [Anmelden](/erste-schritte/anmelden/).
 
-![Startseite der Web-App am Handy mit dem Hinweis „Noch keine Freizeit geöffnet.“](../../../assets/screenshots/app-start-handy.png)
+Nach dem Anmelden begrüßt die Startseite mit dem Vornamen, etwa „Hallo, Jonas“, und zeigt, welche Freizeit gerade geöffnet ist. Solange keine Freizeit gewählt ist, steht dort „Noch keine Freizeit geöffnet.“ Oben rechts in der App-Leiste führt der Vorname zur Seite „Konto“.
 
-![Startseite der Web-App am Laptop mit dem Hinweis „Noch keine Freizeit geöffnet.“](../../../assets/screenshots/app-start-laptop.png)
+![Startseite der Web-App am Handy nach dem Anmelden mit „Hallo, Jonas“ und dem Hinweis „Noch keine Freizeit geöffnet.“](../../../assets/screenshots/app-start-handy.png)
+
+![Startseite der Web-App am Laptop nach dem Anmelden mit „Hallo, Jonas“, dem Hinweis „Noch keine Freizeit geöffnet.“ und dem Vornamen oben rechts](../../../assets/screenshots/app-start-laptop.png)
 
 ## Am Handy installieren
 

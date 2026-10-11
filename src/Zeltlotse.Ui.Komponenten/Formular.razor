@@ -1,0 +1,15 @@
+@attribute [NurInteraktiv]
+@* Formular (EXPERIENCE.md → Formular): Felder untereinander, Absenden mit Enter oder dem Knopf vom Typ submit.
+   novalidate: keine Fehlerblasen des Browsers (keine Pop-ups, NFR-13); Fehler zeigt das Feld selbst ("Fehler: …"). *@
+<form @attributes="Attribute" class="zl-formular" novalidate @onsubmit="Absenden">
+    @ChildContent
+</form>
+
+@code {
+    /// <summary>Wird beim Absenden ausgelöst (Enter im Feld oder Knopf mit <c>Typ="submit"</c>).</summary>
+    [Parameter] public EventCallback Absenden { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? Attribute { get; set; }
+}

@@ -1,0 +1,109 @@
+@page "/anmelden"
+@inject KontenApiClient Konten
+@inject AnmeldungAbschluss Abschluss
+@* Anmelden (EXPERIENCE.md → Login, State Patterns „Login-Link verschickt“; AD-11): Login-Link per Mail anfordern; in der
+   installierten App den Code aus derselben Mail eintippen. Alternativ mit Passwort. Nur Bausteine aus Ui.Komponenten. *@
+<PageTitle>Anmelden – Zeltlotse</PageTitle>
+
+<h1>Anmelden</h1>
+
+@if (_aktionFehler)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>@AnmeldungAbschluss.FehlerText</p>
+    </Meldung>
+}
+@if (_codeFalsch)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>Der Code stimmt nicht oder ist abgelaufen.</p>
+        <Knopf Art="KnopfArt.Outline" Deaktiviert="@_uebertraegt" @onclick="NeuenLinkAsync">Neuen Link schicken</Knopf>
+    </Meldung>
+}
+else if (_anfrageId is not null)
+{
+    <Meldung Titel="Hinweis">
+        <p>Login-Link ist verschickt. Bitte im Postfach nachsehen.</p>
+    </Meldung>
+}
+
+<Formular Absenden="LinkSchickenAsync">
+    <Feld Label="Mail-Adresse" Id="anmelden-mail" Typ="email" Wert="@_mail" Fehler="@_mailFehler"
+          autocomplete="email" @oninput="@(e => _mail = e.Value?.ToString())" />
+    <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Login-Link schicken</Knopf>
+</Formular>
+
+@if (_anfrageId is not null)
+{
+    <Formular Absenden="MitCodeAsync">
+        <Feld Label="Login-Code" Id="anmelden-code" Wert="@_code" Hinweis="6 Ziffern aus der Mail"
+              inputmode="numeric" autocomplete="one-time-code" @oninput="@(e => _code = e.Value?.ToString())" />
+        <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Mit Code anmelden</Knopf>
+    </Formular>
+}
+
+<p><a href="anmelden/passwort">Mit Passwort anmelden</a></p>
+
+@code {
+    private string? _mail;
+    private string? _mailFehler;
+    private string? _code;
+    private Guid? _anfrageId;
+    private bool _codeFalsch;
+    private bool _uebertraegt;
+    private bool _aktionFehler;
+
+    private async Task LinkSchickenAsync()
+    {
+        _uebertraegt = true;
+        _aktionFehler = false;
+        try
+        {
+            var ergebnis = await Konten.LoginLinkAnfordernAsync(_mail);
+            _mailFehler = ergebnis.MailFehler;
+            // Neue Anfrage oder Fehler am Feld: Hinweis und Code der vorigen Anfrage gelten nicht mehr.
+            _anfrageId = ergebnis.AnfrageId;
+            _codeFalsch = false;
+            _code = null;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private Task NeuenLinkAsync() => LinkSchickenAsync();
+
+    private async Task MitCodeAsync()
+    {
+        if (_anfrageId is not { } id)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _aktionFehler = false;
+        try
+        {
+            if (await Konten.LoginCodeEinloesenAsync(id, _code))
+            {
+                await Abschluss.AngemeldetAsync();
+                return;
+            }
+
+            _codeFalsch = true;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

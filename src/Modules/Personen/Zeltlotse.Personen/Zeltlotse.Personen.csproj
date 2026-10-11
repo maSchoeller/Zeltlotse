@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Zeltlotse.SharedKernel\Zeltlotse.SharedKernel.csproj" />
     <ProjectReference Include="..\Zeltlotse.Personen.Contracts\Zeltlotse.Personen.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

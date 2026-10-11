@@ -53,6 +53,16 @@ public sealed class ZeltlotseApiFactory : WebApplicationFactory<Program>
         ["Zeltlotse:Protokoll:HmacSchluessel"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
     };
 
+    /// <summary>
+    /// Ordner des Mail-Adapters <c>Ordner</c> (je Factory neu): Hier landen die Mails als <c>.eml</c>, siehe <see cref="Mails"/>.
+    /// Außerhalb von <c>Development</c>/<c>Testing</c> ist der Ordner-Adapter verboten; dort nimmt die Factory ohne eigene
+    /// Einstellung einen SMTP-Adapter, der nie verbindet.
+    /// </summary>
+    public string MailOrdner { get; } = Path.Combine(Path.GetTempPath(), "zeltlotse-mails-" + Guid.NewGuid().ToString("N"));
+
+    /// <summary>Die Mails im <see cref="MailOrdner"/>.</summary>
+    public MailOrdner Mails => new(MailOrdner);
+
     /// <summary>Zusätzliche Registrierungen nur für Tests (z. B. Test-Endpunkte, Exporter, Fake-Logger).</summary>
     public List<Action<IServiceCollection>> ZusatzDienste { get; } = [];
 
@@ -64,6 +74,19 @@ public sealed class ZeltlotseApiFactory : WebApplicationFactory<Program>
         // veröffentlicht liegen sie in wwwroot (E2E-Tests).
         builder.UseStaticWebAssets();
         builder.UseSetting("ConnectionStrings:zeltlotse", _verbindungsZeichenfolge);
+        Einstellungen.TryAdd("Zeltlotse:OeffentlicheAdresse", ClientOptions.BaseAddress.ToString());
+        if (Umgebung is "Testing" or "Development")
+        {
+            Einstellungen.TryAdd("Zeltlotse:Mail:Art", "Ordner");
+            Einstellungen.TryAdd("Zeltlotse:Mail:Ordner", MailOrdner);
+        }
+        else
+        {
+            Einstellungen.TryAdd("Zeltlotse:Mail:Art", "Smtp");
+            Einstellungen.TryAdd("Zeltlotse:Mail:Smtp:Host", "localhost");
+            Einstellungen.TryAdd("Zeltlotse:Mail:Absender", "Zeltlotse <zeltlotse@example.org>");
+        }
+
         foreach (var (schluessel, wert) in Einstellungen)
         {
             builder.UseSetting(schluessel, wert);

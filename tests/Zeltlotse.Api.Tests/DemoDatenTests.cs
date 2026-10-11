@@ -47,7 +47,32 @@ public sealed class DemoDatenTests(PostgresContainer postgres)
         using var zweiterClient = zweiter.CreateClient();
 
         Assert.Equal(HttpStatusCode.OK, (await zweiterClient.GetAsync("/health", Abbruch)).StatusCode);
-        // Ab Story 1-1 prüft dieser Test hier die Demo-Zeilen in der Datenbank (einmal angelegt, nicht doppelt).
+        // Story 1-1: je Demo-Person mit Mail ein Konto und ein Profil mit Namen, nicht doppelt; Kinder ohne Mail bekommen nichts.
+        Assert.Equal(8L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM konten.konto"));
+        Assert.Equal(8L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.person"));
+        Assert.Equal(8L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.personen_schluessel"));
+        Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
+            verbindung,
+            "SELECT count(*) FROM konten.konto k LEFT JOIN personen.person p ON p.\"Id\" = k.\"PersonId\" WHERE p.\"Id\" IS NULL OR p.\"Vorname\" IS NULL OR p.\"Nachname\" IS NULL"));
+        foreach (var person in DemoKatalog.Personen.Where(p => p.Mail is not null))
+        {
+            var personId = await AnmeldeHelfer.PersonIdAsync(verbindung, person.Mail!);
+            Assert.Equal(person.Vorname, await AnmeldeHelfer.WertAsync<string>(verbindung, "SELECT \"Vorname\" FROM personen.person WHERE \"Id\" = @id", ("id", personId)));
+            Assert.Equal(person.Nachname, await AnmeldeHelfer.WertAsync<string>(verbindung, "SELECT \"Nachname\" FROM personen.person WHERE \"Id\" = @id", ("id", personId)));
+        }
+    }
+
+    [Fact]
+    public async Task Demo_Person_meldet_sich_per_Login_Link_an_und_sieht_ihr_Profil()
+    {
+        await using var factory = AnmeldeHelfer.Factory(await postgres.NeueDatenbankAsync());
+        factory.Einstellungen[Schalter] = "true";
+        using var client = await AnmeldeHelfer.AngemeldeterClientAsync(factory, "jonas.huettner@example.org");
+
+        using var profil = await AnmeldeHelfer.PostAsync(client, "/api/ich/profil");
+
+        Assert.Equal(HttpStatusCode.OK, profil.StatusCode);
+        Assert.Equal("Jonas", (await AnmeldeHelfer.JsonAsync(profil)).GetProperty("vorname").GetString());
     }
 
     [Fact]

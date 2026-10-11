@@ -28,10 +28,15 @@ internal static class ZeltlotseModule
             .AddFinanzenModul()
             .AddKanaeleModul();
 
-    /// <summary>Bindet die Endpunkte der Module und die Betriebs-Endpunkte des Hosts unter <c>/api</c> ein; liefert die Gruppe.</summary>
+    /// <summary>
+    /// Bindet die Endpunkte der Module und die Betriebs-Endpunkte des Hosts unter <c>/api</c> ein; liefert die Gruppe.
+    /// Jeder Endpunkt unter <c>/api</c> verlangt eine Sitzung (AD-12), außer den ausdrücklich anonymen
+    /// (<c>AllowAnonymous</c>: Betriebs-Endpunkte und die vier Anmelde-Endpunkte von Konten).
+    /// </summary>
     public static RouteGroupBuilder MapZeltlotseEndpoints(this IEndpointRouteBuilder app)
     {
         var api = app.MapGroup("/api");
+        api.RequireAuthorization();
         api.MapBetriebEndpoints();
         api.MapKontenEndpoints();
         api.MapPersonenEndpoints();

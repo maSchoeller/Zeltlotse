@@ -25,6 +25,7 @@ internal static class WebSicherheit
             optionen.Cookie.Path = "/";
         });
         services.AddZugriffsbegrenzung();
+        services.AddSitzung();
 
         // Weitergeleitete Header nur von konfigurierten Proxy-Adressen; die eingebauten Loopback-Vorgaben fallen weg.
         services.AddOptions<ForwardedHeadersOptions>()
@@ -58,7 +59,11 @@ internal static class WebSicherheit
         return app;
     }
 
-    /// <summary>Nach dem Routing: Cookie-Richtlinie, Zugriffsbegrenzung, dann der Antiforgery-Zwang.</summary>
+    /// <summary>
+    /// Nach dem Routing: Cookie-Richtlinie, Zugriffsbegrenzung, Sitzung (Authentifizierung und Autorisierung, AD-12) und
+    /// zuletzt der Antiforgery-Zwang. Er prüft das Token gegen die angemeldete Identität; eine Anfrage ohne Sitzung an einen
+    /// angemeldeten Endpunkt endet schon vorher mit <c>401</c>.
+    /// </summary>
     public static IApplicationBuilder UseWebSicherheitNachRouting(this IApplicationBuilder app) =>
-        app.UseCookiePolicy().UseRateLimiter().UseMiddleware<AntiforgeryZwang>();
+        app.UseCookiePolicy().UseRateLimiter().UseAuthentication().UseAuthorization().UseMiddleware<AntiforgeryZwang>();
 }

@@ -8,6 +8,8 @@ sidebar:
 
 **Wer:** die Mitarbeitenden einer Freizeit, also das **Team**. Ins Team kommt, wer sich über den Anmeldelink für Mitarbeitende anmeldet und von der Leitung bestätigt wird. Die Rechte entstehen erst mit dieser Bestätigung.
 
+Mitarbeitende melden sich mit der eigenen Mail-Adresse an, per Login-Link aus der Mail, per Login-Code in der installierten App oder mit Passwort. Wie das geht, steht unter [Anmelden](/erste-schritte/anmelden/).
+
 ## Was das Team in Zeltlotse darf
 
 - **Programm, Material und Aufgaben** – Programmpunkte im Wochenraster planen, Material zuordnen, Aufgaben selbst übernehmen. Die Leitung teilt nichts zu; Mitarbeitende übernehmen selbst.

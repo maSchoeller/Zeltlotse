@@ -19,4 +19,4 @@ Die Daten gehören den Personen selbst. Eine Freizeit sieht sie nur befristet un
 
 ## Erste Schritte
 
-Wie Zeltlotse geöffnet und am Handy installiert wird und was offline zu sehen ist, steht unter [Zeltlotse öffnen](/erste-schritte/zeltlotse-oeffnen/).
+Wie Zeltlotse geöffnet und am Handy installiert wird und was offline zu sehen ist, steht unter [Zeltlotse öffnen](/erste-schritte/zeltlotse-oeffnen/). Wie die Anmeldung per Login-Link aus der Mail, per Login-Code oder mit Passwort geht und was auf der Seite „Konto“ steht, erklärt [Anmelden](/erste-schritte/anmelden/).

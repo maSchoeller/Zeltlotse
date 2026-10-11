@@ -71,6 +71,18 @@ html.elkw[data-stil="nahbar"] .elkw-app__main :is(.elkw-surface, .elkw-card, .el
 .zl-notfall-eintrag { margin: 0 0 0 auto; padding-top: 0; padding-bottom: 0; font-weight: 600; }
 .zl-notfall-eintrag .elkw-status { color: inherit; }
 .zl-notfall-eintrag[aria-current] { text-decoration: underline; text-underline-offset: 4px; }
+.zl-konto-link { margin: 0 0 0 auto; padding-top: 0; padding-bottom: 0; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zl-notfall-eintrag ~ .zl-konto-link { margin-left: var(--elkw-space-s); }
+
+/* Abstände zwischen Bausteinen im Arbeitsbereich: Meldung oder Card vor dem nächsten Baustein */
+.elkw-app__main :is(.elkw-card, .elkw-alert) + :is(.elkw-card, .elkw-alert, .zl-formular, .elkw-btn, p) { margin-top: var(--elkw-space-m); }
+
+/* Felder untereinander außerhalb eines Formulars (z. B. Autosave-Felder in einer Card) */
+:not(.zl-formular) > .elkw-field + .elkw-field { margin-top: var(--elkw-space-s); }
+
+/* Formular: Felder untereinander, Knöpfe links, nicht breiter als nötig */
+.zl-formular { display: grid; gap: var(--elkw-space-s); max-width: 32rem; margin: 0 0 var(--elkw-space-m); }
+.zl-formular > .elkw-btn { justify-self: start; margin: 0; }
 
 /* App-Rahmen ohne Seitennavigation und mit unterer Navigation */
 .zl-app--ohne-nav { grid-template-columns: minmax(0, 1fr); grid-template-areas: "bar" "main"; }

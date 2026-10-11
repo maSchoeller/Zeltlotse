@@ -49,6 +49,10 @@ Nachweise wie Führungszeugnis, JuLeiCa (Jugendleiter-Card) oder Erste-Hilfe-Bes
 - **Fristen der Organisation:** Daten, die eine Organisation eine Zeit lang aufbewahren muss, etwa Teilnehmerlisten, Belege oder archivierte Vorfall-Notizen, löscht Zeltlotse automatisch nach den Fristen, die die Organisation festlegt. Zeltlotse gibt dafür Vorgabewerte vor.
 - **Endgültig, auch in Sicherungen:** Gelöschte Daten sind nicht nur ausgeblendet, sondern unlesbar – auch in Sicherungskopien.
 
+## Konto und Anmeldung
+
+Zum Konto speichert Zeltlotse die Mail-Adresse und, falls festgelegt, ein Passwort nur als Prüfwert, aus dem sich das Passwort nicht zurückrechnen lässt. Login-Links und Login-Codes stehen ebenfalls nur als Prüfwert in der Datenbank und gelten 15 Minuten.
+
 ## Wo die Daten liegen
 
 Alle Daten und Sicherungen liegen **ausschließlich in der EU**. Besonders schützenswerte Angaben wie Freizeitpass-Antworten und Nachweise sind verschlüsselt gespeichert.

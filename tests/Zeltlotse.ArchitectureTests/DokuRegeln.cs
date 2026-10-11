@@ -14,7 +14,7 @@ internal static partial class DokuRegeln
 
     /// <summary>Seiten, die es immer geben muss (ohne Endung, relativ zu <c>doku/src/content/docs</c>).</summary>
     public static IEnumerable<string> PflichtSeiten =>
-        RollenOrdner.Select(o => $"{o}/index").Append("daten").Append("index").Append("erste-schritte/zeltlotse-oeffnen");
+        RollenOrdner.Select(o => $"{o}/index").Append("daten").Append("index").Append("erste-schritte/zeltlotse-oeffnen").Append("erste-schritte/anmelden");
 
     public static string DokuSeitenOrdner => Path.Combine(Loesung.Wurzel, "doku", "src", "content", "docs");
 

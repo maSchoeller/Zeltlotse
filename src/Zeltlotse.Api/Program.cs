@@ -33,6 +33,7 @@ builder.Services.AddFehlerform();
 builder.Services.AddWebSicherheit();
 builder.Services.AddBetrieb();
 builder.Services.AddDateiSpeicher();
+builder.Services.AddMailVersand();
 builder.Services.AddPublicSeiten(sp => sp.GetRequiredService<PublicSeitenDienstKennung>().Geheimnis);
 builder.Services.AddSingleton(new DbKontextVerzeichnis(builder.Services));
 
@@ -75,9 +76,9 @@ Startpruefung.Ausfuehren(app.Services, app.Environment);
 await app.Services.GetRequiredService<ModulMigrationen>().AnwendenAsync();
 await app.Services.GetRequiredService<DemoDaten>().EinspielenAsync();
 
-// Reihenfolge (AD-5, AD-22, AD-25): Versions- und Sicherheits-Header sowie Proxy-Auswertung zuerst, dann Fehlerform
-// (HTML-Seite außerhalb von /api), Rückfall der Web-App auf index.html, Routing, Cookie-Richtlinie, Zugriffsbegrenzung
-// und zuletzt der Antiforgery-Zwang vor den Endpunkten.
+// Reihenfolge (AD-5, AD-12, AD-22, AD-25): Versions- und Sicherheits-Header sowie Proxy-Auswertung zuerst, dann Fehlerform
+// (HTML-Seite außerhalb von /api), Rückfall der Web-App auf index.html, Routing, Cookie-Richtlinie, Zugriffsbegrenzung,
+// Sitzung (Authentifizierung, Autorisierung) und zuletzt der Antiforgery-Zwang vor den Endpunkten.
 app.UseVersionsKopfzeile();
 app.UseWebSicherheitAmAnfang();
 app.UseFehlerform();
@@ -86,12 +87,14 @@ app.UseRouting();
 app.UseWebSicherheitNachRouting();
 
 app.MapDefaultEndpoints();
-var api = app.MapZeltlotseEndpoints();
+app.MapZeltlotseEndpoints();
 if (app.Environment.IsEnvironment(Startpruefung.TestUmgebung))
 {
+    // Test-Endpunkte bekommen eine eigene, anonyme /api-Gruppe; die Sitzungstests nutzen die echten Endpunkte.
+    var testApi = app.MapGroup("/api").AllowAnonymous();
     foreach (var zusatz in app.Services.GetServices<IZusatzEndpunkte>())
     {
-        zusatz.Abbilden(api);
+        zusatz.Abbilden(testApi);
         zusatz.AbbildenAusserhalbApi(app);
     }
 }

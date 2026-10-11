@@ -54,6 +54,7 @@
     <Project Path="tests/Zeltlotse.Api.Tests/Zeltlotse.Api.Tests.csproj" />
     <Project Path="tests/Zeltlotse.ArchitectureTests/Zeltlotse.ArchitectureTests.csproj" />
     <Project Path="tests/Zeltlotse.E2E.Tests/Zeltlotse.E2E.Tests.csproj" />
+    <Project Path="tests/Zeltlotse.Konten.Tests/Zeltlotse.Konten.Tests.csproj" />
     <Project Path="tests/Zeltlotse.Personen.Tests/Zeltlotse.Personen.Tests.csproj" />
     <Project Path="tests/Zeltlotse.SharedKernel.Tests/Zeltlotse.SharedKernel.Tests.csproj" />
     <Project Path="tests/Zeltlotse.Testing/Zeltlotse.Testing.csproj" />

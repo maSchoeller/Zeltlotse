@@ -1,0 +1,132 @@
+@page "/konto"
+@inject KontenApiClient Konten
+@inject PersonenApiClient Personen
+@inject AppSitzung Sitzung
+@inject AnmeldungAbschluss Abschluss
+@* Konto (EXPERIENCE.md → Flächen „Konto“, FR-1, FR-2): Mail-Adresse, Profil mit Vor- und Nachname per Autosave
+   (AD-19), Passwort festlegen oder ändern, Abmelden. Ohne Sitzung (401) leitet der Sitzungs-Handler zur Anmeldung. *@
+<PageTitle>Konto – Zeltlotse</PageTitle>
+
+<h1>Konto</h1>
+
+@if (_aktionFehler)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>@AnmeldungAbschluss.FehlerText</p>
+    </Meldung>
+}
+@if (_konto is null || _profil is null)
+{
+    @if (!_aktionFehler)
+    {
+        <Ladezustand />
+    }
+}
+else
+{
+    <Card Titel="Profil">
+        <p>Mail-Adresse: @_konto.Mail</p>
+        <AutosaveFeld Label="Vorname" Id="konto-vorname" Feldname="vorname" Pfad="@PersonenApiClient.ProfilPfad"
+                      Wert="@_profil.Vorname" Version="@_profil.Version" NeuLaden="NachKonfliktNeuLadenAsync" />
+        <AutosaveFeld Label="Nachname" Id="konto-nachname" Feldname="nachname" Pfad="@PersonenApiClient.ProfilPfad"
+                      Wert="@_profil.Nachname" Version="@_profil.Version" NeuLaden="NachKonfliktNeuLadenAsync" />
+    </Card>
+
+    <Card Titel="@(_konto.HatPasswort ? "Passwort ändern" : "Passwort festlegen")">
+        <p>Mit Passwort geht die Anmeldung auch ohne Login-Link. Ein neues Passwort meldet alle anderen Geräte ab.</p>
+        @if (_passwortGespeichert)
+        {
+            <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+                <p>Passwort ist festgelegt.</p>
+            </Meldung>
+        }
+        <Formular Absenden="PasswortSpeichernAsync">
+            <Feld Label="Passwort" Id="konto-passwort" Typ="password" Wert="@_passwort" Fehler="@_passwortFehler"
+                  Hinweis="10 bis 200 Zeichen" autocomplete="new-password" @oninput="@(e => _passwort = e.Value?.ToString())" />
+            <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Passwort speichern</Knopf>
+        </Formular>
+    </Card>
+
+    <Knopf Art="KnopfArt.Outline" Deaktiviert="@_uebertraegt" @onclick="AbmeldenAsync">Abmelden</Knopf>
+}
+
+@code {
+    private Zeltlotse.Api.Contracts.Konten.KontoAntwort? _konto;
+    private Zeltlotse.Api.Contracts.Personen.ProfilAntwort? _profil;
+    private string? _passwort;
+    private string? _passwortFehler;
+    private bool _passwortGespeichert;
+    private bool _uebertraegt;
+    private bool _aktionFehler;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _konto = await Konten.KontoLadenAsync();
+            await NeuLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    private async Task NachKonfliktNeuLadenAsync()
+    {
+        _aktionFehler = false;
+        try
+        {
+            await NeuLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    private async Task NeuLadenAsync()
+    {
+        _profil = await Personen.ProfilLadenOderAnlegenAsync();
+        Sitzung.Anmelden(_profil.Vorname);
+    }
+
+    private async Task PasswortSpeichernAsync()
+    {
+        _uebertraegt = true;
+        _passwortGespeichert = false;
+        _aktionFehler = false;
+        try
+        {
+            _passwortFehler = await Konten.PasswortFestlegenAsync(_passwort);
+            if (_passwortFehler is null)
+            {
+                _passwortGespeichert = true;
+                _passwort = null;
+                _konto = _konto! with { HatPasswort = true };
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task AbmeldenAsync()
+    {
+        _uebertraegt = true;
+        try
+        {
+            await Abschluss.AbmeldenAsync();
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

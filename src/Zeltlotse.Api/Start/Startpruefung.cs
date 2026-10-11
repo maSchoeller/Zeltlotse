@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Npgsql;
+using Zeltlotse.Api.Adapter;
 using Zeltlotse.Api.Demo;
 using Zeltlotse.SharedKernel.Datenschutz;
+using Zeltlotse.SharedKernel.Web;
 
 namespace Zeltlotse.Api.Start;
 
@@ -21,7 +23,8 @@ internal sealed class DbKontextVerzeichnis(IServiceCollection services)
 
 /// <summary>
 /// Prüfungen vor den Migrationen; jeder Verstoß bricht den Start ab, ohne Geheimnisse zu nennen:
-/// Hauptschlüssel (AD-14), HMAC-Schlüssel der Logs (AD-22), Demo-Daten nur in <c>Development</c>/<c>Testing</c> (NFR-20) und – außerhalb der Umgebung <c>Testing</c> –
+/// Hauptschlüssel (AD-14), HMAC-Schlüssel der Logs (AD-22), Demo-Daten nur in <c>Development</c>/<c>Testing</c> (NFR-20),
+/// Mail-Versand (Art, Ordner-Adapter nur in <c>Development</c>/<c>Testing</c>) und öffentliche Adresse und – außerhalb der Umgebung <c>Testing</c> –
 /// keine DbContexts mit <c>EnableSensitiveDataLogging</c>/<c>EnableDetailedErrors</c> und keine Verbindung
 /// mit <c>Include Error Detail=true</c> (AD-22).
 /// </summary>
@@ -34,6 +37,8 @@ internal static class Startpruefung
         _ = dienste.GetRequiredService<Hauptschluessel>();
         ProtokollSchwaerzung.SchluesselPruefen(dienste.GetRequiredService<IConfiguration>());
         DemoDatenPruefen(dienste.GetRequiredService<IConfiguration>(), umgebung);
+        MailRegistrierung.Pruefen(dienste.GetRequiredService<IConfiguration>(), umgebung, TestUmgebung);
+        AdressePruefen(dienste.GetRequiredService<IConfiguration>(), umgebung);
 
         if (umgebung.IsEnvironment(TestUmgebung))
         {
@@ -45,6 +50,21 @@ internal static class Startpruefung
         {
             throw new InvalidOperationException(
                 "Außerhalb der Tests verboten (AD-22): " + string.Join("; ", verstoesse));
+        }
+    }
+
+    /// <summary>
+    /// Öffentliche Adresse: Pflicht und absolut; außerhalb von <c>Development</c> und <c>Testing</c> nur <c>https</c>,
+    /// damit Login-Links nie unverschlüsselt verschickt werden (AD-11, AD-25).
+    /// </summary>
+    private static void AdressePruefen(IConfiguration konfiguration, IHostEnvironment umgebung)
+    {
+        var adresse = OeffentlicheAdresse.Lesen(konfiguration);
+        if (!adresse.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            && !umgebung.IsDevelopment() && !umgebung.IsEnvironment(TestUmgebung))
+        {
+            throw new InvalidOperationException(
+                $"{OeffentlicheAdresse.Schluessel} muss in {umgebung.EnvironmentName} eine https-Adresse sein.");
         }
     }
 

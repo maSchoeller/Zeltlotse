@@ -15,6 +15,9 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
 {
     private static readonly byte[] PngSignatur = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
+    /// <summary>Demo-Person aus dem Katalog (Leitung „Jonas Hüttner“); die Screenshots ändern ihre Daten nicht.</summary>
+    private const string DemoMail = "jonas.huettner@example.org";
+
     public static TheoryData<string> Geraete => ["handy", "laptop"];
 
     [Theory]
@@ -24,9 +27,10 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await using var kontext = await KontextAsync(geraet);
         var seite = await kontext.NewPageAsync();
 
-        await seite.GotoAsync(new Uri(host.Adresse, "/app/").ToString());
-        await Assertions.Expect(seite.GetByText("Noch keine Freizeit geöffnet.")).ToBeVisibleAsync(new() { Timeout = 60_000 });
-        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlotse");
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, DemoMail);
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Hallo, Jonas");
+        await Assertions.Expect(seite.GetByText("Noch keine Freizeit geöffnet.")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.Locator("header a.zl-konto-link")).ToHaveTextAsync("Jonas");
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         await BildAsync(seite, "app-start", geraet);
@@ -39,13 +43,12 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await using var kontext = await KontextAsync(geraet);
         var seite = await kontext.NewPageAsync();
 
-        // Einmal online laden, bis der Service Worker die Seite steuert; dann offline neu laden (wie OfflineStartTests).
-        await seite.GotoAsync(new Uri(host.Adresse, "/app/").ToString());
-        await Assertions.Expect(seite.GetByText("Noch keine Freizeit geöffnet.")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        // Angemeldet online laden, bis der Service Worker die Seite steuert; dann offline neu laden (wie OfflineStartTests).
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, DemoMail);
         await seite.EvaluateAsync("() => navigator.serviceWorker.ready");
         await seite.ReloadAsync();
         await seite.WaitForFunctionAsync("() => navigator.serviceWorker.controller !== null", null, new() { Timeout = 60_000 });
-        await Assertions.Expect(seite.GetByText("Noch keine Freizeit geöffnet.")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Hallo, Jonas", new() { Timeout = 60_000 });
 
         await kontext.SetOfflineAsync(true);
         await seite.ReloadAsync();
@@ -53,8 +56,58 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(seite.Locator(".zl-offline-leiste")).ToBeVisibleAsync(new() { Timeout = 60_000 });
         await Assertions.Expect(seite.Locator(".zl-notfall-box a[href='tel:112']")).ToHaveTextAsync("Notruf 112");
         await Assertions.Expect(seite.GetByText("Offline nicht verfügbar.")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByText("Noch keine Freizeit geöffnet.")).ToBeVisibleAsync(new() { Timeout = 60_000 });
 
         await BildAsync(seite, "app-offline", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Anmelden(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await seite.GotoAsync(new Uri(host.Adresse, "/app/anmelden").ToString());
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Anmelden", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Login-Link schicken" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+        await BildAsync(seite, "anmelden", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Anmelden_Code(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await seite.GotoAsync(new Uri(host.Adresse, "/app/anmelden").ToString());
+        await seite.GetByLabel("Mail-Adresse").FillAsync("katrin.muster@example.org");
+        await seite.GetByRole(AriaRole.Button, new() { Name = "Login-Link schicken" }).ClickAsync();
+        await Assertions.Expect(seite.GetByText("Login-Link ist verschickt. Bitte im Postfach nachsehen.")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByLabel("Login-Code")).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+        await BildAsync(seite, "anmelden-code", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Konto(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, DemoMail);
+        await seite.Locator("header a.zl-konto-link").ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Konto", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByLabel("Vorname")).ToHaveValueAsync("Jonas", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByLabel("Nachname")).ToHaveValueAsync("Hüttner");
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+        await BildAsync(seite, "konto", geraet);
     }
 
     [Theory]
@@ -81,7 +134,7 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
     private Task<IBrowserContext> KontextAsync(string geraet)
     {
         var (breite, hoehe) = Groesse(geraet);
-        return host.Browser.NewContextAsync(new BrowserNewContextOptions
+        return host.KontextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = breite, Height = hoehe },
             DeviceScaleFactor = 1,

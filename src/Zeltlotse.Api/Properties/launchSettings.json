@@ -7,7 +7,10 @@
       "launchBrowser": false,
       "applicationUrl": "https://localhost:7180",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Zeltlotse__OeffentlicheAdresse": "https://localhost:7180",
+        "Zeltlotse__Mail__Art": "Ordner",
+        "Zeltlotse__Mail__Ordner": "bin/mails"
       }
     }
   }

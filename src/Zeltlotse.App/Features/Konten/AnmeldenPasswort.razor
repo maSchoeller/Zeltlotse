@@ -1,0 +1,65 @@
+@page "/anmelden/passwort"
+@inject KontenApiClient Konten
+@inject AnmeldungAbschluss Abschluss
+@* Anmelden mit Passwort (FR-2: optional). Falsches Passwort, Konto ohne Passwort und unbekannte Mail-Adresse zeigen
+   denselben Fehler (keine Konto-Aufzählung). *@
+<PageTitle>Mit Passwort anmelden – Zeltlotse</PageTitle>
+
+<h1>Mit Passwort anmelden</h1>
+
+@if (_aktionFehler)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>@AnmeldungAbschluss.FehlerText</p>
+    </Meldung>
+}
+@if (_falsch)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>Mail-Adresse oder Passwort stimmt nicht.</p>
+    </Meldung>
+}
+
+<Formular Absenden="AnmeldenAsync">
+    <Feld Label="Mail-Adresse" Id="passwort-mail" Typ="email" Wert="@_mail"
+          autocomplete="username" @oninput="@(e => _mail = e.Value?.ToString())" />
+    <Feld Label="Passwort" Id="passwort-passwort" Typ="password" Wert="@_passwort"
+          autocomplete="current-password" @oninput="@(e => _passwort = e.Value?.ToString())" />
+    <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Anmelden</Knopf>
+</Formular>
+
+<p><a href="anmelden">Mit Login-Link anmelden</a></p>
+
+@code {
+    private string? _mail;
+    private string? _passwort;
+    private bool _falsch;
+    private bool _uebertraegt;
+    private bool _aktionFehler;
+
+    private async Task AnmeldenAsync()
+    {
+        _uebertraegt = true;
+        _aktionFehler = false;
+        try
+        {
+            if (await Konten.MitPasswortAnmeldenAsync(_mail, _passwort))
+            {
+                await Abschluss.AngemeldetAsync();
+                return;
+            }
+
+            _falsch = true;
+            _passwort = null;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _falsch = false;
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

@@ -1,3 +1,8 @@
+using Mediator;
+using Zeltlotse.Api.Contracts.Personen;
+using Zeltlotse.Konten.Anmelden;
+using Zeltlotse.Personen.Profil;
+
 namespace Zeltlotse.Api.Demo;
 
 /// <summary>
@@ -7,11 +12,11 @@ namespace Zeltlotse.Api.Demo;
 /// Migrationen auf; wiederholtes Einspielen (Neustart mit derselben Datenbank) ist unschädlich.
 /// </summary>
 /// <remarks>
-/// Es gibt noch keine Organisation, Freizeit oder Person in einem Modul. Ab Story 1-1 ergänzt jede Fach-Story hier die
-/// Commands ihres Moduls (über Mediator, AD-27) und macht sie idempotent, etwa „nur anlegen, wenn die
-/// Demo-Organisation fehlt“. Ein Seed, der direkt in Tabellen schreibt, ist verboten (AD-27).
+/// Eingespielt wird nur über die Commands der Module (Mediator, AD-27), nie direkt in Tabellen. Jede Fach-Story ergänzt
+/// hier ihre Commands und macht sie idempotent. Bisher (Story 1-1): je Demo-Person mit Mail ein Konto und ein Profil mit
+/// Vor- und Nachnamen; eine vorhandene Mail-Adresse wird übersprungen. Kinder ohne Mail bekommen hier nichts (Familie: 1-4).
 /// </remarks>
-internal sealed partial class DemoDaten(IConfiguration konfiguration, ILogger<DemoDaten> logger)
+internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
     public const string Schalter = "Zeltlotse:DemoDaten:Aktiv";
 
@@ -25,21 +30,51 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, ILogger<De
 
     public static bool IstAktiv(IConfiguration konfiguration) => konfiguration.GetValue<bool>(Schalter);
 
-    public Task EinspielenAsync(CancellationToken abbruch = default)
+    public async Task EinspielenAsync(CancellationToken abbruch = default)
     {
         abbruch.ThrowIfCancellationRequested();
         if (!Aktiv)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        // Noch keine Modul-Commands: Die Fach-Stories ergänzen hier das idempotente Anlegen von Organisation,
-        // Freizeit und Personen aus dem Katalog.
+        var neu = 0;
+        foreach (var person in DemoKatalog.Personen.Where(p => p.Mail is not null))
+        {
+            if (await KontoUndProfilAsync(person, abbruch))
+            {
+                neu++;
+            }
+        }
+
         Interlocked.Increment(ref _einspielungen);
-        Eingespielt(DemoKatalog.Personen.Count);
-        return Task.CompletedTask;
+        Eingespielt(DemoKatalog.Personen.Count, neu);
     }
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Demo-Daten eingespielt ({AnzahlPersonen} Personen im Katalog).")]
-    private partial void Eingespielt(int anzahlPersonen);
+    /// <summary>Konto und Profil einer Demo-Person; <c>false</c>, wenn es das Konto schon gab.</summary>
+    private async Task<bool> KontoUndProfilAsync(DemoPerson person, CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var konto = await sender.Send(new KontoSicherstellen(person.Mail!), abbruch);
+        if (!konto.Neu)
+        {
+            return false;
+        }
+
+        var profil = await sender.Send(new ProfilSicherstellen(konto.PersonId), abbruch);
+        var version = profil.Version;
+        foreach (var (feld, wert) in new[] { (ProfilFeld.Vorname, person.Vorname), (ProfilFeld.Nachname, person.Nachname) })
+        {
+            var ergebnis = await sender.Send(new ProfilFeldAendern(konto.PersonId, feld, version, null, wert), abbruch);
+            version = ergebnis is ProfilAenderung.Gespeichert gespeichert
+                ? gespeichert.Person.Version
+                : throw new InvalidOperationException($"Demo-Profil: {feld} ließ sich nicht setzen.");
+        }
+
+        return true;
+    }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Demo-Daten eingespielt ({AnzahlPersonen} Personen im Katalog, {NeueKonten} neue Konten).")]
+    private partial void Eingespielt(int anzahlPersonen, int neueKonten);
 }

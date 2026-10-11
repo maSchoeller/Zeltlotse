@@ -18,6 +18,8 @@ public static class UiRegistrierung
         ArgumentNullException.ThrowIfNull(client);
         services.AddScoped(sp => new BetriebApiClient(client(sp)));
         services.AddScoped(sp => new FreizeitenApiClient(client(sp)));
+        services.AddScoped(sp => new KontenApiClient(client(sp)));
+        services.AddScoped(sp => new PersonenApiClient(client(sp)));
         services.AddScoped(sp => new AutosaveDienst(client(sp)));
         services.AddScoped<FreizeitKontextDienst>();
         return services;

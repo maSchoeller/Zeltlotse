@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Zeltlotse.Api.Contracts.Personen;
+using Zeltlotse.Personen.Profil;
 using Zeltlotse.Personen.Schluessel;
 using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Mandanten;
@@ -12,6 +14,8 @@ internal sealed class PersonenDbContext(DbContextOptions<PersonenDbContext> opti
 {
     public DbSet<PersonenSchluessel> PersonenSchluessel => Set<PersonenSchluessel>();
 
+    public DbSet<Person> Personen => Set<Person>();
+
     protected override string Schema => PersonenModul.Schema;
 
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => PersonenModell.Konfigurieren(modelBuilder);
@@ -22,6 +26,8 @@ internal sealed class PersonenLeseDbContext(DbContextOptions<PersonenLeseDbConte
     : ModulLeseDbContext(optionen, mandantenKontext)
 {
     public DbSet<PersonenSchluessel> PersonenSchluessel => Set<PersonenSchluessel>();
+
+    public DbSet<Person> Personen => Set<Person>();
 
     protected override string Schema => PersonenModul.Schema;
 
@@ -39,6 +45,16 @@ internal static class PersonenModell
             e.HasKey(s => s.PersonId);
             e.Property(s => s.PersonId).ValueGeneratedNever();
             e.Property(s => s.Umhuellt).HasColumnType("bytea");
+        });
+
+        modelBuilder.Entity<Person>(e =>
+        {
+            e.ToTable("person");
+            e.Property(p => p.Id).ValueGeneratedNever();
+            e.Property(p => p.Vorname).HasMaxLength(ProfilFelder.MaximaleLaenge);
+            e.Property(p => p.Nachname).HasMaxLength(ProfilFelder.MaximaleLaenge);
+            // AD-19: Versionsnummer aus xmin, von PostgreSQL bei jeder Änderung weitergezählt.
+            e.Property(p => p.Version).IsRowVersion();
         });
     }
 }

@@ -1,0 +1,60 @@
+@page "/anmelden/link/{Token}"
+@inject KontenApiClient Konten
+@inject AnmeldungAbschluss Abschluss
+@* Login-Link aus der Mail (AD-11): Der Aufruf zeigt nur diese Seite; eingelöst wird erst beim Klick (POST), damit
+   Mail-Scanner den Link nicht verbrauchen. Ungültig: „Dieser Link ist nicht mehr gültig.“ mit „Neuen Link schicken“. *@
+<PageTitle>Anmelden – Zeltlotse</PageTitle>
+
+<h1>Anmelden</h1>
+
+@if (_aktionFehler)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>@AnmeldungAbschluss.FehlerText</p>
+    </Meldung>
+}
+@if (_ungueltig)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>Dieser Link ist nicht mehr gültig.</p>
+        <Knopf Href="anmelden" Ansichtswechsel="true">Neuen Link schicken</Knopf>
+    </Meldung>
+}
+else
+{
+    <p>Der Login-Link aus der Mail ist geöffnet. Mit „Anmelden“ geht es weiter.</p>
+    <Knopf Deaktiviert="@_uebertraegt" @onclick="AnmeldenAsync">Anmelden</Knopf>
+}
+
+@code {
+    private bool _ungueltig;
+    private bool _uebertraegt;
+    private bool _aktionFehler;
+
+    /// <summary>Das Token aus dem Link; es verlässt die Seite nur im Körper des POST.</summary>
+    [Parameter] public string Token { get; set; } = "";
+
+    private async Task AnmeldenAsync()
+    {
+        _uebertraegt = true;
+        _aktionFehler = false;
+        try
+        {
+            if (await Konten.LoginLinkEinloesenAsync(Token))
+            {
+                await Abschluss.AngemeldetAsync();
+                return;
+            }
+
+            _ungueltig = true;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

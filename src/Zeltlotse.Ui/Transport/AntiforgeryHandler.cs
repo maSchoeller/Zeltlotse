@@ -9,12 +9,19 @@ namespace Zeltlotse.Ui.Transport;
 /// Schutz gegen gefälschte Anfragen aus Sicht der Web-App (AD-25): Beim ersten ändernden Aufruf holt der Handler das
 /// Antiforgery-Token einmal je App-Start über den <see cref="BetriebApiClient"/> und setzt <c>X-Zeltlotse-Antiforgery</c>.
 /// Antwortet der Server mit <c>400</c> und <c>code=antiforgery-ungueltig</c> (Token abgelaufen), holt er es einmal neu
-/// und wiederholt die Anfrage; ein zweites <c>400</c> geht an den Aufrufer.
+/// und wiederholt die Anfrage; ein zweites <c>400</c> geht an den Aufrufer. Nach Anmelden und Abmelden verwirft die App
+/// das Token mit <see cref="TokenVerwerfen"/>.
 /// </summary>
 public sealed class AntiforgeryHandler : DelegatingHandler
 {
     private readonly SemaphoreSlim _sperre = new(1, 1);
     private string? _token;
+
+    /// <summary>
+    /// Verwirft das gemerkte Token; der nächste ändernde Aufruf holt ein neues. Nach Anmelden und Abmelden nötig, weil
+    /// ASP.NET Core das Token an die angemeldete Identität bindet.
+    /// </summary>
+    public void TokenVerwerfen() => Interlocked.Exchange(ref _token, null);
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {

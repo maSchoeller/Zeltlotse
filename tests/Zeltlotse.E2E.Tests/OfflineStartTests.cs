@@ -6,8 +6,9 @@ using Microsoft.Playwright;
 namespace Zeltlotse.E2E.Tests;
 
 /// <summary>
-/// Matrix-Zeile „Offline-Start“ (AD-18, AD-25, AD-30): Die Web-App wurde einmal online geladen; offline lädt sie neu
-/// aus dem Service Worker und zeigt Offline-Leiste, Notfall-Box mit „Notruf 112“ und sonst „Offline nicht verfügbar.“.
+/// Matrix-Zeile „Offline-Start“ (AD-18, AD-25, AD-30): Die Web-App wurde einmal online geladen (ohne Sitzung: Seite
+/// „Anmelden“); offline lädt sie neu aus dem Service Worker und zeigt Offline-Leiste, Notfall-Box mit „Notruf 112“ und
+/// sonst „Offline nicht verfügbar.“ (die Anmeldung ist ausgegraut).
 /// Handygröße 375×812, hell und dunkel; ohne CSP-Meldung in der Konsole; axe ohne Verstoß gegen WCAG 2.2 AA.
 /// </summary>
 public sealed partial class OfflineStartTests(VeroeffentlichterHost host)
@@ -19,7 +20,7 @@ public sealed partial class OfflineStartTests(VeroeffentlichterHost host)
     [InlineData(ColorScheme.Dark)]
     public async Task App_startet_offline_aus_dem_Service_Worker_mit_Offline_Leiste_und_Notfall_Box(ColorScheme farbschema)
     {
-        await using var kontext = await host.Browser.NewContextAsync(new BrowserNewContextOptions
+        await using var kontext = await host.KontextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 375, Height = 812 },
             ColorScheme = farbschema,
@@ -31,13 +32,14 @@ public sealed partial class OfflineStartTests(VeroeffentlichterHost host)
         seite.Console += (_, nachricht) => konsole.Add(nachricht.Text);
         seite.PageError += (_, fehler) => konsole.Add(fehler);
 
-        // Einmal online laden, bis der Service Worker alle Dateien abgelegt hat und die Seite steuert.
+        // Einmal online laden, bis der Service Worker alle Dateien abgelegt hat und die Seite steuert. Ohne Sitzung führt
+        // die App zur Seite „Anmelden“ (Story 1-1); die lädt offline aus dem Service Worker.
         await seite.GotoAsync(new Uri(host.Adresse, "/app/").ToString());
-        await Assertions.Expect(seite.GetByText("Noch keine Freizeit geöffnet.")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Anmelden", new() { Timeout = 60_000 });
         await seite.EvaluateAsync("() => navigator.serviceWorker.ready");
         await seite.ReloadAsync();
         await seite.WaitForFunctionAsync("() => navigator.serviceWorker.controller !== null", null, new() { Timeout = 60_000 });
-        await Assertions.Expect(seite.GetByText("Noch keine Freizeit geöffnet.")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Anmelden", new() { Timeout = 60_000 });
 
         await kontext.SetOfflineAsync(true);
         await seite.ReloadAsync();
@@ -49,7 +51,7 @@ public sealed partial class OfflineStartTests(VeroeffentlichterHost host)
         await Assertions.Expect(notruf).ToHaveTextAsync("Notruf 112");
         await Assertions.Expect(seite.Locator(".zl-notfall-box")).ToContainTextAsync("Im Notfall:");
         await Assertions.Expect(seite.GetByText("Offline nicht verfügbar.")).ToBeVisibleAsync();
-        await Assertions.Expect(seite.Locator(".zl-offline-bereich[inert]")).ToContainTextAsync("Noch keine Freizeit geöffnet.");
+        await Assertions.Expect(seite.Locator(".zl-offline-bereich[inert]")).ToContainTextAsync("Login-Link schicken");
         var hoehe = await notruf.EvaluateAsync<double>("e => e.getBoundingClientRect().height");
         Assert.True(hoehe >= 44, $"Der Link „Notruf 112“ ist nur {hoehe} px hoch.");
 
@@ -65,10 +67,11 @@ public sealed partial class OfflineStartTests(VeroeffentlichterHost host)
     [Theory]
     [InlineData("/")]
     [InlineData("/app/")]
+    [InlineData("/app/anmelden/passwort")]
     [InlineData("/gibt-es-nicht")]
     public async Task Seiten_laden_online_ohne_CSP_Meldung_und_ohne_axe_Verstoss(string pfad)
     {
-        await using var kontext = await host.Browser.NewContextAsync(new BrowserNewContextOptions
+        await using var kontext = await host.KontextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 375, Height = 812 },
         });

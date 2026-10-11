@@ -15,6 +15,10 @@ sidebar:
 - **Sehen, wer Einsicht hatte** – im Zugriffsprotokoll steht, wer wann die Daten des Kindes angesehen hat, und bis wann die Freizeit Einsicht hat.
 - **Das Profil mit 18 übergeben** – wird ein Kind volljährig, geht sein Profil an ein eigenes Konto über.
 
+## Mit Konto anmelden
+
+Für das Familienkonto genügt die Mail-Adresse: Zeltlotse schickt einen Login-Link, ein Passwort ist freiwillig. Wie das geht, steht unter [Anmelden](/erste-schritte/anmelden/).
+
 ## Ohne Konto: als Gast anmelden
 
 Eine Anmeldung gelingt auch ohne Konto. Nach der Gast-Anmeldung kommt eine Mail mit dem **Gast-Link**. Darüber lassen sich der Freizeitpass ausfüllen, der Anmeldestatus sehen und die Elterninfo lesen, bis das Freigabefenster endet.

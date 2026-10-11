@@ -1,5 +1,6 @@
 @* App-Leiste (DESIGN.md): weiß, Wortmarke „Zeltlotse“ als Link, optional der Name der Freizeit, optional rechts der
-   Eintrag „Notfall“ mit rotem Statusquadrat (nur vom Start- bis zum Enddatum). Kein ELKW-Logo. *@
+   Eintrag „Notfall“ mit rotem Statusquadrat (nur vom Start- bis zum Enddatum) und ganz rechts der Link zum Konto
+   (Vorname bzw. „Konto“, sobald angemeldet). Kein ELKW-Logo. *@
 <header class="elkw-appbar zl-appleiste">
     <a class="zl-wortmarke" href="@StartHref">Zeltlotse</a>
     @if (FreizeitName is not null)
@@ -9,6 +10,10 @@
     @if (NotfallHref is not null)
     {
         <Knopf Art="KnopfArt.Text" Href="@NotfallHref" class="zl-notfall-eintrag"><Status Art="StatusArt.Fehler" Wort="Notfall" /></Knopf>
+    }
+    @if (KontoHref is not null)
+    {
+        <Knopf Art="KnopfArt.Text" Href="@KontoHref" class="zl-konto-link">@(string.IsNullOrWhiteSpace(KontoText) ? "Konto" : KontoText)</Knopf>
     }
 </header>
 
@@ -20,4 +25,10 @@
 
     /// <summary>Ziel des Notfall-Eintrags (Sicherheitskette); ohne Ziel kein Eintrag.</summary>
     [Parameter] public string? NotfallHref { get; set; }
+
+    /// <summary>Ziel des Links zur Seite „Konto“; ohne Ziel (nicht angemeldet) kein Link.</summary>
+    [Parameter] public string? KontoHref { get; set; }
+
+    /// <summary>Text des Konto-Links, in der Regel der Vorname; leer heißt „Konto“.</summary>
+    [Parameter] public string? KontoText { get; set; }
 }

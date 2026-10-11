@@ -23,6 +23,10 @@
     <!-- S3-Adapter (nur im API-Host); aktuelle stabile Version beim Anlegen (Story 0-2) -->
     <PackageVersion Include="AWSSDK.S3" Version="4.0.104.2" />
   </ItemGroup>
+  <ItemGroup Label="Anmeldung und Mail (AD-12, AD-13, AD-23)">
+    <!-- SMTP-Adapter (nur im API-Host); aktuelle stabile Version beim Anlegen (Story 1-1). -->
+    <PackageVersion Include="MailKit" Version="4.18.1" />
+  </ItemGroup>
   <ItemGroup Label="Aspire und ServiceDefaults">
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.1" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />

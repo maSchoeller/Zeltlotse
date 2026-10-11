@@ -3,11 +3,13 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Mediator.Abstractions" />
+    <!-- PasswordHasher aus Microsoft.Extensions.Identity.Core kommt mit dem Framework Microsoft.AspNetCore.App (kein Paket). -->
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Zeltlotse.SharedKernel\Zeltlotse.SharedKernel.csproj" />
     <ProjectReference Include="..\Zeltlotse.Konten.Contracts\Zeltlotse.Konten.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

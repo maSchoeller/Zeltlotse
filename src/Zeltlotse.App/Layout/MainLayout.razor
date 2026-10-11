@@ -4,13 +4,14 @@
 @inject NeueVersion NeueVersion
 @inject IBrowser Browser
 @inject NavigationManager Navigation
-@* Layout der Web-App (AD-18, AD-5, AD-22): App-Rahmen mit App-Leiste; offline die Offline-Leiste, die Notfall-Box
+@inject AppSitzung Sitzung
+@* Layout der Web-App (AD-18, AD-5, AD-22): App-Rahmen mit App-Leiste (angemeldet mit Link zum Konto); offline die Offline-Leiste, die Notfall-Box
    mit 112 und die übrigen Inhalte ausgegraut; bei abweichender Server-Version der Hinweis „Neu laden“; eine
    Fehlergrenze, die unerwartete Fehler meldet. *@
 <Sprunglink Ziel="@SprungZiel" />
 <AppRahmen>
     <Leiste>
-        <AppLeiste StartHref="./" />
+        <AppLeiste StartHref="./" KontoHref="@(Sitzung.Angemeldet ? KontoPfad : null)" KontoText="@Sitzung.Vorname" />
     </Leiste>
     <UnterDerLeiste>
         @if (Verbindung.Offline)
@@ -52,6 +53,9 @@
     /// <summary>Satz der Notfall-Box offline vor V6 (EXPERIENCE.md → „Offline vor V6“).</summary>
     public const string NotfallSatzOffline = "Offline gilt der ausgedruckte Notfallordner.";
 
+    /// <summary>Ziel des Konto-Links in der App-Leiste (relativ zur Basis <c>/app/</c>).</summary>
+    public const string KontoPfad = "konto";
+
     // Mit base href="/app/" zeigte "#inhalt" auf /app/; der Sprunglink nennt deshalb die aktuelle Seite.
     private string SprungZiel => Navigation.Uri.Split('#')[0] + "#" + AppRahmen.InhaltId;
 
@@ -59,6 +63,7 @@
     {
         Verbindung.Geaendert += Neuzeichnen;
         NeueVersion.Gemeldet += Neuzeichnen;
+        Sitzung.Geaendert += Neuzeichnen;
         Navigation.LocationChanged += Seitenwechsel;
         await Verbindung.StartenAsync();
     }
@@ -79,6 +84,7 @@
     {
         Verbindung.Geaendert -= Neuzeichnen;
         NeueVersion.Gemeldet -= Neuzeichnen;
+        Sitzung.Geaendert -= Neuzeichnen;
         Navigation.LocationChanged -= Seitenwechsel;
     }
 }
