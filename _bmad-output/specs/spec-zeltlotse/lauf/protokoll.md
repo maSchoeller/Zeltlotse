@@ -8,6 +8,7 @@ Branch: `mvp` · Start: 2026-10-11 12:30 · Ende: –
 
 | Zeit | Story | Ergebnis | Folgedurchlauf | Regression (Tests / Doku-Build) | Commit | Bemerkung |
 |---|---|---|---|---|---|---|
+| 2026-10-11 12:30 | 0-1 | Abbruch (Umgebung) | – | – | – | Claude-CLI: „OAuth session expired and could not be refreshed“; Story-Sitzung startet nicht. Lauf gestoppt, nach erneuter Anmeldung (`claude` → `/login`) fortsetzen. |
 
 ## Entscheidungen im Lauf
 
