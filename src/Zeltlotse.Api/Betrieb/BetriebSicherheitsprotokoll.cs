@@ -7,6 +7,7 @@ namespace Zeltlotse.Api.Betrieb;
 /// <summary>
 /// Schreibt jede Zeile mit einem eigenen, frischen DbContext und damit in eigener Verbindung und Transaktion:
 /// Ein Rollback beim Aufrufer nimmt den Eintrag nicht mit, und der Eintrag hängt nicht an dessen Transaktion.
+/// Auch ein Abbruch des Aufrufers (z. B. Client trennt die Verbindung) verhindert den Eintrag nicht.
 /// </summary>
 internal sealed class BetriebSicherheitsprotokoll(IDbContextFactory<BetriebDbContext> kontexte, TimeProvider uhr) : ISicherheitsprotokoll
 {
@@ -22,7 +23,7 @@ internal sealed class BetriebSicherheitsprotokoll(IDbContextFactory<BetriebDbCon
             throw new ArgumentOutOfRangeException(nameof(art));
         }
 
-        await using var db = await kontexte.CreateDbContextAsync(abbruch);
+        await using var db = await kontexte.CreateDbContextAsync(CancellationToken.None);
         db.Sicherheitsprotokoll.Add(new SicherheitsprotokollEintrag
         {
             Id = Kennung.Neu(uhr),
@@ -32,6 +33,6 @@ internal sealed class BetriebSicherheitsprotokoll(IDbContextFactory<BetriebDbCon
             OrganisationId = organisationId,
             BezugId = bezugId,
         });
-        await db.SaveChangesAsync(abbruch);
+        await db.SaveChangesAsync(CancellationToken.None);
     }
 }

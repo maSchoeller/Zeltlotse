@@ -5,7 +5,7 @@ created: '2026-10-11'
 status: 'done'
 baseline_revision: 'b6ba22533a938771886a2948837f263524744712'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
 warnings: [oversized]
@@ -31,6 +31,13 @@ deferred:
     location: >-
       src/Zeltlotse.Api/Betrieb/BetriebSicherheitsprotokoll.cs
     severity: low
+  - summary: >-
+      Crypto-Shredding wirkt in Backups nur, wenn der umhüllte Personen-Schlüssel nicht mit dem unveränderten Hauptschlüssel zurückkommt.
+    evidence: |-
+      personen.personen_schluessel liegt in derselben Datenbank wie die Daten. Ein zurückgespieltes älteres Backup bringt die Schlüsselzeile zurück, und der Hauptschlüssel (ohne Rotation) entschlüsselt sie wieder. Die Spine stellt Backups zurück („getrennte Sicherung des Hauptschlüssels“) und nimmt an, Crypto-Shredding decke das Löschen in Backups ab. Klären vor der ersten echten Freizeit: Schlüsseltabelle getrennt sichern, Löschungen nach dem Zurückspielen erneut anwenden (Löschliste) oder Hauptschlüssel rotieren.
+    location: >-
+      src/Modules/Personen/Zeltlotse.Personen/Schluessel/PersonenSchluessel.cs
+    severity: medium
 ---
 
 <intent-contract>
@@ -186,6 +193,52 @@ deferred:
   - `[false]` `[reject]` (intent) „Test zuerst“ am Diff nicht nachprüfbar — Prozessaussage, kein Defekt.
   - `[false]` `[reject]` (intent) Antiforgery-Token-Fälle sind keine AD-30-Token-Fälle — beschreibend; Token-Endpunkte (öffentlich, QR) entstehen ab 2-2.
 
+### 2026-10-11 — Review pass (Folgedurchlauf)
+- verdicts: 42 findings — high 0, medium 4, low 25, false 9, maybe-false 4
+- findings:
+  - `[medium]` `[defer]` (blind) Crypto-Shredding schützt Backups nicht: zurückgespielte Schlüsselzeile + unveränderter Hauptschlüssel macht Daten wieder lesbar — Ursache ist die Spine-Annahme (Backups zurückgestellt), nicht diese Story; siehe `deferred`.
+  - `[medium]` `[patch]` (blind) Konsole-, Debug-, EventSource- und EventLog-Provider umgehen `LogBereinigung` und schreiben Framework-Ausnahmen mit Nachricht und Stacktrace — `builder.Logging.ClearProviders()` vor `AddOpenTelemetry` in `ServiceDefaults`; Test `Host_gibt_Logs_nur_ueber_OpenTelemetry_aus` (vorher rot).
+  - `[low]` `[reject]` (blind) `PfadBereinigung` übersieht Token mit `.`, `~`, `%` — carried: Token sind nach AD-11 base64url; Fix wäre weitere Musterlogik.
+  - `[low]` `[reject]` (blind) Kein HSTS, keine `Permissions-Policy`/COOP — carried: HTTPS übernimmt der Reverse Proxy (AD-23); der Teil „http-Profil“ ist mit edge „HTTP → 500“ gepatcht.
+  - `[low]` `[reject]` (blind) IPv6 je Einzeladresse statt /64 — carried: gezielter Angriff, bekannter Kreis; Fix wäre Präfix-Logik.
+  - `[maybe-false]` `[defer]` (blind) Dienst-Kennung ohne Besucher-IP → gemeinsamer Topf — carried, siehe `deferred`.
+  - `[low]` `[reject]` (blind) Proxy-Adressen ohne Validierung, kein CIDR — carried: lauter Fehler bei Fehlkonfiguration gewollt, CIDR nicht gefordert.
+  - `[low]` `[reject]` (blind) Krypto-Ausnahmen → 500; `BadHttpRequestException` mit 413/408 trägt `code = validierung` — Schlüsselfehler carried (kommen mit ihren ersten Endpunkten); 413/408 nur bei übergroßen oder hängenden Anfragen, Fix bräuchte einen neuen Problemcode.
+  - `[low]` `[reject]` (blind) Chiffretext nur an die Person gebunden, nicht an Feld/Zeile — Format nach AD-14 (Version, Inhaltsart, PersonId); Vertauschen setzt Schreibzugriff auf die Datenbank voraus; Fix wäre neue öffentliche Oberfläche.
+  - `[low]` `[reject]` (blind) Eine Abfrage je Entschlüsselung — carried: Mengen einer Freizeit; Fix wäre ein Cache.
+  - `[low]` `[reject]` (blind) S3-Adapter legt Bucket mit Vorgaben an, Abbruch beim Bucket-Check ignoriert, `LesenAsync` ohne Größengrenze — neue Buckets sind privat (Test zeigt 403); Abbruch carried; gespeichert wird nur Geprüftes (≤ 10 MB).
+  - `[false]` `[reject]` (blind) `sendBeacon` kann den Antiforgery-Header nicht setzen — die Intent verlangt den Header für jedes ändernde `/api`; der Client holt das Token vorab (0-3).
+  - `[low]` `[reject]` (blind) Upload-Grenze greift erst nach dem Einlesen, kein `RequestSizeLimit` — es gibt noch keinen Upload-Endpunkt im Produktivbetrieb; der erste (1-5) setzt die Grenze am Endpunkt.
+  - `[low]` `[patch]` (blind) Test „Bucket nicht öffentlich“ akzeptiert jede Nicht-2xx-Antwort — prüft jetzt genau `403 Forbidden`.
+  - `[low]` `[patch]` (edge) Über reines HTTP wirft `IAntiforgery` wegen `SecurePolicy=Always` → 500 bei jedem Ändern — HTTP-Profil und HTTP-Adresse aus `launchSettings.json` der API entfernt (nur noch `https://localhost:7180`); ein Proxy ohne konfigurierte Adressen bleibt lauter Konfigurationsfehler.
+  - `[maybe-false]` `[defer]` (edge) Dienst-Kennung ohne Besucher-IP — carried, siehe `deferred`.
+  - `[maybe-false]` `[defer]` (edge) Schlüssel im selben Command anlegen und nutzen — carried, siehe `deferred`.
+  - `[low]` `[reject]` (edge) 413/408/431 mit `code = validierung` — gleiche Ursache wie blind „Ausnahme-Abbildung“.
+  - `[low]` `[reject]` (edge) CIDR/ungültige Proxy-Adresse — carried.
+  - `[medium]` `[patch]` (edge) Abbruch des Aufrufers (Client trennt) verwirft den Sicherheitsprotokoll-Eintrag — `BetriebSicherheitsprotokoll` nutzt `CancellationToken.None` für Kontext und Speichern, Vertrag dokumentiert; Test `Abbruch_des_Aufrufers_verhindert_den_Eintrag_nicht` (vorher rot).
+  - `[false]` `[reject]` (edge) Zwei Instanzen legen den Bucket gleichzeitig an — carried: ein Prozess (AD-1, AD-23).
+  - `[low]` `[reject]` (edge) Bucket-Check ignoriert den Abbruch — carried.
+  - `[low]` `[reject]` (edge) Objekt ohne Content-Type; `NoSuchBucket` als „Datei fehlt“ — Content-Type carried (`false`); der Bucket wird beim ersten Zugriff sichergestellt, ein später gelöschter Bucket ist Betriebsfehler.
+  - `[low]` `[reject]` (edge) Unbekannte Inhaltsart → `InvalidOperationException` — carried.
+  - `[low]` `[reject]` (edge) Token mit `.`, `~`, `%` — carried.
+  - `[low]` `[reject]` (edge) Leerer Dateiname in `Content-Disposition` — carried.
+  - `[low]` `[reject]` (edge) Höchstgröße 0 oder negativ — carried.
+  - `[low]` `[reject]` (edge) Startprüfung übersieht `Include Error Detail` bei `NpgsqlDataSource` — alle Kontexte nutzen heute Verbindungszeichenfolgen (`ModulRegistrierung.Konfigurieren`); Fix wäre ein Zweig für einen Fall ohne Aufrufer.
+  - `[low]` `[patch]` (vgap) Fehlerpfad des Fristdienstes ungetestet — Test `Fristdienst_laeuft_nach_einem_Fehler_weiter_und_loggt_nur_den_Typ`: erster Lauf scheitert mit Personendaten in der Nachricht, Log nur mit Typ, nächster Tag räumt auf.
+  - `[low]` `[reject]` (vgap) Bereinigung nur mit In-Memory-Exporter getestet, nicht mit OTLP — Reihenfolge heute richtig (Bereinigung vor `UseOtlpExporter`); Fix bräuchte einen OTLP-Empfänger oder Reflexion in die Provider-Kette.
+  - `[low]` `[reject]` (vgap) AppHost-Verdrahtung (Schlüsselnamen) ohne Test — Tippfehler beim Hauptschlüssel bricht den Start laut ab; Fix bräuchte ein AppHost-Testprojekt.
+  - `[maybe-false]` `[defer]` (vgap) Schlüssel im selben Command — carried, siehe `deferred`.
+  - `[false]` `[reject]` (intent) AD-30-Pflichtfälle 403/404/Token fehlen — carried: beide Endpunkte sind anonyme Betriebs-Endpunkte, Rollen/Identity schließt die Intent aus.
+  - `[false]` `[reject]` (intent) Antiforgery-Regel über Endpunkt-Metadaten statt Anfragen — die Intent verlangt genau die Aufzählung der registrierten Endpunkte und ihrer Metadaten.
+  - `[medium]` `[patch]` (intent) Log-Bereinigung erreicht nur Export, nicht andere Provider — gleiche Ursache wie blind „Konsole-Provider“, mitbehoben.
+  - `[false]` `[reject]` (intent) Ausnahme-Ereignisse bleiben, nur ohne Nachricht — die Intent verbietet das Ereignis „mit Nachricht“; erfüllt und getestet.
+  - `[false]` `[reject]` (intent) GUID nur in Bindestrich-Form ausgenommen — bewusste Entscheidung aus dem ersten Review (32 Hex-Zeichen könnten ein Token sein); Matrix erfüllt.
+  - `[low]` `[reject]` (intent) AppHost ohne automatischen Test — gleiche Ursache wie vgap „AppHost-Verdrahtung“.
+  - `[false]` `[reject]` (intent) Startprüfung findet nur über `DbContextOptions<>` registrierte Kontexte — so registriert jeder Kontext der Lösung (`AddDbContext`, `AddDbContextFactory`).
+  - `[low]` `[defer]` (intent) „Eigene Transaktion“ ohne Rollback-Test — carried, siehe `deferred`.
+  - `[false]` `[reject]` (intent) Datei-Prüfung über HTTP nur am Test-Endpunkt — carried: Fachendpunkte schließt die Intent aus.
+  - `[false]` `[reject]` (intent) „0 Warnungen“ und „Test zuerst“ am Diff nicht prüfbar — carried: Prozessaussage.
+
 ## Design Notes
 
 - **AD-30-Pflichtfälle:** Die Story hat nur zwei anonyme Betriebs-Endpunkte des Hosts. Keiner gehört zu den Arten Organisation/Freizeit, persönlich oder Token; die Fälle „falsche Rolle 403“, „fremde Organisation 404“ und Token-Fälle haben hier keinen Gegenstand. An ihrer Stelle prüfen HTTP-Tests je Endpunkt: Erfolg, fehlender/falscher Antiforgery-Header, Dienst-Kennung, Rate-Limit, Header, Validierung. Rollen und Token kommen mit 1-1 bzw. 2-2.
@@ -251,3 +304,30 @@ Telemetrie und Log-Export tragen weder Rohpfad, Abfrage noch Ausnahme-Nachrichte
 - `Telemetry.Abstractions` wird mit `PrivateAssets="none"` weitergereicht, damit der schwärzende Log-Generator in allen Modulen greift.
 - Lokal liegen erzeugte Geheimnisse in den User-Secrets des AppHost, außerdem gibt es das Docker-Volume `zeltlotse-dateien`.
 - Keine Oberfläche, daher keine Doku-Seite.
+
+### Folgedurchlauf 2026-10-11
+
+**Zusammenfassung:** Zweite Review-Runde auf die erledigte Story (vier Layer, 42 Befunde). Gepatcht wurden zwei medium- und drei low-Einträge, testgetrieben (neue Tests zuerst rot, dann Code):
+- Logs gehen nur noch über OpenTelemetry: `ServiceDefaults` entfernt die Vorgabe-Provider (Konsole, Debug, EventSource, EventLog), die Ausnahmen der Frameworks mit Nachricht und Stacktrace an der Bereinigung vorbei schrieben (AD-22).
+- Das Sicherheitsprotokoll schreibt auch dann, wenn der Aufrufer abbricht; ein Angreifer kann eine fehlgeschlagene Anmeldung nicht durch Verbindungsabbruch verbergen.
+- Die API startet lokal nur noch über HTTPS (über HTTP warf der Antiforgery-Dienst wegen `Secure`-Cookies 500).
+- Test „Bucket nicht öffentlich“ verlangt genau `403`; neuer Test für den Fehlerpfad des Fristdienstes.
+
+**Dateien:**
+- `src/Zeltlotse.ServiceDefaults/Extensions.cs` – `ClearProviders()` vor `AddOpenTelemetry`.
+- `src/Zeltlotse.Api/Betrieb/BetriebSicherheitsprotokoll.cs`, `src/Zeltlotse.SharedKernel/Sicherheitsprotokoll/ISicherheitsprotokoll.cs` – Schreiben unabhängig vom Abbruch des Aufrufers, Vertrag dokumentiert.
+- `src/Zeltlotse.Api/Properties/launchSettings.json` – nur Profil `https`, ohne HTTP-Adresse.
+- `tests/Zeltlotse.Api.Tests/LogExportTests.cs`, `SicherheitsprotokollTests.cs`, `S3DateiSpeicherTests.cs` – drei neue Tests, eine geschärfte Prüfung.
+
+**Review:** high 0, medium 4, low 25, false 9, maybe-false 4. Gepatcht: medium 2 (Log-Provider, Abbruch im Sicherheitsprotokoll), low 3 (HTTP-Profil, 403-Prüfung, Fristdienst-Test). Zurückgestellt: 1 neu (Crypto-Shredding und Backups, siehe `deferred`), dazu die bekannten drei. Alle übrigen Befunde sind mit Begründung im Review Triage Log verworfen.
+
+**AD-30 (Hinweis des Aufrufers):** Auch in diesem Durchlauf gibt es keine Endpunkte mit Rolle, Organisation oder Zugangs-Token; die Fälle 403/404/Token haben keinen Gegenstand (Design Notes). Beide Endpunkte haben HTTP-Tests gegen echtes PostgreSQL für Erfolg, Antiforgery, Dienst-Kennung, Rate-Limit, Header und Validierung.
+
+**Folge-Review empfohlen:** nein. Folgedurchlauf ohne gepatchten high-Eintrag (gepatcht: high 0, medium 2, low 3).
+
+**Verifikation:** `dotnet build Zeltlotse.slnx --no-incremental` ergibt 0 Warnungen und 0 Fehler. `dotnet test` ergibt 255 von 255 grün (Architektur, SharedKernel, Personen, API; PostgreSQL 18.6 und RustFS per Testcontainers).
+
+**Restrisiken:**
+- Ohne gesetzten OTLP-Endpunkt gibt es keine Log-Ausgabe mehr (auch nicht auf der Konsole); lokal zeigt das Aspire-Dashboard die Logs. Der Betrieb braucht einen OTLP-Empfänger.
+- Ein Reverse Proxy ohne konfigurierte Adresse (`Zeltlotse:ReverseProxy:Adressen`) führt weiter zu 500 bei ändernden Anfragen.
+- Siehe `deferred`.

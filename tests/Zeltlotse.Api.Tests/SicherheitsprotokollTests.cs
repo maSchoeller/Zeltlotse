@@ -1,5 +1,8 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Npgsql;
 using Zeltlotse.Api.Betrieb;
 using Zeltlotse.SharedKernel.Sicherheitsprotokoll;
@@ -35,6 +38,22 @@ public sealed class SicherheitsprotokollTests(PostgresContainer postgres)
         Assert.Equal(factory.Uhr.GetUtcNow(), rolle.Zeitpunkt);
         var fehlgeschlagen = zeilen.Single(z => z.Art == (int)SicherheitsEreignisArt.AnmeldungFehlgeschlagen);
         Assert.Null(fehlgeschlagen.PersonId);
+    }
+
+    [Fact]
+    public async Task Abbruch_des_Aufrufers_verhindert_den_Eintrag_nicht()
+    {
+        // Sonst entginge z. B. eine fehlgeschlagene Anmeldung dem Protokoll, wenn der Client die Verbindung abbricht.
+        var verbindung = await postgres.NeueDatenbankAsync();
+        await using var factory = new ZeltlotseApiFactory(verbindung);
+        _ = factory.CreateClient();
+        using var abgebrochen = new CancellationTokenSource();
+        await abgebrochen.CancelAsync();
+
+        await factory.Services.GetRequiredService<ISicherheitsprotokoll>()
+            .SchreibenAsync(SicherheitsEreignisArt.AnmeldungFehlgeschlagen, abbruch: abgebrochen.Token);
+
+        Assert.Single(await ZeilenAsync(verbindung));
     }
 
     [Fact]
@@ -117,6 +136,37 @@ public sealed class SicherheitsprotokollTests(PostgresContainer postgres)
     }
 
     [Fact]
+    public async Task Fristdienst_laeuft_nach_einem_Fehler_weiter_und_loggt_nur_den_Typ()
+    {
+        var verbindung = await postgres.NeueDatenbankAsync();
+        await using var factory = new ZeltlotseApiFactory(verbindung);
+        _ = factory.CreateClient();
+        await factory.Services.GetRequiredService<ISicherheitsprotokoll>().SchreibenAsync(SicherheitsEreignisArt.Anmeldung, Person, abbruch: Abbruch);
+        factory.Uhr.Advance(TimeSpan.FromDays(366));
+        var logger = new FakeLogger<SicherheitsprotokollFristDienst>();
+
+        using var dienst = new SicherheitsprotokollFristDienst(
+            new SicherheitsprotokollAufraeumen(new ErstFehlerhafteFabrik(factory.Services.GetRequiredService<IDbContextFactory<BetriebDbContext>>()), factory.Uhr),
+            factory.Uhr,
+            logger);
+        await dienst.StartAsync(Abbruch);
+        await WartenBisAsync(() => Task.FromResult(logger.Collector.Count > 0));
+
+        var fehler = Assert.Single(logger.Collector.GetSnapshot());
+        Assert.Equal(LogLevel.Error, fehler.Level);
+        Assert.Contains(nameof(InvalidOperationException), fehler.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Erika", fehler.Message, StringComparison.Ordinal);
+        Assert.Null(fehler.Exception);
+        Assert.Single(await ZeilenAsync(verbindung));
+
+        // Der nächste tägliche Lauf gelingt wieder.
+        factory.Uhr.Advance(TimeSpan.FromDays(1));
+        await WartenBisAsync(async () => (await ZeilenAsync(verbindung)).Count == 0);
+        Assert.False(dienst.ExecuteTask!.IsCompleted);
+        await dienst.StopAsync(Abbruch);
+    }
+
+    [Fact]
     public async Task Host_registriert_den_Fristdienst()
     {
         await using var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync(), mitZustellDienst: true);
@@ -133,6 +183,15 @@ public sealed class SicherheitsprotokollTests(PostgresContainer postgres)
             Assert.True(DateTime.UtcNow < bis, "Bedingung nicht rechtzeitig erfüllt.");
             await Task.Delay(20, Abbruch);
         }
+    }
+
+    /// <summary>Scheitert beim ersten Aufruf mit Personendaten in der Nachricht, danach wie die echte Fabrik.</summary>
+    private sealed class ErstFehlerhafteFabrik(IDbContextFactory<BetriebDbContext> echt) : IDbContextFactory<BetriebDbContext>
+    {
+        private int _aufrufe;
+
+        public BetriebDbContext CreateDbContext() =>
+            Interlocked.Increment(ref _aufrufe) == 1 ? throw new InvalidOperationException("Erika Muster") : echt.CreateDbContext();
     }
 
     private sealed record Zeile(int Art, Guid? PersonId, Guid? OrganisationId, Guid? BezugId, DateTimeOffset Zeitpunkt);

@@ -1,3 +1,4 @@
+using System.Net;
 using Amazon.S3.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.SharedKernel.Dateien;
@@ -70,7 +71,8 @@ public sealed class S3DateiSpeicherTests(PostgresContainer postgres, S3Container
         using var anonym = new HttpClient();
         using var antwort = await anonym.GetAsync($"{s3.Endpunkt}/{bucket}/personen/{kennung}", Abbruch);
 
-        Assert.False(antwort.IsSuccessStatusCode);
+        // Genau „verboten“: ein 301/400 (z. B. falscher Pfadstil) bewiese nicht, dass der Bucket privat ist.
+        Assert.Equal(HttpStatusCode.Forbidden, antwort.StatusCode);
     }
 
     [Fact]

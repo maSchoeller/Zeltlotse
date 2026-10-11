@@ -14,6 +14,7 @@ public enum SicherheitsEreignisArt : short
 /// <summary>
 /// Schreibt in das Sicherheitsprotokoll im Schema <c>betrieb</c> des API-Hosts (AD-22): nur Kennungen, kein Freitext, keine IP.
 /// Jede Zeile wird in eigener Transaktion gespeichert, unabhängig von der Transaktion des Aufrufers.
+/// <c>abbruch</c> verhindert den Eintrag nicht: Wer die Anfrage abbricht, entgeht dem Protokoll nicht.
 /// </summary>
 public interface ISicherheitsprotokoll
 {

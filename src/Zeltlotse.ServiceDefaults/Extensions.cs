@@ -39,6 +39,9 @@ public static class Extensions
 
     public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
+        // AD-22: Die Ausgabe geht nur über OpenTelemetry. Konsole, Debug, EventSource und EventLog liefen an
+        // der Bereinigung vorbei und schrieben Ausnahmen der Frameworks mit Nachricht und Stacktrace.
+        builder.Logging.ClearProviders();
         builder.Logging.AddOpenTelemetry(logging =>
         {
             logging.IncludeFormattedMessage = true;
