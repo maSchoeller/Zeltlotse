@@ -30,4 +30,13 @@ public sealed class MigrationsReihenfolgeTests(PostgresContainer postgres)
             ["konten", "personen", "organisationen", "freizeiten", "inventar", "sicherheit", "programm", "kueche", "finanzen", "kanaele"],
             module.Select(m => m.Schema));
     }
+
+    [Fact]
+    public void Modul_ohne_Platz_in_der_Reihenfolge_bricht_den_Start_ab()
+    {
+        var fehler = Assert.Throws<InvalidOperationException>(() =>
+            ModulMigrationen.Ordnen([new ModulBeschreibung("Neu", "neu", typeof(object))]));
+
+        Assert.Contains("Neu", fehler.Message);
+    }
 }

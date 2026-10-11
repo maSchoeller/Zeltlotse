@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Ereignisse;
 using Zeltlotse.Testing;
+using Zeltlotse.Testmodul.Daten;
 using Zeltlotse.Testmodul.Empfang;
 using Zeltlotse.Testmodul.Notizen;
 
@@ -86,6 +89,19 @@ public sealed class ZustellungTests(PostgresContainer postgres)
         var empfaenge = await umgebung.RohLesenAsync(db => db.Empfaenge.ToListAsync());
         Assert.Equal(2, empfaenge.Count);
         Assert.All(empfaenge, e => Assert.Equal(orgB, e.KontextOrganisationId));
+    }
+
+    [Fact]
+    public async Task Fehler_in_einem_Modul_haelt_die_Zustellung_der_anderen_Module_nicht_auf()
+    {
+        // Das kaputte Modul steht vor dem Testmodul; sein Lese-Kontext ist kein ModulDbContext, der Durchgang wirft.
+        await using var umgebung = await TestUmgebung.ErstellenAsync(postgres, services =>
+            services.AddSingleton(new ModulBeschreibung("Kaputt", "kaputt", typeof(TestmodulLeseDbContext))));
+        await umgebung.SendenAsync(new NotizAnlegen(OrgA, "Kochtopf"), OrgA);
+
+        await umgebung.AllesZustellenAsync();
+
+        Assert.Equal([nameof(AngelegtEmpfangenA), nameof(AngelegtEmpfangenB)], await EmpfaengerAsync(umgebung));
     }
 
     [Fact]

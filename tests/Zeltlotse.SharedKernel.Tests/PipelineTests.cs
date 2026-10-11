@@ -106,4 +106,11 @@ public sealed class PipelineTests(PostgresContainer postgres)
         Assert.Equal(0, await umgebung.RohLesenAsync(db => db.Outbox.CountAsync()));
         Assert.Equal(0, await umgebung.RohLesenAsync(db => db.Zustellungen.CountAsync()));
     }
+
+    [Theory]
+    [InlineData("Text", "text")]
+    [InlineData("Adresse.Strasse", "adresse.strasse")]
+    [InlineData("Posten[0].Name", "posten[0].name")]
+    public void Fehlerschluessel_sind_JSON_Namen_auch_fuer_verschachtelte_Felder(string eigenschaft, string erwartet) =>
+        Assert.Equal(erwartet, Pipeline.ValidierungsStufe<NotizAnlegen, Guid>.JsonName(eigenschaft));
 }

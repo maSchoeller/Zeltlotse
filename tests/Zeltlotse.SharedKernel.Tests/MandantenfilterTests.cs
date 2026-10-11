@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Zeltlotse.Testing;
 using Zeltlotse.Testmodul.Notizen;
 
@@ -56,9 +57,36 @@ public sealed class MandantenfilterTests(PostgresContainer postgres)
         await umgebung.SendenAsync(new NotizAnlegen(OrgA, "bleibt"), OrgA);
 
         await umgebung.LesenAsync(
-            db => Assert.ThrowsAsync<InvalidOperationException>(() => db.Notizen.ExecuteDeleteAsync(TestContext.Current.CancellationToken)),
+            db => Assert.ThrowsAsync<PostgresException>(() => db.Notizen.ExecuteDeleteAsync(TestContext.Current.CancellationToken)),
             OrgA);
 
         Assert.Equal(1, await umgebung.RohLesenAsync(db => db.Notizen.IgnoreQueryFilters().CountAsync()));
+    }
+
+    [Fact]
+    public async Task Lese_Kontext_lehnt_beschreibbare_CTE_ab()
+    {
+        await using var umgebung = await TestUmgebung.ErstellenAsync(postgres);
+        await umgebung.SendenAsync(new NotizAnlegen(OrgA, "bleibt"), OrgA);
+
+        var fehler = await umgebung.LesenAsync(
+            db => Assert.ThrowsAsync<PostgresException>(() => db.Database
+                .SqlQueryRaw<int>("WITH d AS (DELETE FROM testmodul.notiz RETURNING 1) SELECT count(*)::int AS \"Value\" FROM d")
+                .ToListAsync(TestContext.Current.CancellationToken)),
+            OrgA);
+
+        Assert.Equal(PostgresErrorCodes.ReadOnlySqlTransaction, fehler.SqlState);
+        Assert.Equal(1, await umgebung.RohLesenAsync(db => db.Notizen.IgnoreQueryFilters().CountAsync()));
+    }
+
+    [Fact]
+    public async Task Lese_Kontext_liest_auch_mit_TagWith()
+    {
+        await using var umgebung = await TestUmgebung.ErstellenAsync(postgres);
+        await umgebung.SendenAsync(new NotizAnlegen(OrgA, "von A"), OrgA);
+
+        var texte = await umgebung.LesenAsync(db => db.Notizen.TagWith("Abfrage mit Kommentar").Select(n => n.Text).ToListAsync(), OrgA);
+
+        Assert.Equal(["von A"], texte);
     }
 }

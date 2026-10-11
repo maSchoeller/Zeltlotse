@@ -32,7 +32,7 @@ internal sealed class TestUmgebung : IAsyncDisposable
 
     public EmpfangsStoerung Stoerung => Dienste.GetRequiredService<EmpfangsStoerung>();
 
-    public static async Task<TestUmgebung> ErstellenAsync(PostgresContainer postgres)
+    public static async Task<TestUmgebung> ErstellenAsync(PostgresContainer postgres, Action<IServiceCollection>? vorTestmodul = null)
     {
         var verbindung = await postgres.NeueDatenbankAsync();
         var uhr = new FakeTimeProvider(new DateTimeOffset(2026, 7, 1, 8, 0, 0, TimeSpan.Zero));
@@ -57,6 +57,7 @@ internal sealed class TestUmgebung : IAsyncDisposable
                 typeof(OutboxStufe<,>),
             ];
         });
+        vorTestmodul?.Invoke(services);
         services.AddTestmodul();
 
         var dienste = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });

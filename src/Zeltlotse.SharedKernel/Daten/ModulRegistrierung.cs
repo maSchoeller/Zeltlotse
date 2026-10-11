@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 
 namespace Zeltlotse.SharedKernel.Daten;
 
@@ -25,7 +26,7 @@ public static class ModulRegistrierung
         services.AddDbContext<TSchreib>((sp, optionen) =>
             Konfigurieren(optionen, Verbindung(sp), schema));
         services.AddDbContext<TLese>((sp, optionen) =>
-            Konfigurieren(optionen, Verbindung(sp), schema));
+            Konfigurieren(optionen, NurLesend(Verbindung(sp)), schema));
         services.AddValidatorsFromAssembly(typeof(TSchreib).Assembly, ServiceLifetime.Scoped, includeInternalTypes: true);
         services.AddSingleton(new ModulBeschreibung(name, schema, typeof(TSchreib)));
         return services;
@@ -39,6 +40,17 @@ public static class ModulRegistrierung
     public static DbContextOptions<TKontext> DesignZeitOptionen<TKontext>(string schema)
         where TKontext : DbContext =>
         (DbContextOptions<TKontext>)Konfigurieren(new DbContextOptionsBuilder<TKontext>(), "Host=localhost;Database=zeltlotse", schema).Options;
+
+    /// <summary>
+    /// Verbindung des Lese-Kontexts: PostgreSQL lehnt in ihr jeden schreibenden Befehl ab,
+    /// auch ExecuteUpdate/ExecuteDelete und rohes SQL wie beschreibbare CTEs.
+    /// </summary>
+    private static string NurLesend(string verbindung)
+    {
+        var builder = new NpgsqlConnectionStringBuilder(verbindung);
+        builder.Options = $"{builder.Options} -c default_transaction_read_only=on".Trim();
+        return builder.ConnectionString;
+    }
 
     private static string Verbindung(IServiceProvider sp) =>
         sp.GetRequiredService<IConfiguration>().GetConnectionString(Verbindungsname)

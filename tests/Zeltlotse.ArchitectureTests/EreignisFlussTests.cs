@@ -16,7 +16,8 @@ public sealed partial class EreignisFlussTests
     {
         var tabelle = EreignisFluss();
 
-        Assert.Equal(10, tabelle.Count);
+        // Neue Zeilen in der Spine sind erlaubt; nur die bekannten müssen gelesen werden.
+        Assert.True(tabelle.Count >= 10, $"Nur {tabelle.Count} Zeilen gelesen.");
         Assert.Equal("Freizeiten", tabelle["AnmeldungBestaetigt"].Quelle);
         Assert.Equal(["Organisationen", "Personen"], tabelle["AnmeldungBestaetigt"].Ziele.Order());
         Assert.Equal([JedesModul], tabelle["PersonGeloescht"].Ziele);

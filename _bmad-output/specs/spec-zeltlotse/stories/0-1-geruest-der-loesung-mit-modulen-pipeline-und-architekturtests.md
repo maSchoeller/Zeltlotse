@@ -5,7 +5,7 @@ created: '2026-10-11'
 status: 'done'
 baseline_revision: '5295fec4a76de29daa8143dd7a8d059bfe393d06'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
 warnings: [oversized]
@@ -148,6 +148,51 @@ Greenfield: im Repository liegen nur `_bmad/`, `_bmad-output/`, `scripts/`, `CLA
   - `[false]` `[reject]` (blind) `JsonName` rät JSON-Namen — Commands mit `[JsonPropertyName]` gibt es noch nicht; die HTTP-Abbildung kommt mit 1-1.
   - `[low]` `[reject]` (blind) `MandantenKontext.Setzen` mehrfach aufrufbar — nur Endpunkt-Rand und Zustellung kennen den konkreten Typ; der Fix wäre ein Wächter ohne nachgewiesenen Missbrauch.
 
+### 2026-10-11 — Review pass (Folge-Review)
+- verdicts: 41 findings — high 0, medium 9, low 18, false 14, maybe-false 0
+- findings:
+  - `[medium]` `[patch]` (blind) Nur-Lesen-Prüfung des Lese-Kontexts ist eine Präfix-Heuristik: `TagWith`-Abfragen werden abgelehnt, beschreibbare CTEs kommen durch — `NurLesenInterceptor` entfernt; die Lese-Verbindung setzt jetzt `default_transaction_read_only=on`, PostgreSQL selbst lehnt jedes Schreiben ab. Tests für `TagWith`, beschreibbare CTE und `ExecuteDelete` ergänzt bzw. angepasst.
+  - `[low]` `[patch]` (blind) `ModulMigrationen.Ordnen`: Abbruch bei unbekanntem Modul ungetestet; fehlendes Modul werde still übersprungen — das Fehlen fängt `StartTests` (alle zehn Schemas über den echten Host); Test „Modul ohne Platz in der Reihenfolge bricht den Start ab“ ergänzt.
+  - `[false]` `[reject]` (blind) Handler können über `ISender` fremde Module synchron aufrufen — Commands sind `internal`, und Modulprojekte dürfen keine fremden Modulprojekte referenzieren (Architekturtest); ein fremder Command ist nicht erreichbar.
+  - `[false]` `[reject]` (blind) `IRequest`/`IQuery` umgehen die Command-Regeln — ein solcher Handler mit schreibendem DbContext verletzt die Regel „nur Command-Handler hängen vom schreibenden DbContext ab“ und fällt auf.
+  - `[low]` `[reject]` (blind) Vergessene Empfänger-Registrierung, `IBenutzerCommand` an Empfängern und Empfänger mit Antworttyp sind nicht durch Regeln abgedeckt — fällt beim ersten Zustelltest jedes Empfängers auf; der Fix wären drei neue Architekturregeln.
+  - `[low]` `[reject]` (blind) Outbox-, Zustell- und Inbox-Zeilen speichern `FullName` der Typen; Umbenennen blockiert offene Zeilen — Umbenennungen bestehender Ereignis-Typen sind selten, der Fehler wird bei jedem Versuch geloggt; der Fix wäre ein eigener Namensmechanismus.
+  - `[medium]` `[reject]` (blind) Mandantenfilter schützt nur Lesen, nicht Schreiben — die Intent schließt Autorisierung in 0-1 ausdrücklich aus; Schreibrechte je Organisation kommen mit den Endpunkten (1-x).
+  - `[medium]` `[patch]` (blind) Zustellung zwischen zwei Modulen und der Fehlerfang je Modul sind ungetestet — gleiche Ursache wie vgap „Fehlerfang je Modul“, mitbehoben.
+  - `[low]` `[reject]` (blind) Ereignis-Typen in Unter-Namensräumen, nicht öffentliche Typen und als Eigenschaft wiederverwendete Ereignisse entgehen Wert- und Tabellenprüfung — noch gibt es keinen Ereignis-Typ; die Regeln bekommen mit den ersten Ereignissen Negativ-Fixtures (siehe `deferred`); der Fix wäre Zusatzlogik.
+  - `[low]` `[patch]` (blind) `Tabelle_wird_aus_der_Spine_gelesen` prüft genau 10 Zeilen und bricht bei jeder neuen Spine-Zeile — auf „mindestens 10“ umgestellt.
+  - `[low]` `[reject]` (blind) Generator-Regel liest nur `src/**/*.csproj`, nicht `Directory.*.props`/`.targets` — ein globaler Generator-Verweis wäre eine bewusste, sichtbare Änderung an einer zentralen Datei; der Fix erweitert die Regel um neue Dateiarten.
+  - `[low]` `[reject]` (blind) Design-Zeit-Fabrik mit festem `localhost` widerspricht dem Restrisiko-Text; Handgriffe nur in der Story dokumentiert — der Fix wäre eine Spec-Bearbeitung; die Handgriffe erreichen spätere Stories über den Story-übergreifenden Kontext.
+  - `[low]` `[patch]` (blind) `ValidierungsStufe.JsonName` für verschachtelte Pfade ungetestet — gleiche Ursache wie vgap, mitbehoben.
+  - `[low]` `[reject]` (blind) `Down()` der Initial-Migrationen lässt das Schema stehen — Zurückrollen auf null ist im Betrieb nicht vorgesehen; der Fix wären Handänderungen an elf generierten Migrationen.
+  - `[false]` `[reject]` (edge) Giftnachricht wird stündlich endlos wiederholt — carried: gewollt (AD-4, Reihenfolge je Datensatz, Wartezeit gedeckelt).
+  - `[low]` `[reject]` (edge) `AllesZustellenAsync` endet, wenn ein ganzer Stapel von 100 scheitert — nur bei 100 gleichzeitig fälligen Fehlschlägen; der nächste Takt des `ZustellDienst` setzt fort; der Fix bräuchte einen zweiten Zähler durch `ZustellenAsync`.
+  - `[false]` `[reject]` (edge) zwei gleichzeitige Zustellläufe — carried: ein Prozess (AD-1, AD-23), Inbox-Primärschlüssel verhindert Doppelverarbeitung.
+  - `[false]` `[reject]` (edge) Inbox-Prüfung vor der Transaktion ohne Sperre — carried: zweiter Lauf scheitert am Primärschlüssel und rollt zurück; Stufenfolge laut AD-27.
+  - `[low]` `[reject]` (edge) `EmpfaengtEreignis` doppelt registriert — carried: nur bei doppeltem Aufruf; der Fix wäre ein Wächter.
+  - `[medium]` `[patch]` (edge) `TagWith` bzw. führende Klammer wird im Lese-Kontext abgelehnt — gleiche Ursache wie blind „Präfix-Heuristik“, mitbehoben.
+  - `[medium]` `[patch]` (edge) beschreibbare CTE / `SELECT … INTO` im Lese-Kontext — gleiche Ursache, mitbehoben (Datenbank lehnt mit `25006` ab).
+  - `[low]` `[reject]` (edge) Ereignisse eines nicht angehängten Aggregats gehen verloren — dann wird auch die Änderung selbst nicht gespeichert, das fällt im ersten Test des Handlers auf; der Fix wäre ein Wächter.
+  - `[low]` `[reject]` (edge) `TypeInitializationException` bei falscher Command-Signatur — carried: Architekturregel erzwingt `IModulCommand<>`.
+  - `[low]` `[reject]` (edge) Typname über 300 Zeichen — carried: bei den Namenskonventionen praktisch ausgeschlossen.
+  - `[false]` `[reject]` (edge) Modul fehlt in der Registrierung oder ist doppelt — Fehlen fängt `StartTests` (alle zehn Schemas über den Host); doppelt ist carried („ModulBeschreibung doppelt“).
+  - `[low]` `[reject]` (edge) Ereignis, das zugleich Eigenschaft eines anderen ist, entgeht der Tabellenprüfung — wie blind „Unter-Namensräume“: noch keine Ereignisse, Fix wäre Zusatzlogik.
+  - `[medium]` `[patch]` (vgap) Fehlerfang je Modul in `ZustellenAsync` ohne Test — `TestUmgebung` nimmt optional weitere Registrierungen; Test mit kaputtem Modul vor dem Testmodul ergänzt, beide Empfänger werden trotzdem beliefert.
+  - `[low]` `[reject]` (vgap) Rückfall auf den Mandanten-Kontext bei nicht organisationseigenen Aggregaten ungetestet — einzeilige Verzweigung; der Test bräuchte ein neues Aggregat mit Migration im Testmodul; mit dem ersten solchen Fach-Aggregat prüfen.
+  - `[low]` `[patch]` (vgap) Abbruch für Module ohne Platz in der Migrationsreihenfolge ungetestet — Test ergänzt (gleiche Ursache wie blind `Ordnen`).
+  - `[low]` `[patch]` (vgap) `JsonName` für verschachtelte Pfade ungetestet — Theorie mit `Text`, `Adresse.Strasse`, `Posten[0].Name` ergänzt.
+  - `[medium]` `[patch]` (vgap) `TagWith`-Abfragen im Lese-Kontext blockiert — gleiche Ursache wie blind, mitbehoben.
+  - `[medium]` `[patch]` (vgap) beschreibbare CTE kommt durch die Nur-Lesen-Prüfung — gleiche Ursache wie blind, mitbehoben.
+  - `[medium]` `[defer]` (intent) Pipeline-Reihenfolge des Hosts nur über Kopie in `TestUmgebung` geprüft — carried: bereits in `deferred`.
+  - `[false]` `[reject]` (intent) „Genau ein `AddMediator`“ nicht per Architekturtest erzwungen — `AddMediator` erzeugt der Generator, und den darf laut Architekturtest nur `Zeltlotse.Api` einbinden; Module können es nicht aufrufen.
+  - `[false]` `[reject]` (intent) Generator-Regel nimmt Testprojekte aus — die Intent verlangt den Generator-Test; „nur im API-Host“ betrifft den Produktionscode, `tests/` liefert nichts aus.
+  - `[false]` `[reject]` (intent) AD-30-Pflichtfälle 403/404/Token fehlen — carried: in 0-1 gibt es keinen Endpunkt dieser Arten; die Intent schließt Autorisierung aus.
+  - `[false]` `[reject]` (intent) `postgres:18.6` statt `postgres:18` — 18.6 ist PostgreSQL 18, bewusst festgelegt (Review-Pass 1).
+  - `[false]` `[reject]` (intent) fachähnliche `Notiz`-Typen — liegen nur unter `tests/`; die Never-Liste betrifft die Module unter `src/`.
+  - `[false]` `[reject]` (intent) Zusätze über die Intent hinaus (Concurrency-Token, Zustelltabelle, Nur-Lesen-Schutz) — stützen die Matrix-Zeilen Zustellung und Lese-Kontext; kein Defekt.
+  - `[false]` `[reject]` (intent) Inbox-Prüfung außerhalb der Transaktion — carried: Stufenfolge laut AD-27, Primärschlüssel schützt.
+  - `[false]` `[reject]` (intent) „Test zuerst“ am Diff nicht nachprüfbar — carried: Prozessaussage, kein Defekt.
+
 ## Design Notes
 
 - **Kein fachlicher Endpunkt in 0-1:** Die AD-30-Pflichtfälle (falsche Rolle 403, fremde Organisation 404, Token-Fälle) entfallen, weil es noch keine Endpunkte dieser Arten gibt. Einziger HTTP-Endpunkt ist `/health` der ServiceDefaults; die Test-Infrastruktur steht für die Pflichtfälle ab 1-1 bereit.
@@ -187,3 +232,24 @@ Status: done
 **Verifikation:** `dotnet build Zeltlotse.slnx --no-incremental` → 0 Warnungen, 0 Fehler. `dotnet test` → 95 von 95 grün (Architektur, SharedKernel, API; echtes PostgreSQL per Testcontainers). Jede Zeile der I/O-Matrix hat einen laufenden Test. Aspire-Start lokal vom Umsetzer geprüft (`/health` „Healthy“).
 
 **Restrisiken:** `dotnet ef migrations add` braucht einen Verbindungs-String als App-Argument und zwei Handgriffe (Snapshot nach `Migrationen/` verschieben, Klassen `internal` setzen). Ereignis-Typen erlauben bisher keine Listen und kein `bool`. `/health` prüft die Datenbank nicht (Überwachung in der Spine zurückgestellt). Keine UI → keine Doku-Seite nötig.
+
+### Folge-Review 2026-10-11
+
+**Änderung:** Der Lese-Kontext ist jetzt durch die Datenbank schreibgeschützt: `ModulRegistrierung.NurLesend` setzt in seiner Verbindung `default_transaction_read_only=on`. Damit entfällt der `NurLesenInterceptor` und mit ihm die Heuristik aus dem Restrisiko oben. `TagWith`-Abfragen funktionieren; `ExecuteDelete` und beschreibbare CTEs scheitern mit PostgreSQL-Fehler `25006`.
+
+**Dateien:**
+- `src/Zeltlotse.SharedKernel/Daten/ModulRegistrierung.cs` – Lese-Verbindung schreibgeschützt.
+- `src/Zeltlotse.SharedKernel/Daten/ModulLeseDbContext.cs` – `NurLesenInterceptor` entfernt.
+- `tests/Zeltlotse.SharedKernel.Tests/MandantenfilterTests.cs` – `TagWith`, beschreibbare CTE, `ExecuteDelete` mit `PostgresException`.
+- `tests/Zeltlotse.SharedKernel.Tests/TestUmgebung.cs`, `ZustellungTests.cs` – Fehler in einem Modul hält die anderen nicht auf.
+- `tests/Zeltlotse.SharedKernel.Tests/PipelineTests.cs` – `JsonName` für verschachtelte Pfade.
+- `tests/Zeltlotse.Api.Tests/MigrationsReihenfolgeTests.cs` – unbekanntes Modul bricht den Start ab.
+- `tests/Zeltlotse.ArchitectureTests/EreignisFlussTests.cs` – Spine-Tabelle mit mindestens 10 Zeilen.
+
+**Review:** 41 Befunde. 5 Patch-Einträge (2 medium: Nur-Lesen-Schutz, Fehlerfang je Modul; 3 low: `Ordnen`-Test, `JsonName`-Test, Spine-Zeilenzahl), 1 Eintrag zurückgestellt (bereits in `deferred`), alle übrigen mit Begründung im Review Triage Log verworfen. Die Forderung des Aufrufers nach den AD-30-Pflichtfällen (403, 404, Token) entfällt weiter: 0-1 hat keinen Endpunkt dieser Arten.
+
+**Folge-Review empfohlen:** nein – kein high-Eintrag gepatcht (gepatcht: high 0, medium 2, low 3).
+
+**Verifikation:** `dotnet build Zeltlotse.slnx --no-incremental` → 0 Warnungen, 0 Fehler. `dotnet test` → 102 von 102 grün (Architektur, SharedKernel, API; echtes PostgreSQL per Testcontainers).
+
+**Restrisiken:** Der Rückfall auf den Mandanten-Kontext für nicht organisationseigene Aggregate ist ungetestet (mit dem ersten solchen Aggregat prüfen). Ereignis-, Zustell- und Inbox-Zeilen speichern Typnamen; ein Umbenennen braucht dann eine Datenmigration.
