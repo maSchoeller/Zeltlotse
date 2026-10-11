@@ -1,0 +1,266 @@
+<title>Zeltlotse-Architektur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap">
+<style>
+/* Layout: ruhige Lesespalte auf Blaugrün-Grundton, Abschnitte als weiße Flächen, Entscheidungen als Kennungs-Chips (AD-n) */
+:root{
+  --ground:#EAF2F4; --surface:#FFFFFF; --light:#D6E6EA; --border:#ADCDD4;
+  --text:#0E1A1D; --muted:#474F60; --action:#307F91; --akzent:#318294; --on-akzent:#FFFFFF;
+  --warn:#8A5A0E; --warn-bg:#FBF1E0; --ok:#3F6B5B;
+  --f-text:'Sarabun', Arial, sans-serif;
+  --f-mono:ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#0F1719; --surface:#1D2A2E; --light:#2B3F44; --border:#668E97;
+  --text:#EAF2F4; --muted:#ADCDD4; --action:#83B4BF; --akzent:#83B4BF; --on-akzent:#0E1A1D;
+  --warn:#F2C27A; --warn-bg:#33281A; --ok:#9CCBB8; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --ground:#0F1719; --surface:#1D2A2E; --light:#2B3F44; --border:#668E97;
+  --text:#EAF2F4; --muted:#ADCDD4; --action:#83B4BF; --akzent:#83B4BF; --on-akzent:#0E1A1D;
+  --warn:#F2C27A; --warn-bg:#33281A; --ok:#9CCBB8; color-scheme:dark;}
+
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--text);font-family:var(--f-text);font-size:17px;line-height:1.6;padding-inline:16px;padding-block:24px 64px}
+.wrap{max-width:860px;margin-inline:auto;display:flex;flex-direction:column;gap:20px}
+header.kopf{display:flex;flex-direction:column;gap:6px;padding-block:8px 4px}
+.dach{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--action);font-weight:600}
+h1{font-weight:300;font-size:clamp(30px,5vw,42px);line-height:1.15;margin:0;text-wrap:balance}
+.lead{font-size:19px;color:var(--muted);max-width:65ch;margin:0}
+.meta{font-size:14px;color:var(--muted)}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px}
+nav.toc a{font-size:14px;padding:4px 12px;border:1px solid var(--border);border-radius:999px;color:var(--text);text-decoration:none;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{background:var(--light)}
+a:focus-visible{outline:2px solid var(--text);outline-offset:3px}
+section{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:24px clamp(16px,4vw,32px);display:flex;flex-direction:column;gap:14px;min-width:0}
+h2{font-size:24px;font-weight:600;margin:0;text-wrap:balance}
+h3{font-size:18px;font-weight:600;margin:6px 0 0}
+p{margin:0;max-width:68ch}
+ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;max-width:68ch}
+.ad{display:inline-block;font-family:var(--f-mono);font-size:12px;padding:1px 7px;border-radius:4px;background:var(--light);color:var(--text);white-space:nowrap;vertical-align:1px}
+.kern{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.kern div{border-top:3px solid var(--akzent);background:var(--ground);padding:12px 14px;border-radius:0 0 4px 4px;min-width:0}
+.kern b{display:block;font-size:16px;margin-bottom:2px}
+.kern span{font-size:15px;color:var(--muted)}
+.tab{overflow-x:auto;border:1px solid var(--light);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:560px}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--light)}
+th{font-weight:600;background:var(--ground)}
+tr:last-child td{border-bottom:0}
+.diagramm{overflow-x:auto;background:var(--ground);border-radius:4px;padding:12px}
+pre.mermaid{margin:0;background:transparent;font-family:var(--f-text)}
+.hinweis{background:var(--warn-bg);color:var(--text);border-left:4px solid var(--warn);padding:10px 14px;border-radius:0 4px 4px 0;font-size:15px}
+.hinweis b{color:var(--warn)}
+.begriff{font-style:italic}
+details{border-top:1px solid var(--light);padding-top:10px}
+summary{cursor:pointer;font-weight:600}
+summary:focus-visible{outline:2px solid var(--text);outline-offset:3px}
+.adliste{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin-top:10px;font-size:15px}
+.adliste span:nth-child(odd){font-family:var(--f-mono);font-size:13px;color:var(--action);padding-top:2px}
+footer{font-size:14px;color:var(--muted);padding-inline:4px}
+@media (max-width:520px){body{font-size:16px}.adliste{grid-template-columns:1fr}.adliste span:nth-child(odd){padding-top:8px}}
+</style>
+
+<div class="wrap">
+<header class="kopf">
+  <div class="dach">Architektur · Stand 11. Oktober 2026</div>
+  <h1>Wie Zeltlotse gebaut ist</h1>
+  <p class="lead">Eine Erklärung für Mitstreiter und Datenschutz-Prüfer: wie die Teile zusammenhängen, wo die Daten liegen und warum die Daten einer Person bei ihr bleiben.</p>
+  <p class="meta">Verbindliche Fassung: <code>ARCHITECTURE-SPINE.md</code> im selben Ordner. Kennungen wie <span class="ad">AD-8</span> verweisen auf die dort festgehaltenen Entscheidungen.</p>
+</header>
+
+<nav class="toc" aria-label="Inhalt">
+  <a href="#kurz">Kurzfassung</a><a href="#aufbau">Aufbau</a><a href="#module">Module</a><a href="#daten">Daten der Person</a><a href="#schutz">Schutz &amp; Löschen</a><a href="#unterwegs">Im Zeltlager</a><a href="#betrieb">Betrieb &amp; Offenes</a><a href="#entscheidungen">Alle Entscheidungen</a>
+</nav>
+
+<section id="kurz">
+  <h2>Kurzfassung</h2>
+  <p>Zeltlotse ist eine Web-Anwendung, mit der Leitungen und Teams Freizeiten und Zeltlager planen und durchführen. Eltern melden ihre Kinder darüber an. Gebaut wird sie mit .NET 10 und C#, die Daten liegen in einer PostgreSQL-Datenbank in der EU.</p>
+  <div class="kern">
+    <div><b>Ein Server, eine Schnittstelle</b><span>Der Server spricht nach außen nur über eine API. Die App und die öffentlichen Seiten sind zwei Clients dieser API. <span class="ad">AD-5</span></span></div>
+    <div><b>Zehn klar getrennte Module</b><span>Jedes Modul besitzt seine eigenen Daten. Andere Module kommen nur über eine festgelegte Schnittstelle daran. <span class="ad">AD-1</span> <span class="ad">AD-3</span></span></div>
+    <div><b>Daten gehören der Person</b><span>Eine Freizeit bekommt den Freizeitpass nicht kopiert. Sie darf ihn befristet einsehen, und jeder Zugriff wird protokolliert. <span class="ad">AD-8</span></span></div>
+    <div><b>Löschen wirkt überall</b><span>Sensible Daten sind mit einem eigenen Schlüssel pro Person verschlüsselt. Wird er vernichtet, sind die Daten auch in Backups unlesbar. <span class="ad">AD-14</span></span></div>
+  </div>
+</section>
+
+<section id="aufbau">
+  <h2>Aufbau</h2>
+  <p>Alles läuft unter einer Internet-Adresse. Auf dem Laptop und dem Handy des Teams läuft die <b>Web-App</b>. Sie lässt sich auf dem Handy wie eine App installieren und funktioniert teilweise auch ohne Netz. Eltern kommen beim ersten Kontakt über die <b>öffentlichen Seiten</b>: Freizeitseite, Anmeldelink und Gast-Anmeldung. Diese Seiten sind bewusst schlank, damit sie im Mobilfunk sofort laden.</p>
+  <div class="diagramm"><pre class="mermaid">
+flowchart LR
+  subgraph G[Geräte]
+    T[Team & Leitung<br/>Laptop · Handy-App]
+    E[Eltern<br/>Handy-Browser]
+  end
+  subgraph S[EU-Rechenzentrum · eine Adresse]
+    A[Web-App<br/>/app]
+    P[Öffentliche Seiten<br/>/]
+    API[API mit zehn Modulen<br/>/api]
+    DB[(Datenbank)]
+    F[(Dateien)]
+  end
+  T --> A
+  E --> P
+  A -- Daten --> API
+  P -- Daten --> API
+  API --> DB
+  API --> F
+  API -. Mail & Push nur nach Bestätigung .-> T
+  </pre></div>
+  <p><span class="begriff">API</span> heißt hier: eine Schnittstelle, über die Programme Daten abfragen und ändern. Weder die Web-App noch die öffentlichen Seiten greifen direkt auf die Datenbank zu. Später kann eine native App oder ein anderes System dieselbe API nutzen.</p>
+</section>
+
+<section id="module">
+  <h2>Die zehn Module</h2>
+  <p>Innen ist der Server in fachliche Bereiche geteilt. Das nennt man einen <span class="begriff">modularen Monolithen</span>: ein Programm, aber mit festen inneren Grenzen. Jedes Modul hat eigene Tabellen, die nur es selbst liest und schreibt. Ein Pfeil im Bild bedeutet „darf bei diesem Modul nachfragen“. In der Gegenrichtung erfahren Module voneinander nur über Ereignisse, etwa „Anmeldung bestätigt“.</p>
+  <div class="diagramm"><pre class="mermaid">
+flowchart TD
+  KON[Konten] ~~~ PER[Personen] ~~~ ORG[Organisationen]
+  PER --> KON
+  ORG --> KON
+  ORG --> PER
+  FZ[Freizeiten] --> ORG
+  FZ --> PER
+  INV[Inventar] --> ORG
+  INV --> FZ
+  SIC[Sicherheit] --> FZ
+  SIC --> PER
+  SIC --> INV
+  PRG[Programm] --> FZ
+  PRG --> INV
+  KUE[Küche] --> PRG
+  KUE --> FZ
+  KUE --> PER
+  FIN[Finanzen] --> FZ
+  KAN[Kanäle] --> FZ
+  </pre></div>
+  <div class="tab"><table>
+    <thead><tr><th>Modul</th><th>Verwaltet</th></tr></thead>
+    <tbody>
+      <tr><td>Konten</td><td>Anmeldung per Login-Link aus der Mail, optional mit Passwort</td></tr>
+      <tr><td>Personen</td><td>Profil, Familie, Freizeitpass, Nachweise (z.&nbsp;B. Führungszeugnis), Einwilligungen, Freigaben und das Protokoll aller Einsichten</td></tr>
+      <tr><td>Organisationen</td><td>Organisation, Rollen, Richtlinien (Nachweise, Freigabefenster, Löschfristen), bestätigte Nachweis-Einsichten</td></tr>
+      <tr><td>Freizeiten</td><td>Freizeit, Leitung und Team, Anmeldungen, ausgewählte Fragen, Dokumente, Team-Notizen, QR-Zugang</td></tr>
+      <tr><td>Sicherheit</td><td>Sicherheitskette, Schutzkonzept, Vorfall-Protokoll und dessen Archiv</td></tr>
+      <tr><td>Programm</td><td>Wochenraster, Programmpunkte samt Mahlzeiten, Material, Aufgaben, Programmbibliothek</td></tr>
+      <tr><td>Inventar</td><td>Inventar der Organisation, Reservierungen, Schäden, Anschaffungswünsche</td></tr>
+      <tr><td>Küche</td><td>Rezepte, Gerichte an Mahlzeiten, Einkaufsliste (pro Freizeit zuschaltbar)</td></tr>
+      <tr><td>Finanzen</td><td>Kalkulation, Belege, „Beitrag bezahlt“ (pro Freizeit zuschaltbar)</td></tr>
+      <tr><td>Kanäle</td><td>Kanäle „Team“ und „Alle“, Push-Nachrichten, Ansagen, Besprechungsnotizen</td></tr>
+    </tbody>
+  </table></div>
+  <p>Innerhalb eines Moduls gilt: Jede Änderung ist ein eigener Befehl mit genau einer verarbeitenden Klasse. So laufen Prüfung, Speichern und das Ereignis für andere Module immer gleich ab. Reines Lesen darf direkt geschehen <span class="ad">AD-27</span>. Die Oberfläche setzt sich aus einer eigenen Bibliothek von Bausteinen im ELKW-Stil zusammen <span class="ad">AD-29</span>. Gebaut wird testgetrieben, und jeder Zugang zur API hat Pflicht-Tests für „darf“, „darf nicht“ und „fremde Organisation sieht nichts“ <span class="ad">AD-30</span>.</p>
+  <p>Diese Grenzen prüft bei jedem Bauen ein automatischer Test <span class="ad">AD-24</span>. Auch die KI-Agenten, die die Bausteine V1 bis V6 umsetzen, können sie so nicht unbemerkt überschreiten.</p>
+</section>
+
+<section id="daten">
+  <h2>Daten der Person</h2>
+  <p>Das wichtigste Versprechen aus den Anforderungen lautet: <b>Daten gehören der Person.</b> Technisch heißt das: Der Freizeitpass (Allergien, Medikamente, Notfallkontakte) liegt nur im Modul Personen. Eine Freizeit bekommt eine befristete <b>Freigabe</b>, aber keine Kopie.</p>
+  <div class="diagramm"><pre class="mermaid">
+sequenceDiagram
+  participant E as Eltern
+  participant F as Freizeit
+  participant P as Personen
+  E->>F: Anmeldung absenden
+  F-->>P: Ereignis „Anmeldung eingegangen“
+  P->>P: Freigabe für die Leitung anlegen
+  F-->>P: Ereignis „Anmeldung bestätigt“
+  P->>P: Freigabe auf das Team erweitern (bis Fensterende)
+  Note over F,P: Team öffnet den Freizeitpass
+  F->>P: Bitte Freizeitpass von Paul
+  P->>P: Freigabe und Rolle prüfen, Zugriff protokollieren
+  P-->>F: nur die abgefragten Angaben
+  Note over P: nach dem Freigabefenster: keine Herausgabe mehr
+  </pre></div>
+  <ul>
+    <li><b>Immer aktuell:</b> Ändern Eltern während der Freizeit eine Allergie, sieht das Team sofort den neuen Stand. Zwei Fassungen, die auseinanderlaufen, gibt es nicht.</li>
+    <li><b>Nur, was gefragt ist:</b> Die Freigabe umfasst genau die Fragen, die die Leitung ausgewählt hat. Ältere Antworten aus anderen Freizeiten bleiben verborgen. <span class="ad">AD-8</span> <span class="ad">AD-10</span></li>
+    <li><b>Nachvollziehbar:</b> Eltern sehen im Zugriffsprotokoll, wer wann Einsicht hatte.</li>
+    <li><b>Nachweise:</b> Ein Führungszeugnis wird nur einmal eingesehen. Die Organisation speichert lediglich die Bestätigung (eingesehen am, gültig bis, von wem), nie das Dokument. <span class="ad">AD-9</span></li>
+    <li><b>Organisationen strikt getrennt:</b> Jeder Datensatz einer Organisation trägt deren Kennung, und die Datenbankschicht filtert automatisch darauf. Vor dem Start als Dienst für fremde Organisationen sichert zusätzlich die Datenbank selbst diese Trennung ab. <span class="ad">AD-6</span></li>
+  </ul>
+</section>
+
+<section id="schutz">
+  <h2>Schutz und Löschen</h2>
+  <h3>Verschlüsselung</h3>
+  <p>Gesundheitsdaten, Führungszeugnisse, Vorfall-Einträge und Team-Notizen verschlüsselt Zeltlotse selbst, bevor sie gespeichert werden. Jede Person hat dafür einen eigenen Schlüssel. Wird eine Person gelöscht, wird ihr Schlüssel vernichtet. Auch Kopien in alten Backups sind dann nicht mehr lesbar. Das Verfahren heißt <span class="begriff">Crypto-Shredding</span>. <span class="ad">AD-14</span></p>
+  <h3>Was beim Löschen passiert</h3>
+  <p>Manche Daten muss eine Organisation aufbewahren, etwa Belege. Deshalb gibt es drei Lösch-Klassen <span class="ad">AD-16</span>:</p>
+  <div class="tab"><table>
+    <thead><tr><th>Art der Daten</th><th>Beispiele</th><th>Wenn eine Person ihr Konto löscht</th></tr></thead>
+    <tbody>
+      <tr><td>gehört der Person</td><td>Profil, Freizeitpass, Nachweise</td><td>sofort endgültig gelöscht (läuft gerade eine Freizeit, nach deren Freigabefenster)</td></tr>
+      <tr><td>muss die Organisation aufbewahren</td><td>Beleg, archivierte Vorfall-Notiz</td><td>Name wird durch einen Platzhalter ersetzt, Löschung nach der Frist der Organisation</td></tr>
+      <tr><td>Arbeitsdaten der Freizeit</td><td>Anmeldung, Team-Notiz, Kanal-Nachricht</td><td>Name wird durch einen Platzhalter ersetzt, Löschung nach der Frist der Organisation</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Weitere Schutzregeln</h3>
+  <ul>
+    <li>Rechte prüft immer der Server, bei jeder Anfrage neu. Ein ausgeblendeter Knopf ist nie die Sicherung. <span class="ad">AD-12</span></li>
+    <li>Org-Admins und der Betreiber sehen keine Inhalte einer Freizeit, in der sie nicht selbst mitarbeiten.</li>
+    <li>Ein weitergeleiteter Anmeldelink verschafft keine Rechte. Die entstehen erst, wenn die Leitung die Anmeldung bestätigt. <span class="ad">AD-11</span></li>
+    <li>Mails und Push-Nachrichten gehen nur raus, wenn ein Mensch es bestätigt hat. <span class="ad">AD-13</span></li>
+    <li>Protokolldateien enthalten nur Kennungen, keine Namen und keine Gesundheitsdaten. <span class="ad">AD-22</span></li>
+  </ul>
+</section>
+
+<section id="unterwegs">
+  <h2>Im Zeltlager</h2>
+  <ul>
+    <li><b>Schlechtes Netz:</b> Die App startet auch ohne Netz. Ab Baustein V6 sind Küchenansicht, Notfallkarte und Sicherheitskette offline lesbar. Ins Vorfall-Protokoll lässt sich offline schreiben, die Einträge werden nachgereicht, sobald wieder Netz da ist. Offline gespeicherte Daten sind verschlüsselt und werden spätestens zum Freizeitende vom Gerät gelöscht. <span class="ad">AD-18</span></li>
+    <li><b>Mehrere Leute gleichzeitig:</b> Ändern zwei Personen denselben Eintrag, bekommt die zweite den Hinweis „Inzwischen geändert – neu laden?“. Nichts wird still überschrieben. <span class="ad">AD-19</span></li>
+    <li><b>Push-Nachrichten:</b> Sie laufen über den offenen Web-Push-Standard, ohne Konto bei Google oder Apple. Teilnehmende mit QR-Zugang bekommen Push, wenn ihr Gerät es erlaubt. Auf dem iPhone geht das erst, wenn die App zum Home-Bildschirm hinzugefügt wurde. <span class="ad">AD-21</span></li>
+  </ul>
+</section>
+
+<section id="betrieb">
+  <h2>Betrieb und was noch offen ist</h2>
+  <p>Zeltlotse wird als ein Paket (Container) ausgeliefert und braucht dazu eine PostgreSQL-Datenbank und einen Dateispeicher. Lokal startet alles mit einem Befehl. Im Betrieb liegen Daten und Backups ausschließlich in der EU. <span class="ad">AD-23</span></p>
+  <div class="hinweis"><b>Bewusst noch offen</b>: Hosting-Anbieter, Backup-Strategie und Überwachung entscheiden wir vor der ersten echten Freizeit. Die Datenschutz-Prüfung, eine eventuell nötige Datenschutz-Folgenabschätzung und die Absicherung der Mandantentrennung direkt in der Datenbank folgen vor dem Start als Dienst für fremde Organisationen.</div>
+</section>
+
+<section id="entscheidungen">
+  <h2>Alle Entscheidungen</h2>
+  <p>Die vollständigen Regeln stehen im Architektur-Gerüst. Hier die Liste zum Nachschlagen:</p>
+  <details open>
+    <summary>30 Entscheidungen</summary>
+    <div class="adliste">
+      <span>AD-1</span><span>Modularer Monolith mit zehn Modulen</span>
+      <span>AD-2</span><span>Abhängigkeitsrichtung zwischen den Modulen</span>
+      <span>AD-3</span><span>Jedes Modul besitzt seine Daten (eigenes Schema)</span>
+      <span>AD-4</span><span>Module reden über Lese-Schnittstellen und Ereignisse</span>
+      <span>AD-5</span><span>API First mit zwei Clients: Web-App und öffentliche Seiten</span>
+      <span>AD-6</span><span>Mandantentrennung zwischen Organisationen</span>
+      <span>AD-7</span><span>Person ist nicht Konto</span>
+      <span>AD-8</span><span>Freigabe per Durchgriff statt Kopie</span>
+      <span>AD-9</span><span>Bei Nachweisen wandert nur die Bestätigung</span>
+      <span>AD-10</span><span>Fester Fragenkatalog für den Freizeitpass</span>
+      <span>AD-11</span><span>Ein Muster für alle Zugangslinks</span>
+      <span>AD-12</span><span>Anmelden und Rechte</span>
+      <span>AD-13</span><span>Keine Nachricht ohne Menschen</span>
+      <span>AD-14</span><span>Verschlüsselung mit Schlüssel pro Person</span>
+      <span>AD-15</span><span>Dateien nur durch die App</span>
+      <span>AD-16</span><span>Löschen und Auskunft als Pflicht jedes Moduls</span>
+      <span>AD-17</span><span>Phasen der Freizeit und Schreibschutz nach Abschluss</span>
+      <span>AD-18</span><span>Offline-Fähigkeit (Baustein V6)</span>
+      <span>AD-19</span><span>Gleichzeitiges Bearbeiten</span>
+      <span>AD-20</span><span>Funktions-Schalter pro Freizeit</span>
+      <span>AD-21</span><span>Push über den offenen Web-Push-Standard</span>
+      <span>AD-22</span><span>Keine Personendaten in Protokolldateien</span>
+      <span>AD-23</span><span>Betrieb als Container in der EU</span>
+      <span>AD-24</span><span>Automatische Prüfung der Modulgrenzen</span>
+      <span>AD-25</span><span>Web-Sicherheit</span>
+      <span>AD-26</span><span>Übersicht für Eltern und Mitarbeitende über Organisationen hinweg</span>
+      <span>AD-27</span><span>Ändern immer über Befehle (Mediator), Lesen direkt</span>
+      <span>AD-28</span><span>Status als Zustandsmaschine, Abläufe ohne zentrale Steuerklasse</span>
+      <span>AD-29</span><span>Gemeinsame Bausteine der Oberfläche und eigene Komponenten-Bibliothek</span>
+      <span>AD-30</span><span>Testpflichten, testgetriebene Arbeitsweise</span>
+    </div>
+  </details>
+</section>
+
+<footer>Grundlage: PRD Zeltlotse (10.10.2026) und UX-Spezifikation (DESIGN.md, EXPERIENCE.md). Gestaltung im ELKW-Stil „nahbar“, Farbwelt Blaugrün.</footer>
+</div>
