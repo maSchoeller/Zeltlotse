@@ -15,6 +15,7 @@ Branch: `mvp` · Start: 2026-10-11 12:30 · Ende: –
 | 2026-10-11 16:57 | 0-4 | done | nein (nicht empfohlen) | grün 487/487 / grün (9 Seiten) | 11bc38d | Sitzung hat nicht selbst committet, sondern nach Commit-Freigabe gefragt (CLAUDE.md-Regel); Orchestrator hat committet. npm audit: 10 mittlere Warnungen in Doku-Build-Abhängigkeiten; Demo-Freizeit mit festem Datum Aug. 2027 |
 | 2026-10-11 18:36 | 1-1 | done | ja (done, keiner mehr) | grün 650/650 / grün (10 Seiten) | dd5bb54 | Regression erzeugt Offline-Screenshots mit Rendering-Rauschen neu (zurückgesetzt). Offen: Login-Mail-Begrenzung nur je IP, nicht je Adresse (vor Betrieb entscheiden) |
 | 2026-10-11 20:14 | 1-2 | done | ja (done, keiner mehr) | grün 768/768 / grün (13 Seiten) | f541fef | Offen: abgelaufene Erst-Einladung einer Org nicht neu sendbar; alte Einladungen nie gelöscht (→ 1-7); nach Login-Link aus Mail muss der Einladungslink erneut geöffnet werden |
+| 2026-10-11 21:37 | 1-3 | done | nein (nicht empfohlen) | grün 879/879 / grün (15 Seiten) | bb14ea1 | Offen: alte Leitungs-Einladungen nie gelöscht (→ 1-7); Screenshots mit echter Uhr (Demo-Phase kippt ab Aug. 2027); Datumsfelder zeigen engl. Platzhalter mm/dd/yyyy |
 
 ## Entscheidungen im Lauf
 
