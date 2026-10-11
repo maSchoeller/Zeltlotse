@@ -160,6 +160,12 @@ Die MVP umfasst alle sechs Bausteine; sie legen nur die Bau-Reihenfolge fest (V1
   - **intent:** Küchen-Tagesansicht, Notfallkarte und Sicherheitskette sind offline verschlüsselt lesbar; das Vorfall-Protokoll ist offline beschreibbar. (FR-65)
   - **success:** Im Flugmodus öffnen sich Notfallkarte und Küchen-Tagesansicht; Offline-Daten werden nach Freizeitende auf dem Gerät gelöscht, auch ohne Netz.
 
+### Querschnitt – Anwender-Dokumentation
+
+- **CAP-40**
+  - **intent:** Anwender verstehen über eine statisch gerenderte Anwender-Dokumentation, wie Zeltlotse funktioniert, gegliedert nach Rolle und Aufgabe und mit Screenshots, die die Bedienung zeigen. (NFR-20)
+  - **success:** Jede Capability mit Oberfläche hat mindestens eine Doku-Seite mit Screenshots aus dem aktuellen Stand; die Screenshots erzeugt Playwright automatisch aus erfundenen Demo-Daten in Handy- und Laptop-Größe; der Doku-Build läuft fehlerfrei; die Seite „Was passiert mit meinen Daten“ erklärt Freigabefenster, Einsicht und Löschen in Klartext.
+
 ## Constraints
 
 - **Kein Versand, keine Planungsänderung ohne Menschen:** Mails, Push und Änderungen bestehender Planung entstehen nur nach ausdrücklicher Bestätigung; Ableitungen (Listen, Hinweise, Ablaufdaten, Phase) laufen automatisch (Leitprinzip 6, NFR-10). Ausnahme: selbst angeforderte Mails wie Login-Link und Einladungen.
@@ -173,6 +179,8 @@ Die MVP umfasst alle sechs Bausteine; sie legen nur die Bau-Reihenfolge fest (V1
 - **Fester Fragenkatalog:** Fragen des Freizeitpasses kommen aus einem globalen Katalog mit stabilen Kennungen; eigene Fragen der Leitung gibt es in der MVP nicht. Die Allergie-Frage ist eine Auswahl aus den 14 EU-Hauptallergenen plus Freitext; nur die Auswahl fließt in den Küchen-Abgleich.
 - **Betrieb:** lokal betreib- und testbar, später als Cloud-Dienst; die Architektur verbaut keinen Mehr-Organisationen-Dienst mit Bezahlmodell, gebaut wird beides nicht (NFR-18, NFR-19).
 - **Bau-Reihenfolge:** V1 → V6; der Offline-Modus (V6) gehört zur MVP, wird aber zuletzt gebaut.
+- **Autonom baubar:** Stories werden ohne Rückfragen umgesetzt. Eine Story ist erst fertig, wenn alle Tests (inklusive Architekturtests) grün sind, die Doku-Seite ihrer Oberfläche aktualisiert ist, ihre Screenshots erzeugt sind und der Doku-Build fehlerfrei läuft.
+- **Anwender-Dokumentation:** Astro Starlight, nur Deutsch, ELKW-Farben; Screenshots nur aus erfundenen Demo-Daten, nie aus echten Personendaten (NFR-20).
 - **Gestaltung, Verhalten, Technik:** bindend nach `DESIGN.md`, `EXPERIENCE.md` (Oberfläche nur Deutsch ohne Du/Sie, ELKW-Stil, WCAG 2.2 AA) und `ARCHITECTURE-SPINE.md` (AD-1 bis AD-30).
 
 ## Non-goals

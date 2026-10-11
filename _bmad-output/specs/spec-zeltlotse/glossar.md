@@ -32,6 +32,8 @@ Fachbegriffe gelten in Oberfläche und Code so wie hier (Code: deutsche Fachbegr
 | **Vertrauensseite** | Klartext-Seite je Freizeit: welche Daten, wer sieht sie, wann verschwinden sie. |
 | **Elterninfo** | Infobrief, Packliste und Notfallnummern einer Freizeit für Eltern. |
 | **Ansagen-Zettel** | Sammlung dessen, was beim nächsten Essen angesagt wird. |
+| **Anwender-Doku** | Statische Website, die Anwendern nach Rolle und Aufgabe mit Screenshots erklärt, wie Zeltlotse funktioniert (NFR-20). |
+| **Demo-Daten** | Erfundene Organisation, Freizeit und Personen, aus denen Screenshots und Doku entstehen. |
 | **Restetag** | Mahlzeit, die die Küche spontan zur Resteverwertung erklärt. |
 
 ## Abkürzungen

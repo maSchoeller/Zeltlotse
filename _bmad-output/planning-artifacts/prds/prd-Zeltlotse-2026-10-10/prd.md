@@ -472,6 +472,10 @@ Gruppiert nach den Bausteinen V1–V6 (siehe Vision). IDs sind dauerhaft und wer
 - **NFR-18** Zeltlotse lässt sich lokal betreiben und testen; später läuft es als Dienst in der Cloud.
 - **NFR-19** Die Architektur verbaut keinen späteren Dienst für viele Organisationen mit Bezahlmodell. Gebaut wird beides in der MVP nicht.
 
+### Dokumentation
+
+- **NFR-20** Zu Zeltlotse gehört eine Anwender-Dokumentation als statische Website, die zusammen mit den Funktionen entsteht. Sie ist nach Rolle und Aufgabe gegliedert (Eltern, Mitarbeitende, Leitung, Küche, Org-Admin), hat eine Seite „Was passiert mit meinen Daten“ und zeigt mit Screenshots in Handy- und Laptop-Größe, wie das System funktioniert. Die Screenshots entstehen automatisch aus erfundenen Demo-Daten; echte Personendaten erscheinen nie.
+
 ## Nicht im Umfang
 
 ### Bewusst nie

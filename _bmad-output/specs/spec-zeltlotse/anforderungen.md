@@ -149,3 +149,12 @@ Detailregeln zu den Capabilities in `SPEC.md`. IDs stammen aus dem PRD und sind 
 
 - **NFR-18** Lokal betreib- und testbar; später als Dienst in der Cloud.
 - **NFR-19** Die Architektur verbaut keinen späteren Dienst für viele Organisationen mit Bezahlmodell; gebaut wird beides in der MVP nicht.
+
+### Dokumentation *(Spec)*
+
+- **NFR-20** Zu Zeltlotse gehört eine Anwender-Dokumentation als statische Website (Astro Starlight), die zusammen mit den Funktionen entsteht:
+  - a) Gegliedert nach Rolle und Aufgabe: Eltern, Mitarbeitende, Leitung, Küche, Org-Admin; Aufgaben angelehnt an die Nutzungsszenarien (z. B. „Kind anmelden“, „Notfall“, „Einkaufsliste“). Dazu eine Seite „Was passiert mit meinen Daten“.
+  - b) Jede Funktion mit Oberfläche hat eine Doku-Seite, die in derselben Story entsteht oder aktualisiert wird.
+  - c) Screenshots erzeugt Playwright automatisch bei jedem Lauf, in Handy- und Laptop-Größe, aus erfundenen Demo-Daten; echte Personendaten erscheinen nie.
+  - d) Sprache wie in der App: Deutsch, ohne Du/Sie, Fachbegriffe laut Glossar; Gestaltung in ELKW-Farben.
+  - e) Der Doku-Build läuft lokal mit einem Befehl und ist Teil der Fertig-Prüfung jeder Story.

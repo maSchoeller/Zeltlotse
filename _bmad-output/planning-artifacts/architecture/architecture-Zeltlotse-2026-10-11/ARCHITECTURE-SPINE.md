@@ -8,7 +8,7 @@ scope: 'Zeltlotse MVP – Bausteine V1–V6, gesamtes System (API, Web-App/PWA, 
 status: final
 created: '2026-10-11'
 updated: '2026-10-11'
-binds: [FR-1..FR-69, NFR-1..NFR-19]
+binds: [FR-1..FR-69, NFR-1..NFR-20]
 sources:
   - ../../prds/prd-Zeltlotse-2026-10-10/prd.md
   - ../../ux-designs/ux-Zeltlotse-2026-10-10/DESIGN.md
@@ -424,6 +424,7 @@ flowchart TD
   - **Fachlogik:** Fristen und Phasen werden mit künstlicher Uhr (`FakeTimeProvider`) getestet.
   - **Oberfläche:** Die gemeinsamen Bausteine aus AD-29 und jeder Baustein der Komponenten-Bibliothek haben bUnit-Tests.
   - **Ende-zu-Ende:** Die Kernabläufe Gast-Anmeldung, Login und Notfall haben Playwright-Tests in Handy-Größe mit axe-Prüfung auf WCAG 2.2 AA.
+  - **Doku-Screenshots:** Jede Oberfläche hat Playwright-Screenshot-Tests (Kategorie `Doku`, Handy und Laptop) gegen die Demo-Daten; sie schreiben die Bilder der Anwender-Doku (NFR-20). Der Doku-Build gehört zur Fertig-Prüfung jeder Story.
 
 ## Konsistenz-Konventionen
 
@@ -443,6 +444,7 @@ flowchart TD
 | Logging | `ILogger` + `[LoggerMessage]`, strukturiert, Ausgabe über OpenTelemetry (lokal Aspire-Dashboard). Unerwartete Fehler im Browser gehen an einen API-Endpunkt, nur mit Fehlerart, Seite und Trace-ID |
 | Sprache der Oberfläche | Nur Deutsch, ohne Du/Sie (UX-Vorgabe). Keine Technik für Mehrsprachigkeit |
 | Gestaltung | ELKW-CSS über `Zeltlotse.Ui.Komponenten` (Stil nahbar, Farbwelt 09, eigene Dunkel-Tokens laut DESIGN.md, WCAG 2.2 AA). Keine Komponentenbibliothek von Drittanbietern, keine Dialoge oder Pop-ups |
+| Anwender-Doku | Astro Starlight unter `doku/` (Markdown, Deutsch, ELKW-Farben), gegliedert nach Rolle und Aufgabe; Build mit einem Befehl (`npm run build` in `doku/`). Screenshots unter `doku/src/assets/screenshots/`, nur aus Playwright-Tests. Demo-Daten: erfundene Organisation, Freizeit und Personen als Seed im API-Host, nur in Entwicklung und Tests aktivierbar (NFR-20) |
 | Druck | Den Notfallordner druckt der Browser über Druck-CSS (ELKW-Druckbausteine). Keine PDF-Bibliothek |
 | Konfiguration | `appsettings` + Umgebungsvariablen. Geheimnisse nie im Repository |
 | Tests | xUnit v3 auf Microsoft.Testing.Platform (`global.json`). HTTP-Tests über `WebApplicationFactory` gegen `postgres:18` (Testcontainers, ein Container pro Testlauf). Ein Testprojekt je Modul, dazu je ein Projekt für Architektur-, Durchlauf-, UI- und Ende-zu-Ende-Tests |
@@ -470,6 +472,7 @@ flowchart TD
 | bUnit | 2.11.3 |
 | Microsoft.Playwright | 1.63.0 |
 | Deque.AxeCore.Playwright | 4.13.0 |
+| Node.js (LTS) + Astro Starlight | aktuelle stabile Version beim Anlegen (nur für `doku/`) |
 
 ## Struktur-Gerüst
 
@@ -587,12 +590,13 @@ zeltlotse/
         Zeltlotse.Personen/
         Zeltlotse.Personen.Contracts/
       ...                         # je Modul das gleiche Paar
+  doku/                           # Anwender-Doku, Astro Starlight (NFR-20)
   tests/
     Zeltlotse.ArchitectureTests/
     Zeltlotse.<Modul>.Tests/      # Fachlogik + HTTP-Tests des Moduls
     Zeltlotse.Ablaeufe.Tests/     # Durchlauf-Tests (AD-28)
     Zeltlotse.Ui.Tests/           # bUnit
-    Zeltlotse.E2E.Tests/          # Playwright + axe
+    Zeltlotse.E2E.Tests/          # Playwright + axe, Doku-Screenshots
 ```
 
 ## Anforderungen → Architektur
@@ -615,6 +619,7 @@ zeltlotse/
 | V6 Kanäle, Push, QR-Zugang (FR-61–64) | Kanäle, Freizeiten, Zeltlotse.App | AD-11, AD-12, AD-13, AD-21 |
 | V6 Offline (FR-65) | Zeltlotse.App, Sicherheit, Küche | AD-18 |
 | Datenschutz, EU, Löschfristen (NFR-1–7) | alle | AD-6–AD-9, AD-14, AD-16, AD-22, AD-23 |
+| Anwender-Doku (NFR-20) | `doku/`, Zeltlotse.E2E.Tests | AD-30, Konvention „Anwender-Doku“ |
 
 ## Zurückgestellt
 
