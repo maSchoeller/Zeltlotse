@@ -34,6 +34,8 @@ $zusatz = if ($Folgedurchlauf) { ' Dies ist ein Folgedurchlauf (follow-up pass) 
 $prompt = "/bmad-build-auto Spec-Ordner: $SpecOrdner, Story-Id: $Id.$zusatz Hinweis des Aufrufers: $hinweis"
 
 "== Story $Id | Start $(Get-Date -Format s) | Modell $Modell" | Tee-Object -FilePath $log
+# Ohne diese Einstellung beendet claude -p Hintergrund-Subagenten 10 Minuten nach dem letzten Zug (Story 2-2 wurde so abgeschnitten).
+$env:CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS = '0'
 claude -p $prompt --model $Modell --permission-mode auto *>> $log
 $exit = $LASTEXITCODE
 "== Story $Id | Ende $(Get-Date -Format s) | Exit $exit" | Tee-Object -FilePath $log -Append
