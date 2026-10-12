@@ -18,6 +18,7 @@ Branch: `mvp` · Start: 2026-10-11 12:30 · Ende: –
 | 2026-10-11 21:37 | 1-3 | done | nein (nicht empfohlen) | grün 879/879 / grün (15 Seiten) | bb14ea1 | Offen: alte Leitungs-Einladungen nie gelöscht (→ 1-7); Screenshots mit echter Uhr (Demo-Phase kippt ab Aug. 2027); Datumsfelder zeigen engl. Platzhalter mm/dd/yyyy |
 | 2026-10-12 06:26 | 1-4 | done | nein (nicht empfohlen) | grün 1023/1023 / grün (17 Seiten) | 2ac5564 | Lauf angehalten (Auto-Modus-Prüfung), nach Freigabe durch Marvin fortgesetzt; CLAUDE.md um Ausnahme für den autonomen Lauf ergänzt |
 | 2026-10-12 09:25 | 1-5 | done | nein (nicht empfohlen) | grün 1150/1150 / grün (20 Seiten) | cc2b258 | –  |
+| 2026-10-12 10:40 | 1-6 | done | nein (nicht empfohlen) | grün 1191/1191 / grün (21 Seiten) | 60b6472 | –  |
 
 ## Entscheidungen im Lauf
 
