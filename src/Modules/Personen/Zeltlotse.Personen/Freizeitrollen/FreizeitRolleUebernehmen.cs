@@ -40,7 +40,8 @@ internal sealed class FreizeitRolle : IOrganisationsEigen
 }
 
 /// <summary>
-/// Empfänger von <see cref="FreizeitRolleGeaendert"/> (Tabelle Ereignis-Fluss): legt die Zeile an oder setzt die Rolle und legt
+/// Empfänger von <see cref="FreizeitRolleGeaendert"/> (Tabelle Ereignis-Fluss): löscht die Zeile bei <see cref="FreizeitRolleArt.Entzogen"/>;
+/// sonst legt er die Zeile an oder setzt die Rolle und legt
 /// bei der ersten Mitarbeit in der Organisation eine Einsicht in die Nachweise an (FR-10, NS-3, ohne neue Zeile im Ereignis-Fluss). Der
 /// Mandant kommt aus dem Umschlag (AD-4, AD-6); kein Benutzer-Command.
 /// </summary>
@@ -59,6 +60,18 @@ internal sealed class FreizeitRolleUebernehmenHandler(PersonenDbContext db, Time
                              ?? throw new InvalidOperationException("Eine Freizeit-Rolle gehört immer zu einer Organisation (Umschlag ohne Mandant).");
         var vorhanden = await db.FreizeitRollen
             .SingleOrDefaultAsync(r => r.FreizeitId == command.FreizeitId && r.PersonId == command.PersonId, cancellationToken);
+
+        // Story 2-3: Nach einer Absage hat die Person keine Rolle mehr; die Zeile verschwindet, Einsichten bleiben, wie sie sind.
+        if (command.Rolle == FreizeitRolleArt.Entzogen)
+        {
+            if (vorhanden is not null)
+            {
+                db.FreizeitRollen.Remove(vorhanden);
+            }
+
+            return Unit.Value;
+        }
+
         if (vorhanden is null)
         {
             db.FreizeitRollen.Add(FreizeitRolle.Anlegen(organisationId, command.FreizeitId, command.PersonId, command.Rolle));

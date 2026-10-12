@@ -15,18 +15,12 @@ using OrgNachweisArt = Zeltlotse.Organisationen.Contracts.Nachweise.NachweisArt;
 namespace Zeltlotse.Freizeiten.Freizeitseite;
 
 /// <summary>
-/// Bestätigte Teilnehmende einer Freizeit für die Platzlage (FR-67). Bis Story 2-3 gibt es keine Bestätigungen; dann setzt die
-/// echte Zählung diese Umsetzung ab.
+/// Bestätigte Teilnehmende einer Freizeit für die Platzlage (FR-67); umgesetzt von
+/// <c>Anmeldungen.Entscheiden.BestaetigteTeilnehmendeZaehlen</c> (Story 2-3).
 /// </summary>
 internal interface IBestaetigteTeilnehmende
 {
     Task<int> AnzahlAsync(Guid freizeitId, CancellationToken abbruch = default);
-}
-
-/// <summary>Vor Story 2-3: keine Anmeldungen, also keine bestätigten Teilnehmenden.</summary>
-internal sealed class KeineBestaetigtenTeilnehmenden : IBestaetigteTeilnehmende
-{
-    public Task<int> AnzahlAsync(Guid freizeitId, CancellationToken abbruch = default) => Task.FromResult(0);
 }
 
 /// <summary>

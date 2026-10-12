@@ -40,13 +40,17 @@ public static class AnmeldelinkArten
 /// </summary>
 /// <param name="Anmeldelinks">Teilnehmende vor Mitarbeitende; fehlt ein Link, steht er nicht in der Liste.</param>
 /// <param name="Teilnahmebedingungen">Text der Teilnahmebedingungen, der im Anmeldeformular steht (Story 2-2).</param>
+/// <param name="KontaktMail">Mail-Adresse der Leitung für Absagen (Story 2-3, FR-21).</param>
+/// <param name="KontaktTelefon">Telefon der Leitung für Absagen (Story 2-3, FR-21).</param>
 public sealed record FreizeitseiteEinstellungen(
     uint Version,
     string? Beschreibung,
     string? Ort,
     int? HoechstzahlTeilnehmende,
     IReadOnlyList<Anmeldelink> Anmeldelinks,
-    string? Teilnahmebedingungen = null);
+    string? Teilnahmebedingungen = null,
+    string? KontaktMail = null,
+    string? KontaktTelefon = null);
 
 /// <summary>Ein Anmeldelink mit seiner vollständigen Adresse (öffentliche Adresse plus <c>/freizeit/{token}</c>).</summary>
 public sealed record Anmeldelink(AnmeldelinkArt Art, string Adresse);
@@ -58,6 +62,8 @@ public enum FreizeitseiteFeld
     Ort,
     HoechstzahlTeilnehmende,
     Teilnahmebedingungen,
+    KontaktMail,
+    KontaktTelefon,
 }
 
 /// <summary>
@@ -75,6 +81,15 @@ public static class FreizeitseiteFelder
 
     public const string Teilnahmebedingungen = AnmeldungFelder.Teilnahmebedingungen;
 
+    public const string KontaktMail = "kontaktMail";
+
+    public const string KontaktTelefon = "kontaktTelefon";
+
+    /// <summary>Höchstlänge der Mail-Adresse für Absagen (wie jede Mail-Adresse); sie muss ein „@“ enthalten.</summary>
+    public const int KontaktMailMaximaleLaenge = 254;
+
+    public const int KontaktTelefonMaximaleLaenge = 40;
+
     public const int BeschreibungMaximaleLaenge = 2000;
 
     public const int OrtMaximaleLaenge = 100;
@@ -91,6 +106,8 @@ public static class FreizeitseiteFelder
         FreizeitseiteFeld.Ort => Ort,
         FreizeitseiteFeld.HoechstzahlTeilnehmende => HoechstzahlTeilnehmende,
         FreizeitseiteFeld.Teilnahmebedingungen => Teilnahmebedingungen,
+        FreizeitseiteFeld.KontaktMail => KontaktMail,
+        FreizeitseiteFeld.KontaktTelefon => KontaktTelefon,
         _ => throw new ArgumentOutOfRangeException(nameof(feld), feld, null),
     };
 }

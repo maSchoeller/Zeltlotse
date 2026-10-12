@@ -64,6 +64,15 @@ internal sealed class Freizeit : Aggregat, IOrganisationsEigen
     /// </summary>
     public string? Teilnahmebedingungen { get; private set; }
 
+    /// <summary>
+    /// Mail-Adresse, die Eltern und Mitarbeitende für eine Absage sehen (FR-21, Story 2-3); die Leitung trägt sie selbst ein. Höchstens
+    /// <see cref="FreizeitseiteFelder.KontaktMailMaximaleLaenge"/> Zeichen, mit „@“.
+    /// </summary>
+    public string? KontaktMail { get; private set; }
+
+    /// <summary>Telefon für Absagen (FR-21), höchstens <see cref="FreizeitseiteFelder.KontaktTelefonMaximaleLaenge"/> Zeichen.</summary>
+    public string? KontaktTelefon { get; private set; }
+
     /// <summary>Versionsprüfung (xmin, AD-19).</summary>
     public uint Version { get; private set; }
 
@@ -98,6 +107,39 @@ internal sealed class Freizeit : Aggregat, IOrganisationsEigen
         return true;
     }
 
+    /// <summary>
+    /// Bestätigte Mitarbeitende werden Team (AD-11, Story 2-3) und das Ereignis wird abgelegt; <c>false</c>, wenn die Person schon
+    /// eine Rolle hat (eine Leitung bleibt Leitung, kein Ereignis). Erwartet die geladenen <see cref="Rollen"/>.
+    /// </summary>
+    public bool TeamEinsetzen(Guid personId, DateTimeOffset jetzt)
+    {
+        if (_rollen.Any(r => r.PersonId == personId))
+        {
+            return false;
+        }
+
+        _rollen.Add(FreizeitRolle.Vergeben(OrganisationId, Id, personId, RolleArt.Team, jetzt));
+        EreignisAblegen(new FreizeitRolleGeaendert(Id, personId, FreizeitRolleArt.Team));
+        return true;
+    }
+
+    /// <summary>
+    /// Entzieht nach einer Absage die Rolle Team und legt <see cref="FreizeitRolleArt.Entzogen"/> ab; eine Leitung oder keine Rolle
+    /// bleibt unberührt (<c>false</c>). Erwartet die geladenen <see cref="Rollen"/>.
+    /// </summary>
+    public bool TeamEntziehen(Guid personId)
+    {
+        var team = _rollen.SingleOrDefault(r => r.PersonId == personId && r.Rolle == RolleArt.Team);
+        if (team is null)
+        {
+            return false;
+        }
+
+        _rollen.Remove(team);
+        EreignisAblegen(new FreizeitRolleGeaendert(Id, personId, FreizeitRolleArt.Entzogen));
+        return true;
+    }
+
     /// <summary>Wert eines Felds der Freizeitseite als Text; die Höchstzahl als Zahl in Ziffern.</summary>
     public string? Wert(FreizeitseiteFeld feld) => feld switch
     {
@@ -105,6 +147,8 @@ internal sealed class Freizeit : Aggregat, IOrganisationsEigen
         FreizeitseiteFeld.Ort => Ort,
         FreizeitseiteFeld.HoechstzahlTeilnehmende => HoechstzahlTeilnehmende?.ToString(CultureInfo.InvariantCulture),
         FreizeitseiteFeld.Teilnahmebedingungen => Teilnahmebedingungen,
+        FreizeitseiteFeld.KontaktMail => KontaktMail,
+        FreizeitseiteFeld.KontaktTelefon => KontaktTelefon,
         _ => throw new ArgumentOutOfRangeException(nameof(feld), feld, null),
     };
 
@@ -134,6 +178,12 @@ internal sealed class Freizeit : Aggregat, IOrganisationsEigen
                 break;
             case FreizeitseiteFeld.Teilnahmebedingungen:
                 Teilnahmebedingungen = wert;
+                break;
+            case FreizeitseiteFeld.KontaktMail:
+                KontaktMail = wert;
+                break;
+            case FreizeitseiteFeld.KontaktTelefon:
+                KontaktTelefon = wert;
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(feld), feld, null);

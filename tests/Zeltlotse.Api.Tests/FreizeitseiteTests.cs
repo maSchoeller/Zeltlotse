@@ -79,7 +79,7 @@ public sealed class FreizeitseiteTests(PostgresContainer postgres) : IAsyncLifet
 
         Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
         var json = await JsonAsync(antwort);
-        Assert.Equal(["anmeldelinks", "beschreibung", "hoechstzahlTeilnehmende", "ort", "teilnahmebedingungen", "version"], Namen(json));
+        Assert.Equal(["anmeldelinks", "beschreibung", "hoechstzahlTeilnehmende", "kontaktMail", "kontaktTelefon", "ort", "teilnahmebedingungen", "version"], Namen(json));
         Assert.True(json.GetProperty("version").GetUInt32() > 0);
         Assert.Equal(JsonValueKind.Null, json.GetProperty("beschreibung").ValueKind);
         Assert.Equal(JsonValueKind.Null, json.GetProperty("ort").ValueKind);

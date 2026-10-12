@@ -4,7 +4,8 @@
 @using Zeltlotse.Ui.Texte
 @inject FreizeitenApiClient Freizeiten
 @inject NavigationManager Navigation
-@* Gast-Link aus der Eingangsmail (AD-11, FR-17, FR-20): die Anmeldungen der Gast-Familie mit Vorname, Freizeit, Zeitraum und Status,
+@* Gast-Link aus der Eingangsmail (AD-11, FR-17, FR-20, FR-21): die Anmeldungen der Gast-Familie mit Vorname, Freizeit, Zeitraum, Status
+   und, solange nicht abgesagt, dem Kontakt der Leitung für Absagen (Story 2-3),
    wie lange der Gast-Link gilt, und das Angebot „Konto aus diesen Daten erstellen?“. Nur eine Ansicht, statisch gerendert, ohne
    Skript. Ungültig, abgelaufen oder übernommen: Status 404 mit „Dieser Link ist nicht mehr gültig.“; Zugriffsbegrenzung: Status 429.
    Suchmaschinen nehmen die Seite nicht auf (noindex). *@
@@ -29,6 +30,10 @@ else if (_ansicht is not null)
                 <p>@anmeldung.FreizeitName</p>
                 <p>@Anzeige.ZeitraumLang(anmeldung.ErsterTag, anmeldung.LetzterTag)</p>
                 <p><Status Wort="@Anzeige.Status(anmeldung.Status)" Art="@Anzeige.AnmeldungStatusArt(anmeldung.Status)" /></p>
+                @if (anmeldung.Status != Zeltlotse.Api.Contracts.Freizeiten.AnmeldungStatus.Abgesagt)
+                {
+                    <AbsageKontakt Mail="@anmeldung.KontaktMail" Telefon="@anmeldung.KontaktTelefon" />
+                }
             </Card>
         }
         <p>Gast-Link gilt bis @Anzeige.BisEinschliesslich(_ansicht.GueltigBis).</p>

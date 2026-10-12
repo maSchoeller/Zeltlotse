@@ -5,6 +5,7 @@ using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Zeltlotse.Freizeiten.Anmeldungen.Entscheiden;
 using Zeltlotse.Freizeiten.Daten;
 using Zeltlotse.Freizeiten.Domaene;
 using Zeltlotse.Freizeiten.Freizeitseite;
@@ -17,8 +18,8 @@ using ApiFeld = Zeltlotse.Api.Contracts.Freizeiten.FreizeitseiteFeld;
 namespace Zeltlotse.Freizeiten.Tests;
 
 /// <summary>
-/// Story 2-1: Platzlage und „Ausgebucht“ (FR-67), die Anmeldelinks einer Freizeit (AD-11) und der Mandantenfilter des Links. Weil
-/// es vor Story 2-3 keine bestätigten Anmeldungen gibt, ersetzt der HTTP-Test <see cref="IBestaetigteTeilnehmende"/>.
+/// Story 2-1: Platzlage und „Ausgebucht“ (FR-67), die Anmeldelinks einer Freizeit (AD-11) und der Mandantenfilter des Links. Für
+/// feste Zahlen bestätigter Teilnehmender ersetzt der HTTP-Test <see cref="IBestaetigteTeilnehmende"/>; die echte Zählung prüft Story 2-3.
 /// </summary>
 public sealed class FreizeitseiteTests(PostgresContainer postgres) : IAsyncLifetime
 {
@@ -68,11 +69,13 @@ public sealed class FreizeitseiteTests(PostgresContainer postgres) : IAsyncLifet
         Assert.Equal(erwartet, FreizeitseiteOeffentlichEndpunkt.Initialen(vorname, nachname));
 
     [Fact]
-    public async Task Ohne_Anmeldungen_gibt_es_noch_keine_bestaetigten_Teilnehmenden()
+    public async Task Ohne_Anmeldungen_zaehlt_die_echte_Zaehlung_keine_bestaetigten_Teilnehmenden()
     {
         await using var scope = _factory.Services.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<MandantenKontext>().Setzen(OrgA);
+        var zaehlung = new BestaetigteTeilnehmendeZaehlen(scope.ServiceProvider.GetRequiredService<FreizeitenLeseDbContext>());
 
-        Assert.Equal(0, await new KeineBestaetigtenTeilnehmenden().AnzahlAsync(Guid.CreateVersion7(), Abbruch));
+        Assert.Equal(0, await zaehlung.AnzahlAsync(Guid.CreateVersion7(), Abbruch));
         Assert.IsType<FesteBestaetigte>(scope.ServiceProvider.GetRequiredService<IBestaetigteTeilnehmende>());
     }
 

@@ -50,13 +50,14 @@ Die Elternangaben werden nur innerhalb dieser Seite weitergereicht, auf dem Ger�
 
 ## Der Gast-Link
 
-Der Gast-Link aus der Mail öffnet die Seite **Anmeldungen**: je angemeldetem Kind Vorname, Freizeit, Zeitraum und Status. Darunter steht, bis wann der Gast-Link gilt.
+Der Gast-Link aus der Mail öffnet die Seite **Anmeldungen**: je angemeldetem Kind Vorname, Freizeit, Zeitraum, Status und, solange nicht abgesagt, der Kontakt der Leitung für Absagen (siehe [Absagen](#absagen)). Darunter steht, bis wann der Gast-Link gilt.
 
 - Er gilt bis zum Ende des **Freigabefensters** der Freizeit, also so lange, wie die Freizeit die Angaben sehen darf. Ist bei der Leitung noch keine Anmeldung angekommen, gilt er **einen Tag**.
 - Hat ein Konto die Angaben übernommen, gilt der Gast-Link nicht mehr.
+- Sagt die Leitung die einzige Anmeldung ab, endet der Gast-Link sofort; die Absage steht in der Mail.
 - Ein ungültiger Gast-Link zeigt „Dieser Link ist nicht mehr gültig.“
 
-![Seite „Anmeldungen“ des Gast-Links am Handy mit Lina, „Zeltlager Sommer 2027“, dem Status „Eingegangen“ und „Gast-Link gilt bis 12.09.2027“](../../../assets/screenshots/gast-link-handy.png)
+![Seite „Anmeldungen“ des Gast-Links am Handy mit Lina, „Zeltlager Sommer 2027“, dem Status „Eingegangen“ und „Gast-Link gilt bis 12.09.2027“; darunter „Absage nur über die Leitung:“ mit Mail-Adresse und Telefon](../../../assets/screenshots/gast-link-handy.png)
 
 ![Seite „Anmeldungen“ des Gast-Links am Laptop](../../../assets/screenshots/gast-link-laptop.png)
 
@@ -85,6 +86,18 @@ Eine Mail gibt es bei dieser Anmeldung nicht; der Status steht in der Familienü
 
 ## Status in der Familienübersicht
 
-Auf der Seite **Familie** steht in der Card jedes Kindes jede Freizeit mit Zeitraum und Status, zum Beispiel „Zeltlager Sommer 2027, 02.08.2027 – 13.08.2027 · Eingegangen“. Eigene Anmeldungen stehen in der Card **Eigene Anmeldungen**. Siehe [Familienkonto](/eltern/familienkonto/).
+Auf der Seite **Familie** steht in der Card jedes Kindes jede Freizeit mit Zeitraum und Status, zum Beispiel „Zeltlager Sommer 2027, 02.08.2027 – 13.08.2027 · Eingegangen“. Eigene Anmeldungen stehen in einer eigenen Card **Eigene Anmeldungen**. Siehe [Familienkonto](/eltern/familienkonto/).
+
+Der Status ist eines von drei Wörtern:
+
+- **Eingegangen** – die Leitung hat noch nicht entschieden,
+- **Bestätigt** – das Kind ist dabei,
+- **Abgesagt** – das Kind ist nicht dabei.
+
+Bestätigt oder sagt die Leitung ab, kommt eine Mail „Anmeldung bestätigt: …“ bzw. „Anmeldung abgesagt: …“. Sie geht an genau eine Adresse: an das eigene Konto der angemeldeten Person; sonst an den Elternteil der Familie mit Konto, dessen Profil zuerst angelegt wurde; sonst an die Mail-Adresse der Gast-Anmeldung. Der zweite Elternteil sieht den Status in der Familienübersicht.
+
+## Absagen
+
+Absagen geht nur über die Leitung; einen Absage-Knopf gibt es nicht. Unter jeder Anmeldung, die nicht abgesagt ist, steht deshalb „Absage nur über die Leitung:“ mit der Mail-Adresse und der Telefonnummer, die die Leitung dafür eingetragen hat. Ein Tipp darauf öffnet das Mail-Programm bzw. wählt die Nummer. Hat die Leitung keinen Kontakt eingetragen, steht dort „Absage nur über die Leitung der Freizeit.“ Dasselbe steht auf dem Gast-Link. Wer nachrückt, wenn ein Platz frei wird, entscheidet die Leitung.
 
 Wie lange eine Freizeit die Angaben sieht und wann Gast-Angaben gelöscht werden, steht unter [Was passiert mit meinen Daten](/daten/).

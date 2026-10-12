@@ -1,0 +1,47 @@
+@* Kontakt für Absagen (FR-21, EXPERIENCE.md → State Patterns „Anmeldung eingegangen / bestätigt / abgesagt“): Absagen gehen nur über
+   die Leitung. Mit Kontakt „Absage nur über die Leitung:“ mit mailto:- und tel:-Link, getrennt mit „·“; ohne Kontakt „Absage nur über
+   die Leitung der Freizeit.“. Ohne Ereignis-Handler, also auch statisch tauglich (öffentliche Seiten). *@
+<p class="zl-absage-kontakt">
+    @if (HatMail || HatTelefon)
+    {
+        <text>Absage nur über die Leitung: </text>
+        @if (HatMail)
+        {
+            <a href="@($"mailto:{Mail!.Trim()}")">@Mail!.Trim()</a>
+        }
+        @if (HatMail && HatTelefon)
+        {
+            <text> · </text>
+        }
+        @if (HatTelefon)
+        {
+            @if (TelefonLink.Length > 0)
+            {
+                <a href="@($"tel:{TelefonLink}")">@Telefon!.Trim()</a>
+            }
+            else
+            {
+                @Telefon!.Trim()
+            }
+        }
+    }
+    else
+    {
+        <text>Absage nur über die Leitung der Freizeit.</text>
+    }
+</p>
+
+@code {
+    /// <summary>Mail-Adresse der Leitung für Absagen, wenn eingetragen.</summary>
+    [Parameter] public string? Mail { get; set; }
+
+    /// <summary>Telefon der Leitung für Absagen, wenn eingetragen.</summary>
+    [Parameter] public string? Telefon { get; set; }
+
+    private bool HatMail => !string.IsNullOrWhiteSpace(Mail);
+
+    private bool HatTelefon => !string.IsNullOrWhiteSpace(Telefon);
+
+    /// <summary>Die Nummer für den tel:-Link: nur Ziffern und ein führendes „+“.</summary>
+    private string TelefonLink => new([.. Telefon!.Trim().Where((z, i) => char.IsAsciiDigit(z) || (i == 0 && z == '+'))]);
+}

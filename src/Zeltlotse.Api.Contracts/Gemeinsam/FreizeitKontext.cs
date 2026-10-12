@@ -83,4 +83,9 @@ public static class Aktionsschluessel
     /// FR-15, FR-16).
     /// </summary>
     public const string FreizeitEinstellungen = "freizeit-einstellungen";
+
+    /// <summary>
+    /// Anmeldungen der Freizeit sehen, bestätigen und Absagen eintragen (Leitung im Freizeit-Kontext, FR-20, FR-21, Story 2-3).
+    /// </summary>
+    public const string AnmeldungenBearbeiten = "anmeldungen-bearbeiten";
 }

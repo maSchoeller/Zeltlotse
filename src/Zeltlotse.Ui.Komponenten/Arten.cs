@@ -69,4 +69,5 @@ public sealed record PersonenEintrag(string Initialen, string Name, string? Zeil
 public sealed record FeldFehler(string FeldId, string Text);
 
 /// <summary>Eine Zeile einer <see cref="StatusListe"/>: Text, Status-Wort und seine Art.</summary>
-public sealed record StatusEintrag(string Text, string Wort, StatusArt Art);
+/// <param name="Darunter">Optional eine Zeile unter dem Eintrag, z. B. der Kontakt für Absagen (statisch tauglich).</param>
+public sealed record StatusEintrag(string Text, string Wort, StatusArt Art, RenderFragment? Darunter = null);

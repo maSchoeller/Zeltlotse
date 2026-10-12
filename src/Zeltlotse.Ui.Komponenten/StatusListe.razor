@@ -1,5 +1,6 @@
 @* Statusliste (DESIGN.md → Status, EXPERIENCE.md → Kind-Card): je Zeile ein Text, z. B. Freizeit und Zeitraum, daneben das
-   Status-Wort mit Quadrat (Farbe nie allein). Statisch tauglich, ohne Ereignis-Handler; ohne Einträge erscheint nichts. *@
+   Status-Wort mit Quadrat (Farbe nie allein) und, falls angegeben, darunter eine eigene Zeile (z. B. der Kontakt für Absagen).
+   Statisch tauglich, ohne Ereignis-Handler; ohne Einträge erscheint nichts. *@
 @if (Eintraege.Count > 0)
 {
     <ul class="zl-statusliste">
@@ -8,6 +9,10 @@
             <li>
                 <span>@eintrag.Text</span>
                 <Status Wort="@eintrag.Wort" Art="@eintrag.Art" />
+                @if (eintrag.Darunter is not null)
+                {
+                    <div class="zl-statusliste__darunter">@eintrag.Darunter</div>
+                }
             </li>
         }
     </ul>

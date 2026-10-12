@@ -67,6 +67,18 @@ internal sealed class FreizeitseiteFeldAendernValidator : AbstractValidator<Frei
                 case FreizeitseiteFeld.Teilnahmebedingungen when wert is { Length: > FreizeitseiteFelder.TeilnahmebedingungenMaximaleLaenge }:
                     kontext.AddFailure(new ValidationFailure(name, $"Höchstens {FreizeitseiteFelder.TeilnahmebedingungenMaximaleLaenge} Zeichen."));
                     break;
+                case FreizeitseiteFeld.KontaktMail when wert is { Length: > FreizeitseiteFelder.KontaktMailMaximaleLaenge }:
+                    kontext.AddFailure(new ValidationFailure(name, $"Höchstens {FreizeitseiteFelder.KontaktMailMaximaleLaenge} Zeichen."));
+                    break;
+                case FreizeitseiteFeld.KontaktMail when wert is not null && !MailAdresse.IstGueltig(wert):
+                    kontext.AddFailure(new ValidationFailure(name, "Das ist keine gültige Mail-Adresse."));
+                    break;
+                case FreizeitseiteFeld.KontaktTelefon when wert is not null && !wert.Any(char.IsAsciiDigit):
+                    kontext.AddFailure(new ValidationFailure(name, "Die Telefonnummer braucht mindestens eine Ziffer."));
+                    break;
+                case FreizeitseiteFeld.KontaktTelefon when wert is { Length: > FreizeitseiteFelder.KontaktTelefonMaximaleLaenge }:
+                    kontext.AddFailure(new ValidationFailure(name, $"Höchstens {FreizeitseiteFelder.KontaktTelefonMaximaleLaenge} Zeichen."));
+                    break;
                 case FreizeitseiteFeld.Ort when wert is { Length: > FreizeitseiteFelder.OrtMaximaleLaenge }:
                     kontext.AddFailure(new ValidationFailure(name, $"Höchstens {FreizeitseiteFelder.OrtMaximaleLaenge} Zeichen."));
                     break;
@@ -144,7 +156,9 @@ internal static class FreizeitseiteLadenEndpunkt
             freizeit.Ort,
             freizeit.HoechstzahlTeilnehmende,
             [.. links.Select(l => Anzeigen(l, schutz, konfiguration)).OfType<Api.Contracts.Freizeiten.Anmeldelink>()],
-            freizeit.Teilnahmebedingungen));
+            freizeit.Teilnahmebedingungen,
+            freizeit.KontaktMail,
+            freizeit.KontaktTelefon));
     }
 
     /// <summary>
@@ -173,7 +187,10 @@ internal static class FreizeitseiteLadenEndpunkt
 internal static class FreizeitseiteFeldAendernEndpunkt
 {
     private static readonly FreizeitseiteFeld[] Felder =
-        [FreizeitseiteFeld.Beschreibung, FreizeitseiteFeld.Ort, FreizeitseiteFeld.HoechstzahlTeilnehmende, FreizeitseiteFeld.Teilnahmebedingungen];
+        [
+            FreizeitseiteFeld.Beschreibung, FreizeitseiteFeld.Ort, FreizeitseiteFeld.HoechstzahlTeilnehmende, FreizeitseiteFeld.Teilnahmebedingungen,
+            FreizeitseiteFeld.KontaktMail, FreizeitseiteFeld.KontaktTelefon,
+        ];
 
     public static async Task<IResult> Aendern(Guid freizeitId, JsonElement koerper, ISender sender, CancellationToken abbruch)
     {
@@ -210,7 +227,7 @@ internal static class FreizeitseiteFeldAendernEndpunkt
         {
             throw Fehler(
                 "feld",
-                $"Genau ein Feld: {FreizeitseiteFelder.Beschreibung}, {FreizeitseiteFelder.Ort}, {FreizeitseiteFelder.HoechstzahlTeilnehmende} oder {FreizeitseiteFelder.Teilnahmebedingungen}.");
+                $"Genau ein Feld: {string.Join(", ", Felder.Select(FreizeitseiteFelder.JsonName))}.");
         }
 
         var feld = felder[0];

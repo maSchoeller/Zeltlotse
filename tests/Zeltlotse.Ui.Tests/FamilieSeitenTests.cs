@@ -495,6 +495,31 @@ public sealed class FamilieSeitenTests : BunitContext
     }
 
     [Fact]
+    public void Unter_jeder_nicht_abgesagten_Anmeldung_steht_der_Kontakt_der_Leitung_fuer_Absagen()
+    {
+        Familie([KatrinZeile()], [EmmaZeile()]);
+        _anmeldungen =
+        [
+            new { anmeldungId = Guid.CreateVersion7(), personId = Emma, freizeitName = "Zeltlager Sommer 2027", ersterTag = "2027-08-02", letzterTag = "2027-08-13", art = "Teilnehmende", status = "Bestaetigt", kontaktMail = "zeltlager@example.org", kontaktTelefon = "0123 456789" },
+            new { anmeldungId = Guid.CreateVersion7(), personId = Emma, freizeitName = "Herbstfreizeit", ersterTag = "2027-10-01", letzterTag = "2027-10-03", art = "Teilnehmende", status = "Eingegangen", kontaktMail = (string?)null, kontaktTelefon = (string?)null },
+            new { anmeldungId = Guid.CreateVersion7(), personId = Emma, freizeitName = "Winterfreizeit", ersterTag = "2027-12-27", letzterTag = "2027-12-30", art = "Teilnehmende", status = "Abgesagt", kontaktMail = "winter@example.org", kontaktTelefon = (string?)null },
+        ];
+
+        var cut = Render<FamilieAnsicht>();
+
+        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll(".zl-statusliste li").Count));
+        var zeilen = cut.FindAll(".zl-statusliste li");
+        Assert.Equal("<span class=\"elkw-status elkw-status--erfolg\">Bestätigt</span>", zeilen[0].QuerySelector(".elkw-status")!.OuterHtml);
+        Assert.Equal("Absage nur über die Leitung: zeltlager@example.org · 0123 456789", zeilen[0].QuerySelector(".zl-absage-kontakt")!.TextContent.Trim());
+        Assert.Equal(["mailto:zeltlager@example.org", "tel:0123456789"], zeilen[0].QuerySelectorAll(".zl-absage-kontakt a").Select(a => a.GetAttribute("href")));
+        Assert.Equal("Absage nur über die Leitung der Freizeit.", zeilen[1].QuerySelector(".zl-absage-kontakt")!.TextContent.Trim());
+        Assert.Equal("<span class=\"elkw-status elkw-status--fehler\">Abgesagt</span>", zeilen[2].QuerySelector(".elkw-status")!.OuterHtml);
+        Assert.Null(zeilen[2].QuerySelector(".zl-absage-kontakt"));
+        // Ein Absage-Knopf für Eltern gibt es nicht.
+        Assert.DoesNotContain(cut.FindAll("button"), k => k.TextContent.Contains("Absage", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Ohne_Anmeldungen_fehlt_die_Card_Eigene_Anmeldungen()
     {
         Familie([KatrinZeile()], [EmmaZeile()]);

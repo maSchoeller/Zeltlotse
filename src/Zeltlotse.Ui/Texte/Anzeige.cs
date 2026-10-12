@@ -113,17 +113,21 @@ public static class Anzeige
     /// </summary>
     public static string BisEinschliesslich(DateTimeOffset ende) => Datum(Tag(ende.AddTicks(-1)));
 
-    /// <summary>Status einer Anmeldung als Wort (EXPERIENCE.md → State Patterns): „Eingegangen“.</summary>
+    /// <summary>Status einer Anmeldung als Wort (EXPERIENCE.md → State Patterns): „Eingegangen“, „Bestätigt“, „Abgesagt“.</summary>
     public static string Status(Zeltlotse.Api.Contracts.Freizeiten.AnmeldungStatus status) => status switch
     {
         Zeltlotse.Api.Contracts.Freizeiten.AnmeldungStatus.Eingegangen => "Eingegangen",
+        Zeltlotse.Api.Contracts.Freizeiten.AnmeldungStatus.Bestaetigt => "Bestätigt",
+        Zeltlotse.Api.Contracts.Freizeiten.AnmeldungStatus.Abgesagt => "Abgesagt",
         _ => status.ToString(),
     };
 
-    /// <summary>Status-Art einer Anmeldung: eingegangen = offen.</summary>
+    /// <summary>Status-Art einer Anmeldung: eingegangen = offen, bestätigt = Erfolg, abgesagt = Fehler.</summary>
     public static StatusArt AnmeldungStatusArt(Zeltlotse.Api.Contracts.Freizeiten.AnmeldungStatus status) => status switch
     {
         Zeltlotse.Api.Contracts.Freizeiten.AnmeldungStatus.Eingegangen => StatusArt.Offen,
+        Zeltlotse.Api.Contracts.Freizeiten.AnmeldungStatus.Bestaetigt => StatusArt.Erfolg,
+        Zeltlotse.Api.Contracts.Freizeiten.AnmeldungStatus.Abgesagt => StatusArt.Fehler,
         _ => StatusArt.Aktiv,
     };
 

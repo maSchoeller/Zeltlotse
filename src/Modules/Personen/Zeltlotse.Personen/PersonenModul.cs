@@ -41,6 +41,9 @@ public static class PersonenModul
         services.AddScoped<IVertretung, VertretungLesen>();
         services.EmpfaengtEreignis<FreizeitRolleGeaendert, FreizeitRolleUebernehmen>();
         services.EmpfaengtEreignis<AnmeldungEingegangen, FreigabeAnlegen>();
+        services.EmpfaengtEreignis<AnmeldungBestaetigt, FreigabeTeamSetzen>();
+        services.EmpfaengtEreignis<AnmeldungAbgesagt, FreigabeBeenden>();
+        services.AddScoped<IAnmeldeKontakt, AnmeldeKontaktLesen>();
         services.VerschicktMail<NachweisErinnerungMail, NachweisErinnerungMailAufbau>();
         services.AddScoped<IDatenauskunft, PersonenAuskunft>();
         services.AddScoped<ILoeschlauf, PersonenLoeschlauf>();

@@ -5,7 +5,7 @@ namespace Zeltlotse.Freizeiten.Domaene;
 
 /// <summary>
 /// Rolle einer Person in einer Freizeit (FR-6, AD-12): eindeutig je (Freizeit, Person). Entsteht nur über
-/// <see cref="Freizeit.LeitungEinsetzen"/>; in dieser Version nur die Leitung.
+/// <see cref="Freizeit.LeitungEinsetzen"/> oder, mit der Bestätigung von Mitarbeitenden, <see cref="Freizeit.TeamEinsetzen"/>.
 /// </summary>
 internal sealed class FreizeitRolle : IOrganisationsEigen
 {

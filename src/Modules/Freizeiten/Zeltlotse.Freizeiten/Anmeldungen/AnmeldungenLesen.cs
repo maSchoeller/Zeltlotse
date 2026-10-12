@@ -25,17 +25,23 @@ internal static class AnmeldungWerte
     public static ApiStatus Status(AnmeldeStatus status) => status switch
     {
         AnmeldeStatus.Eingegangen => ApiStatus.Eingegangen,
+        AnmeldeStatus.Bestaetigt => ApiStatus.Bestaetigt,
+        AnmeldeStatus.Abgesagt => ApiStatus.Abgesagt,
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, null),
     };
 }
 
+/// <summary>Eine Anmeldung einer Person mit den Übersichtsfeldern ihrer Freizeit und dem Kontakt der Leitung für Absagen (FR-21).</summary>
+internal sealed record AnmeldungDerPerson(
+    Guid AnmeldungId, Guid PersonId, string FreizeitName, DateOnly ErsterTag, DateOnly LetzterTag, AnmeldeArt Art, AnmeldeStatus Status, string? KontaktMail, string? KontaktTelefon);
+
 /// <summary>
 /// Liest Anmeldungen einer Menge von Personen über Organisationen hinweg (personenbezogener Lesepfad, AD-26): ohne Mandantenfilter,
-/// aber nur für die übergebenen Personen, und nur Übersichtsfelder mit Name und Zeitraum der Freizeit.
+/// aber nur für die übergebenen Personen, und nur Übersichtsfelder mit Name, Zeitraum und Kontakt für Absagen der Freizeit.
 /// </summary>
 internal static class AnmeldungenDerPersonen
 {
-    public static async Task<IReadOnlyList<(Guid AnmeldungId, Guid PersonId, string FreizeitName, DateOnly ErsterTag, DateOnly LetzterTag, AnmeldeArt Art, AnmeldeStatus Status)>> LesenAsync(
+    public static async Task<IReadOnlyList<AnmeldungDerPerson>> LesenAsync(
         FreizeitenLeseDbContext db, IReadOnlyCollection<Guid> personIds, CancellationToken abbruch)
     {
         var ids = personIds.ToList();
@@ -46,7 +52,7 @@ internal static class AnmeldungenDerPersonen
         var freizeitIds = anmeldungen.Select(a => a.FreizeitId).Distinct().ToList();
         var freizeiten = await db.Freizeiten.IgnoreQueryFilters()
             .Where(f => freizeitIds.Contains(f.Id))
-            .Select(f => new { f.Id, f.Name, f.ErsterTag, f.LetzterTag })
+            .Select(f => new { f.Id, f.Name, f.ErsterTag, f.LetzterTag, f.KontaktMail, f.KontaktTelefon })
             .ToDictionaryAsync(f => f.Id, abbruch);
         return
         [
@@ -55,7 +61,8 @@ internal static class AnmeldungenDerPersonen
                 .OrderByDescending(a => a.Freizeit.ErsterTag)
                 .ThenBy(a => a.Freizeit.Name, StringComparer.CurrentCulture)
                 .ThenBy(a => a.Id)
-                .Select(a => (a.Id, a.PersonId, a.Freizeit.Name, a.Freizeit.ErsterTag, a.Freizeit.LetzterTag, a.Art, a.Status)),
+                .Select(a => new AnmeldungDerPerson(
+                    a.Id, a.PersonId, a.Freizeit.Name, a.Freizeit.ErsterTag, a.Freizeit.LetzterTag, a.Art, a.Status, a.Freizeit.KontaktMail, a.Freizeit.KontaktTelefon)),
         ];
     }
 }
@@ -71,7 +78,8 @@ internal static class MeineAnmeldungenEndpunkt
         var personId = angemeldet.PersonId ?? throw new InvalidOperationException("Ohne Sitzung erreicht niemand diesen Endpunkt.");
         var zeilen = await AnmeldungenDerPersonen.LesenAsync(db, await vertretung.PersonenAsync(personId, abbruch), abbruch);
         return TypedResults.Ok(zeilen
-            .Select(z => new AnmeldungZeile(z.AnmeldungId, z.PersonId, z.FreizeitName, z.ErsterTag, z.LetzterTag, AnmeldungWerte.Art(z.Art), AnmeldungWerte.Status(z.Status)))
+            .Select(z => new AnmeldungZeile(
+                z.AnmeldungId, z.PersonId, z.FreizeitName, z.ErsterTag, z.LetzterTag, AnmeldungWerte.Art(z.Art), AnmeldungWerte.Status(z.Status), z.KontaktMail, z.KontaktTelefon))
             .ToList());
     }
 }
@@ -97,7 +105,8 @@ internal static class GastLinkEndpunkt
             gast.GueltigBis,
             [
                 .. zeilen.Select(z => new GastLinkAnmeldung(
-                    vornamen.GetValueOrDefault(z.PersonId)?.Vorname ?? "", z.FreizeitName, z.ErsterTag, z.LetzterTag, AnmeldungWerte.Status(z.Status))),
+                    vornamen.GetValueOrDefault(z.PersonId)?.Vorname ?? "", z.FreizeitName, z.ErsterTag, z.LetzterTag, AnmeldungWerte.Status(z.Status),
+                    z.KontaktMail, z.KontaktTelefon)),
             ]));
     }
 }

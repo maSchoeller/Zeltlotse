@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Freizeiten.Anmeldungen;
+using Zeltlotse.Freizeiten.Anmeldungen.Entscheiden;
 using Zeltlotse.Freizeiten.Contracts.Rollen;
 using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
 using Zeltlotse.Freizeiten.Daten;
@@ -15,6 +16,7 @@ using Zeltlotse.Personen.Contracts.Events;
 using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Datenschutz;
 using Zeltlotse.SharedKernel.Ereignisse;
+using Zeltlotse.SharedKernel.Mail;
 using Zeltlotse.SharedKernel.Rechte;
 using Zeltlotse.SharedKernel.Web;
 
@@ -33,7 +35,8 @@ public static class FreizeitenModul
         services.AddScoped<IFreizeitRollenLesen, FreizeitRollenLesen>();
         services.AddScoped<IFreizeitZeitpunkte, FreizeitZeitpunkteLesen>();
         services.AddScoped<IFreizeitEndenLesen, FreizeitEndenLesen>();
-        services.AddScoped<IBestaetigteTeilnehmende, KeineBestaetigtenTeilnehmenden>();
+        services.AddScoped<IBestaetigteTeilnehmende, BestaetigteTeilnehmendeZaehlen>();
+        services.VerschicktMail<AnmeldungEntschiedenMail, AnmeldungEntschiedenMailAufbau>();
         services.EmpfaengtEreignis<PersonGeloescht, FreizeitPersonLoeschen>();
         services.AddScoped<IDatenauskunft, FreizeitenAuskunft>();
         services.AddScoped<ILoeschlauf, FreizeitenLoeschlauf>();
@@ -78,6 +81,10 @@ public static class FreizeitenModul
         freizeit.MapGet("/freizeitseite", FreizeitseiteLadenEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Einstellungen);
         freizeit.MapPatch("/freizeitseite", FreizeitseiteFeldAendernEndpunkt.Aendern).NurFreizeitRolle(FreizeitRechte.Einstellungen);
         freizeit.MapPost("/anmeldelinks/{art}/erneuern", AnmeldelinkErneuernEndpunkt.Erneuern).NurFreizeitRolle(FreizeitRechte.Einstellungen);
+        // Story 2-3: Anmeldungen der Leitung (Liste, Bestätigen, Absagen); Statuswechsel als POST je Übergang (AD-19, AD-28).
+        freizeit.MapGet("/anmeldungen", AnmeldungenListeEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Anmeldungen);
+        freizeit.MapPost("/anmeldungen/{anmeldungId:guid}/bestaetigen", AnmeldungEntscheidenEndpunkt.Bestaetigen).NurFreizeitRolle(FreizeitRechte.Anmeldungen);
+        freizeit.MapPost("/anmeldungen/{anmeldungId:guid}/absagen", AnmeldungEntscheidenEndpunkt.Absagen).NurFreizeitRolle(FreizeitRechte.Anmeldungen);
 
         api.MapGet("/ich/freizeiten", MeineFreizeitenEndpunkt.Laden).Organisationsuebergreifend();
         var anmeldungen = api.MapGroup("/ich/anmeldungen").Organisationsuebergreifend();

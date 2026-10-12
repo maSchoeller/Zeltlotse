@@ -4,7 +4,8 @@ namespace Zeltlotse.Api.Demo;
 
 /// <summary>
 /// Erfundene Stammdaten für Screenshots und Anwender-Doku (NFR-20, Konvention „Anwender-Doku“): eine Organisation,
-/// eine Freizeit und Personen mit Rolle. Alle Mail-Adressen enden auf <c>@example.org</c>; keine Telefonnummern,
+/// eine Freizeit und Personen mit Rolle. Alle Mail-Adressen enden auf <c>@example.org</c>; die einzige Telefonnummer ist der erfundene
+/// Kontakt für Absagen (Story 2-3),
 /// keine echten Namen von Organisationen. Die Fach-Stories spielen diese Daten über ihre Commands ein (<see cref="DemoDaten"/>).
 /// </summary>
 internal static class DemoKatalog
@@ -23,8 +24,21 @@ internal static class DemoKatalog
         40,
         "Die Lagerregeln und die Anweisungen der Mitarbeitenden gelten für alle Teilnehmenden.\nDer Teilnahmebeitrag wird nach der Zusage fällig. Wer krank wird, sagt bei der Leitung ab.");
 
-    /// <summary>Story 2-2: Katrin meldet Emma mit Konto über den Anmeldelink für Teilnehmende an (Status „eingegangen“).</summary>
-    public static (string ElternMail, string Kind) MitKontoAngemeldet { get; } = ("katrin.muster@example.org", "Emma");
+    /// <summary>
+    /// Story 2-2 und 2-3: Anmeldungen der Demo-Freizeit mit Konto, in dieser Reihenfolge. <c>Kind</c> leer heißt: die Person meldet sich
+    /// selbst über den Anmeldelink für Mitarbeitende an. Miriam bestätigt die mit <c>Bestaetigt</c>; die anderen bleiben „eingegangen“.
+    /// So zeigt die Liste der Leitung alle Status und der Balken „1 von 40“ (Mia; Mitarbeitende zählen nicht).
+    /// </summary>
+    public static IReadOnlyList<DemoAnmeldung> Anmeldungen { get; } =
+    [
+        new("katrin.muster@example.org", "Emma", Bestaetigt: false),
+        new("daniel.probst@example.org", "Mia", Bestaetigt: true),
+        new("lea.feuerstein@example.org", Kind: null, Bestaetigt: true),
+        new("tobias.wanderer@example.org", Kind: null, Bestaetigt: false),
+    ];
+
+    /// <summary>Story 2-3: Kontakt der Leitung für Absagen auf der Demo-Freizeit (erfunden, Mail-Adresse unter example.org).</summary>
+    public static (string Mail, string Telefon) KontaktFuerAbsagen { get; } = ("zeltlager@example.org", "0123 456789");
 
     /// <summary>
     /// Jonas' Nachweise (Story 1-5): Art, Ausstellungsdatum und eine kleine erfundene Demo-Datei. Ohne Präventionsschulung, damit
@@ -190,3 +204,9 @@ internal sealed record DemoPerson(
     string? Familie = null,
     DateOnly? Geburtsdatum = null,
     string? Herkunft = null);
+
+/// <summary>Eine Demo-Anmeldung mit Konto (Story 2-2, 2-3).</summary>
+/// <param name="Mail">Konto, das anmeldet: Elternteil oder die Person selbst.</param>
+/// <param name="Kind">Vorname des Kindes aus der Familie; leer heißt: selbst, über den Anmeldelink für Mitarbeitende.</param>
+/// <param name="Bestaetigt">Miriam hat die Anmeldung bestätigt.</param>
+internal sealed record DemoAnmeldung(string Mail, string? Kind, bool Bestaetigt);

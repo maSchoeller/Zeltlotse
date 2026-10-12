@@ -272,9 +272,10 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(seite.GetByText("Zeitraum: 02.08.2027 – 13.08.2027")).ToBeVisibleAsync();
         await Assertions.Expect(seite.GetByText("Leitung: Jonas Hüttner, Miriam Zeltner")).ToBeVisibleAsync();
         await Assertions.Expect(seite.GetByText("Einsicht in Freizeitpässe bis 12.09.2027")).ToBeVisibleAsync();
-        // Story 1-6: Miriam fehlen Pflicht-Nachweise (Führungszeugnis, Erste Hilfe); die Warnung steht über „Nachweise prüfen“.
+        // Story 1-6: Miriam fehlen Pflicht-Nachweise (Führungszeugnis, Erste Hilfe), Story 2-3: Lea (Team) ebenso; die Warnung steht
+        // über „Nachweise prüfen“.
         await Assertions.Expect(seite.Locator(".elkw-alert--warnung"))
-            .ToContainTextAsync("Bei 1 Person im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.", new() { Timeout = 60_000 });
+            .ToContainTextAsync("Bei 2 Personen im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.", new() { Timeout = 60_000 });
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await E2EHilfe.AxeAsync(seite);
 
@@ -301,6 +302,8 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         // Story 2-2: Katrin hat Emma mit Konto angemeldet; die Card zeigt die Freizeit mit dem Status.
         await Assertions.Expect(emma.Locator(".zl-statusliste li")).ToContainTextAsync("Zeltlager Sommer 2027, 02.08.2027 – 13.08.2027");
         await Assertions.Expect(emma.Locator(".zl-statusliste .elkw-status")).ToHaveTextAsync("Eingegangen");
+        // Story 2-3: darunter der Kontakt der Leitung für Absagen.
+        await Assertions.Expect(emma.Locator(".zl-absage-kontakt")).ToHaveTextAsync("Absage nur über die Leitung: zeltlager@example.org · 0123 456789");
         // Nur bei Paul (volljährig) steht die Übergabe.
         await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Profil an Paul übergeben" })).ToHaveCountAsync(1);
         await Assertions.Expect(emma.GetByRole(AriaRole.Button)).ToHaveCountAsync(0);
@@ -602,7 +605,9 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(seite.GetByText("Freizeit · 2. bis 13. August 2027")).ToBeVisibleAsync();
         await Assertions.Expect(seite.GetByText("Ort: Zeltplatz am Mühlbach, Musterhausen")).ToBeVisibleAsync();
         var team = seite.Locator(".elkw-card").Filter(new() { HasText = "Das Team" });
-        await Assertions.Expect(team.Locator("li")).ToHaveCountAsync(2);
+        // Story 2-3: Lea ist als bestätigte Mitarbeitende im Team.
+        await Assertions.Expect(team.Locator("li")).ToHaveCountAsync(3);
+        await Assertions.Expect(team.Locator("li").Filter(new() { HasText = "Lea" })).ToContainTextAsync("Team");
         await Assertions.Expect(team.Locator("li").Filter(new() { HasText = "Jonas" })).ToContainTextAsync("Leitung · aus Musterstadt");
         await Assertions.Expect(team.Locator("li").Filter(new() { HasText = "Miriam" })).ToContainTextAsync("Leitung · aus Musterstadt");
         await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Vertrauensseite" })).ToBeVisibleAsync();
@@ -697,6 +702,8 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Anmeldungen");
         var karte = seite.Locator(".elkw-card").Filter(new() { HasText = "Lina" });
         await Assertions.Expect(karte.Locator(".elkw-status")).ToHaveTextAsync("Eingegangen");
+        // Story 2-3: Absagen nur über die Leitung, mit Mail- und Telefon-Link.
+        await Assertions.Expect(karte.Locator(".zl-absage-kontakt")).ToHaveTextAsync("Absage nur über die Leitung: zeltlager@example.org · 0123 456789");
         await Assertions.Expect(seite.GetByText("Gast-Link gilt bis 12.09.2027.")).ToBeVisibleAsync();
         await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Konto erstellen" })).ToBeVisibleAsync();
         await E2EHilfe.AxeAsync(seite);
@@ -746,6 +753,98 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await E2EHilfe.AxeAsync(seite);
 
         await BildAsync(seite, "anmeldung-team", geraet);
+    }
+
+    // ---------- Story 2-3: Anmeldungen bestätigen und absagen ----------
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Anmeldungen(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await AnmeldungenAsync(seite);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await GastZeilenAusblendenAsync(seite);
+
+        await BildAsync(seite, "anmeldungen", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Anmeldung_Absage(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        // Die Inline-Bestätigung bei Tobias ist aufgeklappt; abgesagt wird nichts, die Demo-Daten bleiben.
+        await AnmeldungenAsync(seite);
+        var tobias = seite.Locator("tbody tr").Filter(new() { HasText = "Tobias Wanderer" });
+        await tobias.GetByRole(AriaRole.Button, new() { Name = "Absage eintragen" }).ClickAsync();
+        await Assertions.Expect(tobias).ToContainTextAsync("Absage für Tobias eintragen? Eine Absage-Mail geht raus.");
+        await Assertions.Expect(tobias.GetByRole(AriaRole.Button, new() { Name = "Ja, Absage eintragen" })).ToBeVisibleAsync();
+        await Assertions.Expect(tobias.GetByRole(AriaRole.Button, new() { Name = "Nein" })).ToBeFocusedAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        await GastZeilenAusblendenAsync(seite);
+        await tobias.ScrollIntoViewIfNeededAsync();
+
+        await BildAsync(seite, "anmeldung-absage", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Kontakt_Fuer_Absagen(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await EinstellungenAsync(seite);
+        var abschnitt = seite.Locator(".elkw-card").Filter(new() { HasText = "Kontakt für Absagen" });
+        await Assertions.Expect(abschnitt.GetByLabel("Mail-Adresse")).ToHaveValueAsync("zeltlager@example.org", new() { Timeout = 60_000 });
+        await Assertions.Expect(abschnitt.GetByLabel("Telefon")).ToHaveValueAsync("0123 456789");
+        await Assertions.Expect(abschnitt).ToContainTextAsync("Erscheint bei Eltern und Mitarbeitenden neben dem Anmeldestatus.");
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        await abschnitt.ScrollIntoViewIfNeededAsync();
+
+        await BildAsync(seite, "kontakt-fuer-absagen", geraet);
+    }
+
+
+    /// <summary>
+    /// Blendet vor dem Bild die Zeilen der Gast-Anmeldungen aus, die andere Tests desselben Laufs über den Demo-Link anlegen (Familie
+    /// „Beispiel“); sie gehören nicht zu den Demo-Daten und ihre Anzahl hängt von der Reihenfolge der Tests ab. Geprüft ist die Seite
+    /// vorher vollständig.
+    /// </summary>
+    private static Task GastZeilenAusblendenAsync(IPage seite) =>
+        seite.EvaluateAsync("() => document.querySelectorAll('tbody tr').forEach(z => { if (z.textContent.includes('Beispiel')) z.remove(); })");
+
+    /// <summary>
+    /// Miriam öffnet in der Demo-Freizeit „Anmeldungen“: Balken „1 von 40“, Emma und Tobias eingegangen, Mia und Lea bestätigt, mit den
+    /// erlaubten Aktionen je Zeile.
+    /// </summary>
+    private async Task AnmeldungenAsync(IPage seite)
+    {
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, PruefMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Anmeldungen", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Anmeldungen", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator(".zl-balken .zl-zahl")).ToHaveTextAsync("1 von 40", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator(".zl-balken .elkw-status")).ToHaveTextAsync("Belegt");
+        foreach (var (name, status, knoepfe) in new[]
+                 {
+                     ("Emma Muster", "Eingegangen", 2), ("Mia Probst", "Bestätigt", 1), ("Lea Feuerstein", "Bestätigt", 1), ("Tobias Wanderer", "Eingegangen", 2),
+                 })
+        {
+            var zeile = seite.Locator("tbody tr").Filter(new() { HasText = name });
+            await Assertions.Expect(zeile.Locator(".elkw-status")).ToHaveTextAsync(status);
+            await Assertions.Expect(zeile.GetByRole(AriaRole.Button)).ToHaveCountAsync(knoepfe);
+        }
     }
 
     /// <summary>Öffnet die Freizeitseite über den Anmeldelink für Teilnehmende und tippt „Anmelden“.</summary>

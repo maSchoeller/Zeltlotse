@@ -11,7 +11,8 @@ using NachweisArt = Zeltlotse.Personen.Contracts.Events.NachweisArt;
 namespace Zeltlotse.Organisationen.Datenschutz;
 
 /// <summary>
-/// Empfänger von <see cref="PersonGeloescht"/> (Tabelle Ereignis-Fluss, AD-16): löscht in allen Organisationen die Org-Rollen und
+/// Empfänger von <see cref="PersonGeloescht"/> (Tabelle Ereignis-Fluss, AD-16): löscht in allen Organisationen die Org-Rollen, die
+/// Mitgliedschaften (personeneigen, Story 2-3) und
 /// die eigenen Nachweis-Bestätigungen der Person (ohne die Person belegen sie nichts) und ersetzt „geprüft von“ und „eingeladen
 /// von“ in Daten anderer durch den Platzhalter. Kein Benutzer-Command.
 /// </summary>
@@ -28,6 +29,7 @@ internal sealed class OrgPersonLoeschenHandler(OrganisationenDbContext db) : ICo
         var personId = command.PersonId;
         await db.Rollen.IgnoreQueryFilters().Where(r => r.PersonId == personId).ExecuteDeleteAsync(cancellationToken);
         await db.Bestaetigungen.IgnoreQueryFilters().Where(b => b.PersonId == personId).ExecuteDeleteAsync(cancellationToken);
+        await db.Mitgliedschaften.IgnoreQueryFilters().Where(m => m.PersonId == personId).ExecuteDeleteAsync(cancellationToken);
         await db.Bestaetigungen.IgnoreQueryFilters().Where(b => b.GeprueftVon == personId)
             .ExecuteUpdateAsync(s => s.SetProperty(b => b.GeprueftVon, GeloeschtePerson.Id), cancellationToken);
         await db.Einladungen.IgnoreQueryFilters().Where(e => e.EingeladenVon == personId)
@@ -37,7 +39,7 @@ internal sealed class OrgPersonLoeschenHandler(OrganisationenDbContext db) : ICo
 }
 
 /// <summary>
-/// Datenauskunft von Organisationen (AD-16): die Rollen der Person und die Nachweis-Bestätigungen über sie, je mit dem Namen der
+/// Datenauskunft von Organisationen (AD-16): die Rollen der Person, die Nachweis-Bestätigungen über sie und ihre Mitgliedschaften, je mit dem Namen der
 /// Organisation. Ohne Mandantenfilter, nur die Zeilen der Person (AD-6).
 /// </summary>
 internal sealed class OrganisationenAuskunft(OrganisationenLeseDbContext db) : IDatenauskunft
@@ -46,7 +48,12 @@ internal sealed class OrganisationenAuskunft(OrganisationenLeseDbContext db) : I
     {
         var rollen = await db.Rollen.IgnoreQueryFilters().Where(r => r.PersonId == personId).ToListAsync(abbruch);
         var bestaetigungen = await db.Bestaetigungen.IgnoreQueryFilters().Where(b => b.PersonId == personId).ToListAsync(abbruch);
-        var orgIds = rollen.Select(r => r.OrganisationId).Concat(bestaetigungen.Select(b => b.OrganisationId)).Distinct().ToList();
+        var mitgliedschaften = await db.Mitgliedschaften.IgnoreQueryFilters().Where(m => m.PersonId == personId).ToListAsync(abbruch);
+        var orgIds = rollen.Select(r => r.OrganisationId)
+            .Concat(bestaetigungen.Select(b => b.OrganisationId))
+            .Concat(mitgliedschaften.Select(m => m.OrganisationId))
+            .Distinct()
+            .ToList();
         var namen = await db.Organisationen.Where(o => orgIds.Contains(o.Id)).ToDictionaryAsync(o => o.Id, o => o.Name, abbruch);
         string Name(Guid id) => namen.GetValueOrDefault(id) ?? "";
 
@@ -65,6 +72,12 @@ internal sealed class OrganisationenAuskunft(OrganisationenLeseDbContext db) : I
                         .Select(b => new AuskunftZeile(
                             $"{Art(b.Art)} ({Name(b.OrganisationId)})",
                             $"eingesehen am {AuskunftFormat.Datum(b.EingesehenAm)}, gültig bis {AuskunftFormat.Datum(b.GueltigBis)}")),
+                ]),
+            new AuskunftAbschnitt(
+                "Mitgliedschaften",
+                [
+                    .. mitgliedschaften.OrderBy(m => Name(m.OrganisationId), StringComparer.CurrentCulture)
+                        .Select(m => new AuskunftZeile(Name(m.OrganisationId), $"Mitarbeitende von {Name(m.OrganisationId)} seit {AuskunftFormat.Datum(m.SeitAm)}")),
                 ]),
         ];
     }

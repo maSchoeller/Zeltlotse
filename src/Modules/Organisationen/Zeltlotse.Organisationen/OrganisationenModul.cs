@@ -5,7 +5,9 @@ using Zeltlotse.Organisationen.Contracts.Loeschfristen;
 using Zeltlotse.Organisationen.Contracts.Nachweise;
 using Zeltlotse.Organisationen.Contracts.Rollen;
 using Zeltlotse.Organisationen.Contracts.Vertrauensseite;
+using Zeltlotse.Freizeiten.Contracts.Events;
 using Zeltlotse.Organisationen.Daten;
+using Zeltlotse.Organisationen.Mitglieder;
 using Zeltlotse.Organisationen.Datenschutz;
 using Zeltlotse.Organisationen.Nachweise;
 using Zeltlotse.Organisationen.Rollen;
@@ -34,6 +36,7 @@ public static class OrganisationenModul
         services.AddScoped<INachweisStandLesen, NachweisStandLesen>();
         services.EmpfaengtEreignis<NachweisEingesehen, NachweisBestaetigungSpeichern>();
         services.EmpfaengtEreignis<PersonGeloescht, OrgPersonLoeschen>();
+        services.EmpfaengtEreignis<AnmeldungBestaetigt, MitgliedschaftAnlegen>();
         services.AddScoped<ILoeschfristenLesen, LoeschfristenLesen>();
         services.AddScoped<IVertrauensAngabenLesen, VertrauensAngabenLesen>();
         services.AddScoped<IDatenauskunft, OrganisationenAuskunft>();

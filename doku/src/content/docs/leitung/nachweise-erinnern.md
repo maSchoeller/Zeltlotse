@@ -2,7 +2,7 @@
 title: Fehlende Nachweise und Erinnerungen
 description: Warnhinweise zu Pflicht-Nachweisen im Team sehen und eine Person per Mail an ihre Nachweise erinnern.
 sidebar:
-  order: 3
+  order: 5
 ---
 
 Die Leitung sieht, wem im Team ein Nachweis fehlt, den die Organisation verlangt, oder bei wem er vor dem Ende der Freizeit abläuft. Wer betroffen ist, lässt sich mit einem Klick per Mail erinnern.
@@ -21,9 +21,9 @@ Warnhinweise und **Erinnern** gibt es nur in der Freizeit, nicht auf der Seite �
 
 ## Meldung auf der Startseite
 
-Fehlt im Team etwas, steht auf der Startseite der Freizeit über dem Knopf **Nachweise prüfen** zum Beispiel „Achtung: Bei 1 Person im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.“ Ist alles in Ordnung, entfällt die Meldung.
+Fehlt im Team etwas, steht auf der Startseite der Freizeit über dem Knopf **Nachweise prüfen** zum Beispiel „Achtung: Bei 2 Personen im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.“ Ist alles in Ordnung, entfällt die Meldung.
 
-![Startseite der Freizeit am Handy mit der Meldung „Achtung: Bei 1 Person im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.“ über dem Knopf „Nachweise prüfen“](../../../assets/screenshots/freizeit-start-handy.png)
+![Startseite der Freizeit am Handy mit der Meldung „Achtung: Bei 2 Personen im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.“ über dem Knopf „Nachweise prüfen“](../../../assets/screenshots/freizeit-start-handy.png)
 
 ![Startseite der Freizeit am Laptop mit der Meldung über fehlende Nachweise und dem Knopf „Nachweise prüfen“](../../../assets/screenshots/freizeit-start-laptop.png)
 

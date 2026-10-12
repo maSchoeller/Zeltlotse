@@ -20,6 +20,17 @@ public sealed record AnmeldelinkErneuernErgebnis(Anmeldelink? Link, bool Abgesch
 /// </summary>
 public sealed record AnmeldungErgebnis(Guid? AnmeldungId, IReadOnlyDictionary<string, string> Fehler, bool NichtGefunden, bool SchonAngemeldet);
 
+/// <summary>
+/// Ergebnis von <see cref="FreizeitenApiClient.BestaetigenAsync"/> und <see cref="FreizeitenApiClient.AbsagenAsync"/>: entschieden
+/// (<c>204</c>), schon entschieden (<c>409</c>) oder nicht (mehr) verfügbar (<c>403</c>/<c>404</c>).
+/// </summary>
+public enum EntscheidungErgebnis
+{
+    Entschieden,
+    SchonEntschieden,
+    NichtVerfuegbar,
+}
+
 /// <summary>Ergebnis von <see cref="FreizeitenApiClient.LeitungEinladenAsync"/>: die Kennung der Einladung oder der Fehler an der Mail-Adresse.</summary>
 public sealed record LeitungEinladenErgebnis(Guid? Id, string? MailFehler);
 
@@ -205,6 +216,38 @@ public sealed class FreizeitenApiClient(HttpClient http)
     /// <summary><c>GET /api/freizeiten/gast/{gastToken}</c> (anonym): die Anmeldungen der Gast-Familie oder <c>null</c>, wenn der Gast-Link nicht (mehr) gilt.</summary>
     public Task<GastLinkAnsicht?> GastLinkLadenAsync(string gastToken, CancellationToken abbruch = default) =>
         LadenAsync<GastLinkAnsicht>($"/api/freizeiten/gast/{Uri.EscapeDataString(gastToken)}", abbruch);
+
+    /// <summary>
+    /// <c>GET /api/freizeiten/{freizeitId}/anmeldungen</c> (Leitung, Story 2-3): Höchstzahl, bestätigte Teilnehmende und alle
+    /// Anmeldungen oder <c>null</c> bei <c>403</c>/<c>404</c>.
+    /// </summary>
+    public Task<AnmeldungenUebersicht?> AnmeldungenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
+        LadenAsync<AnmeldungenUebersicht>($"/api/freizeiten/{freizeitId}/anmeldungen", abbruch);
+
+    /// <summary><c>POST /api/freizeiten/{freizeitId}/anmeldungen/{anmeldungId}/bestaetigen</c> (Leitung, FR-20).</summary>
+    public Task<EntscheidungErgebnis> BestaetigenAsync(Guid freizeitId, Guid anmeldungId, CancellationToken abbruch = default) =>
+        EntscheidenAsync($"/api/freizeiten/{freizeitId}/anmeldungen/{anmeldungId}/bestaetigen", abbruch);
+
+    /// <summary><c>POST /api/freizeiten/{freizeitId}/anmeldungen/{anmeldungId}/absagen</c> (Leitung, FR-21).</summary>
+    public Task<EntscheidungErgebnis> AbsagenAsync(Guid freizeitId, Guid anmeldungId, CancellationToken abbruch = default) =>
+        EntscheidenAsync($"/api/freizeiten/{freizeitId}/anmeldungen/{anmeldungId}/absagen", abbruch);
+
+    private async Task<EntscheidungErgebnis> EntscheidenAsync(string pfad, CancellationToken abbruch)
+    {
+        using var antwort = await http.PostAsync(pfad, content: null, abbruch);
+        if (antwort.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+        {
+            return EntscheidungErgebnis.NichtVerfuegbar;
+        }
+
+        if (antwort.StatusCode == HttpStatusCode.Conflict)
+        {
+            return EntscheidungErgebnis.SchonEntschieden;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return EntscheidungErgebnis.Entschieden;
+    }
 
     private static async Task<AnmeldungErgebnis> AnmeldungErgebnisAsync(HttpResponseMessage antwort, CancellationToken abbruch)
     {

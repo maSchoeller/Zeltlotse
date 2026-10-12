@@ -83,7 +83,8 @@ internal sealed class PersonenAuskunft(PersonenLeseDbContext db, IVerschluesselu
     private static string Stufe(FreigabeStufe stufe) => stufe switch
     {
         FreigabeStufe.Leitung => "Leitung",
-        _ => stufe.ToString(),
+        FreigabeStufe.Team => "Team",
+        _ => throw new ArgumentOutOfRangeException(nameof(stufe), stufe, null),
     };
 
     /// <summary>Anzeigetext einer Nachweisart.</summary>

@@ -39,6 +39,11 @@ internal static class FreizeitRechte
     /// </summary>
     public static readonly RolleArt[] Einstellungen = [RolleArt.Leitung];
 
+    /// <summary>
+    /// Anmeldungen sehen, bestätigen und Absagen eintragen (EXPERIENCE.md → Fläche „Anmeldungen“, Nur-Leitung-Funktion; FR-20, FR-21).
+    /// </summary>
+    public static readonly RolleArt[] Anmeldungen = [RolleArt.Leitung];
+
     /// <summary>Erlaubte Aktionen im Freizeit-Kontext (AD-29) aus den eigenen Freizeit-Rollen.</summary>
     public static IReadOnlyList<string> Erlaubt(IReadOnlyCollection<RolleArt> rollen)
     {
@@ -51,6 +56,11 @@ internal static class FreizeitRechte
         if (rollen.Any(Einstellungen.Contains))
         {
             erlaubt.Add(Aktionsschluessel.FreizeitEinstellungen);
+        }
+
+        if (rollen.Any(Anmeldungen.Contains))
+        {
+            erlaubt.Add(Aktionsschluessel.AnmeldungenBearbeiten);
         }
 
         return erlaubt;

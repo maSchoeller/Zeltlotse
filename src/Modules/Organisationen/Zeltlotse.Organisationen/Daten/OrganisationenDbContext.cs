@@ -25,6 +25,8 @@ internal sealed class OrganisationenDbContext(DbContextOptions<OrganisationenDbC
 
     public DbSet<Loeschfristen> Loeschfristen => Set<Loeschfristen>();
 
+    public DbSet<Mitgliedschaft> Mitgliedschaften => Set<Mitgliedschaft>();
+
     protected override string Schema => OrganisationenModul.Schema;
 
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => OrganisationenModell.Konfigurieren(modelBuilder);
@@ -45,6 +47,8 @@ internal sealed class OrganisationenLeseDbContext(DbContextOptions<Organisatione
     public DbSet<NachweisBestaetigung> Bestaetigungen => Set<NachweisBestaetigung>();
 
     public DbSet<Loeschfristen> Loeschfristen => Set<Loeschfristen>();
+
+    public DbSet<Mitgliedschaft> Mitgliedschaften => Set<Mitgliedschaft>();
 
     protected override string Schema => OrganisationenModul.Schema;
 
@@ -109,6 +113,14 @@ internal static class OrganisationenModell
             e.HasKey(f => f.OrganisationId);
             e.Property(f => f.OrganisationId).ValueGeneratedNever();
             e.Property(f => f.Version).IsRowVersion();
+        });
+
+        // FR-7, Story 2-3: Mitarbeitende der Organisation, je Organisation und Person eine Zeile.
+        modelBuilder.Entity<Mitgliedschaft>(e =>
+        {
+            e.ToTable("mitgliedschaft");
+            e.HasKey(m => new { m.OrganisationId, m.PersonId });
+            e.HasIndex(m => m.PersonId);
         });
     }
 }

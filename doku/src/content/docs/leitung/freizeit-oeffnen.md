@@ -36,6 +36,7 @@ Die Startseite der Freizeit zeigt:
 - die eigene **Rolle**,
 - wer die **Leitung** hat,
 - bis wann die Freizeit **Einsicht in Freizeitpässe** hat,
+- für die Leitung den Knopf **Anmeldungen** (siehe [Anmeldungen bestätigen und absagen](/leitung/anmeldungen/)),
 - für die Leitung den Knopf **Nachweise prüfen** und darüber eine Meldung, wenn im Team Pflicht-Nachweise fehlen oder vor dem Ende der Freizeit ablaufen (siehe [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/)).
 - für die Leitung den Knopf **Einstellungen** mit der Freizeitseite und den Anmeldelinks (siehe [Freizeitseite einrichten](/leitung/freizeitseite-einrichten/)).
 

@@ -76,10 +76,26 @@ internal sealed class FreizeitenAuskunft(FreizeitenLeseDbContext db, IVertretung
             .. anmeldungen.Select(a => new AuskunftZeile(
                 freizeitNamen.GetValueOrDefault(a.FreizeitId) ?? "",
                 $"{AuskunftFormat.Name(vornamen.GetValueOrDefault(a.PersonId)?.Vorname, vornamen.GetValueOrDefault(a.PersonId)?.Nachname)}, "
-                + $"{(a.Art == AnmeldeArt.Teilnehmende ? "Teilnehmende" : "Mitarbeitende")}, eingegangen am {AuskunftFormat.Datum(a.EingegangenAm)}, "
-                + $"Teilnahmebedingungen bestätigt am {AuskunftFormat.Datum(a.TeilnahmebedingungenBestaetigtAm)}")),
+                + $"{Art(a.Art)}, eingegangen am {AuskunftFormat.Datum(a.EingegangenAm)}, "
+                + $"Teilnahmebedingungen bestätigt am {AuskunftFormat.Datum(a.TeilnahmebedingungenBestaetigtAm)}, Status {Status(a.Status)}"
+                + (a.EntschiedenAm is { } entschieden ? $", entschieden am {AuskunftFormat.Datum(entschieden)}" : ""))),
         ];
     }
+
+    private static string Art(AnmeldeArt art) => art switch
+    {
+        AnmeldeArt.Teilnehmende => "Teilnehmende",
+        AnmeldeArt.Mitarbeitende => "Mitarbeitende",
+        _ => throw new ArgumentOutOfRangeException(nameof(art), art, null),
+    };
+
+    private static string Status(AnmeldeStatus status) => status switch
+    {
+        AnmeldeStatus.Eingegangen => "Eingegangen",
+        AnmeldeStatus.Bestaetigt => "Bestätigt",
+        AnmeldeStatus.Abgesagt => "Abgesagt",
+        _ => throw new ArgumentOutOfRangeException(nameof(status), status, null),
+    };
 
     private static string Rolle(RolleArt rolle) => rolle switch
     {

@@ -2,7 +2,7 @@
 title: Nachweise prüfen
 description: Einsicht in die Nachweise des Teams anfragen, die Prüfung übernehmen, bestätigen oder ablehnen; danach endet der Zugriff.
 sidebar:
-  order: 2
+  order: 4
 ---
 
 Die Leitung prüft die Nachweise der Personen, die in der Freizeit mitarbeiten, etwa das Führungszeugnis. Die Dateien bleiben am Profil der Person; Zeltlotse speichert bei der Organisation nur die **Bestätigung** (welcher Nachweis, eingesehen am, gültig bis, von wem).

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Zeltlotse.Api.Contracts.Personen;
 using Zeltlotse.Api.Contracts.Freizeiten;
 using Zeltlotse.Freizeiten.Anmeldungen;
+using Zeltlotse.Freizeiten.Anmeldungen.Entscheiden;
 using Zeltlotse.Freizeiten.Daten;
 using Zeltlotse.Freizeiten.Domaene;
 using Zeltlotse.Freizeiten.Freizeitseite;
@@ -55,6 +56,9 @@ namespace Zeltlotse.Api.Demo;
 /// (je nur, wenn das Feld noch leer ist) und ihre beiden Anmeldelinks (fehlt einer, entsteht er per Erneuern).
 /// Story 2-2: Die Demo-Freizeit hat Teilnahmebedingungen (nur, wenn leer); Katrin hat Emma mit Konto angemeldet (nur einmal), die
 /// Freigabe der Stufe Leitung ist zugestellt.
+/// Story 2-3: Die Demo-Freizeit hat den Kontakt für Absagen (nur, wenn leer); Daniel meldet Mia an, Lea und Tobias sich selbst als
+/// Mitarbeitende; Miriam bestätigt Mia und Lea (nur, solange eingegangen). Lea wird damit Team der Freizeit und Mitarbeitende der
+/// Organisation; Bestätigungs-Mails gehen an Daniel und Lea.
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -394,6 +398,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             (FreizeitseiteFeld.Beschreibung, DemoKatalog.Freizeit.Beschreibung),
             (FreizeitseiteFeld.HoechstzahlTeilnehmende, DemoKatalog.Freizeit.HoechstzahlTeilnehmende.ToString(CultureInfo.InvariantCulture)),
             (FreizeitseiteFeld.Teilnahmebedingungen, DemoKatalog.Freizeit.Teilnahmebedingungen),
+            (FreizeitseiteFeld.KontaktMail, DemoKatalog.KontaktFuerAbsagen.Mail),
+            (FreizeitseiteFeld.KontaktTelefon, DemoKatalog.KontaktFuerAbsagen.Telefon),
         };
         foreach (var (feld, wert) in werte.Where(w => freizeit.Wert(w.Feld) is null))
         {
@@ -414,39 +420,57 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
     }
 
     /// <summary>
-    /// Story 2-2: Katrin meldet Emma mit Konto über den Anmeldelink für Teilnehmende an (Teilnahmebedingungen bestätigt), nur wenn Emma
-    /// noch nicht angemeldet ist. Die Freigabe der Stufe Leitung entsteht über die Outbox; sie wird gleich zugestellt.
+    /// Story 2-2 und 2-3: die Anmeldungen aus <see cref="DemoKatalog.Anmeldungen"/> mit Konto über den passenden Anmeldelink
+    /// (Teilnahmebedingungen bestätigt), je nur, wenn die Person noch nicht angemeldet ist; danach bestätigt Miriam die vorgesehenen,
+    /// solange sie noch „eingegangen“ sind. Freigaben, Team-Rolle, Mitgliedschaft und die Bestätigungs-Mails entstehen über die Outbox;
+    /// sie wird gleich zugestellt. Nach dem Ende der Demo-Freizeit gilt der Anmeldelink nicht mehr; dann bleibt es ohne Anmeldung.
     /// </summary>
     private async Task AnmeldungAsync(CancellationToken abbruch)
     {
         await using var scope = scopes.CreateAsyncScope();
         var dienste = scope.ServiceProvider;
         var sender = dienste.GetRequiredService<ISender>();
-        var (elternMail, kindVorname) = DemoKatalog.MitKontoAngemeldet;
-        var eltern = (await sender.Send(new KontoSicherstellen(elternMail), abbruch)).PersonId;
-        var personen = dienste.GetRequiredService<PersonenLeseDbContext>();
-        var kind = await personen.Personen
-            .Where(p => p.Vorname == kindVorname && personen.Elternteile.Any(e => e.PersonId == eltern && e.FamilieId == p.FamilieId))
-            .Select(p => p.Id)
-            .SingleAsync(abbruch);
-        var lesen = dienste.GetRequiredService<FreizeitenLeseDbContext>();
-        if (await lesen.Anmeldungen.IgnoreQueryFilters().AnyAsync(a => a.PersonId == kind, abbruch))
-        {
-            return;
-        }
-
         var organisationId = await dienste.GetRequiredService<OrganisationenLeseDbContext>().Organisationen
             .Where(o => o.Name == DemoKatalog.Organisation.Name)
             .Select(o => o.Id)
             .SingleAsync(abbruch);
         dienste.GetRequiredService<MandantenKontext>().Setzen(organisationId);
+        var lesen = dienste.GetRequiredService<FreizeitenLeseDbContext>();
+        var personen = dienste.GetRequiredService<PersonenLeseDbContext>();
         var freizeitId = await lesen.Freizeiten.Where(f => f.Name == DemoKatalog.Freizeit.Name).Select(f => f.Id).SingleAsync(abbruch);
-        var link = await lesen.Anmeldelinks.SingleAsync(l => l.FreizeitId == freizeitId && l.Art == LinkArt.Teilnehmende, abbruch);
-        var token = AnmeldelinkErzeugen.Token(dienste.GetRequiredService<Zeltlotse.SharedKernel.Zugangslinks.ILinkSchutz>(), link);
-        // Nach dem Ende der Demo-Freizeit gilt der Anmeldelink nicht mehr; dann bleibt Emma ohne Anmeldung.
-        if (await sender.Send(new AnmeldenMitKontoCommand(token, eltern, kind, TeilnahmebedingungenBestaetigt: true), abbruch) is not AnmeldungErgebnis.Angelegt)
+        var schutz = dienste.GetRequiredService<Zeltlotse.SharedKernel.Zugangslinks.ILinkSchutz>();
+
+        foreach (var demo in DemoKatalog.Anmeldungen)
         {
-            return;
+            var angemeldet = (await sender.Send(new KontoSicherstellen(demo.Mail), abbruch)).PersonId;
+            var personId = demo.Kind is null
+                ? angemeldet
+                : await personen.Personen
+                    .Where(p => p.Vorname == demo.Kind && personen.Elternteile.Any(e => e.PersonId == angemeldet && e.FamilieId == p.FamilieId))
+                    .Select(p => p.Id)
+                    .SingleAsync(abbruch);
+            var anmeldung = await lesen.Anmeldungen.Where(a => a.FreizeitId == freizeitId && a.PersonId == personId).Select(a => new { a.Id, a.Status }).SingleOrDefaultAsync(abbruch);
+            var anmeldungId = anmeldung?.Id;
+            if (anmeldung is null)
+            {
+                var art = demo.Kind is null ? LinkArt.Mitarbeitende : LinkArt.Teilnehmende;
+                var link = await lesen.Anmeldelinks.SingleAsync(l => l.FreizeitId == freizeitId && l.Art == art, abbruch);
+                var token = AnmeldelinkErzeugen.Token(schutz, link);
+                if (await sender.Send(new AnmeldenMitKontoCommand(token, angemeldet, personId, TeilnahmebedingungenBestaetigt: true), abbruch)
+                    is not AnmeldungErgebnis.Angelegt angelegt)
+                {
+                    continue;
+                }
+
+                anmeldungId = angelegt.AnmeldungId;
+            }
+
+            if (demo.Bestaetigt && (anmeldung is null || anmeldung.Status == AnmeldeStatus.Eingegangen)
+                                && await sender.Send(new AnmeldungEntscheiden(freizeitId, anmeldungId!.Value, Entscheidung.Bestaetigt), abbruch)
+                                    is not EntscheidungErgebnis.Entschieden)
+            {
+                throw new InvalidOperationException("Demo-Anmeldung: Die Bestätigung ließ sich nicht eintragen.");
+            }
         }
 
         await dienste.GetRequiredService<IOutboxZustellung>().AllesZustellenAsync(abbruch);

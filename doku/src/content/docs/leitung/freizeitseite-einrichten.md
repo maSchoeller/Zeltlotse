@@ -31,6 +31,10 @@ Name und Zeitraum der Freizeit legt der Org-Admin beim Anlegen fest. Das Team au
 
 Hat jemand anderes dasselbe Feld inzwischen geändert, erscheint „Inzwischen geändert – neu laden?“ am Feld.
 
+## Kontakt für Absagen
+
+Im Abschnitt **Kontakt für Absagen** stehen **Mail-Adresse** und **Telefon**. Sie erscheinen bei Eltern und Mitarbeitenden neben dem Anmeldestatus und in der Absage-Mail, denn abgesagt wird nur über die Leitung. Eingetragen wird hier, was Eltern sehen sollen, etwa eine eigene Mail-Adresse für die Freizeit; die Mail-Adresse des eigenen Kontos erscheint nie von selbst. Einzelheiten stehen unter [Anmeldungen bestätigen und absagen](/leitung/anmeldungen/#kontakt-für-absagen).
+
 ## Anmeldelinks
 
 Jede Freizeit hat zwei Anmeldelinks:
@@ -38,7 +42,7 @@ Jede Freizeit hat zwei Anmeldelinks:
 - **Für Teilnehmende** – für Eltern und volljährige Teilnehmende,
 - **Für Mitarbeitende** – für das Team.
 
-Beide öffnen dieselbe Freizeitseite. Über den Link für Teilnehmende melden Eltern ihre Kinder als Gast oder mit Konto an ([Kind anmelden](/eltern/kind-anmelden/)); über den Link für Mitarbeitende meldet sich das Team mit dem eigenen Konto an ([Für das Team anmelden](/mitarbeitende/anmelden/)). Ein Link lässt sich beliebig oft teilen und gilt bis zum Ende des letzten Freizeittages. Der Link steht als Text auf der Seite und lässt sich von dort kopieren. **Freizeitseite öffnen** zeigt die Seite so, wie Eltern sie sehen. Der Aufruf allein meldet niemanden an; Rechte entstehen erst, wenn die Leitung eine Anmeldung bestätigt.
+Beide öffnen dieselbe Freizeitseite. Über den Link für Teilnehmende melden Eltern ihre Kinder als Gast oder mit Konto an ([Kind anmelden](/eltern/kind-anmelden/)); über den Link für Mitarbeitende meldet sich das Team mit dem eigenen Konto an ([Für das Team anmelden](/mitarbeitende/anmelden/)). Ein Link lässt sich beliebig oft teilen und gilt bis zum Ende des letzten Freizeittages. Der Link steht als Text auf der Seite und lässt sich von dort kopieren. **Freizeitseite öffnen** zeigt die Seite so, wie Eltern sie sehen. Der Aufruf allein meldet niemanden an; Rechte entstehen erst, wenn die Leitung eine Anmeldung bestätigt (siehe [Anmeldungen bestätigen und absagen](/leitung/anmeldungen/)).
 
 Steht bei einer Art „Noch kein Link.“, fehlt der Link oder lässt sich nicht mehr lesen, etwa bei einer Freizeit aus einer älteren Version; **Link erzeugen** erzeugt dann einen neuen.
 

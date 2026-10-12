@@ -11,6 +11,8 @@
     <!-- Pfeile aus AD-2: Organisationen liest Konten (Mail-Bindung der Einladung) und Personen (Namen der Rolleninhaber). -->
     <ProjectReference Include="..\..\Konten\Zeltlotse.Konten.Contracts\Zeltlotse.Konten.Contracts.csproj" />
     <ProjectReference Include="..\..\Personen\Zeltlotse.Personen.Contracts\Zeltlotse.Personen.Contracts.csproj" />
+    <!-- Nur die Ereignisse von Freizeiten (AD-2: Ereignisse darf jedes Modul abonnieren), für die Mitgliedschaft (FR-7). -->
+    <ProjectReference Include="..\..\Freizeiten\Zeltlotse.Freizeiten.Contracts\Zeltlotse.Freizeiten.Contracts.csproj" />
     <ProjectReference Include="..\..\..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
   </ItemGroup>
 

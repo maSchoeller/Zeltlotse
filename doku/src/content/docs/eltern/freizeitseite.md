@@ -16,7 +16,7 @@ Jede Freizeit hat eine öffentliche **Freizeitseite**. Sie öffnet sich über de
 - den Knopf **Anmelden** und darunter den Link **Mit Konto anmelden** (beim Anmeldelink für Mitarbeitende nur **Anmelden**, mit Konto),
 - den Link zur **Vertrauensseite**.
 
-![Freizeitseite „Zeltlager Sommer 2027“ am Handy: oben „Jugendwerk Musterstadt“, darunter „Freizeit · 2. bis 13. August 2027“, Ort, Beschreibung und die Card „Das Team“ mit Jonas und Miriam als „Leitung · aus Musterstadt“](../../../assets/screenshots/freizeitseite-handy.png)
+![Freizeitseite „Zeltlager Sommer 2027“ am Handy: oben „Jugendwerk Musterstadt“, darunter „Freizeit · 2. bis 13. August 2027“, Ort, Beschreibung und die Card „Das Team“ mit Jonas und Miriam als „Leitung · aus Musterstadt“ und Lea als „Team“](../../../assets/screenshots/freizeitseite-handy.png)
 
 ![Freizeitseite am Laptop](../../../assets/screenshots/freizeitseite-laptop.png)
 
@@ -24,7 +24,7 @@ Wie die Anmeldung als Gast oder mit Konto geht, steht unter [Kind anmelden](/elt
 
 ## Ausgebucht
 
-Hat die Leitung eine Höchstzahl für Teilnehmende festgelegt und sind so viele Anmeldungen bestätigt, steht auf der Freizeitseite der Status **Ausgebucht** mit dem Satz „Anmelden ist trotzdem möglich, eine Zusage gibt es erst, wenn ein Platz frei wird.“ Eine Warteliste gibt es nicht; wer nachrückt, entscheidet die Leitung. Ohne Höchstzahl ist eine Freizeit nie ausgebucht. Über den Anmeldelink für Mitarbeitende erscheint „Ausgebucht“ nie, denn Mitarbeitende können immer dazukommen.
+Hat die Leitung eine Höchstzahl für Teilnehmende festgelegt und sind so viele Anmeldungen bestätigt, steht auf der Freizeitseite der Status **Ausgebucht** mit dem Satz „Anmelden ist trotzdem möglich, eine Zusage gibt es erst, wenn ein Platz frei wird.“ Eine Warteliste gibt es nicht; wer nachrückt, entscheidet die Leitung (siehe [Anmeldungen bestätigen und absagen](/leitung/anmeldungen/)). Ohne Höchstzahl ist eine Freizeit nie ausgebucht. Über den Anmeldelink für Mitarbeitende erscheint „Ausgebucht“ nie, denn Mitarbeitende können immer dazukommen.
 
 ## Vertrauensseite
 

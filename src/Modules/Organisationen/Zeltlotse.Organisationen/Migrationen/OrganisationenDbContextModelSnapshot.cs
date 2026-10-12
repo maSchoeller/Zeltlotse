@@ -45,6 +45,24 @@ namespace Zeltlotse.Organisationen.Migrationen
                     b.ToTable("loeschfristen", "organisationen");
                 });
 
+            modelBuilder.Entity("Zeltlotse.Organisationen.Domaene.Mitgliedschaft", b =>
+                {
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("SeitAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("OrganisationId", "PersonId");
+
+                    b.HasIndex("PersonId");
+
+                    b.ToTable("mitgliedschaft", "organisationen");
+                });
+
             modelBuilder.Entity("Zeltlotse.Organisationen.Domaene.OrgEinladung", b =>
                 {
                     b.Property<Guid>("Id")

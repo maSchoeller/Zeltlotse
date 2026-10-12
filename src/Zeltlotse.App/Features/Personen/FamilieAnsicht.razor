@@ -5,7 +5,7 @@
 @inject PersonenApiClient Personen
 @inject FreizeitenApiClient Freizeiten
 @* Familie (FR-3, FR-4, FR-20, EXPERIENCE.md → Familienübersicht, NS-1, NS-11): je Kind eine Card mit Geburtsdatum, seinen
-   Freizeiten mit Anmeldestatus (Status-Wort mit Quadrat) und „Angaben ändern“; nur bei einem volljährigen Kind (der Server rechnet,
+   Freizeiten mit Anmeldestatus (Status-Wort mit Quadrat), darunter der Kontakt der Leitung für Absagen (Story 2-3), und „Angaben ändern“; nur bei einem volljährigen Kind (der Server rechnet,
    der Client nie) die Übergabe mit Inline-Bestätigung. Eigene Anmeldungen stehen in einer eigenen Card. Darunter „Kind
    hinzufügen“, die Eltern mit offenen Einladungen und, solange es weniger als 2 Eltern gibt, „Zweiten Elternteil hinzufügen“. Kein
    eigener Anmelden-Knopf: angemeldet wird über den Anmeldelink der Freizeit. Ohne frische Anmeldung (401 bei der Übergabe) führt
@@ -214,17 +214,27 @@ else
     private IReadOnlyList<AnmeldungZeile> EigeneAnmeldungen =>
         [.. _anmeldungen.Where(a => _familie?.Kinder.Any(k => k.PersonId == a.PersonId) != true)];
 
-    /// <summary>Die Freizeiten einer Person mit Zeitraum und Anmeldestatus; <c>null</c> heißt: die eigenen Anmeldungen.</summary>
+    /// <summary>
+    /// Die Freizeiten einer Person mit Zeitraum und Anmeldestatus, unter jeder nicht abgesagten Anmeldung der Kontakt der Leitung für
+    /// Absagen (FR-21); <c>null</c> heißt: die eigenen Anmeldungen.
+    /// </summary>
     private RenderFragment AnmeldungenListe(Guid? personId)
     {
         var zeilen = personId is { } id ? _anmeldungen.Where(a => a.PersonId == id) : EigeneAnmeldungen;
         IReadOnlyList<StatusEintrag> eintraege =
         [
             .. zeilen.Select(a => new StatusEintrag(
-                $"{a.FreizeitName}, {Anzeige.Zeitraum(a.ErsterTag, a.LetzterTag)}", Anzeige.Status(a.Status), Anzeige.AnmeldungStatusArt(a.Status))),
+                $"{a.FreizeitName}, {Anzeige.Zeitraum(a.ErsterTag, a.LetzterTag)}",
+                Anzeige.Status(a.Status),
+                Anzeige.AnmeldungStatusArt(a.Status),
+                a.Status == AnmeldungStatus.Abgesagt ? null : Kontakt(a))),
         ];
         return @<StatusListe Eintraege="@eintraege" />;
     }
+
+    /// <summary>„Absage nur über die Leitung: …“ mit Mail- und Telefon-Link der Freizeit (FR-21).</summary>
+    private static RenderFragment Kontakt(AnmeldungZeile anmeldung) =>
+        @<AbsageKontakt Mail="@anmeldung.KontaktMail" Telefon="@anmeldung.KontaktTelefon" />;
 
     /// <summary>Wert eines Datumsfelds (<c>yyyy-MM-dd</c>); alles andere gilt als fehlend, den Fehler meldet der Server am Feld.</summary>
     private static DateOnly? Tag(string? wert) =>

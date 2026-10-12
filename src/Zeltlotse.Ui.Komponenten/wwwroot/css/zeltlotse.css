@@ -145,6 +145,10 @@ a.zl-gross:not(.elkw-btn) { display: inline-flex; align-items: center; }
 /* Statusliste, z. B. Freizeiten mit Anmeldestatus in der Familienübersicht: je Zeile ein Text, daneben das Status-Wort. */
 .zl-statusliste { margin: var(--elkw-space-xs) 0 var(--elkw-space-s); padding: 0; list-style: none; }
 .zl-statusliste li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
+.zl-statusliste li + li { margin-top: var(--elkw-space-xs); }
+/* Zeile unter einem Eintrag, z. B. der Kontakt für Absagen (Story 2-3). */
+.zl-statusliste__darunter { flex-basis: 100%; }
+.zl-absage-kontakt { margin: 0; font-size: var(--elkw-fs-small); }
 
 /* ---------- Datentabelle und Auswahl ---------- */
 /* Nur für Screenreader sichtbar (z. B. die Beschriftung der Datentabelle). */

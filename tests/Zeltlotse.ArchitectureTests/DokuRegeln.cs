@@ -16,7 +16,7 @@ internal static partial class DokuRegeln
     public static IEnumerable<string> PflichtSeiten =>
         RollenOrdner.Select(o => $"{o}/index").Append("daten").Append("index").Append("erste-schritte/zeltlotse-oeffnen").Append("erste-schritte/anmelden")
             .Append("erste-schritte/meine-daten").Append("org-admin/loeschfristen").Append("eltern/freizeitseite").Append("leitung/freizeitseite-einrichten")
-            .Append("eltern/kind-anmelden").Append("mitarbeitende/anmelden");
+            .Append("eltern/kind-anmelden").Append("mitarbeitende/anmelden").Append("leitung/anmeldungen");
 
     public static string DokuSeitenOrdner => Path.Combine(Loesung.Wurzel, "doku", "src", "content", "docs");
 

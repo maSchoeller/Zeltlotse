@@ -70,6 +70,9 @@ namespace Zeltlotse.Freizeiten.Migrationen
                     b.Property<DateTimeOffset>("EingegangenAm")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTimeOffset?>("EntschiedenAm")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<long>("Folgenummer")
                         .IsConcurrencyToken()
                         .HasColumnType("bigint");
@@ -133,6 +136,14 @@ namespace Zeltlotse.Freizeiten.Migrationen
 
                     b.Property<int?>("HoechstzahlTeilnehmende")
                         .HasColumnType("integer");
+
+                    b.Property<string>("KontaktMail")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<string>("KontaktTelefon")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
 
                     b.Property<DateOnly>("LetzterTag")
                         .HasColumnType("date");

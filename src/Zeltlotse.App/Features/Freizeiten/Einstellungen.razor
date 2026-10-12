@@ -6,7 +6,7 @@
 @inject FreizeitenApiClient Freizeiten
 @* Einstellungen der Freizeit (EXPERIENCE.md → Fläche „Einstellungen der Freizeit“, nur Leitung; FR-15, FR-16, FR-67): Abschnitt
    „Freizeitseite“ mit Beschreibung (mehrzeilig), Ort, Höchstzahl Teilnehmende und Teilnahmebedingungen (mehrzeilig, FR-19) per
-   Autosave (AD-19) und Abschnitt
+   Autosave (AD-19), Abschnitt „Kontakt für Absagen“ mit Mail-Adresse und Telefon der Leitung (FR-21, Story 2-3) per Autosave und Abschnitt
    „Anmeldelinks“ mit beiden Links als Text, „Freizeitseite öffnen“ und „Neuen Link erzeugen“ über die Inline-Bestätigung. Ohne
    die erlaubte Aktion „freizeit-einstellungen“ oder bei 403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>Einstellungen – Zeltlotse</PageTitle>
@@ -63,6 +63,16 @@ else
             <AutosaveFeld Label="Teilnahmebedingungen" Id="freizeitseite-teilnahmebedingungen" Feldname="@FreizeitseiteFelder.Teilnahmebedingungen" Mehrzeilig="true"
                           Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.Teilnahmebedingungen" Version="@_einstellungen.Version"
                           Hinweis="Erscheint bei der Anmeldung vor dem Absenden." NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+        </Card>
+
+        <Card Titel="Kontakt für Absagen">
+            <p>Erscheint bei Eltern und Mitarbeitenden neben dem Anmeldestatus.</p>
+            <AutosaveFeld Label="Mail-Adresse" Id="kontakt-mail" Feldname="@FreizeitseiteFelder.KontaktMail" Typ="email"
+                          Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.KontaktMail" Version="@_einstellungen.Version"
+                          NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+            <AutosaveFeld Label="Telefon" Id="kontakt-telefon" Feldname="@FreizeitseiteFelder.KontaktTelefon" Typ="tel"
+                          Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.KontaktTelefon" Version="@_einstellungen.Version"
+                          NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
         </Card>
 
         <Card Titel="Anmeldelinks">
