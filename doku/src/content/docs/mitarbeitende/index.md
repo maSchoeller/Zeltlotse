@@ -6,7 +6,7 @@ sidebar:
   order: 0
 ---
 
-**Wer:** die Mitarbeitenden einer Freizeit, also das **Team**. Ins Team kommt, wer sich über den Anmeldelink für Mitarbeitende anmeldet und von der Leitung bestätigt wird. Die Rechte entstehen erst mit dieser Bestätigung.
+**Wer:** die Mitarbeitenden einer Freizeit, also das **Team**. Ins Team kommt, wer sich über den Anmeldelink für Mitarbeitende anmeldet und von der Leitung bestätigt wird. Die Rechte entstehen erst mit dieser Bestätigung. Auf der öffentlichen [Freizeitseite](/eltern/freizeitseite/) erscheint das Team mit Vorname, Rolle und, falls im Konto eingetragen, der Herkunft.
 
 Mitarbeitende melden sich mit der eigenen Mail-Adresse an, per Login-Link aus der Mail, per Login-Code in der installierten App oder mit Passwort. Wie das geht, steht unter [Anmelden](/erste-schritte/anmelden/).
 

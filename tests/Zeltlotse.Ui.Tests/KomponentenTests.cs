@@ -137,6 +137,65 @@ public sealed class KomponentenTests : BunitContext
         Assert.Equal(eingabe.Id, cut.Find("label").GetAttribute("for"));
     }
 
+    [Fact]
+    public void Feld_mehrzeilig_ist_ein_textarea_mit_Label_Hinweis_und_Wert()
+    {
+        var cut = Render<Feld>(ps => ps.Add(p => p.Label, "Beschreibung").Add(p => p.Id, "beschreibung").Add(p => p.Mehrzeilig, true)
+            .Add(p => p.Wert, "Zeile 1\nZeile 2").Add(p => p.Hinweis, "Höchstens 2000 Zeichen").AddUnmatched("maxlength", "2000"));
+
+        var kinder = cut.Find(".elkw-field").Children;
+        Assert.Equal("LABEL", kinder[0].TagName);
+        Assert.Equal("beschreibung", kinder[0].GetAttribute("for"));
+        Assert.Equal("TEXTAREA", kinder[1].TagName);
+        Assert.Equal("beschreibung", kinder[1].Id);
+        Assert.Equal("Zeile 1\nZeile 2", kinder[1].GetAttribute("value") ?? kinder[1].TextContent);
+        Assert.Equal("2000", kinder[1].GetAttribute("maxlength"));
+        Assert.Equal("beschreibung-hinweis", kinder[1].GetAttribute("aria-describedby"));
+        Assert.Empty(cut.FindAll("input"));
+    }
+
+    // ---------- Dachzeile ----------
+
+    [Fact]
+    public void Dachzeile_ist_ein_Absatz_mit_der_Kicker_Klasse()
+    {
+        var cut = Render<Dachzeile>(ps => ps.AddChildContent("Freizeit · 2. bis 13. August 2027"));
+
+        cut.MarkupMatches("""<p class="elkw-kicker">Freizeit · 2. bis 13. August 2027</p>""");
+    }
+
+    // ---------- Personenliste ----------
+
+    [Fact]
+    public void Personenliste_zeigt_Avatar_mit_Initialen_ohne_Vorlesen_Name_und_Zeile()
+    {
+        var cut = Render<PersonenListe>(ps => ps.Add(p => p.Personen, new[]
+        {
+            new PersonenEintrag("MZ", "Miriam", "Leitung · aus Musterstadt"),
+            new PersonenEintrag("J", "Jonas", null),
+        }));
+
+        var liste = cut.Find("ul.elkw-people");
+        var eintraege = liste.Children;
+        Assert.Equal(2, eintraege.Length);
+        Assert.Equal(
+            """<span class="elkw-avatar" aria-hidden="true">MZ</span>""",
+            eintraege[0].QuerySelector(".elkw-avatar")!.OuterHtml);
+        Assert.Equal("Miriam", eintraege[0].QuerySelector(".elkw-people__who strong")!.TextContent);
+        Assert.Equal("Leitung · aus Musterstadt", eintraege[0].QuerySelector(".elkw-people__who span")!.TextContent);
+        Assert.Equal("J", eintraege[1].QuerySelector(".elkw-avatar")!.TextContent);
+        Assert.Null(eintraege[1].QuerySelector(".elkw-people__who span"));
+        Assert.Empty(cut.FindAll("button, a, img"));
+    }
+
+    [Fact]
+    public void Personenliste_ohne_Personen_zeigt_nichts()
+    {
+        var cut = Render<PersonenListe>(ps => ps.Add(p => p.Personen, Array.Empty<PersonenEintrag>()));
+
+        Assert.Empty(cut.FindAll("ul"));
+    }
+
     // ---------- Balken ----------
 
     [Theory]

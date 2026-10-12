@@ -6,7 +6,7 @@
    „Inzwischen geändert – neu laden?“; Netzfehler oder 5xx → „Nicht gespeichert.“ mit „Erneut versuchen“, der Wert
    bleibt stehen. Mit KonfliktText zeigt ein 409 stattdessen eine Fehlermeldung mit diesem Text (wenn die Ressource gerade
    gesperrt sein kann). Zusammengesetzt nur aus Bausteinen von Ui.Komponenten, ohne eigene Klassen. *@
-<Feld Label="@Label" Id="@Id" Name="@Feldname" Typ="@Typ" Hinweis="@(_zustand == SpeicherZustand.Keiner ? Hinweis : null)"
+<Feld Label="@Label" Id="@Id" Name="@Feldname" Typ="@Typ" Mehrzeilig="@Mehrzeilig" Hinweis="@(_zustand == SpeicherZustand.Keiner ? Hinweis : null)"
       Wert="@_eingabe" @onfocus="Fokus" @oninput="Eingabe" @onblur="VerlassenAsync">
     <UnterDemFeld>
         @if (_zustand == SpeicherZustand.Konflikt && KonfliktText is not null)
@@ -55,6 +55,9 @@
     [Parameter] public string Typ { get; set; } = "text";
 
     [Parameter] public string? Hinweis { get; set; }
+
+    /// <summary>Mehrzeiliger Text (z. B. eine Beschreibung): ein <c>textarea</c>; gespeichert wird weiter beim Verlassen.</summary>
+    [Parameter] public bool Mehrzeilig { get; set; }
 
     /// <summary>
     /// Text für eine Antwort <c>409</c> statt „Inzwischen geändert – neu laden?“, wenn die Ressource gerade gesperrt sein kann

@@ -54,6 +54,49 @@ public static class Anzeige
     /// <summary>Zeitraum als „TT.MM.JJJJ – TT.MM.JJJJ“.</summary>
     public static string Zeitraum(DateOnly ersterTag, DateOnly letzterTag) => $"{Datum(ersterTag)} – {Datum(letzterTag)}";
 
+    /// <summary>
+    /// Zeitraum in Worten für die öffentlichen Seiten: „2. bis 13. August 2027“, „30. Juli bis 2. August 2027“,
+    /// „30. Dezember 2027 bis 2. Januar 2028“; ein einzelner Tag „2. August 2027“.
+    /// </summary>
+    public static string ZeitraumLang(DateOnly ersterTag, DateOnly letzterTag)
+    {
+        string Tag(DateOnly tag) => tag.ToString("d.", Deutsch);
+        string Monat(DateOnly tag) => tag.ToString("MMMM", Deutsch);
+        string Jahr(DateOnly tag) => tag.ToString("yyyy", Deutsch);
+
+        if (ersterTag == letzterTag)
+        {
+            return $"{Tag(ersterTag)} {Monat(ersterTag)} {Jahr(ersterTag)}";
+        }
+
+        if (ersterTag.Year != letzterTag.Year)
+        {
+            return $"{Tag(ersterTag)} {Monat(ersterTag)} {Jahr(ersterTag)} bis {Tag(letzterTag)} {Monat(letzterTag)} {Jahr(letzterTag)}";
+        }
+
+        return ersterTag.Month == letzterTag.Month
+            ? $"{Tag(ersterTag)} bis {Tag(letzterTag)} {Monat(letzterTag)} {Jahr(letzterTag)}"
+            : $"{Tag(ersterTag)} {Monat(ersterTag)} bis {Tag(letzterTag)} {Monat(letzterTag)} {Jahr(letzterTag)}";
+    }
+
+    /// <summary>Zeile einer Person des Teams auf der Freizeitseite: „Leitung · aus Musterstadt“ bzw. nur „Leitung“.</summary>
+    public static string TeamZeile(FreizeitRolle rolle, string? herkunft) =>
+        string.IsNullOrWhiteSpace(herkunft) ? Rolle(rolle) : $"{Rolle(rolle)} · aus {herkunft.Trim()}";
+
+    /// <summary>„1 Monat“, „12 Monate“.</summary>
+    public static string Monate(int anzahl) => anzahl == 1 ? "1 Monat" : $"{anzahl.ToString(Deutsch)} Monate";
+
+    /// <summary>„1 Tag“, „30 Tage“.</summary>
+    public static string Tage(int anzahl) => anzahl == 1 ? "1 Tag" : $"{anzahl.ToString(Deutsch)} Tage";
+
+    /// <summary>Aufzählung mit Komma und „und“: „Führungszeugnis, JuLeiCa und Erste Hilfe“.</summary>
+    public static string Aufzaehlung(IReadOnlyList<string> teile) => teile.Count switch
+    {
+        0 => "",
+        1 => teile[0],
+        _ => $"{string.Join(", ", teile.Take(teile.Count - 1))} und {teile[^1]}",
+    };
+
     /// <summary>Tag ohne Uhrzeit als TT.MM.JJJJ.</summary>
     public static string Datum(DateOnly tag) => tag.ToString("dd.MM.yyyy", Deutsch);
 

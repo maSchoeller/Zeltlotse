@@ -5,6 +5,7 @@ using Zeltlotse.Freizeiten.Contracts.Rollen;
 using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
 using Zeltlotse.Freizeiten.Daten;
 using Zeltlotse.Freizeiten.Datenschutz;
+using Zeltlotse.Freizeiten.Freizeitseite;
 using Zeltlotse.Freizeiten.Nachweise;
 using Zeltlotse.Freizeiten.Rechte;
 using Zeltlotse.Freizeiten.Startseite;
@@ -31,6 +32,7 @@ public static class FreizeitenModul
         services.AddScoped<IFreizeitRollenLesen, FreizeitRollenLesen>();
         services.AddScoped<IFreizeitZeitpunkte, FreizeitZeitpunkteLesen>();
         services.AddScoped<IFreizeitEndenLesen, FreizeitEndenLesen>();
+        services.AddScoped<IBestaetigteTeilnehmende, KeineBestaetigtenTeilnehmenden>();
         services.EmpfaengtEreignis<PersonGeloescht, FreizeitPersonLoeschen>();
         services.AddScoped<IDatenauskunft, FreizeitenAuskunft>();
         services.AddScoped<ILoeschlauf, FreizeitenLoeschlauf>();
@@ -41,7 +43,8 @@ public static class FreizeitenModul
     /// Bindet die Endpunkte des Moduls in die <c>/api</c>-Gruppe ein (FR-6, FR-45). Rechte prüft der Host zentral über die
     /// Merkmale (AD-12): Organisations-Routen (Liste, Anlegen, Verwalten, Einladen) tragen <c>.NurOrgRolle(…)</c> mit
     /// <c>{orgId:guid}</c>, Freizeit-Routen <c>.NurFreizeitRolle(…)</c> mit <c>{freizeitId:guid}</c>; nie beide. Die
-    /// Warnhinweise zu Pflicht-Nachweisen (FR-11) sieht die Leitung mit denselben Rollen wie „Nachweise prüfen“.
+    /// Warnhinweise zu Pflicht-Nachweisen (FR-11) sieht die Leitung mit denselben Rollen wie „Nachweise prüfen“. Die Einstellungen
+    /// der Freizeitseite und die Anmeldelinks pflegt nur die Leitung (Story 2-1); die beiden Seiten eines Anmeldelinks sind anonym.
     /// </summary>
     public static IEndpointRouteBuilder MapFreizeitenEndpoints(this IEndpointRouteBuilder api)
     {
@@ -55,10 +58,18 @@ public static class FreizeitenModul
         var freizeiten = api.MapGroup("/freizeiten");
         freizeiten.MapPost("/leitung/annehmen", LeitungAnnehmenEndpunkt.Annehmen).Zugriffsbegrenzt();
 
+        // Anmeldelinks (AD-11): anonym, zugriffsbegrenzt; der Mandant kommt aus dem Token, nie aus der Route (AD-6).
+        var oeffentlich = freizeiten.MapGroup("/oeffentlich/{token}").AllowAnonymous().Zugriffsbegrenzt();
+        oeffentlich.MapGet("", FreizeitseiteOeffentlichEndpunkt.Laden);
+        oeffentlich.MapGet("/vertrauensseite", VertrauensseiteEndpunkt.Laden);
+
         var freizeit = freizeiten.MapGroup($"/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}");
         freizeit.MapGet("", FreizeitLadenEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Mitarbeit);
         freizeit.MapGet("/kontext", FreizeitKontextEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Mitarbeit);
         freizeit.MapGet("/nachweis-warnungen", NachweisWarnungenEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.NachweisePruefen);
+        freizeit.MapGet("/freizeitseite", FreizeitseiteLadenEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Einstellungen);
+        freizeit.MapPatch("/freizeitseite", FreizeitseiteFeldAendernEndpunkt.Aendern).NurFreizeitRolle(FreizeitRechte.Einstellungen);
+        freizeit.MapPost("/anmeldelinks/{art}/erneuern", AnmeldelinkErneuernEndpunkt.Erneuern).NurFreizeitRolle(FreizeitRechte.Einstellungen);
 
         api.MapGet("/ich/freizeiten", MeineFreizeitenEndpunkt.Laden).Organisationsuebergreifend();
         return api;

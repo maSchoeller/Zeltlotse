@@ -77,4 +77,10 @@ public static class Aktionsschluessel
 
     /// <summary>Die Löschfristen der Organisation bearbeiten (Org-Admin, in <c>GET /api/organisationen/{orgId}</c>, NFR-5).</summary>
     public const string LoeschfristenVerwalten = "loeschfristen-verwalten";
+
+    /// <summary>
+    /// Einstellungen der Freizeit: Freizeitseite bearbeiten und Anmeldelinks sehen und erneuern (Leitung im Freizeit-Kontext,
+    /// FR-15, FR-16).
+    /// </summary>
+    public const string FreizeitEinstellungen = "freizeit-einstellungen";
 }

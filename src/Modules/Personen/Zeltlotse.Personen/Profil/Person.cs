@@ -21,6 +21,11 @@ internal sealed class Person : Aggregat
 
     public string? Nachname { get; private set; }
 
+    /// <summary>
+    /// Freiwillig (FR-15): der Wohnort, z. B. „Musterstadt“. Erscheint auf der Freizeitseite jeder Freizeit, in der die Person mitarbeitet.
+    /// </summary>
+    public string? Herkunft { get; private set; }
+
     /// <summary>Pflicht bei Kinderprofilen (18-Grenze, FR-4); sonst bisher leer.</summary>
     public DateOnly? Geburtsdatum { get; private set; }
 
@@ -52,6 +57,7 @@ internal sealed class Person : Aggregat
     {
         ProfilFeld.Vorname => Vorname,
         ProfilFeld.Nachname => Nachname,
+        ProfilFeld.Herkunft => Herkunft,
         _ => throw new ArgumentOutOfRangeException(nameof(feld), feld, null),
     };
 
@@ -83,6 +89,9 @@ internal sealed class Person : Aggregat
                 break;
             case ProfilFeld.Nachname:
                 Nachname = wert;
+                break;
+            case ProfilFeld.Herkunft:
+                Herkunft = wert;
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(feld), feld, null);

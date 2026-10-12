@@ -483,4 +483,181 @@ public sealed class FreizeitenSeitenTests : BunitContext
         cut.WaitForAssertion(() => Assert.Contains(AnmeldungAbschluss.FehlerText, cut.Markup, StringComparison.Ordinal));
         Assert.Empty(cut.FindAll(".elkw-loading"));
     }
+
+    // ---------- Story 2-1: Einstellungen, Freizeitseite ----------
+
+    [Fact]
+    public void Texte_fuer_Zeitraum_in_Worten_Team_Zeile_Monate_Tage_und_Aufzaehlung()
+    {
+        Assert.Equal("2. bis 13. August 2027", Anzeige.ZeitraumLang(new DateOnly(2027, 8, 2), new DateOnly(2027, 8, 13)));
+        Assert.Equal("30. Juli bis 2. August 2027", Anzeige.ZeitraumLang(new DateOnly(2027, 7, 30), new DateOnly(2027, 8, 2)));
+        Assert.Equal("30. Dezember 2027 bis 2. Januar 2028", Anzeige.ZeitraumLang(new DateOnly(2027, 12, 30), new DateOnly(2028, 1, 2)));
+        Assert.Equal("2. August 2027", Anzeige.ZeitraumLang(new DateOnly(2027, 8, 2), new DateOnly(2027, 8, 2)));
+        Assert.Equal("Leitung · aus Musterstadt", Anzeige.TeamZeile(FreizeitRolle.Leitung, " Musterstadt "));
+        Assert.Equal("Team", Anzeige.TeamZeile(FreizeitRolle.Team, null));
+        Assert.Equal(("1 Monat", "12 Monate", "1 Tag", "30 Tage"), (Anzeige.Monate(1), Anzeige.Monate(12), Anzeige.Tage(1), Anzeige.Tage(30)));
+        Assert.Equal(("", "A", "A und B", "A, B und C"), (Anzeige.Aufzaehlung([]), Anzeige.Aufzaehlung(["A"]), Anzeige.Aufzaehlung(["A", "B"]), Anzeige.Aufzaehlung(["A", "B", "C"])));
+    }
+
+    [Fact]
+    public async Task Client_laedt_Einstellungen_erneuert_Links_und_liest_die_oeffentlichen_Seiten()
+    {
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitId}/freizeitseite", () => Json(Einstellungen()));
+        _server.BeiDerReihe(
+            HttpMethod.Post,
+            $"/api/freizeiten/{FreizeitId}/anmeldelinks/mitarbeitende/erneuern",
+            () => Json(new { art = "Mitarbeitende", adresse = "https://zeltlotse.example/freizeit/neu" }),
+            () => NachgebildeterHandler.Json(HttpStatusCode.Conflict, """{"code":"freizeit-abgeschlossen"}""", "application/problem+json"),
+            () => new HttpResponseMessage(HttpStatusCode.Forbidden));
+        _server.Bei(HttpMethod.Get, "/api/freizeiten/oeffentlich/tok", () => new HttpResponseMessage(HttpStatusCode.NotFound));
+        _server.Bei(HttpMethod.Get, "/api/freizeiten/oeffentlich/tok/vertrauensseite", () => Json(new
+        {
+            organisation = "CVJM",
+            name = "Zeltlager",
+            ersterTag = "2027-08-02",
+            letzterTag = "2027-08-13",
+            freigabeIntervallTage = 30,
+            freigabeBis = "2027-09-12",
+            freizeitDatenMonate = 12,
+            nachweisBestaetigungMonate = 12,
+            pflichtNachweise = new[] { "Führungszeugnis" },
+        }));
+        var client = Services.GetRequiredService<FreizeitenApiClient>();
+        var art = Zeltlotse.Api.Contracts.Freizeiten.AnmeldelinkArt.Mitarbeitende;
+
+        var einstellungen = await client.FreizeitseiteLadenAsync(FreizeitId, Abbruch);
+        var erneuert = await client.AnmeldelinkErneuernAsync(FreizeitId, art, Abbruch);
+        var abgeschlossen = await client.AnmeldelinkErneuernAsync(FreizeitId, art, Abbruch);
+        var verboten = await client.AnmeldelinkErneuernAsync(FreizeitId, art, Abbruch);
+        var seite = await client.FreizeitseiteOeffentlichLadenAsync("tok", Abbruch);
+        var vertrauen = await client.VertrauensseiteLadenAsync("tok", Abbruch);
+
+        Assert.Equal((7u, "Eine Woche.", "Kapf", (int?)40), (einstellungen!.Version, einstellungen.Beschreibung, einstellungen.Ort, einstellungen.HoechstzahlTeilnehmende));
+        Assert.Equal(2, einstellungen.Anmeldelinks.Count);
+        Assert.Equal("https://zeltlotse.example/freizeit/neu", erneuert.Link!.Adresse);
+        Assert.Equal(new AnmeldelinkErneuernErgebnis(null, Abgeschlossen: true), abgeschlossen);
+        Assert.Equal(new AnmeldelinkErneuernErgebnis(null, Abgeschlossen: false), verboten);
+        Assert.Null(seite);
+        Assert.Equal(["Führungszeugnis"], vertrauen!.PflichtNachweise);
+    }
+
+    [Fact]
+    public void Einstellungen_zeigen_Felder_der_Freizeitseite_und_beide_Anmeldelinks()
+    {
+        EinstellungenAntworten([Aktionsschluessel.FreizeitEinstellungen]);
+
+        var cut = Render<Einstellungen>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        cut.WaitForAssertion(() => Assert.Equal("Kapf", cut.Find("#freizeitseite-ort").GetAttribute("value")));
+        var beschreibung = cut.Find("#freizeitseite-beschreibung");
+        Assert.Equal("TEXTAREA", beschreibung.TagName);
+        Assert.Equal("Eine Woche.", beschreibung.GetAttribute("value") ?? beschreibung.TextContent);
+        Assert.Equal("40", cut.Find("#freizeitseite-hoechstzahl").GetAttribute("value"));
+        Assert.Equal("number", cut.Find("#freizeitseite-hoechstzahl").GetAttribute("type"));
+        Assert.Equal(["Für Teilnehmende", "Für Mitarbeitende"], cut.FindAll("h3").Select(h => h.TextContent));
+        Assert.Contains("https://zeltlotse.example/freizeit/tn", cut.Markup, StringComparison.Ordinal);
+        var oeffnen = cut.FindAll("a").Where(a => a.TextContent == "Freizeitseite öffnen").Select(a => a.GetAttribute("href")).ToList();
+        Assert.Equal(["https://zeltlotse.example/freizeit/tn", "https://zeltlotse.example/freizeit/ma"], oeffnen);
+        Assert.Equal(2, cut.FindAll("button").Count(b => b.TextContent == "Neuen Link erzeugen"));
+    }
+
+    [Fact]
+    public void Neuen_Link_erzeugen_fragt_inline_nach_und_zeigt_danach_den_neuen_Link()
+    {
+        EinstellungenAntworten([Aktionsschluessel.FreizeitEinstellungen]);
+        _server.Bei(
+            HttpMethod.Post,
+            $"/api/freizeiten/{FreizeitId}/anmeldelinks/teilnehmende/erneuern",
+            () => Json(new { art = "Teilnehmende", adresse = "https://zeltlotse.example/freizeit/neu" }));
+        var cut = Render<Einstellungen>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("h3").Count));
+
+        cut.FindAll("button").First(b => b.TextContent == "Neuen Link erzeugen").Click();
+        Assert.Contains("Der bisherige Link wird ungültig.", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain(_server.Anfragen, a => a.Methode == HttpMethod.Post && a.Pfad.EndsWith("/erneuern", StringComparison.Ordinal));
+        cut.FindAll("button").First(b => b.TextContent == "Ja, neuen Link erzeugen").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Neuer Link für Teilnehmende ist erzeugt.", cut.Markup, StringComparison.Ordinal));
+        Assert.Contains("https://zeltlotse.example/freizeit/neu", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("https://zeltlotse.example/freizeit/tn", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("https://zeltlotse.example/freizeit/ma", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Einstellungen_ohne_Anmeldelinks_bieten_Link_erzeugen_an()
+    {
+        EinstellungenAntworten([Aktionsschluessel.FreizeitEinstellungen], mitLinks: false);
+
+        var cut = Render<Einstellungen>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".elkw-empty").Count));
+        Assert.All(cut.FindAll(".elkw-empty"), e => Assert.Contains("Noch kein Link.", e.TextContent, StringComparison.Ordinal));
+        Assert.Equal(2, cut.FindAll("button").Count(b => b.TextContent == "Link erzeugen"));
+    }
+
+    [Fact]
+    public void Einstellungen_ohne_erlaubte_Aktion_sind_nicht_verfuegbar_und_die_Startseite_zeigt_keinen_Zugang()
+    {
+        EinstellungenAntworten([]);
+        FreizeitStartAntworten();
+
+        var einstellungen = Render<Einstellungen>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+        var start = Render<FreizeitStart>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        einstellungen.WaitForAssertion(() => Assert.Equal("Diese Seite ist nicht verfügbar.", einstellungen.Find("h1").TextContent));
+        start.WaitForAssertion(() => Assert.Equal("Zeltlager Sommer 2027", start.Find("h1").TextContent));
+        Assert.DoesNotContain(start.FindAll("a"), a => a.TextContent == "Einstellungen");
+        Assert.DoesNotContain(_server.Anfragen, a => a.Pfad == $"/api/freizeiten/{FreizeitId}/freizeitseite");
+    }
+
+    [Fact]
+    public void Freizeit_Startseite_zeigt_der_Leitung_den_Weg_zu_den_Einstellungen()
+    {
+        EinstellungenAntworten([Aktionsschluessel.FreizeitEinstellungen]);
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitId}", () => Json(new
+        {
+            id = FreizeitId,
+            name = "Zeltlager Sommer 2027",
+            ersterTag = "2027-08-02",
+            letzterTag = "2027-08-13",
+            phase = "InVorbereitung",
+            freigabeBis = "2027-09-12",
+            leitung = Array.Empty<object>(),
+        }));
+
+        var cut = Render<FreizeitStart>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        cut.WaitForAssertion(() => Assert.Equal(
+            $"freizeiten/{FreizeitId}/einstellungen",
+            cut.FindAll("a").Single(a => a.TextContent == "Einstellungen").GetAttribute("href")));
+    }
+
+    private static object Einstellungen(bool mitLinks = true) => new
+    {
+        version = 7,
+        beschreibung = "Eine Woche.",
+        ort = "Kapf",
+        hoechstzahlTeilnehmende = 40,
+        anmeldelinks = mitLinks
+            ? new object[]
+            {
+                new { art = "Teilnehmende", adresse = "https://zeltlotse.example/freizeit/tn" },
+                new { art = "Mitarbeitende", adresse = "https://zeltlotse.example/freizeit/ma" },
+            }
+            : [],
+    };
+
+    private void EinstellungenAntworten(string[] erlaubt, bool mitLinks = true)
+    {
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitId}/kontext", () => Json(new
+        {
+            freizeitId = FreizeitId,
+            name = "Zeltlager Sommer 2027",
+            phase = "InVorbereitung",
+            rollen = new[] { "Leitung" },
+            schalter = Array.Empty<string>(),
+            erlaubt,
+        }));
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitId}/freizeitseite", () => Json(Einstellungen(mitLinks)));
+    }
 }

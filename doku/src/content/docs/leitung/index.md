@@ -12,6 +12,7 @@ sidebar:
 
 Die Leitung darf alles, was das [Team](/mitarbeitende/) darf. **Nur die Leitung** darf außerdem:
 
+- die Freizeitseite einrichten (Beschreibung, Ort, Höchstzahl) und die Anmeldelinks teilen und erneuern – siehe [Freizeitseite einrichten](/leitung/freizeitseite-einrichten/),
 - Anmeldungen bestätigen, Absagen eintragen und das Nachrücken bestimmen,
 - Erinnerungen auslösen, zum Beispiel an fehlende Nachweise – siehe [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/),
 - den Stand der Nachweise im Team sehen und Nachweise prüfen – siehe [Nachweise prüfen](/leitung/nachweise-pruefen/),

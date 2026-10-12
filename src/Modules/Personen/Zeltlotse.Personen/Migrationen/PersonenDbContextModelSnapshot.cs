@@ -344,6 +344,10 @@ namespace Zeltlotse.Personen.Migrationen
                     b.Property<DateOnly?>("Geburtsdatum")
                         .HasColumnType("date");
 
+                    b.Property<string>("Herkunft")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
                     b.Property<string>("Nachname")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");

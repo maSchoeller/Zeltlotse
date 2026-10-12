@@ -21,6 +21,7 @@ using Zeltlotse.Public;
 using Zeltlotse.SharedKernel;
 using Zeltlotse.SharedKernel.Datenschutz;
 using Zeltlotse.SharedKernel.Pipeline;
+using Zeltlotse.SharedKernel.Zugangslinks;
 using Zeltlotse.Sicherheit;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,6 +30,8 @@ builder.AddServiceDefaults();
 
 builder.Services.AddSharedKernel();
 builder.Services.AddOutboxZustellDienst();
+// AD-11: dauerhaft geteilte Links (Anmeldelinks) verschlüsselt speichern, damit sie sich wieder anzeigen lassen.
+builder.Services.AddLinkSchutz();
 builder.Services.AddProtokollSchwaerzung();
 builder.Services.AddFehlerform();
 builder.Services.AddWebSicherheit();

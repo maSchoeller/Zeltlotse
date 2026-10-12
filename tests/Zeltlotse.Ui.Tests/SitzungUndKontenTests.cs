@@ -172,7 +172,7 @@ public sealed class SitzungUndKontenTests : BunitContext
         Assert.Null(await personen.ProfilLadenAsync(Abbruch));
         var profil = await personen.ProfilLadenOderAnlegenAsync(Abbruch);
 
-        Assert.Equal(new Zeltlotse.Api.Contracts.Personen.ProfilAntwort(7, "Jonas", null), profil);
+        Assert.Equal(new Zeltlotse.Api.Contracts.Personen.ProfilAntwort(7, "Jonas", null, null), profil);
         Assert.Equal(["GET /api/ich/profil", "GET /api/ich/profil", "POST /api/ich/profil"], server.Anfragen.Select(a => $"{a.Methode} {a.Pfad}"));
     }
 

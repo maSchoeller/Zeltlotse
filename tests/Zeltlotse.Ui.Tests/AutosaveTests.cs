@@ -393,4 +393,26 @@ public sealed class AutosaveTests : BunitContext
         Assert.Equal(new AutosaveErgebnis.Gespeichert(8, null), ergebnis);
         Assert.Equal("""{"version":7,"alterWert":"Wald","ort":null}""", Assert.Single(_server.Anfragen).Koerper);
     }
+
+    [Fact]
+    public void Mehrzeilig_speichert_ein_textarea_beim_Verlassen()
+    {
+        _server.Bei(HttpMethod.Patch, Pfad, Gespeichert(8, "beschreibung", "Zeile 1\nZeile 2"));
+        var feld = Render<AutosaveFeld>(ps => ps
+            .Add(p => p.Label, "Beschreibung")
+            .Add(p => p.Feldname, "beschreibung")
+            .Add(p => p.Pfad, Pfad)
+            .Add(p => p.Wert, null)
+            .Add(p => p.Version, 7u)
+            .Add(p => p.Mehrzeilig, true));
+
+        var eingabe = feld.Find("textarea");
+        eingabe.Focus();
+        eingabe.Input("Zeile 1\nZeile 2");
+        eingabe.Blur();
+
+        var koerper = Koerper(Assert.Single(_server.Anfragen));
+        Assert.Equal("Zeile 1\nZeile 2", koerper.GetProperty("beschreibung").GetString());
+        Assert.StartsWith("Gespeichert · ", feld.Find("p[role=status]").TextContent, StringComparison.Ordinal);
+    }
 }

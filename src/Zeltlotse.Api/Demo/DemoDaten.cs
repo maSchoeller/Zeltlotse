@@ -2,7 +2,10 @@ using System.Globalization;
 using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Zeltlotse.Api.Contracts.Personen;
+using Zeltlotse.Api.Contracts.Freizeiten;
 using Zeltlotse.Freizeiten.Daten;
+using Zeltlotse.Freizeiten.Domaene;
+using Zeltlotse.Freizeiten.Freizeitseite;
 using Zeltlotse.Freizeiten.Leitung;
 using Zeltlotse.Freizeiten.Verwaltung;
 using Zeltlotse.Konten.Anmelden;
@@ -47,6 +50,8 @@ namespace Zeltlotse.Api.Demo;
 /// zeigt die Freizeit Warnhinweise; eine Demo-Erinnerung gibt es nicht, also verschickt das Einspielen keine Mails.
 /// Story 1-7: Miriam hat Jonas' Nachweise eingesehen: ein Eintrag im Einsicht-Protokoll (Organisation und Freizeit der Demo), nur
 /// wenn es noch keinen Eintrag von Miriam über Jonas gibt. Die Löschfristen der Demo-Organisation haben die Vorgabewerte.
+/// Story 2-1: Jonas und Miriam tragen die Herkunft aus dem Katalog; die Demo-Freizeit hat Ort, Beschreibung und Höchstzahl
+/// (je nur, wenn das Feld noch leer ist) und ihre beiden Anmeldelinks (fehlt einer, entsteht er per Erneuern).
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -89,6 +94,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await RichtlinieAsync(abbruch);
         await NachweiseAsync(abbruch);
         await ZugriffsprotokollAsync(abbruch);
+        await HerkunftAsync(abbruch);
+        await FreizeitseiteAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -334,6 +341,71 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         }
 
         await sender.Send(new EinsichtProtokollieren(jonas, miriam, organisationId, freizeitId, EinsichtZweck.NachweiseEingesehen), abbruch);
+    }
+
+    /// <summary>Story 2-1: die Herkunft der Demo-Personen, nur wenn sie im Profil noch fehlt.</summary>
+    private async Task HerkunftAsync(CancellationToken abbruch)
+    {
+        foreach (var person in DemoKatalog.Personen.Where(p => p.Mail is not null && p.Herkunft is not null))
+        {
+            await using var scope = scopes.CreateAsyncScope();
+            var dienste = scope.ServiceProvider;
+            var sender = dienste.GetRequiredService<ISender>();
+            var personId = (await sender.Send(new KontoSicherstellen(person.Mail!), abbruch)).PersonId;
+            var profil = await dienste.GetRequiredService<PersonenLeseDbContext>().Personen
+                .Where(p => p.Id == personId)
+                .Select(p => new { p.Herkunft, p.Version })
+                .SingleAsync(abbruch);
+            if (profil.Herkunft is not null)
+            {
+                continue;
+            }
+
+            if (await sender.Send(new ProfilFeldAendern(personId, ProfilFeld.Herkunft, profil.Version, null, person.Herkunft), abbruch) is not ProfilAenderung.Gespeichert)
+            {
+                throw new InvalidOperationException("Demo-Profil: Die Herkunft ließ sich nicht setzen.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Story 2-1: Ort, Beschreibung und Höchstzahl der Demo-Freizeit (je nur, wenn leer) und beide Anmeldelinks (fehlt einer, entsteht
+    /// er). Ein vorhandener Link bleibt, damit Screenshots und geteilte Links stabil sind.
+    /// </summary>
+    private async Task FreizeitseiteAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        var organisationId = await dienste.GetRequiredService<OrganisationenLeseDbContext>().Organisationen
+            .Where(o => o.Name == DemoKatalog.Organisation.Name)
+            .Select(o => o.Id)
+            .SingleAsync(abbruch);
+        dienste.GetRequiredService<MandantenKontext>().Setzen(organisationId);
+        var lesen = dienste.GetRequiredService<FreizeitenLeseDbContext>();
+        var freizeit = await lesen.Freizeiten.SingleAsync(f => f.Name == DemoKatalog.Freizeit.Name, abbruch);
+        var werte = new (FreizeitseiteFeld Feld, string Wert)[]
+        {
+            (FreizeitseiteFeld.Ort, DemoKatalog.Freizeit.Ort),
+            (FreizeitseiteFeld.Beschreibung, DemoKatalog.Freizeit.Beschreibung),
+            (FreizeitseiteFeld.HoechstzahlTeilnehmende, DemoKatalog.Freizeit.HoechstzahlTeilnehmende.ToString(CultureInfo.InvariantCulture)),
+        };
+        foreach (var (feld, wert) in werte.Where(w => freizeit.Wert(w.Feld) is null))
+        {
+            if (await sender.Send(new FreizeitseiteFeldAendernCommand(freizeit.Id, feld, freizeit.Version, null, wert), abbruch) is not FreizeitseiteAenderung.Gespeichert)
+            {
+                throw new InvalidOperationException($"Demo-Freizeit: {feld} ließ sich nicht setzen.");
+            }
+        }
+
+        var vorhanden = await lesen.Anmeldelinks.Where(l => l.FreizeitId == freizeit.Id).Select(l => l.Art).ToListAsync(abbruch);
+        foreach (var art in new[] { LinkArt.Teilnehmende, LinkArt.Mitarbeitende }.Where(a => !vorhanden.Contains(a)))
+        {
+            if (await sender.Send(new AnmeldelinkErneuernCommand(freizeit.Id, art), abbruch) is not AnmeldelinkErneuerung.Erneuert)
+            {
+                throw new InvalidOperationException("Demo-Freizeit: Der Anmeldelink ließ sich nicht erzeugen.");
+            }
+        }
     }
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Demo-Daten eingespielt ({AnzahlPersonen} Personen im Katalog, {NeueKonten} neue Konten).")]

@@ -18,7 +18,9 @@ internal static class DemoKatalog
         "Zeltlager Sommer 2027",
         "Zeltplatz am Mühlbach, Musterhausen",
         new DateOnly(2027, 8, 2),
-        new DateOnly(2027, 8, 13));
+        new DateOnly(2027, 8, 13),
+        "Zwölf Tage Zeltlager am Mühlbach: Geländespiel, Lagerfeuer, Bachwanderung und gemeinsames Essen im großen Zelt.\nFür Kinder und Jugendliche von 9 bis 14 Jahren.",
+        40);
 
     /// <summary>
     /// Jonas' Nachweise (Story 1-5): Art, Ausstellungsdatum und eine kleine erfundene Demo-Datei. Ohne Präventionsschulung, damit
@@ -35,8 +37,8 @@ internal static class DemoKatalog
     [
         new("Gerd", "Betreiber", DemoRolle.GlobalAdmin, "gerd.betreiber@example.org"),
         new("Andrea", "Beispiel", DemoRolle.OrgAdmin, "andrea.beispiel@example.org"),
-        new("Jonas", "Hüttner", DemoRolle.Leitung, "jonas.huettner@example.org"),
-        new("Miriam", "Zeltner", DemoRolle.Leitung, "miriam.zeltner@example.org"),
+        new("Jonas", "Hüttner", DemoRolle.Leitung, "jonas.huettner@example.org", Herkunft: "Musterstadt"),
+        new("Miriam", "Zeltner", DemoRolle.Leitung, "miriam.zeltner@example.org", Herkunft: "Musterstadt"),
         new("Lea", "Feuerstein", DemoRolle.Team, "lea.feuerstein@example.org"),
         new("Tobias", "Wanderer", DemoRolle.Team, "tobias.wanderer@example.org"),
         new("Sara", "Kochlöffel", DemoRolle.Team, "sara.kochloeffel@example.org"),
@@ -152,7 +154,9 @@ internal static class DemoDateien
     }
 }
 
-internal sealed record DemoFreizeit(string Name, string Ort, DateOnly Beginn, DateOnly Ende);
+/// <param name="Beschreibung">Text der Freizeitseite (Story 2-1).</param>
+/// <param name="HoechstzahlTeilnehmende">Höchstzahl Teilnehmende auf der Freizeitseite (Story 2-1).</param>
+internal sealed record DemoFreizeit(string Name, string Ort, DateOnly Beginn, DateOnly Ende, string Beschreibung, int HoechstzahlTeilnehmende);
 
 /// <summary>
 /// Rolle einer Demo-Person; <see cref="Kind"/> ist ein Kinderprofil im Familienkonto, ohne eigenes Konto (Paul ist schon
@@ -171,10 +175,12 @@ internal enum DemoRolle
 
 /// <param name="Mail">Anmelde-Adresse; nur Erwachsene haben eine.</param>
 /// <param name="Familie">Familienkonto, zu dem Eltern und Kinder gehören.</param>
+/// <param name="Herkunft">Wohnort im Profil (Story 2-1), erscheint auf der Freizeitseite.</param>
 internal sealed record DemoPerson(
     string Vorname,
     string Nachname,
     DemoRolle Rolle,
     string? Mail,
     string? Familie = null,
-    DateOnly? Geburtsdatum = null);
+    DateOnly? Geburtsdatum = null,
+    string? Herkunft = null);

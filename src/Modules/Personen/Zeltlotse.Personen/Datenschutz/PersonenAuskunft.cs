@@ -25,6 +25,11 @@ internal sealed class PersonenAuskunft(PersonenLeseDbContext db, IVerschluesselu
                 new("Vorname", person.Vorname ?? ""),
                 new("Nachname", person.Nachname ?? ""),
             };
+            if (person.Herkunft is { } herkunft)
+            {
+                profil.Add(new AuskunftZeile("Herkunft", herkunft));
+            }
+
             if (person.Geburtsdatum is { } geburtsdatum)
             {
                 profil.Add(new AuskunftZeile("Geburtsdatum", AuskunftFormat.Datum(geburtsdatum)));

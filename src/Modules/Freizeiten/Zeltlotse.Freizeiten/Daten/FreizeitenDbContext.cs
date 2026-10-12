@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using FreizeitseiteFelder = Zeltlotse.Api.Contracts.Freizeiten.FreizeitseiteFelder;
 using Zeltlotse.Freizeiten.Domaene;
 using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Mandanten;
@@ -17,6 +18,8 @@ internal sealed class FreizeitenDbContext(DbContextOptions<FreizeitenDbContext> 
 
     public DbSet<LeitungsEinladung> Einladungen => Set<LeitungsEinladung>();
 
+    public DbSet<Anmeldelink> Anmeldelinks => Set<Anmeldelink>();
+
     protected override string Schema => FreizeitenModul.Schema;
 
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => FreizeitenModell.Konfigurieren(modelBuilder);
@@ -31,6 +34,8 @@ internal sealed class FreizeitenLeseDbContext(DbContextOptions<FreizeitenLeseDbC
     public DbSet<FreizeitRolle> Rollen => Set<FreizeitRolle>();
 
     public DbSet<LeitungsEinladung> Einladungen => Set<LeitungsEinladung>();
+
+    public DbSet<Anmeldelink> Anmeldelinks => Set<Anmeldelink>();
 
     protected override string Schema => FreizeitenModul.Schema;
 
@@ -47,6 +52,9 @@ internal static class FreizeitenModell
             e.ToTable("freizeit");
             e.Property(f => f.Id).ValueGeneratedNever();
             e.Property(f => f.Name).HasMaxLength(Freizeit.MaximaleNamensLaenge);
+            e.Property(f => f.Beschreibung).HasMaxLength(FreizeitseiteFelder.BeschreibungMaximaleLaenge);
+            e.Property(f => f.Ort).HasMaxLength(FreizeitseiteFelder.OrtMaximaleLaenge);
+            e.Property(f => f.Version).IsRowVersion();
             e.HasIndex(f => f.OrganisationId);
             e.HasMany(f => f.Rollen).WithOne().HasForeignKey(r => r.FreizeitId);
         });
@@ -69,6 +77,18 @@ internal static class FreizeitenModell
             e.HasIndex(i => i.TokenHash).IsUnique();
             e.Property(i => i.Status).HasConversion<short>();
             e.Property(i => i.Version).IsRowVersion();
+        });
+
+        modelBuilder.Entity<Anmeldelink>(e =>
+        {
+            e.ToTable("anmeldelink");
+            e.Property(l => l.Id).ValueGeneratedNever();
+            e.Property(l => l.Art).HasConversion<short>();
+            e.HasIndex(l => new { l.FreizeitId, l.Art }).IsUnique();
+            e.Property(l => l.TokenHash).HasColumnType("bytea");
+            e.HasIndex(l => l.TokenHash).IsUnique();
+            e.Property(l => l.TokenGeschuetzt).HasColumnType("bytea");
+            e.HasOne<Freizeit>().WithMany().HasForeignKey(l => l.FreizeitId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

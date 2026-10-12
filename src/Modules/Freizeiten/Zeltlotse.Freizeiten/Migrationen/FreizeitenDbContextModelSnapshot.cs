@@ -23,6 +23,42 @@ namespace Zeltlotse.Freizeiten.Migrationen
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Zeltlotse.Freizeiten.Domaene.Anmeldelink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Art")
+                        .HasColumnType("smallint");
+
+                    b.Property<DateTimeOffset>("ErzeugtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("TokenGeschuetzt")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("FreizeitId", "Art")
+                        .IsUnique();
+
+                    b.ToTable("anmeldelink", "freizeiten");
+                });
+
             modelBuilder.Entity("Zeltlotse.Freizeiten.Domaene.Freizeit", b =>
                 {
                     b.Property<Guid>("Id")
@@ -37,6 +73,10 @@ namespace Zeltlotse.Freizeiten.Migrationen
                     b.Property<Guid>("AngelegtVon")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Beschreibung")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<DateOnly>("ErsterTag")
                         .HasColumnType("date");
 
@@ -45,6 +85,9 @@ namespace Zeltlotse.Freizeiten.Migrationen
                         .HasColumnType("bigint");
 
                     b.Property<int>("FreigabeIntervallTage")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("HoechstzahlTeilnehmende")
                         .HasColumnType("integer");
 
                     b.Property<DateOnly>("LetzterTag")
@@ -57,6 +100,16 @@ namespace Zeltlotse.Freizeiten.Migrationen
 
                     b.Property<Guid>("OrganisationId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Ort")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 
@@ -232,6 +285,15 @@ namespace Zeltlotse.Freizeiten.Migrationen
                     b.HasIndex("ErledigtAm", "NaechsterVersuch");
 
                     b.ToTable("outbox_zustellung", "freizeiten");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Freizeiten.Domaene.Anmeldelink", b =>
+                {
+                    b.HasOne("Zeltlotse.Freizeiten.Domaene.Freizeit", null)
+                        .WithMany()
+                        .HasForeignKey("FreizeitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Zeltlotse.Freizeiten.Domaene.FreizeitRolle", b =>

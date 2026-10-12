@@ -106,6 +106,41 @@ public sealed class ProfilCommandTests(PostgresContainer postgres) : IAsyncLifet
         Assert.Equal(angewendet ? "Neu" : Person.Normalisieren(aktuell), person.Vorname);
     }
 
+    [Fact]
+    public async Task Steckbriefe_liefern_Vorname_Nachname_und_Herkunft_fuer_die_Menge_unbekannte_fehlen()
+    {
+        var personB = Guid.Parse("0199b000-0000-7000-8000-00000000000b");
+        var a = await SendenAsync(new ProfilSicherstellen(PersonA));
+        await SendenAsync(new ProfilSicherstellen(personB));
+        var version = a.Version;
+        foreach (var (feld, wert) in new[] { (ProfilFeld.Vorname, "Miriam"), (ProfilFeld.Nachname, "Zeltner"), (ProfilFeld.Herkunft, " Musterstadt ") })
+        {
+            version = Assert.IsType<ProfilAenderung.Gespeichert>(await SendenAsync(new ProfilFeldAendern(PersonA, feld, version, null, wert))).Person.Version;
+        }
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var steckbriefe = await scope.ServiceProvider.GetRequiredService<Zeltlotse.Personen.Contracts.Namen.IPersonenSteckbriefe>()
+            .SteckbriefeAsync([PersonA, personB, Guid.CreateVersion7()], Abbruch);
+
+        Assert.Equal(2, steckbriefe.Count);
+        Assert.Equal(new Zeltlotse.Personen.Contracts.Namen.PersonenSteckbrief("Miriam", "Zeltner", "Musterstadt"), steckbriefe[PersonA]);
+        Assert.Equal(new Zeltlotse.Personen.Contracts.Namen.PersonenSteckbrief(null, null, null), steckbriefe[personB]);
+        Assert.Empty(await scope.ServiceProvider.GetRequiredService<Zeltlotse.Personen.Contracts.Namen.IPersonenSteckbriefe>().SteckbriefeAsync([], Abbruch));
+    }
+
+    [Fact]
+    public async Task Herkunft_ist_hoechstens_60_Zeichen_lang()
+    {
+        var person = await SendenAsync(new ProfilSicherstellen(PersonA));
+
+        var fehler = await Assert.ThrowsAsync<Zeltlotse.SharedKernel.Commands.ValidierungsAusnahme>(
+            () => SendenAsync(new ProfilFeldAendern(PersonA, ProfilFeld.Herkunft, person.Version, null, new string('x', 61))));
+        var gespeichert = await SendenAsync(new ProfilFeldAendern(PersonA, ProfilFeld.Herkunft, person.Version, null, new string('x', 60)));
+
+        Assert.Equal(["Höchstens 60 Zeichen."], fehler.Fehler[ProfilFelder.Herkunft]);
+        Assert.IsType<ProfilAenderung.Gespeichert>(gespeichert);
+    }
+
     private async Task<T> SendenAsync<T>(ICommand<T> command)
     {
         await using var scope = _factory.Services.CreateAsyncScope();

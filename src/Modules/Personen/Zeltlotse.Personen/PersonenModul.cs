@@ -33,6 +33,7 @@ public static class PersonenModul
         services.AddModul<PersonenDbContext, PersonenLeseDbContext>(Name, Schema);
         services.AddScoped<IPersonenSchluesselQuelle, PersonenSchluesselQuelle>();
         services.AddScoped<IPersonenNamen, PersonenNamen>();
+        services.AddScoped<IPersonenSteckbriefe, PersonenSteckbriefe>();
         services.EmpfaengtEreignis<FreizeitRolleGeaendert, FreizeitRolleUebernehmen>();
         services.VerschicktMail<NachweisErinnerungMail, NachweisErinnerungMailAufbau>();
         services.AddScoped<IDatenauskunft, PersonenAuskunft>();

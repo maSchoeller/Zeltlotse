@@ -63,6 +63,7 @@ public sealed class DokuTests
             [
                 "Seite kueche/index.md fehlt.", "Seite daten.md fehlt.", "Seite index.md fehlt.", "Seite erste-schritte/zeltlotse-oeffnen.md fehlt.",
                 "Seite erste-schritte/anmelden.md fehlt.", "Seite erste-schritte/meine-daten.md fehlt.", "Seite org-admin/loeschfristen.md fehlt.",
+                "Seite eltern/freizeitseite.md fehlt.", "Seite leitung/freizeitseite-einrichten.md fehlt.",
             ],
             fehlend);
     }

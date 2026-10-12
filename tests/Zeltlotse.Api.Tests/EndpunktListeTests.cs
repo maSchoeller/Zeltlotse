@@ -17,10 +17,12 @@ namespace Zeltlotse.Api.Tests;
 /// </summary>
 public sealed class EndpunktListeTests(PostgresContainer postgres)
 {
-    /// <summary>Die anonymen Endpunkte: Betrieb und die vier Anmelde-Endpunkte.</summary>
+    /// <summary>Die anonymen Endpunkte: Betrieb, die vier Anmelde-Endpunkte und die zwei Anmeldelink-Seiten (Story 2-1).</summary>
     private static readonly string[] Anonym =
     [
         "GET /api/betrieb/antiforgery",
+        "GET /api/freizeiten/oeffentlich/{token}",
+        "GET /api/freizeiten/oeffentlich/{token}/vertrauensseite",
         "POST /api/betrieb/fehler",
         "POST /api/konten/anmelden",
         "POST /api/konten/login-code/einloesen",
@@ -78,6 +80,25 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 e.Endpunkt.Metadata.OfType<Microsoft.AspNetCore.RateLimiting.EnableRateLimitingAttribute>(),
                 r => r.PolicyName == Zugriffsbegrenzung.Richtlinie));
         Assert.Equal(4, endpunkte.Count(e => e.Name.StartsWith("POST /api/konten/", StringComparison.Ordinal) && Anonym.Contains(e.Name)));
+    }
+
+    [Fact]
+    public async Task Die_Anmeldelink_Endpunkte_sind_zugriffsbegrenzt_und_tragen_keine_freizeitId()
+    {
+        var endpunkte = await EndpunkteAsync();
+
+        var oeffentlich = endpunkte.Where(e => e.Pfad.StartsWith("/api/freizeiten/oeffentlich/", StringComparison.Ordinal)).ToList();
+        Assert.Equal(2, oeffentlich.Count);
+        Assert.All(oeffentlich, e =>
+        {
+            Assert.Contains(e.Name, Anonym);
+            Assert.Contains(
+                e.Endpunkt.Metadata.OfType<Microsoft.AspNetCore.RateLimiting.EnableRateLimitingAttribute>(),
+                r => r.PolicyName == Zugriffsbegrenzung.Richtlinie);
+            // Der Mandant kommt aus dem Token, nie aus einer Freizeit in der Route (AD-6).
+            Assert.DoesNotContain(e.Endpunkt.RoutePattern.Parameters, p => p.Name == Rechtemerkmale.FreizeitRouteWert || p.Name == Rechtemerkmale.OrgRouteWert);
+            Assert.Null(e.Endpunkt.Metadata.GetMetadata<NurFreizeitRolleMetadaten>());
+        });
     }
 
     [Fact]
@@ -156,6 +177,10 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 $"POST {pruefen}/einsichten/{{einsichtId:guid}}/nachweise/{{nachweisId:guid}}/ablehnen",
                 $"POST {pruefen}/einsichten/{{einsichtId:guid}}/nachweise/{{nachweisId:guid}}/bestaetigen",
                 $"POST {pruefen}/einsichten/{{einsichtId:guid}}/pruefen",
+                // Story 2-1: Einstellungen der Freizeitseite und Anmeldelinks (Leitung).
+                "GET /api/freizeiten/{freizeitId:guid}/freizeitseite",
+                "PATCH /api/freizeiten/{freizeitId:guid}/freizeitseite",
+                "POST /api/freizeiten/{freizeitId:guid}/anmeldelinks/{art}/erneuern",
             }.Order(StringComparer.Ordinal),
             freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
         Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));

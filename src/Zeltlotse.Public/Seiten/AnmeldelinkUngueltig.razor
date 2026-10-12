@@ -1,0 +1,11 @@
+@page "/anmeldelink-ungueltig"
+@layout OhneRahmenLayout
+@* Hinweis für einen ungültigen Anmeldelink (EXPERIENCE.md → State Patterns „Anmeldelink ungültig“): unbekannt, erneuert, nach dem
+   Freizeitende oder ein Link mit anderem Zweck. Zu einem unbekannten Link ist keine Leitung bekannt, darum ohne Kontakt.
+   Freizeitseite und Vertrauensseite rufen NavigationManager.NotFound() auf; der Router zeigt dann diese Seite mit Status 404
+   (Router-Parameter NotFoundPage in Wurzel.razor). *@
+<PageTitle>Anmeldelink nicht gültig – Zeltlotse</PageTitle>
+<OeffentlicherRahmen>
+    <h1>Dieser Anmeldelink ist nicht mehr gültig.</h1>
+    <p>Die Leitung der Freizeit kann einen aktuellen Link schicken.</p>
+</OeffentlicherRahmen>

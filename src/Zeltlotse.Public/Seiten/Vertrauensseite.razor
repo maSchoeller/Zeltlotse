@@ -1,0 +1,105 @@
+@page "/freizeit/{Token}/vertrauensseite"
+@layout OhneRahmenLayout
+@using Zeltlotse.Ui.Api
+@using Zeltlotse.Ui.Texte
+@inject FreizeitenApiClient Freizeiten
+@inject NavigationManager Navigation
+@* Vertrauensseite (FR-66, EXPERIENCE.md → Öffentliche Seiten): erklärt in Klartext, welche Daten erhoben werden, wer sie sieht und
+   wann sie verschwinden. Sie entsteht nur aus gespeicherten Einstellungen: aus der Freizeit Name, Daten, Freigabe-Intervall und
+   „Freigabe bis“, aus der Organisation Name, Löschfristen und Pflicht-Nachweise. Freizeitpass und Freigabefenster sind beim ersten
+   Auftreten erklärt. Statisch gerendert, ohne Skript; ein ungültiger Link ergibt Status 404 mit dem Hinweis. *@
+
+@if (_zuViele)
+{
+    <ZuVieleAufrufe />
+}
+else if (_seite is not null)
+{
+    <PageTitle>Vertrauensseite – @_seite.Name</PageTitle>
+    <OeffentlicherRahmen Organisation="@_seite.Organisation">
+        <Dachzeile>@_seite.Name · @Anzeige.ZeitraumLang(_seite.ErsterTag, _seite.LetzterTag)</Dachzeile>
+        <h1>Vertrauensseite</h1>
+        <p>
+            Diese Seite erklärt, welche Daten bei einer Anmeldung zu dieser Freizeit erhoben werden, wer sie sieht und wann sie
+            verschwinden. Sie entsteht aus den Einstellungen der Freizeit und von @_seite.Organisation.
+        </p>
+
+        <Card Titel="Welche Daten erhoben werden">
+            <p>Bei der Anmeldung die Angaben aus dem Anmeldeformular, zum Beispiel Name und Kontakt.</p>
+            <p>
+                Dazu der Freizeitpass: Er enthält die Angaben, die das Team auf der Freizeit über eine Person braucht, zum Beispiel
+                Notfallkontakte. Erhoben werden nur die Fragen, die die Leitung für diese Freizeit ausgewählt hat.
+            </p>
+            @if (_seite.PflichtNachweise.Count > 0)
+            {
+                <p>
+                    Von Mitarbeitenden verlangt @_seite.Organisation diese Nachweise: @Anzeige.Aufzaehlung(_seite.PflichtNachweise).
+                    Die Organisation behält davon keine Kopie, nur die Bestätigung: welcher Nachweis, eingesehen am, gültig bis und von wem.
+                </p>
+            }
+            else
+            {
+                <p>@_seite.Organisation verlangt von Mitarbeitenden keine Nachweise.</p>
+            }
+        </Card>
+
+        <Card Titel="Wer die Daten sieht">
+            <p>
+                Die Daten gehören der angemeldeten Person, bei Kindern den Eltern. Die Freizeit bekommt nur befristet Einsicht: die
+                Leitung ab dem Eingang der Anmeldung, das Team ab ihrer Bestätigung.
+            </p>
+            <p>
+                Die Einsicht endet mit dem Freigabefenster. Das Freigabefenster ist die Zeit, in der die Freizeit den Freizeitpass sehen
+                darf: Es endet @Anzeige.Tage(_seite.FreigabeIntervallTage) nach dem letzten Tag der Freizeit, für diese Freizeit am
+                @Anzeige.Datum(_seite.FreigabeBis).
+            </p>
+            <p>Andere Organisationen sehen nichts davon.</p>
+        </Card>
+
+        <Card Titel="Wann die Daten verschwinden">
+            <p>
+                Nach dem @Anzeige.Datum(_seite.FreigabeBis) sieht die Freizeit keinen Freizeitpass mehr. Der Freizeitpass bleibt bei der
+                Person und lässt sich für die nächste Freizeit wieder verwenden.
+            </p>
+            <p>
+                Die Daten der Freizeit, zum Beispiel die Anmeldung, löscht Zeltlotse @Anzeige.Monate(_seite.FreizeitDatenMonate) nach dem
+                Ende der Freizeit endgültig.
+            </p>
+            <p>Bestätigungen von Nachweisen löscht Zeltlotse @Anzeige.Monate(_seite.NachweisBestaetigungMonate) nach ihrem Ablauf.</p>
+            <p>Mit einem Konto lassen sich alle eigenen Daten jederzeit exportieren und das Konto löschen.</p>
+        </Card>
+
+        <p><a href="@($"/freizeit/{Token}")">Zurück zur Freizeitseite</a></p>
+    </OeffentlicherRahmen>
+}
+
+@code {
+    private Zeltlotse.Api.Contracts.Freizeiten.Vertrauensseite? _seite;
+
+    [Parameter] public string Token { get; set; } = "";
+
+    [CascadingParameter] public HttpContext? HttpKontext { get; set; }
+
+    private bool _zuViele;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _seite = await Freizeiten.VertrauensseiteLadenAsync(Token);
+        }
+        catch (Exception fehler) when (ZuVieleAufrufe.IstZugriffsbegrenzt(fehler))
+        {
+            // Zugriffsbegrenzung der API (429): ein Hinweis mit Status 429 statt einer Fehlerseite.
+            _zuViele = true;
+            ZuVieleAufrufe.Status429(HttpKontext);
+            return;
+        }
+
+        if (_seite is null)
+        {
+            // Status 404 mit der Seite „Dieser Anmeldelink ist nicht mehr gültig.“ (NotFoundPage des Routers).
+            Navigation.NotFound();
+        }
+    }
+}

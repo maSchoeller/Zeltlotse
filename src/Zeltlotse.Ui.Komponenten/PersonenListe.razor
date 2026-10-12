@@ -1,0 +1,25 @@
+@* Personenliste mit Avatar (DESIGN.md → Avatar, EXPERIENCE.md → Component Patterns „Avatar“): je Person die Initialen im
+   Avatar (für Screenreader verborgen, der Name steht daneben), der Name fett und darunter eine Zeile, z. B. „Leitung · aus
+   Musterstadt“. Statisch tauglich, ohne Ereignis-Handler. Ohne Personen erscheint nichts. *@
+@if (Personen.Count > 0)
+{
+    <ul class="elkw-people">
+        @foreach (var person in Personen)
+        {
+            <li>
+                <span class="elkw-avatar" aria-hidden="true">@person.Initialen</span>
+                <div class="elkw-people__who">
+                    <strong>@person.Name</strong>
+                    @if (person.Zeile is not null)
+                    {
+                        <span>@person.Zeile</span>
+                    }
+                </div>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<PersonenEintrag> Personen { get; set; } = [];
+}

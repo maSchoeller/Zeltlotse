@@ -18,7 +18,7 @@ internal static class ProfilAbfrage
     public static Task<ProfilAntwort?> LadenAsync(PersonenLeseDbContext db, Guid personId, CancellationToken abbruch) =>
         db.Personen
             .Where(p => p.Id == personId)
-            .Select(p => new ProfilAntwort(p.Version, p.Vorname, p.Nachname))
+            .Select(p => new ProfilAntwort(p.Version, p.Vorname, p.Nachname, p.Herkunft))
             .SingleOrDefaultAsync(abbruch);
 
     public static Guid PersonId(IAngemeldet angemeldet) =>
@@ -47,7 +47,7 @@ internal static class ProfilSicherstellenEndpunkt
         try
         {
             var person = await sender.Send(new ProfilSicherstellen(personId), abbruch);
-            return TypedResults.Ok(new ProfilAntwort(person.Version, person.Vorname, person.Nachname));
+            return TypedResults.Ok(new ProfilAntwort(person.Version, person.Vorname, person.Nachname, person.Herkunft));
         }
         catch (DbUpdateException fehler) when (fehler.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
@@ -59,7 +59,7 @@ internal static class ProfilSicherstellenEndpunkt
 }
 
 /// <summary>
-/// <c>PATCH /api/ich/profil</c> (AD-19): Körper <c>{ "version": n, "alterWert": …, "vorname"|"nachname": neu }</c> mit genau
+/// <c>PATCH /api/ich/profil</c> (AD-19): Körper <c>{ "version": n, "alterWert": …, "vorname"|"nachname"|"herkunft": neu }</c> mit genau
 /// einem Feld. <c>200 { "version", "&lt;feld&gt;" }</c>; anderer Wert desselben Felds → <c>409</c> mit Code <c>konflikt</c>.
 /// </summary>
 internal static class ProfilFeldAendernEndpunkt
@@ -99,12 +99,12 @@ internal static class ProfilFeldAendernEndpunkt
         }
 
         var alterWert = koerper.TryGetProperty("alterWert", out var alt) ? Text(alt, "alterWert") : null;
-        var felder = new[] { ProfilFeld.Vorname, ProfilFeld.Nachname }
+        var felder = new[] { ProfilFeld.Vorname, ProfilFeld.Nachname, ProfilFeld.Herkunft }
             .Where(f => koerper.TryGetProperty(ProfilFelder.JsonName(f), out _))
             .ToList();
         if (felder.Count != 1)
         {
-            throw Fehler("feld", $"Genau ein Feld: {ProfilFelder.Vorname} oder {ProfilFelder.Nachname}.");
+            throw Fehler("feld", $"Genau ein Feld: {ProfilFelder.Vorname}, {ProfilFelder.Nachname} oder {ProfilFelder.Herkunft}.");
         }
 
         var feld = felder[0];

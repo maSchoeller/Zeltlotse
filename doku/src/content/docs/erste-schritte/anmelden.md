@@ -39,14 +39,14 @@ Stimmt der Code nicht, erscheint „Fehler: Der Code stimmt nicht oder ist abgel
 
 Nach dem Anmelden steht oben rechts in der App-Leiste der Vorname (oder „Konto“). Er führt zur Seite **Konto**:
 
-- **Profil:** Vorname und Nachname. Jede Änderung speichert beim Verlassen des Feldes; danach steht „Gespeichert“ am Feld, mit „Rückgängig“.
+- **Profil:** Vorname, Nachname und freiwillig die **Herkunft (Wohnort)**. Die Herkunft erscheint auf der Freizeitseite jeder Freizeit, in der die Person mitarbeitet, zum Beispiel „Leitung · aus Musterstadt“ (siehe [Freizeitseite und Vertrauensseite](/eltern/freizeitseite/)). Jede Änderung speichert beim Verlassen des Feldes; danach steht „Gespeichert“ am Feld, mit „Rückgängig“.
 - **Passwort festlegen:** Ein Passwort ist freiwillig und hat 10 bis 200 Zeichen. Nach „Passwort speichern“ steht dort „Gespeichert: Passwort ist festgelegt.“ Ein neues Passwort meldet alle anderen Geräte ab; das eigene Gerät bleibt angemeldet.
 - **Nachweise öffnen:** führt zur Seite „Nachweise“ mit Führungszeugnis, JuLeiCa und den anderen Nachweisen (siehe [Nachweise](/mitarbeitende/nachweise/)).
 - **Meine Daten öffnen:** führt zur Seite „Zugriffsprotokoll und Meine Daten“ mit Zugriffsprotokoll, Auskunft, Export und „Konto löschen“ (siehe [Zugriffsprotokoll und Meine Daten](/erste-schritte/meine-daten/)).
 - **Familienkonto öffnen:** führt zur Seite „Familie“ mit den Kindern im Familienkonto (siehe [Familienkonto](/eltern/familienkonto/)).
 - **Abmelden:** Der Knopf „Abmelden“ beendet die Anmeldung auf diesem Gerät und führt zur Seite „Anmelden“.
 
-![Seite „Konto“ am Handy mit Mail-Adresse, den Feldern „Vorname“ und „Nachname“, dem Abschnitt „Passwort festlegen“ und der Card „Nachweise“](../../../assets/screenshots/konto-handy.png)
+![Seite „Konto“ am Handy mit Mail-Adresse, den Feldern „Vorname“, „Nachname“ und „Herkunft (Wohnort)“, dem Abschnitt „Passwort festlegen“ und der Card „Nachweise“](../../../assets/screenshots/konto-handy.png)
 
 ![Seite „Konto“ am Laptop mit Profil, Passwort und der Card „Nachweise“](../../../assets/screenshots/konto-laptop.png)
 

@@ -1,0 +1,6 @@
+@* Dachzeile (DESIGN.md → Kicker): kurze Zeile über einer Überschrift, z. B. „Freizeit · 2. bis 13. August 2027“. Statisch tauglich. *@
+<p class="elkw-kicker">@ChildContent</p>
+
+@code {
+    [Parameter, EditorRequired] public RenderFragment? ChildContent { get; set; }
+}

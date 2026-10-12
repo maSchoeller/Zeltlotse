@@ -43,10 +43,10 @@ internal sealed class ProfilFeldAendernValidator : AbstractValidator<ProfilFeldA
             {
                 kontext.AddFailure(new ValidationFailure("feld", "Unbekanntes Feld."));
             }
-            else if (c.NeuerWert is { } wert && wert.Trim().Length > ProfilFelder.MaximaleLaenge)
+            else if (c.NeuerWert is { } wert && wert.Trim().Length > ProfilFelder.Laenge(c.Feld))
             {
                 kontext.AddFailure(new ValidationFailure(
-                    ProfilFelder.JsonName(c.Feld), $"Höchstens {ProfilFelder.MaximaleLaenge} Zeichen."));
+                    ProfilFelder.JsonName(c.Feld), $"Höchstens {ProfilFelder.Laenge(c.Feld)} Zeichen."));
             }
         });
     }

@@ -1,9 +1,17 @@
 @* Eingabefeld (DESIGN.md, EXPERIENCE.md): Label sichtbar darüber, Hinweis darunter; ein Fehler „Fehler: …“ setzt
-   aria-invalid und aria-describedby. Weitere Attribute (auch Ereignisse) landen am input-Element. *@
+   aria-invalid und aria-describedby. Weitere Attribute (auch Ereignisse) landen am input-Element, mehrzeilig am textarea. *@
 <div class="elkw-field">
     <label for="@KennungFeld">@Label</label>
-    <input @attributes="Attribute" id="@KennungFeld" name="@Name" type="@Typ" value="@Wert" disabled="@Deaktiviert"
-           aria-invalid="@(Fehler is null ? null : "true")" aria-describedby="@Beschrieben" />
+    @if (Mehrzeilig)
+    {
+        <textarea @attributes="Attribute" id="@KennungFeld" name="@Name" rows="@Zeilen" value="@Wert" disabled="@Deaktiviert"
+                  aria-invalid="@(Fehler is null ? null : "true")" aria-describedby="@Beschrieben"></textarea>
+    }
+    else
+    {
+        <input @attributes="Attribute" id="@KennungFeld" name="@Name" type="@Typ" value="@Wert" disabled="@Deaktiviert"
+               aria-invalid="@(Fehler is null ? null : "true")" aria-describedby="@Beschrieben" />
+    }
     @if (Hinweis is not null)
     {
         <span class="elkw-hint" id="@HinweisId">@Hinweis</span>
@@ -34,6 +42,12 @@
     [Parameter] public string? Fehler { get; set; }
 
     [Parameter] public bool Deaktiviert { get; set; }
+
+    /// <summary>Mehrzeiliger Text (z. B. eine Beschreibung): ein <c>textarea</c> statt eines <c>input</c>; <see cref="Typ"/> zählt dann nicht.</summary>
+    [Parameter] public bool Mehrzeilig { get; set; }
+
+    /// <summary>Sichtbare Zeilen eines mehrzeiligen Felds.</summary>
+    [Parameter] public int Zeilen { get; set; } = 5;
 
     /// <summary>Platz an der Stelle des Feldhinweises, z. B. für den Speicher-Hinweis.</summary>
     [Parameter] public RenderFragment? UnterDemFeld { get; set; }

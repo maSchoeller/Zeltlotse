@@ -75,7 +75,7 @@ internal static class LeitungSperre
 
     public static async Task<Freizeit> FreizeitAsync(DbSet<Freizeit> freizeiten, Guid freizeitId, Guid organisationId, CancellationToken abbruch) =>
         (await freizeiten
-            .FromSql($"SELECT * FROM freizeiten.freizeit WHERE \"Id\" = {freizeitId} AND \"OrganisationId\" = {organisationId} FOR UPDATE")
+            .FromSql($"SELECT *, xmin FROM freizeiten.freizeit WHERE \"Id\" = {freizeitId} AND \"OrganisationId\" = {organisationId} FOR UPDATE")
             .IgnoreQueryFilters()
             .ToListAsync(abbruch))
         .Single();

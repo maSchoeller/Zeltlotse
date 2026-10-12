@@ -113,6 +113,8 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Konto", new() { Timeout = 60_000 });
         await Assertions.Expect(seite.GetByLabel("Vorname")).ToHaveValueAsync("Jonas", new() { Timeout = 60_000 });
         await Assertions.Expect(seite.GetByLabel("Nachname")).ToHaveValueAsync("Hüttner");
+        // Story 2-1: die Herkunft erscheint auf den Freizeitseiten.
+        await Assertions.Expect(seite.GetByLabel("Herkunft (Wohnort)")).ToHaveValueAsync("Musterstadt");
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         await BildAsync(seite, "konto", geraet);
@@ -564,6 +566,100 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await card.ScrollIntoViewIfNeededAsync();
 
         await BildAsync(seite, "loeschfristen", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Freizeit_Einstellungen(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await EinstellungenAsync(seite);
+        await Assertions.Expect(seite.GetByLabel("Ort")).ToHaveValueAsync("Zeltplatz am Mühlbach, Musterhausen", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByLabel("Höchstzahl Teilnehmende")).ToHaveValueAsync("40");
+        await Assertions.Expect(seite.GetByRole(AriaRole.Heading, new() { Name = "Für Teilnehmende" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Freizeitseite öffnen" })).ToHaveCountAsync(2);
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Neuen Link erzeugen" })).ToHaveCountAsync(2);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "freizeit-einstellungen", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Freizeitseite(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await FreizeitseiteAsync(seite);
+        await Assertions.Expect(seite.Locator("header .zl-wortmarke")).ToHaveTextAsync("Jugendwerk Musterstadt");
+        await Assertions.Expect(seite.GetByText("Freizeit · 2. bis 13. August 2027")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByText("Ort: Zeltplatz am Mühlbach, Musterhausen")).ToBeVisibleAsync();
+        var team = seite.Locator(".elkw-card").Filter(new() { HasText = "Das Team" });
+        await Assertions.Expect(team.Locator("li")).ToHaveCountAsync(2);
+        await Assertions.Expect(team.Locator("li").Filter(new() { HasText = "Jonas" })).ToContainTextAsync("Leitung · aus Musterstadt");
+        await Assertions.Expect(team.Locator("li").Filter(new() { HasText = "Miriam" })).ToContainTextAsync("Leitung · aus Musterstadt");
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Vertrauensseite" })).ToBeVisibleAsync();
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "freizeitseite", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Vertrauensseite(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await FreizeitseiteAsync(seite);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Vertrauensseite" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Vertrauensseite", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByRole(AriaRole.Heading, new() { Name = "Welche Daten erhoben werden" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Heading, new() { Name = "Wer die Daten sieht" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Heading, new() { Name = "Wann die Daten verschwinden" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.Locator("main")).ToContainTextAsync("Führungszeugnis und Erste Hilfe");
+        await Assertions.Expect(seite.Locator("main")).ToContainTextAsync("12.09.2027");
+        await Assertions.Expect(seite.Locator("main")).ToContainTextAsync("12 Monate");
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "vertrauensseite", geraet);
+    }
+
+    /// <summary>Jonas (Leitung) meldet sich an und öffnet in der Demo-Freizeit „Einstellungen“.</summary>
+    private async Task EinstellungenAsync(IPage seite)
+    {
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, DemoMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Einstellungen" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Einstellungen", new() { Timeout = 60_000 });
+    }
+
+    /// <summary>
+    /// Liest den Anmeldelink für Teilnehmende aus Jonas' Einstellungen und öffnet ihn in einem neuen Browser-Kontext ohne Sitzung
+    /// (die Freizeitseite braucht keinen Login). Kein Erneuern, damit die Demo-Daten unverändert bleiben.
+    /// </summary>
+    private async Task FreizeitseiteAsync(IPage seite)
+    {
+        var leitung = await host.KontextAsync(new BrowserNewContextOptions { Locale = "de-DE", TimezoneId = "Europe/Berlin" });
+        try
+        {
+            var einstellungen = await leitung.NewPageAsync();
+            await EinstellungenAsync(einstellungen);
+            var link = await einstellungen.GetByRole(AriaRole.Link, new() { Name = "Freizeitseite öffnen" }).First.GetAttributeAsync("href");
+            Assert.NotNull(link);
+            await seite.GotoAsync(link);
+        }
+        finally
+        {
+            await leitung.CloseAsync();
+        }
+
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
     }
 
     /// <summary>Jonas meldet sich an und öffnet Konto → „Meine Daten öffnen“.</summary>

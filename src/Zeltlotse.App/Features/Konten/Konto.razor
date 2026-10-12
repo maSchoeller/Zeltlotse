@@ -3,7 +3,7 @@
 @inject PersonenApiClient Personen
 @inject AppSitzung Sitzung
 @inject AnmeldungAbschluss Abschluss
-@* Konto (EXPERIENCE.md → Flächen „Konto“, FR-1, FR-2): Mail-Adresse, Profil mit Vor- und Nachname per Autosave
+@* Konto (EXPERIENCE.md → Flächen „Konto“, FR-1, FR-2): Mail-Adresse, Profil mit Vor- und Nachname und Herkunft (FR-15) per Autosave
    (AD-19), Passwort festlegen oder ändern, der Weg zu den Nachweisen (FR-8), zu Zugriffsprotokoll und Meine Daten (FR-13, FR-14)
    und zum Familienkonto (FR-3), Abmelden. Ohne Sitzung (401) leitet der Sitzungs-Handler zur Anmeldung. *@
 <PageTitle>Konto – Zeltlotse</PageTitle>
@@ -31,6 +31,9 @@ else
                       Wert="@_profil.Vorname" Version="@_profil.Version" NeuLaden="NachKonfliktNeuLadenAsync" />
         <AutosaveFeld Label="Nachname" Id="konto-nachname" Feldname="nachname" Pfad="@PersonenApiClient.ProfilPfad"
                       Wert="@_profil.Nachname" Version="@_profil.Version" NeuLaden="NachKonfliktNeuLadenAsync" />
+        <AutosaveFeld Label="Herkunft (Wohnort)" Id="konto-herkunft" Feldname="herkunft" Pfad="@PersonenApiClient.ProfilPfad"
+                      Wert="@_profil.Herkunft" Version="@_profil.Version" Hinweis="Erscheint auf der Freizeitseite jeder Freizeit, in der die Person mitarbeitet."
+                      NeuLaden="NachKonfliktNeuLadenAsync" />
     </Card>
 
     <Card Titel="@(_konto.HatPasswort ? "Passwort ändern" : "Passwort festlegen")">

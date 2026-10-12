@@ -99,6 +99,7 @@ internal static class PersonenModell
             e.Property(p => p.Id).ValueGeneratedNever();
             e.Property(p => p.Vorname).HasMaxLength(ProfilFelder.MaximaleLaenge);
             e.Property(p => p.Nachname).HasMaxLength(ProfilFelder.MaximaleLaenge);
+            e.Property(p => p.Herkunft).HasMaxLength(ProfilFelder.HerkunftMaximaleLaenge);
             // Nur bei Kinderprofilen gesetzt; Eltern lesen ihre Kinder über die Familie.
             e.HasIndex(p => p.FamilieId);
             // AD-19: Versionsnummer aus xmin, von PostgreSQL bei jeder Änderung weitergezählt.

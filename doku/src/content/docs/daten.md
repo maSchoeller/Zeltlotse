@@ -5,6 +5,10 @@ description: Freigabe und Freigabefenster, Einsicht und Zugriffsprotokoll, Ausku
 
 Die Daten in Zeltlotse gehören der Person, nicht der Organisation und nicht der Freizeit. Eine Freizeit bekommt nur eine befristete Einsicht, und nur in das, was sie abgefragt hat. Diese Seite erklärt die Regeln, die für alle Organisationen gleich gelten.
 
+## Vertrauensseite einer Freizeit
+
+Jede Freizeit hat neben ihrer Freizeitseite eine **Vertrauensseite**. Sie erklärt für genau diese Freizeit, welche Daten erhoben werden, wer sie sieht und wann sie verschwinden: mit dem Datum, an dem das Freigabefenster endet, den Pflicht-Nachweisen und den Löschfristen der Organisation. Die Werte kommen aus den gespeicherten Einstellungen; ändert die Organisation sie, ändert sich auch die Seite. Erreichbar ist sie über den Anmeldelink der Freizeit (siehe [Freizeitseite und Vertrauensseite](/eltern/freizeitseite/)).
+
 ## Freigabe: wer den Freizeitpass sieht
 
 Der Freizeitpass enthält Angaben wie Allergien, Medikamente und Notfallkontakte. Mit der Anmeldung zu einer Freizeit wird er für diese Freizeit freigegeben, und zwar in zwei Stufen:
@@ -72,6 +76,8 @@ Zum Konto speichert Zeltlotse die Mail-Adresse und, falls festgelegt, ein Passwo
 - **Leitungs-Einladungen:** Eine Einladung als Leitung einer Freizeit speichert die **Mail-Adresse**, an die sie ging, die Freizeit und wer eingeladen hat. Der Link steht nur als Prüfwert in der Datenbank, gilt 7 Tage und nur einmal und lässt sich nur mit einem Konto unter genau dieser Mail-Adresse annehmen.
 - **Org-Admin:** sieht von der Leitung einer Freizeit nur **Vor- und Nachname**, keine Profile und keine Mail-Adressen, und keine Inhalte der Freizeit. Bei offenen Leitungs-Einladungen sieht er die eingeladene Mail-Adresse.
 - **Org-Überblick:** sieht nur Name, Zeitraum und Phase der Freizeiten.
+- **Anmeldelinks:** Ein Anmeldelink steht als Prüfwert und verschlüsselt in der Datenbank, damit die Leitung ihn wieder anzeigen kann. Er gilt bis zum Ende des letzten Freizeittages oder bis die Leitung ihn erneuert. Wer ihn aufruft, wird nicht protokolliert. Kommen zu viele Aufrufe von derselben Adresse, bremst Zeltlotse sie aus.
+- **Freizeitseite:** Öffentlich stehen dort nur Name, Zeitraum, Ort und Beschreibung der Freizeit und vom Team Vorname, Rolle und die freiwillige **Herkunft** aus dem Profil, dazu ein Kreis mit den Initialen von Vor- und Nachname. Den vollen Nachnamen und Mail-Adressen zeigt sie nicht.
 
 ## Familie und Übergabe
 

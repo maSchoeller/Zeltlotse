@@ -11,7 +11,7 @@
     <HeadOutlet />
 </head>
 <body>
-    <Router AppAssembly="typeof(Wurzel).Assembly">
+    <Router AppAssembly="typeof(Wurzel).Assembly" NotFoundPage="typeof(Seiten.AnmeldelinkUngueltig)">
         <Found Context="routeData">
             <RouteView RouteData="routeData" DefaultLayout="typeof(OeffentlichesLayout)" />
         </Found>

@@ -98,6 +98,13 @@ public sealed class Hauptschluessel
         return schluessel;
     }
 
+    /// <summary>
+    /// Ein vom Hauptschlüssel abgeleiteter Schlüssel (HKDF mit SHA-256, 32 Bytes) für einen festen Zweck, z. B. „zugangslink“
+    /// (AD-11). Der Hauptschlüssel selbst verschlüsselt so nur Personen-Schlüssel.
+    /// </summary>
+    internal byte[] Ableiten(string zweck) =>
+        HKDF.DeriveKey(HashAlgorithmName.SHA256, _schluessel, SchluesselLaenge, salt: [], info: System.Text.Encoding.UTF8.GetBytes(zweck));
+
     /// <summary>Nie den Schlüssel ausgeben.</summary>
     public override string ToString() => nameof(Hauptschluessel);
 

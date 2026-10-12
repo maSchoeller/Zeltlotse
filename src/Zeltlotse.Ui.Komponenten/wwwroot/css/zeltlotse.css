@@ -133,6 +133,9 @@ a.zl-gross:not(.elkw-btn) { display: inline-flex; align-items: center; }
 .zl-speicher-hinweis .elkw-btn--text { padding: 0; }
 .zl-speicher-hinweis--fehler { color: var(--elkw-text); font-weight: 600; }
 
+/* Lange Wörter und Adressen (z. B. ein Anmeldelink) brechen in Cards um, statt seitlich zu scrollen (WCAG 1.4.10) */
+.elkw-card__body { overflow-wrap: anywhere; }
+
 /* Öffentliche Seiten: eine Spalte, höchstens 75 Zeichen, Name der Organisation oben */
 .zl-oeffentlich-spalte { max-width: 75ch; margin: 0 auto; padding: 0 var(--elkw-space-m); }
 .zl-oeffentlich-kopf { padding: var(--elkw-header-pad) 0; border-bottom: 1px solid var(--elkw-light); background: var(--elkw-white); }

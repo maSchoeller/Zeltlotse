@@ -30,7 +30,7 @@ public sealed class ProfilTests(PostgresContainer postgres)
         Assert.Equal(HttpStatusCode.OK, erstes.StatusCode);
         Assert.Equal(HttpStatusCode.OK, zweites.StatusCode);
         var json = await JsonAsync(erstes);
-        Assert.Equal(["nachname", "version", "vorname"], Namen(json));
+        Assert.Equal(["herkunft", "nachname", "version", "vorname"], Namen(json));
         Assert.Equal(json.GetRawText(), (await JsonAsync(zweites)).GetRawText());
         Assert.True(json.GetProperty("version").GetUInt32() > 0);
         Assert.Equal(1L, await WertAsync<long>(verbindung, "SELECT count(*) FROM personen.person WHERE \"Id\" = @id", ("id", personId)));
@@ -199,12 +199,37 @@ public sealed class ProfilTests(PostgresContainer postgres)
         using var konto = await a.GetAsync("/api/ich/konto", Abbruch);
 
         var p = await JsonAsync(profil);
-        Assert.Equal(["nachname", "version", "vorname"], Namen(p));
+        Assert.Equal(["herkunft", "nachname", "version", "vorname"], Namen(p));
         Assert.Equal("Anna", p.GetProperty("vorname").GetString());
         var k = await JsonAsync(konto);
         Assert.Equal(["erlaubt", "hatPasswort", "mail"], Namen(k));
         Assert.Equal("a@example.org", k.GetProperty("mail").GetString());
         Assert.DoesNotContain("Bernd", p.GetRawText(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Herkunft_wird_gespeichert_steht_in_der_Datenauskunft_und_ist_hoechstens_60_Zeichen_lang()
+    {
+        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        using var client = await AngemeldeterClientAsync(factory, Mail);
+        var version = await SicherstellenAsync(client);
+
+        using var zuLang = await PatchAsync(client, $$"""{"version":{{version}},"alterWert":null,"herkunft":"{{new string('x', 61)}}"}""");
+        Assert.Equal(HttpStatusCode.BadRequest, zuLang.StatusCode);
+        Assert.True((await ProblemAsync(zuLang)).GetProperty("errors").TryGetProperty("herkunft", out _));
+
+        using var antwort = await PatchAsync(client, $$"""{"version":{{version}},"alterWert":null,"herkunft":" Musterstadt "}""");
+
+        Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
+        var json = await JsonAsync(antwort);
+        Assert.Equal(["herkunft", "version"], Namen(json));
+        Assert.Equal("Musterstadt", json.GetProperty("herkunft").GetString());
+        Assert.Equal("Musterstadt", (await JsonAsync(await client.GetAsync("/api/ich/profil", Abbruch))).GetProperty("herkunft").GetString());
+        var auskunft = await JsonAsync(await client.GetAsync("/api/ich/daten", Abbruch));
+        var profil = auskunft.GetProperty("abschnitte").EnumerateArray().Single(a => a.GetProperty("titel").GetString() == "Profil");
+        Assert.Contains(
+            ("Herkunft", "Musterstadt"),
+            profil.GetProperty("zeilen").EnumerateArray().Select(z => (z.GetProperty("feld").GetString(), z.GetProperty("wert").GetString())));
     }
 
     private static async Task<uint> SicherstellenAsync(HttpClient client)

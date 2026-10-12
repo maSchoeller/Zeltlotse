@@ -85,9 +85,11 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
     {
         var verbindung = await postgres.NeueDatenbankAsync();
         var bucket = S3Container.NeuerBucket();
+        string? hauptschluessel;
         await using (var erster = new ZeltlotseApiFactory(verbindung))
         {
             erster.Einstellungen[Schalter] = "true";
+            hauptschluessel = erster.Einstellungen[Zeltlotse.SharedKernel.Datenschutz.Hauptschluessel.Konfigurationsschluessel];
             foreach (var (schluessel, wert) in s3.Einstellungen(bucket))
             {
                 erster.Einstellungen[schluessel] = wert;
@@ -101,6 +103,8 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         // Echte Zeit, damit der Client das Sitzungs-Cookie annimmt (Story 1-6: Miriam ruft die Warnhinweise ab).
         zweiter.Uhr.SetUtcNow(DateTimeOffset.UtcNow);
         zweiter.Einstellungen[Schalter] = "true";
+        // Derselbe Hauptschlüssel wie beim ersten Start (wie im Betrieb): Die Anmeldelinks liegen damit verschlüsselt (Story 2-1).
+        zweiter.Einstellungen[Zeltlotse.SharedKernel.Datenschutz.Hauptschluessel.Konfigurationsschluessel] = hauptschluessel;
         foreach (var (schluessel, wert) in s3.Einstellungen(bucket))
         {
             zweiter.Einstellungen[schluessel] = wert;
@@ -199,6 +203,24 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         using var jonasClient = await AnmeldeHelfer.AngemeldeterClientAsync(zweiter, "jonas.huettner@example.org");
         var protokoll = await AnmeldeHelfer.JsonAsync(await jonasClient.GetAsync("/api/ich/zugriffsprotokoll", Abbruch));
         Assert.Equal("Miriam Zeltner", Assert.Single(protokoll.EnumerateArray()).GetProperty("lesenderName").GetString());
+
+        // Story 2-1: Jonas und Miriam mit Herkunft „Musterstadt“, die Demo-Freizeit mit Ort, Beschreibung, Höchstzahl 40 und genau
+        // zwei Anmeldelinks (auch nach dem zweiten Einspielen); die Freizeitseite zeigt beide als „Leitung · aus Musterstadt“.
+        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.person WHERE \"Herkunft\" = 'Musterstadt' AND \"Id\" = ANY(@p)", ("p", leitung)));
+        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.person WHERE \"Herkunft\" IS NOT NULL"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(
+            verbindung,
+            "SELECT count(*) FROM freizeiten.freizeit WHERE \"Ort\" = @ort AND \"Beschreibung\" = @beschreibung AND \"HoechstzahlTeilnehmende\" = 40",
+            ("ort", DemoKatalog.Freizeit.Ort), ("beschreibung", DemoKatalog.Freizeit.Beschreibung)));
+        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.anmeldelink WHERE \"FreizeitId\" = @f", ("f", freizeitId)));
+        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.anmeldelink"));
+        var einstellungen = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/freizeitseite", Abbruch));
+        var teilnehmendenLink = einstellungen.GetProperty("anmeldelinks")[0].GetProperty("adresse").GetString()!;
+        var seite = await AnmeldeHelfer.JsonAsync(await zweiterClient.GetAsync($"/api/freizeiten/oeffentlich/{teilnehmendenLink[(teilnehmendenLink.LastIndexOf('/') + 1)..]}", Abbruch));
+        Assert.Equal(("Jugendwerk Musterstadt", 40), (seite.GetProperty("organisation").GetString(), einstellungen.GetProperty("hoechstzahlTeilnehmende").GetInt32()));
+        Assert.Equal(
+            ["Jonas Leitung Musterstadt", "Miriam Leitung Musterstadt"],
+            seite.GetProperty("team").EnumerateArray().Select(p => $"{p.GetProperty("vorname").GetString()} {p.GetProperty("rolle").GetString()} {p.GetProperty("herkunft").GetString()}"));
 
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,

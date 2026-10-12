@@ -18,6 +18,9 @@ public static class Problemcodes
     /// <summary><c>409</c>: Der Wert desselben Felds hat sich seit der mitgeschickten Version geändert (AD-19).</summary>
     public const string Konflikt = "konflikt";
 
+    /// <summary><c>409</c>: Die Freizeit ist abgeschlossen („gelaufen“) und nur noch lesbar (AD-17, FR-45).</summary>
+    public const string FreizeitAbgeschlossen = "freizeit-abgeschlossen";
+
     /// <summary><c>429</c>: Zu viele Anfragen; <c>Retry-After</c> nennt die Wartezeit in Sekunden.</summary>
     public const string Zugriffsbegrenzt = "zugriffsbegrenzt";
 

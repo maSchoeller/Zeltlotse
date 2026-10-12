@@ -33,9 +33,28 @@ internal static class FreizeitRechte
     /// </summary>
     public static readonly RolleArt[] NachweisePruefen = [RolleArt.Leitung];
 
+    /// <summary>
+    /// Einstellungen der Freizeit (EXPERIENCE.md → Fläche „Einstellungen der Freizeit“, nur Leitung): Freizeitseite bearbeiten,
+    /// Anmeldelinks sehen und erneuern (FR-15, FR-16).
+    /// </summary>
+    public static readonly RolleArt[] Einstellungen = [RolleArt.Leitung];
+
     /// <summary>Erlaubte Aktionen im Freizeit-Kontext (AD-29) aus den eigenen Freizeit-Rollen.</summary>
-    public static IReadOnlyList<string> Erlaubt(IReadOnlyCollection<RolleArt> rollen) =>
-        rollen.Any(NachweisePruefen.Contains) ? [Aktionsschluessel.NachweisePruefen] : [];
+    public static IReadOnlyList<string> Erlaubt(IReadOnlyCollection<RolleArt> rollen)
+    {
+        var erlaubt = new List<string>();
+        if (rollen.Any(NachweisePruefen.Contains))
+        {
+            erlaubt.Add(Aktionsschluessel.NachweisePruefen);
+        }
+
+        if (rollen.Any(Einstellungen.Contains))
+        {
+            erlaubt.Add(Aktionsschluessel.FreizeitEinstellungen);
+        }
+
+        return erlaubt;
+    }
 
     public static IReadOnlyList<string> ErlaubtInOrganisation(IReadOnlyCollection<OrgRolleArt> rollen)
     {

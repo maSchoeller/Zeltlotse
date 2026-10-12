@@ -1,0 +1,88 @@
+@page "/freizeit/{Token}"
+@layout OhneRahmenLayout
+@using Zeltlotse.Ui.Api
+@using Zeltlotse.Ui.Texte
+@inject FreizeitenApiClient Freizeiten
+@inject NavigationManager Navigation
+@* Öffentliche Freizeitseite (FR-15, FR-67, EXPERIENCE.md → Öffentliche Seiten, Mock key-gast-anmeldung.html): oben der Name der
+   Organisation, Dachzeile mit dem Zeitraum, Name, Ort und Beschreibung, „Ausgebucht“ (nur über den Link für Teilnehmende), das
+   Team mit Avatar und der Weg zur Vertrauensseite. Statisch gerendert, ohne Skript; die Daten kommen über die API (AD-5). Ein
+   ungültiger Link ergibt Status 404 mit dem Hinweis (AnmeldelinkUngueltig). Anmelden kommt mit Story 2-2. *@
+
+@if (_zuViele)
+{
+    <ZuVieleAufrufe />
+}
+else if (_seite is not null)
+{
+    <PageTitle>@_seite.Name – @_seite.Organisation</PageTitle>
+    <OeffentlicherRahmen Organisation="@_seite.Organisation">
+        <Dachzeile>Freizeit · @Anzeige.ZeitraumLang(_seite.ErsterTag, _seite.LetzterTag)</Dachzeile>
+        <h1>@_seite.Name</h1>
+        @if (_seite.Ort is not null)
+        {
+            <p>Ort: @_seite.Ort</p>
+        }
+        @foreach (var absatz in Absaetze(_seite.Beschreibung))
+        {
+            <p>@absatz</p>
+        }
+
+        @if (_seite.Ausgebucht)
+        {
+            <Card>
+                <p><Status Wort="Ausgebucht" Art="StatusArt.Offen" /></p>
+                <p>Anmelden ist trotzdem möglich, eine Zusage gibt es erst, wenn ein Platz frei wird.</p>
+            </Card>
+        }
+
+        @if (_seite.Team.Count > 0)
+        {
+            <Card Titel="Das Team">
+                <PersonenListe Personen="@Team(_seite)" />
+            </Card>
+        }
+
+        <Card Titel="Daten bei der Anmeldung">
+            <p>Welche Angaben erhoben werden, wer sie sieht und wann sie gelöscht werden: <a href="@($"/freizeit/{Token}/vertrauensseite")">Vertrauensseite</a></p>
+        </Card>
+    </OeffentlicherRahmen>
+}
+
+@code {
+    private Zeltlotse.Api.Contracts.Freizeiten.Freizeitseite? _seite;
+
+    [Parameter] public string Token { get; set; } = "";
+
+    [CascadingParameter] public HttpContext? HttpKontext { get; set; }
+
+    private bool _zuViele;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _seite = await Freizeiten.FreizeitseiteOeffentlichLadenAsync(Token);
+        }
+        catch (Exception fehler) when (ZuVieleAufrufe.IstZugriffsbegrenzt(fehler))
+        {
+            // Zugriffsbegrenzung der API (429): ein Hinweis mit Status 429 statt einer Fehlerseite.
+            _zuViele = true;
+            ZuVieleAufrufe.Status429(HttpKontext);
+            return;
+        }
+
+        if (_seite is null)
+        {
+            // Status 404 mit der Seite „Dieser Anmeldelink ist nicht mehr gültig.“ (NotFoundPage des Routers).
+            Navigation.NotFound();
+        }
+    }
+
+    private static IReadOnlyList<PersonenEintrag> Team(Zeltlotse.Api.Contracts.Freizeiten.Freizeitseite seite) =>
+        [.. seite.Team.Select(p => new PersonenEintrag(p.Initialen, p.Vorname, Anzeige.TeamZeile(p.Rolle, p.Herkunft)))];
+
+    /// <summary>Absätze der Beschreibung: je Zeile einer, leere Zeilen fallen weg.</summary>
+    private static IEnumerable<string> Absaetze(string? text) =>
+        (text ?? "").Split('\n').Select(z => z.Trim()).Where(z => z.Length > 0);
+}

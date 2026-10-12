@@ -8,13 +8,20 @@ namespace Zeltlotse.Ui.Api;
 /// <summary>Ergebnis von <see cref="FreizeitenApiClient.AnlegenAsync"/>: die Kennung oder die Fehler an den Feldern.</summary>
 public sealed record FreizeitAnlegenErgebnis(Guid? Id, string? NameFehler, string? ErsterTagFehler, string? LetzterTagFehler);
 
+/// <summary>
+/// Ergebnis von <see cref="FreizeitenApiClient.AnmeldelinkErneuernAsync"/>: der neue Link, nicht (mehr) verfügbar (<c>403</c>/<c>404</c>)
+/// oder die Freizeit ist abgeschlossen (<c>409</c>).
+/// </summary>
+public sealed record AnmeldelinkErneuernErgebnis(Anmeldelink? Link, bool Abgeschlossen);
+
 /// <summary>Ergebnis von <see cref="FreizeitenApiClient.LeitungEinladenAsync"/>: die Kennung der Einladung oder der Fehler an der Mail-Adresse.</summary>
 public sealed record LeitungEinladenErgebnis(Guid? Id, string? MailFehler);
 
 /// <summary>
 /// Typisierter Client des Moduls Freizeiten (AD-29, handgeschrieben): Freizeit-Kontext, Freizeiten einer Organisation
-/// (Liste, Anlegen, Verwalten, Leitung einladen), Leitung übernehmen, Startseite der Freizeit, Warnhinweise zu Nachweisen und die
-/// eigenen Freizeiten.
+/// (Liste, Anlegen, Verwalten, Leitung einladen), Leitung übernehmen, Startseite der Freizeit, Warnhinweise zu Nachweisen, die
+/// eigenen Freizeiten, die Einstellungen der Freizeitseite mit den Anmeldelinks und die beiden öffentlichen Seiten eines
+/// Anmeldelinks (Freizeitseite, Vertrauensseite).
 /// <c>403</c> und <c>404</c> beim Laden heißen „nicht verfügbar“ (<c>null</c>); andere Fehler enden in einer
 /// <see cref="HttpRequestException"/>.
 /// </summary>
@@ -106,6 +113,53 @@ public sealed class FreizeitenApiClient(HttpClient http)
         return await antwort.Content.ReadFromJsonAsync<List<MeineFreizeit>>(ApiJson.Optionen, abbruch)
                ?? throw new HttpRequestException("Leere Antwort beim Laden der eigenen Freizeiten.");
     }
+
+    /// <summary>Pfad der Einstellungen der Freizeitseite, auch für den Autosave-Baustein (<c>PATCH</c>, AD-19).</summary>
+    public static string FreizeitseitePfad(Guid freizeitId) => $"/api/freizeiten/{freizeitId}/freizeitseite";
+
+    /// <summary>
+    /// <c>GET /api/freizeiten/{freizeitId}/freizeitseite</c> (Leitung): Beschreibung, Ort, Höchstzahl und die Anmeldelinks oder
+    /// <c>null</c> bei <c>403</c>/<c>404</c>.
+    /// </summary>
+    public Task<FreizeitseiteEinstellungen?> FreizeitseiteLadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
+        LadenAsync<FreizeitseiteEinstellungen>(FreizeitseitePfad(freizeitId), abbruch);
+
+    /// <summary>
+    /// <c>POST /api/freizeiten/{freizeitId}/anmeldelinks/{art}/erneuern</c> (Leitung): der neue Link; der bisherige ist danach
+    /// ungültig.
+    /// </summary>
+    public async Task<AnmeldelinkErneuernErgebnis> AnmeldelinkErneuernAsync(Guid freizeitId, AnmeldelinkArt art, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsync($"/api/freizeiten/{freizeitId}/anmeldelinks/{AnmeldelinkArten.Routenwert(art)}/erneuern", content: null, abbruch);
+        if (antwort.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+        {
+            return new AnmeldelinkErneuernErgebnis(null, Abgeschlossen: false);
+        }
+
+        if (antwort.StatusCode == HttpStatusCode.Conflict)
+        {
+            return new AnmeldelinkErneuernErgebnis(null, Abgeschlossen: true);
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        var link = await antwort.Content.ReadFromJsonAsync<Anmeldelink>(ApiJson.Optionen, abbruch)
+                   ?? throw new HttpRequestException("Leere Antwort beim Erneuern des Anmeldelinks.");
+        return new AnmeldelinkErneuernErgebnis(link, Abgeschlossen: false);
+    }
+
+    /// <summary>
+    /// <c>GET /api/freizeiten/oeffentlich/{token}</c> (anonym): die öffentliche Freizeitseite oder <c>null</c>, wenn der Link nicht
+    /// (mehr) gültig ist.
+    /// </summary>
+    public Task<Freizeitseite?> FreizeitseiteOeffentlichLadenAsync(string token, CancellationToken abbruch = default) =>
+        LadenAsync<Freizeitseite>($"/api/freizeiten/oeffentlich/{Uri.EscapeDataString(token)}", abbruch);
+
+    /// <summary>
+    /// <c>GET /api/freizeiten/oeffentlich/{token}/vertrauensseite</c> (anonym): die Angaben der Vertrauensseite oder <c>null</c>, wenn
+    /// der Link nicht (mehr) gültig ist.
+    /// </summary>
+    public Task<Vertrauensseite?> VertrauensseiteLadenAsync(string token, CancellationToken abbruch = default) =>
+        LadenAsync<Vertrauensseite>($"/api/freizeiten/oeffentlich/{Uri.EscapeDataString(token)}/vertrauensseite", abbruch);
 
     private async Task<T?> LadenAsync<T>(string pfad, CancellationToken abbruch)
         where T : class

@@ -1,0 +1,24 @@
+@* Hinweis bei Zugriffsbegrenzung (AD-25): Die API hat mit 429 geantwortet. Die Seite antwortet ebenfalls mit 429 statt mit einem
+   Fehler 500; den Status setzt Status429. *@
+<PageTitle>Bitte später erneut versuchen – Zeltlotse</PageTitle>
+<OeffentlicherRahmen>
+    <h1>Bitte gleich erneut versuchen</h1>
+    <Meldung Titel="Hinweis">
+        <p>Gerade kommen sehr viele Aufrufe an. Bitte in einer Minute erneut versuchen.</p>
+    </Meldung>
+</OeffentlicherRahmen>
+
+@code {
+    /// <summary>Ob die Ausnahme eine Antwort 429 der API ist.</summary>
+    public static bool IstZugriffsbegrenzt(Exception fehler) =>
+        fehler is HttpRequestException { StatusCode: System.Net.HttpStatusCode.TooManyRequests };
+
+    /// <summary>Setzt Status 429, solange die Antwort noch nicht begonnen hat.</summary>
+    public static void Status429(HttpContext? kontext)
+    {
+        if (kontext is { Response.HasStarted: false })
+        {
+            kontext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        }
+    }
+}

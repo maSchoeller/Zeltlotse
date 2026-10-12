@@ -1,0 +1,184 @@
+@page "/freizeiten/{FreizeitId:guid}/einstellungen"
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Ui.Kontext
+@inject FreizeitKontextDienst Kontext
+@inject FreizeitenApiClient Freizeiten
+@* Einstellungen der Freizeit (EXPERIENCE.md → Fläche „Einstellungen der Freizeit“, nur Leitung; FR-15, FR-16, FR-67): Abschnitt
+   „Freizeitseite“ mit Beschreibung (mehrzeilig), Ort und Höchstzahl Teilnehmende per Autosave (AD-19) und Abschnitt
+   „Anmeldelinks“ mit beiden Links als Text, „Freizeitseite öffnen“ und „Neuen Link erzeugen“ über die Inline-Bestätigung. Ohne
+   die erlaubte Aktion „freizeit-einstellungen“ oder bei 403/404 → „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>Einstellungen – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <h1>Einstellungen</h1>
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+    @if (_abgeschlossen)
+    {
+        <Meldung Titel="Hinweis">
+            <p>@AbgeschlossenText</p>
+        </Meldung>
+    }
+    @if (_erneuert is not null)
+    {
+        <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+            <p>Neuer Link für @Fuer(_erneuert.Value) ist erzeugt. Der bisherige Link ist nicht mehr gültig.</p>
+        </Meldung>
+    }
+
+    @if (_einstellungen is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        <Card Titel="Freizeitseite">
+            <p>Diese Angaben stehen auf der öffentlichen Freizeitseite, die die Anmeldelinks öffnen.</p>
+            <AutosaveFeld Label="Beschreibung" Id="freizeitseite-beschreibung" Feldname="@FreizeitseiteFelder.Beschreibung" Mehrzeilig="true"
+                          Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.Beschreibung" Version="@_einstellungen.Version"
+                          Hinweis="@($"Höchstens {FreizeitseiteFelder.BeschreibungMaximaleLaenge} Zeichen")" NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+            <AutosaveFeld Label="Ort" Id="freizeitseite-ort" Feldname="@FreizeitseiteFelder.Ort"
+                          Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.Ort" Version="@_einstellungen.Version"
+                          NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+            <AutosaveFeld Label="Höchstzahl Teilnehmende" Id="freizeitseite-hoechstzahl" Feldname="@FreizeitseiteFelder.HoechstzahlTeilnehmende" Typ="number"
+                          Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.HoechstzahlTeilnehmende?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                          Version="@_einstellungen.Version" Hinweis="Leer lassen, wenn es keine Grenze gibt. Ist sie erreicht, zeigt die Freizeitseite „Ausgebucht“."
+                          NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+        </Card>
+
+        <Card Titel="Anmeldelinks">
+            <p>Jeder Link öffnet die Freizeitseite und lässt sich beliebig oft teilen. Er gilt bis zum Ende der Freizeit.</p>
+            @foreach (var art in Enum.GetValues<AnmeldelinkArt>())
+            {
+                var link = _einstellungen.Anmeldelinks.FirstOrDefault(l => l.Art == art);
+                <h3>Für @Fuer(art)</h3>
+                @if (link is null)
+                {
+                    <LeerZustand Satz="Noch kein Link.">
+                        <Knopf Deaktiviert="@_uebertraegt" @onclick="() => ErneuernAsync(art)">Link erzeugen</Knopf>
+                    </LeerZustand>
+                }
+                else
+                {
+                    <p>@link.Adresse</p>
+                    <p><Knopf Art="KnopfArt.Outline" Href="@link.Adresse" Ansichtswechsel="true">Freizeitseite öffnen</Knopf></p>
+                    <InlineBestaetigung AusloeserText="Neuen Link erzeugen" AusloeserArt="KnopfArt.Outline" Satz="Der bisherige Link wird ungültig."
+                                        JaText="Ja, neuen Link erzeugen" Bestaetigt="() => ErneuernAsync(art)" />
+                }
+            }
+        </Card>
+    }
+}
+
+@code {
+    private FreizeitseiteEinstellungen? _einstellungen;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _abgeschlossen;
+    private bool _uebertraegt;
+    private AnmeldelinkArt? _erneuert;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _einstellungen = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _abgeschlossen = false;
+        _erneuert = null;
+        try
+        {
+            var kontext = await Kontext.LadenAsync(FreizeitId);
+            if (kontext is null || !FreizeitKontextDienst.Darf(kontext, Aktionsschluessel.FreizeitEinstellungen))
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            _abgeschlossen = kontext.Phase == Phase.Gelaufen;
+            _einstellungen = await Freizeiten.FreizeitseiteLadenAsync(FreizeitId);
+            _nichtVerfuegbar = _einstellungen is null;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>„Neu laden“ nach einem Konflikt beim Autosave.</summary>
+    private async Task NeuLadenAsync()
+    {
+        _aktionFehler = false;
+        try
+        {
+            _einstellungen = await Freizeiten.FreizeitseiteLadenAsync(FreizeitId);
+            _nichtVerfuegbar = _einstellungen is null;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    private async Task ErneuernAsync(AnmeldelinkArt art)
+    {
+        // Zweimal bestätigt, während die erste Anfrage noch läuft: nur einmal erneuern.
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _aktionFehler = false;
+        _erneuert = null;
+        try
+        {
+            var ergebnis = await Freizeiten.AnmeldelinkErneuernAsync(FreizeitId, art);
+            if (ergebnis.Link is { } link)
+            {
+                _einstellungen = _einstellungen! with
+                {
+                    Anmeldelinks = [.. _einstellungen.Anmeldelinks.Where(l => l.Art != art).Append(link).OrderBy(l => l.Art)],
+                };
+                _erneuert = art;
+            }
+            else if (ergebnis.Abgeschlossen)
+            {
+                _abgeschlossen = true;
+            }
+            else
+            {
+                _nichtVerfuegbar = true;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private const string AbgeschlossenText = "Diese Freizeit ist abgeschlossen und nur lesbar.";
+
+    private static string Fuer(AnmeldelinkArt art) => art == AnmeldelinkArt.Teilnehmende ? "Teilnehmende" : "Mitarbeitende";
+}

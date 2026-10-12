@@ -1,0 +1,129 @@
+using System.Text.Json.Serialization;
+using Zeltlotse.Api.Contracts.Gemeinsam;
+
+namespace Zeltlotse.Api.Contracts.Freizeiten;
+
+/// <summary>Art eines Anmeldelinks (AD-11, FR-16); im JSON als Name, in Routen als <see cref="AnmeldelinkArten"/>.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<AnmeldelinkArt>))]
+public enum AnmeldelinkArt
+{
+    Teilnehmende,
+    Mitarbeitende,
+}
+
+/// <summary>Routenwerte der Anmeldelink-Arten, z. B. <c>POST /api/freizeiten/{freizeitId}/anmeldelinks/teilnehmende/erneuern</c>.</summary>
+public static class AnmeldelinkArten
+{
+    public const string Teilnehmende = "teilnehmende";
+
+    public const string Mitarbeitende = "mitarbeitende";
+
+    public static string Routenwert(AnmeldelinkArt art) => art switch
+    {
+        AnmeldelinkArt.Teilnehmende => Teilnehmende,
+        AnmeldelinkArt.Mitarbeitende => Mitarbeitende,
+        _ => throw new ArgumentOutOfRangeException(nameof(art), art, null),
+    };
+
+    /// <summary>Die Art zum Routenwert; <c>null</c> für einen unbekannten Wert.</summary>
+    public static AnmeldelinkArt? Aus(string? routenwert) => routenwert switch
+    {
+        Teilnehmende => AnmeldelinkArt.Teilnehmende,
+        Mitarbeitende => AnmeldelinkArt.Mitarbeitende,
+        _ => null,
+    };
+}
+
+/// <summary>
+/// Antwort von <c>GET /api/freizeiten/{freizeitId}/freizeitseite</c> (Leitung): die Angaben der öffentlichen Freizeitseite mit
+/// Version (AD-19) und die beiden Anmeldelinks.
+/// </summary>
+/// <param name="Anmeldelinks">Teilnehmende vor Mitarbeitende; fehlt ein Link, steht er nicht in der Liste.</param>
+public sealed record FreizeitseiteEinstellungen(
+    uint Version,
+    string? Beschreibung,
+    string? Ort,
+    int? HoechstzahlTeilnehmende,
+    IReadOnlyList<Anmeldelink> Anmeldelinks);
+
+/// <summary>Ein Anmeldelink mit seiner vollständigen Adresse (öffentliche Adresse plus <c>/freizeit/{token}</c>).</summary>
+public sealed record Anmeldelink(AnmeldelinkArt Art, string Adresse);
+
+/// <summary>Bearbeitbare Felder der Freizeitseite für <c>PATCH /api/freizeiten/{freizeitId}/freizeitseite</c> (AD-19).</summary>
+public enum FreizeitseiteFeld
+{
+    Beschreibung,
+    Ort,
+    HoechstzahlTeilnehmende,
+}
+
+/// <summary>
+/// JSON-Namen und Grenzen der Felder für <c>PATCH /api/freizeiten/{freizeitId}/freizeitseite</c>: Körper
+/// <c>{ "version": n, "alterWert": …, "&lt;feld&gt;": neu }</c> mit Text (die Höchstzahl als Text oder Zahl, leer = keine), Antwort
+/// <c>{ "version": n, "&lt;feld&gt;": gespeichert }</c> als Text.
+/// </summary>
+public static class FreizeitseiteFelder
+{
+    public const string Beschreibung = "beschreibung";
+
+    public const string Ort = "ort";
+
+    public const string HoechstzahlTeilnehmende = "hoechstzahlTeilnehmende";
+
+    public const int BeschreibungMaximaleLaenge = 2000;
+
+    public const int OrtMaximaleLaenge = 100;
+
+    public const int HoechstzahlMindestens = 1;
+
+    public const int HoechstzahlHoechstens = 1000;
+
+    public static string JsonName(FreizeitseiteFeld feld) => feld switch
+    {
+        FreizeitseiteFeld.Beschreibung => Beschreibung,
+        FreizeitseiteFeld.Ort => Ort,
+        FreizeitseiteFeld.HoechstzahlTeilnehmende => HoechstzahlTeilnehmende,
+        _ => throw new ArgumentOutOfRangeException(nameof(feld), feld, null),
+    };
+}
+
+/// <summary>
+/// Antwort von <c>GET /api/freizeiten/oeffentlich/{token}</c> (anonym, AD-11): die öffentliche Freizeitseite (FR-15, FR-67).
+/// </summary>
+/// <param name="Organisation">Name der Organisation.</param>
+/// <param name="Art">Art des aufgerufenen Anmeldelinks.</param>
+/// <param name="Ausgebucht">Nur beim Link für Teilnehmende: bestätigte Teilnehmende erreichen die Höchstzahl.</param>
+/// <param name="Team">Leitung vor Team; nur Vorname, Initialen, Rolle und Herkunft.</param>
+public sealed record Freizeitseite(
+    string Organisation,
+    string Name,
+    DateOnly ErsterTag,
+    DateOnly LetzterTag,
+    string? Ort,
+    string? Beschreibung,
+    AnmeldelinkArt Art,
+    bool Ausgebucht,
+    IReadOnlyList<TeamPerson> Team);
+
+/// <summary>Eine Person des Teams auf der Freizeitseite: kein Nachname, keine Mail-Adresse, keine Kennung.</summary>
+public sealed record TeamPerson(string Vorname, string Initialen, FreizeitRolle Rolle, string? Herkunft);
+
+/// <summary>
+/// Antwort von <c>GET /api/freizeiten/oeffentlich/{token}/vertrauensseite</c> (anonym, FR-66): die gespeicherten Einstellungen, aus
+/// denen die Vertrauensseite entsteht.
+/// </summary>
+/// <param name="FreigabeIntervallTage">Beim Anlegen der Freizeit festgeschriebenes Intervall des Freigabefensters.</param>
+/// <param name="FreigabeBis">Letzter Tag des Freigabefensters.</param>
+/// <param name="FreizeitDatenMonate">Löschfrist der Organisation für Daten einer Freizeit, ab Freizeitende.</param>
+/// <param name="NachweisBestaetigungMonate">Löschfrist der Organisation für abgelaufene Nachweis-Bestätigungen.</param>
+/// <param name="PflichtNachweise">Pflicht-Nachweise der Organisation als deutsche Bezeichnungen.</param>
+public sealed record Vertrauensseite(
+    string Organisation,
+    string Name,
+    DateOnly ErsterTag,
+    DateOnly LetzterTag,
+    int FreigabeIntervallTage,
+    DateOnly FreigabeBis,
+    int FreizeitDatenMonate,
+    int NachweisBestaetigungMonate,
+    IReadOnlyList<string> PflichtNachweise);

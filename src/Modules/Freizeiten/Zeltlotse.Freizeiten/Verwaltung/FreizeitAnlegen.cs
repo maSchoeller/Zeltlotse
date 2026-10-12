@@ -2,15 +2,18 @@ using FluentValidation;
 using Mediator;
 using Zeltlotse.Freizeiten.Daten;
 using Zeltlotse.Freizeiten.Domaene;
+using Zeltlotse.Freizeiten.Freizeitseite;
 using Zeltlotse.SharedKernel;
 using Zeltlotse.SharedKernel.Commands;
 using Zeltlotse.SharedKernel.Mandanten;
+using Zeltlotse.SharedKernel.Zugangslinks;
 
 namespace Zeltlotse.Freizeiten.Verwaltung;
 
 /// <summary>
 /// Legt eine Freizeit an (FR-6, Org-Admin): Name und Zeitraum sind Pflicht (NFR-12); das Freigabe-Intervall wird aus der
-/// Vorgabe festgeschrieben (FR-24d). Läuft im Mandanten-Kontext der Organisation (AD-6).
+/// Vorgabe festgeschrieben (FR-24d). Mit der Freizeit entstehen ihre beiden Anmeldelinks (AD-11, FR-16). Läuft im
+/// Mandanten-Kontext der Organisation (AD-6).
 /// </summary>
 internal sealed record FreizeitAnlegenCommand(Guid OrganisationId, string? Name, DateOnly? ErsterTag, DateOnly? LetzterTag, Guid AngelegtVon)
     : ICommand<Guid>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand
@@ -44,7 +47,7 @@ internal sealed class FreizeitAnlegenValidator : AbstractValidator<FreizeitAnleg
     private static bool ImRahmen(DateOnly? tag) => tag is not { } wert || wert.Year is >= Freizeit.FruehestesJahr and <= Freizeit.SpaetestesJahr;
 }
 
-internal sealed class FreizeitAnlegenHandler(FreizeitenDbContext db, IMandantenKontext mandant, TimeProvider uhr)
+internal sealed class FreizeitAnlegenHandler(FreizeitenDbContext db, IMandantenKontext mandant, ILinkSchutz schutz, TimeProvider uhr)
     : ICommandHandler<FreizeitAnlegenCommand, Guid>
 {
     public ValueTask<Guid> Handle(FreizeitAnlegenCommand command, CancellationToken cancellationToken)
@@ -64,6 +67,11 @@ internal sealed class FreizeitAnlegenHandler(FreizeitenDbContext db, IMandantenK
             command.AngelegtVon,
             uhr.GetUtcNow());
         db.Freizeiten.Add(freizeit);
+        foreach (var art in new[] { LinkArt.Teilnehmende, LinkArt.Mitarbeitende })
+        {
+            db.Anmeldelinks.Add(AnmeldelinkErzeugen.Neu(schutz, uhr, freizeit.OrganisationId, freizeit.Id, art));
+        }
+
         return ValueTask.FromResult(freizeit.Id);
     }
 }

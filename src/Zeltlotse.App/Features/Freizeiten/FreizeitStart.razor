@@ -8,7 +8,7 @@
    wann die Freizeit Einsicht in Freizeitpässe hat (Freigabefenster). Der Client setzt die Ansicht aus dem Kontext-Endpunkt
    und dem Endpunkt der Freizeit zusammen (AD-2). Mit der erlaubten Aktion „nachweise-pruefen“ der Weg zur Prüfliste und,
    wenn im Team Pflicht-Nachweise fehlen oder vor dem Ende ablaufen, eine Warnung darüber (FR-11); scheitert der Abruf der
-   Warnhinweise, entfällt sie.
+   Warnhinweise, entfällt sie. Mit der erlaubten Aktion „freizeit-einstellungen“ (nur Leitung) der Weg zu den Einstellungen.
    403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>@(_freizeit?.Name ?? "Freizeit") – Zeltlotse</PageTitle>
 
@@ -50,6 +50,10 @@ else
             </Meldung>
         }
         <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/nachweise")" Ansichtswechsel="true">Nachweise prüfen</Knopf></p>
+    }
+    @if (FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.FreizeitEinstellungen))
+    {
+        <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/einstellungen")" Ansichtswechsel="true">Einstellungen</Knopf></p>
     }
 }
 

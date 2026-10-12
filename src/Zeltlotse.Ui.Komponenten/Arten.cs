@@ -61,3 +61,6 @@ public sealed record Spalte<TZeile>(string Titel, RenderFragment<TZeile> Inhalt)
 
 /// <summary>Eine Option einer <see cref="Auswahl"/>: gespeicherter Wert und sichtbarer Text.</summary>
 public sealed record AuswahlOption(string Wert, string Text);
+
+/// <summary>Ein Eintrag einer <see cref="PersonenListe"/>: Initialen für den Avatar, Name und eine optionale Zeile darunter.</summary>
+public sealed record PersonenEintrag(string Initialen, string Name, string? Zeile);

@@ -10,6 +10,7 @@ sidebar:
 
 ## Was Eltern in Zeltlotse dürfen
 
+- **Die Freizeitseite ansehen** – der Anmeldelink öffnet die Freizeitseite mit Beschreibung, Team und Vertrauensseite, ohne Konto ([Freizeitseite und Vertrauensseite](/eltern/freizeitseite/)).
 - **Kinder unter 18 anmelden** – über den Anmeldelink für Teilnehmende, den die Leitung einer Freizeit verteilt. Geschwister lassen sich nacheinander anmelden.
 - **Den Freizeitpass pflegen** – Angaben wie Allergien, Medikamente und Notfallkontakte. Der Freizeitpass gehört dem Kind und wird bei der nächsten Freizeit vorausgefüllt.
 - **Sehen, wer Einsicht hatte** – im Zugriffsprotokoll steht, wer wann die Daten des Kindes angesehen hat ([Zugriffsprotokoll und Meine Daten](/erste-schritte/meine-daten/)).
