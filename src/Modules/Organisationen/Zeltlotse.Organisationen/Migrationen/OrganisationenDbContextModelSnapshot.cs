@@ -113,6 +113,58 @@ namespace Zeltlotse.Organisationen.Migrationen
                     b.ToTable("organisation", "organisationen");
                 });
 
+            modelBuilder.Entity("Zeltlotse.Organisationen.Nachweise.NachweisBestaetigung", b =>
+                {
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Art")
+                        .HasColumnType("smallint");
+
+                    b.Property<DateTimeOffset>("EingesehenAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("GeprueftVon")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("GueltigBis")
+                        .HasColumnType("date");
+
+                    b.HasKey("OrganisationId", "PersonId", "Art");
+
+                    b.HasIndex("PersonId");
+
+                    b.ToTable("nachweis_bestaetigung", "organisationen");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Organisationen.Nachweise.NachweisRichtlinie", b =>
+                {
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Art")
+                        .HasColumnType("smallint");
+
+                    b.Property<int>("GueltigkeitMonate")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Pflicht")
+                        .HasColumnType("boolean");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("OrganisationId", "Art");
+
+                    b.ToTable("nachweis_richtlinie", "organisationen");
+                });
+
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.InboxEintrag", b =>
                 {
                     b.Property<Guid>("EreignisId")

@@ -13,7 +13,8 @@ sidebar:
 - **Freizeiten anlegen** und die **Leitung einsetzen** – siehe [Freizeit anlegen](/org-admin/freizeit-anlegen/),
 - **Inventar** der Organisation verwalten,
 - **Aufgaben-Vorlagen** und **Org-Dokumente** pflegen,
-- **Richtlinien** festlegen: welche Nachweise Pflicht sind und wie lange sie gelten, wie lange das Freigabefenster dauert und nach welchen Fristen Daten gelöscht werden,
+- **Richtlinien** festlegen: welche Nachweise Pflicht sind und wie lange sie gelten (siehe [Richtlinie für Nachweise](/org-admin/nachweis-richtlinie/)), wie lange das Freigabefenster dauert und nach welchen Fristen Daten gelöscht werden,
+- **Nachweise prüfen** auf Ebene der Organisation, für alle, die in einer Freizeit der Organisation mitarbeiten,
 - weitere Org-Admins und den **Org-Überblick** ernennen – per Einladung, siehe [Rollen vergeben](/org-admin/rollen-vergeben/).
 
 ## Org-Überblick

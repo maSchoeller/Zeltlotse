@@ -20,8 +20,35 @@ internal static class OrgRechte
     /// <summary>Rollen und offene Einladungen sehen, Personen einladen.</summary>
     public static readonly OrgRolleArt[] RollenVergeben = [OrgRolleArt.OrgAdmin];
 
-    public static IReadOnlyList<string> Erlaubt(IReadOnlyCollection<OrgRolleArt> rollen) =>
-        rollen.Any(RollenVergeben.Contains) ? [Aktionsschluessel.OrgRollenVergeben] : [];
+    /// <summary>Die Nachweis-Richtlinie sehen und bearbeiten (FR-9).</summary>
+    public static readonly OrgRolleArt[] RichtlinieVerwalten = [OrgRolleArt.OrgAdmin];
+
+    /// <summary>
+    /// Nachweise auf Organisationsebene prüfen (FR-10). Die Endpunkte dazu besitzt Personen; dort steht dieselbe Liste
+    /// (<c>NachweisRechte.OrgPruefen</c>), ein HTTP-Test hält beide gleich.
+    /// </summary>
+    public static readonly OrgRolleArt[] NachweisePruefen = [OrgRolleArt.OrgAdmin];
+
+    public static IReadOnlyList<string> Erlaubt(IReadOnlyCollection<OrgRolleArt> rollen)
+    {
+        var erlaubt = new List<string>();
+        if (rollen.Any(RollenVergeben.Contains))
+        {
+            erlaubt.Add(Aktionsschluessel.OrgRollenVergeben);
+        }
+
+        if (rollen.Any(NachweisePruefen.Contains))
+        {
+            erlaubt.Add(Aktionsschluessel.NachweisePruefen);
+        }
+
+        if (rollen.Any(RichtlinieVerwalten.Contains))
+        {
+            erlaubt.Add(Aktionsschluessel.NachweisRichtlinieVerwalten);
+        }
+
+        return erlaubt;
+    }
 
     public static ApiOrgRolle Api(OrgRolleArt rolle) => rolle switch
     {

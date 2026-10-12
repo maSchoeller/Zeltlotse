@@ -41,12 +41,13 @@ Nach dem Anmelden steht oben rechts in der App-Leiste der Vorname (oder „Konto
 
 - **Profil:** Vorname und Nachname. Jede Änderung speichert beim Verlassen des Feldes; danach steht „Gespeichert“ am Feld, mit „Rückgängig“.
 - **Passwort festlegen:** Ein Passwort ist freiwillig und hat 10 bis 200 Zeichen. Nach „Passwort speichern“ steht dort „Gespeichert: Passwort ist festgelegt.“ Ein neues Passwort meldet alle anderen Geräte ab; das eigene Gerät bleibt angemeldet.
+- **Nachweise öffnen:** führt zur Seite „Nachweise“ mit Führungszeugnis, JuLeiCa und den anderen Nachweisen (siehe [Nachweise](/mitarbeitende/nachweise/)).
 - **Familienkonto öffnen:** führt zur Seite „Familie“ mit den Kindern im Familienkonto (siehe [Familienkonto](/eltern/familienkonto/)).
 - **Abmelden:** Der Knopf „Abmelden“ beendet die Anmeldung auf diesem Gerät und führt zur Seite „Anmelden“.
 
-![Seite „Konto“ am Handy mit Mail-Adresse, den Feldern „Vorname“ und „Nachname“, dem Abschnitt „Passwort festlegen“ und den Knöpfen „Familienkonto öffnen“ und „Abmelden“](../../../assets/screenshots/konto-handy.png)
+![Seite „Konto“ am Handy mit Mail-Adresse, den Feldern „Vorname“ und „Nachname“, dem Abschnitt „Passwort festlegen“ und der Card „Nachweise“](../../../assets/screenshots/konto-handy.png)
 
-![Seite „Konto“ am Laptop mit Profil, Passwort, „Familienkonto öffnen“ und Abmelden](../../../assets/screenshots/konto-laptop.png)
+![Seite „Konto“ am Laptop mit Profil, Passwort und der Card „Nachweise“](../../../assets/screenshots/konto-laptop.png)
 
 ## Mit Passwort anmelden
 

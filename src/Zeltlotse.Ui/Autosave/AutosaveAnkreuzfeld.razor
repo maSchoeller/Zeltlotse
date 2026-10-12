@@ -1,0 +1,134 @@
+@attribute [NurInteraktiv]
+@implements IDisposable
+@inject AutosaveDienst Dienst
+@* Autosave-Baustein für ein Ja/Nein (AD-19, AD-29): gleicher Speicher-Dienst wie AutosaveFeld, Werte "true"/"false". Ein Klick
+   speichert sofort. Gespeichert → „Gespeichert · Rückgängig“ (erneuter PATCH mit dem vorigen Wert); 409 → „Inzwischen
+   geändert – neu laden?“; Netzfehler oder 5xx → „Nicht gespeichert.“ mit „Erneut versuchen“, das Kästchen bleibt, wie gewählt. *@
+<Ankreuzfeld Label="@Label" Id="@Id" Name="@Feldname" Wert="@_eingabe" Deaktiviert="@_uebertraegt" @onfocus="Fokus" @onchange="GeaendertAsync">
+    <UnterDemFeld>
+        <SpeicherHinweis Zustand="_zustand" MitRueckgaengig="_mitRueckgaengig" Uebertraegt="_uebertraegt"
+                         Rueckgaengig="RueckgaengigAsync" NeuLaden="NeuLaden" ErneutVersuchen="ErneutVersuchenAsync" />
+    </UnterDemFeld>
+</Ankreuzfeld>
+
+@code {
+    private bool _gespeichert;
+    private bool _eingabe;
+    private uint _version;
+    private bool _vorher;
+    private SpeicherZustand _zustand;
+    private bool _mitRueckgaengig;
+    private bool _uebertraegt;
+    private AutosaveAnfrage? _letzteAnfrage;
+    private (bool Wert, uint Version)? _letzteParameter;
+
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+
+    /// <summary>JSON-Name des Felds aus <c>Zeltlotse.Api.Contracts</c>.</summary>
+    [Parameter, EditorRequired] public string Feldname { get; set; } = "";
+
+    /// <summary>Pfad der Ressource für den PATCH.</summary>
+    [Parameter, EditorRequired] public string Pfad { get; set; } = "";
+
+    /// <summary>Wert beim Laden.</summary>
+    [Parameter] public bool Wert { get; set; }
+
+    /// <summary>Version der Ressource beim Laden.</summary>
+    [Parameter] public uint Version { get; set; }
+
+    [Parameter] public string? Id { get; set; }
+
+    /// <summary>„Neu laden“ beim Konflikt: die Seite lädt die Ressource neu und übergibt Wert und Version.</summary>
+    [Parameter] public EventCallback NeuLaden { get; set; }
+
+    protected override void OnInitialized() => Dienst.FeldAktiv += AnderesFeldAktiv;
+
+    protected override void OnParametersSet()
+    {
+        if (_letzteParameter != (Wert, Version))
+        {
+            _letzteParameter = (Wert, Version);
+            _gespeichert = Wert;
+            _eingabe = Wert;
+            _version = Version;
+            _zustand = SpeicherZustand.Keiner;
+        }
+    }
+
+    private static string Text(bool wert) => wert ? "true" : "false";
+
+    private void Fokus() => Dienst.Aktivieren(this);
+
+    private Task GeaendertAsync(ChangeEventArgs e)
+    {
+        _eingabe = e.Value is bool angekreuzt ? angekreuzt : string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+        return _eingabe == _gespeichert
+            ? Task.CompletedTask
+            : SendenAsync(new AutosaveAnfrage(Pfad, Feldname, _version, Text(_gespeichert), Text(_eingabe)), rueckgaengig: false);
+    }
+
+    private Task RueckgaengigAsync()
+    {
+        _eingabe = _vorher;
+        return SendenAsync(new AutosaveAnfrage(Pfad, Feldname, _version, Text(_gespeichert), Text(_vorher)), rueckgaengig: true);
+    }
+
+    private Task ErneutVersuchenAsync() =>
+        _letzteAnfrage is null ? Task.CompletedTask : SendenAsync(_letzteAnfrage with { Version = _version }, rueckgaengig: false);
+
+    private async Task SendenAsync(AutosaveAnfrage anfrage, bool rueckgaengig)
+    {
+        _letzteAnfrage = anfrage;
+        _uebertraegt = true;
+        Dienst.Aktivieren(this);
+        StateHasChanged();
+
+        AutosaveErgebnis ergebnis;
+        try
+        {
+            ergebnis = await Dienst.SpeichernAsync(anfrage);
+        }
+#pragma warning disable CA1031 // Jeder Fehler beim Speichern zeigt „Nicht gespeichert.“, statt die Fehlergrenze auszulösen.
+        catch (Exception)
+#pragma warning restore CA1031
+        {
+            ergebnis = new AutosaveErgebnis.Gescheitert();
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+
+        switch (ergebnis)
+        {
+            case AutosaveErgebnis.Gespeichert gespeichert:
+                _vorher = _gespeichert;
+                _version = gespeichert.Version;
+                _gespeichert = string.Equals(gespeichert.Wert, "true", StringComparison.Ordinal);
+                _eingabe = _gespeichert;
+                _zustand = SpeicherZustand.Gespeichert;
+                _mitRueckgaengig = !rueckgaengig;
+                break;
+            case AutosaveErgebnis.Konflikt:
+                _zustand = SpeicherZustand.Konflikt;
+                break;
+            default:
+                _zustand = SpeicherZustand.Gescheitert;
+                break;
+        }
+    }
+
+    // Nur „Gespeichert“ verschwindet; Konflikt und „Nicht gespeichert.“ bleiben, solange die Ursache besteht.
+    private void AnderesFeldAktiv(object feld)
+    {
+        if (ReferenceEquals(feld, this) || _uebertraegt || _zustand != SpeicherZustand.Gespeichert)
+        {
+            return;
+        }
+
+        _zustand = SpeicherZustand.Keiner;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => Dienst.FeldAktiv -= AnderesFeldAktiv;
+}

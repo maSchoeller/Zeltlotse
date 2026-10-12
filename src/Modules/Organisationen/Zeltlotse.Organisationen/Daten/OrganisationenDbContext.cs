@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Zeltlotse.Organisationen.Domaene;
+using Zeltlotse.Organisationen.Nachweise;
 using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Mandanten;
 using Zeltlotse.SharedKernel.Zugangslinks;
@@ -17,6 +18,10 @@ internal sealed class OrganisationenDbContext(DbContextOptions<OrganisationenDbC
 
     public DbSet<OrgEinladung> Einladungen => Set<OrgEinladung>();
 
+    public DbSet<NachweisRichtlinie> Richtlinien => Set<NachweisRichtlinie>();
+
+    public DbSet<NachweisBestaetigung> Bestaetigungen => Set<NachweisBestaetigung>();
+
     protected override string Schema => OrganisationenModul.Schema;
 
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => OrganisationenModell.Konfigurieren(modelBuilder);
@@ -31,6 +36,10 @@ internal sealed class OrganisationenLeseDbContext(DbContextOptions<Organisatione
     public DbSet<OrgRolle> Rollen => Set<OrgRolle>();
 
     public DbSet<OrgEinladung> Einladungen => Set<OrgEinladung>();
+
+    public DbSet<NachweisRichtlinie> Richtlinien => Set<NachweisRichtlinie>();
+
+    public DbSet<NachweisBestaetigung> Bestaetigungen => Set<NachweisBestaetigung>();
 
     protected override string Schema => OrganisationenModul.Schema;
 
@@ -68,6 +77,24 @@ internal static class OrganisationenModell
             e.HasIndex(i => i.TokenHash).IsUnique();
             e.Property(i => i.Status).HasConversion<short>();
             e.Property(i => i.Version).IsRowVersion();
+        });
+
+        // FR-9, NFR-5: je Organisation und Art eine Zeile mit Pflicht und Gültigkeit.
+        modelBuilder.Entity<NachweisRichtlinie>(e =>
+        {
+            e.ToTable("nachweis_richtlinie");
+            e.HasKey(r => new { r.OrganisationId, r.Art });
+            e.Property(r => r.Art).HasConversion<short>();
+            e.Property(r => r.Version).IsRowVersion();
+        });
+
+        // AD-9: nur die Bestätigung, je Organisation, Person und Art eine Zeile.
+        modelBuilder.Entity<NachweisBestaetigung>(e =>
+        {
+            e.ToTable("nachweis_bestaetigung");
+            e.HasKey(b => new { b.OrganisationId, b.PersonId, b.Art });
+            e.Property(b => b.Art).HasConversion<short>();
+            e.HasIndex(b => b.PersonId);
         });
     }
 }

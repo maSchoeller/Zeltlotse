@@ -11,9 +11,13 @@ using Zeltlotse.Organisationen.Einladungen;
 using Zeltlotse.Organisationen.Verwaltung;
 using Zeltlotse.Personen.Daten;
 using Zeltlotse.Personen.Familien;
+using Zeltlotse.Personen.Nachweise;
 using Zeltlotse.Personen.Profil;
 using Zeltlotse.SharedKernel.Mandanten;
+using Zeltlotse.SharedKernel.Outbox;
 using Zeltlotse.SharedKernel.Rechte;
+using EinsichtStatus = Zeltlotse.Personen.Nachweise.EinsichtStatus;
+using NachweisArt = Zeltlotse.Personen.Contracts.Events.NachweisArt;
 
 namespace Zeltlotse.Api.Demo;
 
@@ -35,6 +39,8 @@ namespace Zeltlotse.Api.Demo;
 /// normale Zustelldienst zu.
 /// Story 1-4: Je Demo-Person mit <see cref="DemoRolle.Eltern"/> entstehen die Kinder ihrer Familie per Command (Katrin: Paul und
 /// Emma, Daniel: Mia); ein Kind mit gleichem Vornamen in der Familie wird übersprungen.
+/// Story 1-5: Jonas' Nachweise mit Demo-Dateien (der Dateispeicher muss konfiguriert sein), automatische Einsicht für Jonas und
+/// Miriam, Jonas gibt frei, Miriam bestätigt Erste Hilfe.
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -73,6 +79,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         {
             await KinderAsync(eltern, abbruch);
         }
+
+        await NachweiseAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -191,6 +199,80 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
                 _ = ergebnis as KindAenderung.Gespeichert ?? throw new InvalidOperationException("Demo-Familie: Das Geburtsdatum ließ sich nicht setzen.");
             }
         }
+    }
+
+    /// <summary>
+    /// Story 1-5: Jonas' Nachweise mit kleinen erfundenen Demo-Dateien (<see cref="DemoKatalog.Nachweise"/>), die automatische
+    /// Einsicht für Jonas und Miriam, Jonas gibt frei, Miriam übernimmt die Prüfung und bestätigt Erste Hilfe. Jeder Schritt nur,
+    /// wenn er noch fehlt.
+    /// </summary>
+    private async Task NachweiseAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        var mandant = dienste.GetRequiredService<MandantenKontext>();
+        var organisationId = await dienste.GetRequiredService<OrganisationenLeseDbContext>().Organisationen
+            .Where(o => o.Name == DemoKatalog.Organisation.Name)
+            .Select(o => o.Id)
+            .SingleAsync(abbruch);
+        mandant.Setzen(organisationId);
+        var freizeitId = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name)
+            .Select(f => f.Id)
+            .SingleAsync(abbruch);
+        var leitung = DemoKatalog.Personen.Where(p => p.Rolle == DemoRolle.Leitung).ToList();
+        var jonas = (await sender.Send(new KontoSicherstellen(leitung[0].Mail!), abbruch)).PersonId;
+        var miriam = (await sender.Send(new KontoSicherstellen(leitung[1].Mail!), abbruch)).PersonId;
+        var lesen = dienste.GetRequiredService<PersonenLeseDbContext>();
+
+        foreach (var (art, ausstellung, datei) in DemoKatalog.Nachweise)
+        {
+            var vorhanden = await lesen.Nachweise.Where(n => n.PersonId == jonas && n.Art == art).Select(n => new { n.Id, n.HochgeladenAm }).SingleOrDefaultAsync(abbruch);
+            var id = vorhanden?.Id
+                     ?? (await sender.Send(new NachweisAnlegen(jonas, art, ausstellung), abbruch) as NachweisAnlage.Angelegt
+                         ?? throw new InvalidOperationException("Demo-Nachweis: ließ sich nicht anlegen.")).NachweisId;
+            if (vorhanden?.HochgeladenAm is null)
+            {
+                _ = await sender.Send(new NachweisDateiHochladen(jonas, id, datei()), abbruch) as NachweisDateiErgebnis.Hochgeladen
+                    ?? throw new InvalidOperationException("Demo-Nachweis: Die Datei ließ sich nicht hochladen.");
+            }
+        }
+
+        // Die Freizeit-Rollen erreichen Personen über die Outbox: erst zustellen (Miriam übernimmt nur mit Jonas' Rolle in der
+        // Liste von Personen), dann die automatische Einsicht ausdrücklich sicherstellen (idempotent).
+        await dienste.GetRequiredService<IOutboxZustellung>().AllesZustellenAsync(abbruch);
+        await sender.Send(new AutomatischeEinsichtSicherstellen(organisationId, freizeitId, miriam), abbruch);
+        var einsichtId = await sender.Send(new AutomatischeEinsichtSicherstellen(organisationId, freizeitId, jonas), abbruch);
+        var einsicht = await lesen.Einsichten.SingleAsync(e => e.Id == einsichtId, abbruch);
+        if (einsicht.Status == EinsichtStatus.Abgeschlossen)
+        {
+            return;
+        }
+
+        // Auch nach Tagen: Ist die Freigabe abgelaufen, gibt Jonas dieselbe Einsicht erneut frei; Entschiedenes bleibt entschieden.
+        if (einsicht.Freigebbar(dienste.GetRequiredService<TimeProvider>().GetUtcNow()))
+        {
+            _ = await sender.Send(new EinsichtFreigeben(jonas, einsichtId), abbruch) as EinsichtFreigabe.Freigegeben
+                ?? throw new InvalidOperationException("Demo-Einsicht: Jonas konnte nicht freigeben.");
+        }
+
+        if (einsicht.PruefendePersonId is null)
+        {
+            _ = await sender.Send(new EinsichtPruefungUebernehmen(freizeitId, miriam, einsichtId), abbruch) as PruefungUebernahme.Gebunden
+                ?? throw new InvalidOperationException("Demo-Einsicht: Miriam konnte die Prüfung nicht übernehmen.");
+        }
+
+        var ersteHilfe = await lesen.Nachweise.Where(n => n.PersonId == jonas && n.Art == NachweisArt.ErsteHilfe).Select(n => n.Id).SingleAsync(abbruch);
+        var offen = await lesen.EinsichtPosten.AnyAsync(
+            p => p.EinsichtId == einsichtId && p.NachweisId == ersteHilfe && p.Ergebnis == PostenErgebnisArt.Offen, abbruch);
+        if (offen && !await sender.Send(new NachweisEntscheiden(miriam, einsichtId, ersteHilfe, Bestaetigt: true, Hinweis: null), abbruch))
+        {
+            throw new InvalidOperationException("Demo-Einsicht: Miriam konnte Erste Hilfe nicht bestätigen.");
+        }
+
+        // Die Bestätigung erreicht Organisationen über die Outbox (NachweisEingesehen).
+        await dienste.GetRequiredService<IOutboxZustellung>().AllesZustellenAsync(abbruch);
     }
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Demo-Daten eingespielt ({AnzahlPersonen} Personen im Katalog, {NeueKonten} neue Konten).")]

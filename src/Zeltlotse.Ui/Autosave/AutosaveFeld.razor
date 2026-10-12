@@ -4,12 +4,22 @@
 @* Autosave-Baustein (AD-19, AD-29): speichert beim Verlassen des Feldes, nur wenn sich der Wert geändert hat.
    Gespeichert → „Gespeichert · Rückgängig“; Rückgängig ist ein erneuter PATCH mit dem vorigen Wert. 409 →
    „Inzwischen geändert – neu laden?“; Netzfehler oder 5xx → „Nicht gespeichert.“ mit „Erneut versuchen“, der Wert
-   bleibt stehen. Zusammengesetzt nur aus Bausteinen von Ui.Komponenten, ohne eigene Klassen. *@
+   bleibt stehen. Mit KonfliktText zeigt ein 409 stattdessen eine Fehlermeldung mit diesem Text (wenn die Ressource gerade
+   gesperrt sein kann). Zusammengesetzt nur aus Bausteinen von Ui.Komponenten, ohne eigene Klassen. *@
 <Feld Label="@Label" Id="@Id" Name="@Feldname" Typ="@Typ" Hinweis="@(_zustand == SpeicherZustand.Keiner ? Hinweis : null)"
       Wert="@_eingabe" @onfocus="Fokus" @oninput="Eingabe" @onblur="VerlassenAsync">
     <UnterDemFeld>
-        <SpeicherHinweis Zustand="_zustand" MitRueckgaengig="_mitRueckgaengig" Uebertraegt="_uebertraegt"
-                         Rueckgaengig="RueckgaengigAsync" NeuLaden="NeuLaden" ErneutVersuchen="ErneutVersuchenAsync" />
+        @if (_zustand == SpeicherZustand.Konflikt && KonfliktText is not null)
+        {
+            <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                <p>@KonfliktText</p>
+            </Meldung>
+        }
+        else
+        {
+            <SpeicherHinweis Zustand="_zustand" MitRueckgaengig="_mitRueckgaengig" Uebertraegt="_uebertraegt"
+                             Rueckgaengig="RueckgaengigAsync" NeuLaden="NeuLaden" ErneutVersuchen="ErneutVersuchenAsync" />
+        }
     </UnterDemFeld>
 </Feld>
 
@@ -45,6 +55,12 @@
     [Parameter] public string Typ { get; set; } = "text";
 
     [Parameter] public string? Hinweis { get; set; }
+
+    /// <summary>
+    /// Text für eine Antwort <c>409</c> statt „Inzwischen geändert – neu laden?“, wenn die Ressource gerade gesperrt sein kann
+    /// (etwa ein Nachweis in laufender Prüfung); <c>null</c> für den Konflikt nach AD-19.
+    /// </summary>
+    [Parameter] public string? KonfliktText { get; set; }
 
     /// <summary>„Neu laden“ beim Konflikt: die Seite lädt die Ressource neu und übergibt Wert und Version.</summary>
     [Parameter] public EventCallback NeuLaden { get; set; }

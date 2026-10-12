@@ -361,6 +361,120 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await BildAsync(seite, "profil-uebernehmen", geraet);
     }
 
+    /// <summary>Leitung der Demo-Freizeit, prüft Jonas' Nachweise (Story 1-5).</summary>
+    private const string PruefMail = "miriam.zeltner@example.org";
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Nachweise(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, DemoMail);
+        await seite.Locator("header a.zl-konto-link").ClickAsync();
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Nachweise öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Nachweise", new() { Timeout = 60_000 });
+        var fuehrungszeugnis = seite.Locator(".elkw-card").Filter(new() { HasText = "Führungszeugnis" });
+        var ersteHilfe = seite.Locator(".elkw-card").Filter(new() { HasText = "Erste Hilfe" });
+        await Assertions.Expect(fuehrungszeugnis.GetByLabel("Ausgestellt am")).ToHaveValueAsync("2025-11-03", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator(".elkw-card").Filter(new() { HasText = "JuLeiCa" })).ToContainTextAsync("Hochgeladen am");
+        // Die Bestätigung kommt über die Outbox (Zustelldienst) zu Organisationen; neu laden, bis sie da ist.
+        await Assertions.Expect(seite.Locator(".elkw-alert--hinweis")).ToContainTextAsync("Freigegeben bis", new() { Timeout = 60_000 });
+        for (var versuch = 0; versuch < 30 && !(await ersteHilfe.TextContentAsync() ?? "").Contains("Bestätigt", StringComparison.Ordinal); versuch++)
+        {
+            await Task.Delay(1000, TestContext.Current.CancellationToken);
+            await seite.ReloadAsync();
+            await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Nachweise", new() { Timeout = 60_000 });
+            await Assertions.Expect(ersteHilfe).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        }
+
+        await Assertions.Expect(ersteHilfe).ToContainTextAsync("Bestätigt · gültig bis 15.04.2027 (Jugendwerk Musterstadt)");
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Nachweis hinzufügen" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        if (geraet == "laptop")
+        {
+            // Am Laptop die Card mit der Bestätigung zeigen, am Handy den Anfang der Seite mit dem Hinweis.
+            await ersteHilfe.ScrollIntoViewIfNeededAsync();
+        }
+
+        await BildAsync(seite, "nachweise", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Nachweise_Pruefen(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await PruefListeAsync(seite);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "nachweise-pruefen", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Nachweis_Einsicht(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        // „Prüfen“ übernimmt die Prüfung (Miriam ist schon gebunden, nichts ändert sich) und öffnet die Einsicht; entschieden wird nichts.
+        var zeile = await PruefListeAsync(seite);
+        await zeile.GetByRole(AriaRole.Button, new() { Name = "Prüfen" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Nachweise von Jonas Hüttner", new() { Timeout = 60_000 });
+        var fuehrungszeugnis = seite.Locator(".elkw-card").Filter(new() { HasText = "Führungszeugnis" });
+        await Assertions.Expect(fuehrungszeugnis).ToContainTextAsync("Ausgestellt am 03.11.2025", new() { Timeout = 60_000 });
+        await Assertions.Expect(fuehrungszeugnis.GetByRole(AriaRole.Link, new() { Name = "Datei öffnen" })).ToBeVisibleAsync();
+        await Assertions.Expect(fuehrungszeugnis.GetByRole(AriaRole.Button, new() { Name = "Bestätigen" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.Locator(".elkw-card").Filter(new() { HasText = "Erste Hilfe" }).Locator(".elkw-status")).ToHaveTextAsync("Bestätigt");
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "nachweis-einsicht", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Nachweis_Richtlinie(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, OrgAdminMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Organisation öffnen" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Jugendwerk Musterstadt", new() { Timeout = 60_000 });
+        var card = seite.Locator(".elkw-card").Filter(new() { HasText = "Richtlinie für Nachweise" });
+        var fuehrungszeugnis = card.Locator("tbody tr").Filter(new() { HasText = "Führungszeugnis" });
+        await Assertions.Expect(fuehrungszeugnis.GetByLabel("Pflicht")).ToBeCheckedAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(fuehrungszeugnis.GetByLabel("Gültig (Monate)")).ToHaveValueAsync("60");
+        await Assertions.Expect(card.Locator("tbody tr").Filter(new() { HasText = "Erste Hilfe" }).GetByLabel("Gültig (Monate)")).ToHaveValueAsync("24");
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Nachweise prüfen" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        await card.ScrollIntoViewIfNeededAsync();
+
+        await BildAsync(seite, "nachweis-richtlinie", geraet);
+    }
+
+    /// <summary>Miriam öffnet in der Demo-Freizeit „Nachweise prüfen“; liefert Jonas' Zeile (freigegeben, mit „Prüfen“).</summary>
+    private async Task<ILocator> PruefListeAsync(IPage seite)
+    {
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, PruefMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Nachweise prüfen" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Nachweise prüfen", new() { Timeout = 60_000 });
+        var zeile = seite.Locator("tbody tr").Filter(new() { HasText = "Jonas Hüttner" });
+        await Assertions.Expect(zeile).ToContainTextAsync("Freigegeben bis", new() { Timeout = 60_000 });
+        await Assertions.Expect(zeile.GetByRole(AriaRole.Button, new() { Name = "Prüfen" })).ToBeVisibleAsync();
+        return zeile;
+    }
+
     private static (int Breite, int Hoehe) Groesse(string geraet) => geraet switch
     {
         "handy" => (375, 812),

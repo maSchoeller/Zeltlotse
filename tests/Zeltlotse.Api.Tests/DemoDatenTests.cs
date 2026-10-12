@@ -11,16 +11,27 @@ namespace Zeltlotse.Api.Tests;
 /// <c>Zeltlotse:DemoDaten:Aktiv</c> ist nur in <c>Development</c> und <c>Testing</c> erlaubt; ist er an, spielt der Host
 /// nach den Migrationen die Demo-Daten ein, auch wiederholt ohne Schaden.
 /// </summary>
-public sealed class DemoDatenTests(PostgresContainer postgres)
+public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
 {
     private const string Schalter = "Zeltlotse:DemoDaten:Aktiv";
+
+    /// <summary>Story 1-5: Die Demo-Daten laden Nachweis-Dateien hoch und brauchen den Dateispeicher.</summary>
+    private ZeltlotseApiFactory MitS3(ZeltlotseApiFactory factory)
+    {
+        foreach (var (schluessel, wert) in s3.Einstellungen(S3Container.NeuerBucket()))
+        {
+            factory.Einstellungen[schluessel] = wert;
+        }
+
+        return factory;
+    }
 
     [Theory]
     [InlineData("Testing")]
     [InlineData("Development")]
     public async Task Demo_an_in_Testing_oder_Development_startet_und_spielt_die_Demo_Daten_ein(string umgebung)
     {
-        await using var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync()) { Umgebung = umgebung };
+        await using var factory = MitS3(new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync()) { Umgebung = umgebung });
         factory.Einstellungen[Schalter] = "true";
         using var client = factory.CreateClient();
 
@@ -32,18 +43,67 @@ public sealed class DemoDatenTests(PostgresContainer postgres)
     }
 
     [Fact]
-    public async Task Zweiter_Start_mit_Demo_Daten_gegen_dieselbe_Datenbank_startet_ebenfalls()
+    public async Task Nach_Ablauf_der_Freigabe_gibt_Jonas_beim_erneuten_Einspielen_wieder_frei()
     {
         var verbindung = await postgres.NeueDatenbankAsync();
+        var bucket = S3Container.NeuerBucket();
         await using (var erster = new ZeltlotseApiFactory(verbindung))
         {
             erster.Einstellungen[Schalter] = "true";
+            foreach (var (schluessel, wert) in s3.Einstellungen(bucket))
+            {
+                erster.Einstellungen[schluessel] = wert;
+            }
+
+            using var client = erster.CreateClient();
+            Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health", Abbruch)).StatusCode);
+        }
+
+        await using var spaeter = new ZeltlotseApiFactory(verbindung);
+        spaeter.Uhr.Advance(TimeSpan.FromDays(20));
+        spaeter.Einstellungen[Schalter] = "true";
+        foreach (var (schluessel, wert) in s3.Einstellungen(bucket))
+        {
+            spaeter.Einstellungen[schluessel] = wert;
+        }
+
+        using var spaeterClient = spaeter.CreateClient();
+
+        Assert.Equal(HttpStatusCode.OK, (await spaeterClient.GetAsync("/health", Abbruch)).StatusCode);
+        var jonas = await AnmeldeHelfer.PersonIdAsync(verbindung, "jonas.huettner@example.org");
+        Assert.Equal(
+            (spaeter.Uhr.GetUtcNow() + TimeSpan.FromDays(14)).UtcDateTime,
+            await AnmeldeHelfer.WertAsync<DateTime>(verbindung, "SELECT \"FreigegebenBis\" FROM personen.nachweis_einsicht WHERE \"PersonId\" = @p AND \"Status\" = 2", ("p", jonas)));
+        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.nachweis_einsicht"));
+        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.nachweis_einsicht_posten"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.nachweis_einsicht_posten WHERE \"Ergebnis\" = 1 AND \"Art\" = 3"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.nachweis_bestaetigung"));
+    }
+
+    [Fact]
+    public async Task Zweiter_Start_mit_Demo_Daten_gegen_dieselbe_Datenbank_startet_ebenfalls()
+    {
+        var verbindung = await postgres.NeueDatenbankAsync();
+        var bucket = S3Container.NeuerBucket();
+        await using (var erster = new ZeltlotseApiFactory(verbindung))
+        {
+            erster.Einstellungen[Schalter] = "true";
+            foreach (var (schluessel, wert) in s3.Einstellungen(bucket))
+            {
+                erster.Einstellungen[schluessel] = wert;
+            }
+
             using var client = erster.CreateClient();
             Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health", Abbruch)).StatusCode);
         }
 
         await using var zweiter = new ZeltlotseApiFactory(verbindung);
         zweiter.Einstellungen[Schalter] = "true";
+        foreach (var (schluessel, wert) in s3.Einstellungen(bucket))
+        {
+            zweiter.Einstellungen[schluessel] = wert;
+        }
+
         using var zweiterClient = zweiter.CreateClient();
 
         Assert.Equal(HttpStatusCode.OK, (await zweiterClient.GetAsync("/health", Abbruch)).StatusCode);
@@ -91,6 +151,21 @@ public sealed class DemoDatenTests(PostgresContainer postgres)
 
         Assert.Equal(new DateOnly(2008, 3, 14), DemoKatalog.Personen.Single(p => p.Vorname == "Paul").Geburtsdatum);
 
+        // Story 1-5: Jonas hat drei Nachweise mit Datei; zwei Einsichten (Jonas freigegeben und an Miriam gebunden, Erste Hilfe
+        // bestätigt; Miriam angefragt); die Organisation hat vier Richtlinien-Zeilen und nach der Zustellung eine Bestätigung.
+        var jonas = leitung[0];
+        var miriam = leitung[1];
+        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.nachweis"));
+        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.nachweis WHERE \"PersonId\" = @p AND \"HochgeladenAm\" IS NOT NULL", ("p", jonas)));
+        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.nachweis_einsicht"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(
+            verbindung, "SELECT count(*) FROM personen.nachweis_einsicht WHERE \"PersonId\" = @p AND \"Status\" = 2 AND \"PruefendePersonId\" = @m", ("p", jonas), ("m", miriam)));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.nachweis_einsicht WHERE \"PersonId\" = @m AND \"Status\" = 1", ("m", miriam)));
+        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.nachweis_einsicht_posten"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.nachweis_einsicht_posten WHERE \"Ergebnis\" = 1 AND \"Art\" = 3"));
+        Assert.Equal(4L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.nachweis_richtlinie"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.nachweis_bestaetigung WHERE \"Art\" = 3 AND \"GueltigBis\" = '2027-04-15' AND \"GeprueftVon\" = @m", ("m", miriam)));
+
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,
             "SELECT count(*) FROM konten.konto k LEFT JOIN personen.person p ON p.\"Id\" = k.\"PersonId\" WHERE p.\"Id\" IS NULL OR p.\"Vorname\" IS NULL OR p.\"Nachname\" IS NULL"));
@@ -105,7 +180,7 @@ public sealed class DemoDatenTests(PostgresContainer postgres)
     [Fact]
     public async Task Demo_Person_meldet_sich_per_Login_Link_an_und_sieht_ihr_Profil()
     {
-        await using var factory = AnmeldeHelfer.Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = MitS3(AnmeldeHelfer.Factory(await postgres.NeueDatenbankAsync()));
         factory.Einstellungen[Schalter] = "true";
         using var client = await AnmeldeHelfer.AngemeldeterClientAsync(factory, "jonas.huettner@example.org");
 
@@ -119,7 +194,7 @@ public sealed class DemoDatenTests(PostgresContainer postgres)
     public async Task Gerd_ist_nur_mit_Demo_Daten_Global_Admin()
     {
         var verbindung = await postgres.NeueDatenbankAsync();
-        await using (var mitDemo = new ZeltlotseApiFactory(verbindung))
+        await using (var mitDemo = MitS3(new ZeltlotseApiFactory(verbindung)))
         {
             mitDemo.Einstellungen[Schalter] = "true";
             _ = mitDemo.CreateClient();
@@ -134,7 +209,7 @@ public sealed class DemoDatenTests(PostgresContainer postgres)
     [Fact]
     public async Task Development_schaltet_die_Demo_Daten_ueber_appsettings_Development_ein()
     {
-        await using var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync()) { Umgebung = "Development" };
+        await using var factory = MitS3(new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync()) { Umgebung = "Development" });
         using var client = factory.CreateClient();
 
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health", Abbruch)).StatusCode);

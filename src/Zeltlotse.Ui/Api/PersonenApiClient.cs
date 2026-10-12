@@ -13,6 +13,40 @@ public sealed record ElternteilEinladenErgebnis(Guid? Id, string? MailFehler, bo
 /// <summary>Ergebnis von <see cref="PersonenApiClient.ProfilUebergebenAsync"/>: Kennung, Fehler am Feld oder „noch nicht volljährig“ (<c>409</c>).</summary>
 public sealed record UebergabeErgebnis(Guid? Id, string? MailFehler, bool NichtVolljaehrig);
 
+/// <summary>Ergebnis von <see cref="PersonenApiClient.NachweisAnlegenAsync"/>: Kennung, Fehler an den Feldern oder „Art schon vorhanden“ (<c>409</c>).</summary>
+public sealed record NachweisAnlegenErgebnis(Guid? NachweisId, string? ArtFehler, string? DatumFehler, bool Vorhanden);
+
+/// <summary>
+/// Ergebnis von <see cref="PersonenApiClient.DateiHochladenAsync"/>: Hochladedatum, der Fehler am Feld <c>datei</c>, gerade zur
+/// Prüfung freigegeben (<c>409</c>) oder nicht gefunden (<c>404</c>).
+/// </summary>
+public sealed record DateiHochladenErgebnis(DateTimeOffset? HochgeladenAm, string? DateiFehler, bool InPruefung = false, bool NichtGefunden = false);
+
+/// <summary>
+/// Ergebnis von <see cref="PersonenApiClient.FreigebenAsync"/>: freigegeben bis, nicht (mehr) da (<c>404</c>) oder nicht möglich
+/// (<c>409</c>: kein passender Nachweis mit Datei, oder die Freigabe läuft schon).
+/// </summary>
+public sealed record FreigabeErgebnis(DateTimeOffset? FreigegebenBis, bool NichtGefunden, bool OhneDatei);
+
+/// <summary>Ergebnis von <see cref="PersonenApiClient.PruefenAsync"/>.</summary>
+public enum PruefErgebnis
+{
+    Gebunden,
+    NichtGefunden,
+    NichtFreigegeben,
+}
+
+/// <summary>
+/// Wo Nachweise geprüft werden: im Freizeit-Kontext (Leitung) oder auf Organisationsebene (Org-Admin); <see cref="Basis"/> ist der
+/// Pfad der Prüf-Endpunkte.
+/// </summary>
+public sealed record PruefOrt(string Basis)
+{
+    public static PruefOrt Freizeit(Guid freizeitId) => new($"/api/freizeiten/{freizeitId}/personen/nachweise");
+
+    public static PruefOrt Organisation(Guid orgId) => new($"/api/organisationen/{orgId}/personen/nachweise");
+}
+
 /// <summary>Ergebnis des Annehmens eines Zugangslinks: angenommen, nicht (mehr) gültig (<c>404</c>) oder ein Konflikt (<c>409</c>).</summary>
 public enum AnnahmeErgebnis
 {
@@ -22,8 +56,8 @@ public enum AnnahmeErgebnis
 }
 
 /// <summary>
-/// Typisierter Client des Moduls Personen (AD-29, handgeschrieben): das eigene Profil und das Familienkonto (Kinder, zweiter
-/// Elternteil, Profil-Übergabe). Tokens gehen nur im Körper. Unerwartete Antworten enden in einer
+/// Typisierter Client des Moduls Personen (AD-29, handgeschrieben): das eigene Profil, das Familienkonto (Kinder, zweiter
+/// Elternteil, Profil-Übergabe), die eigenen Nachweise und das Prüfen von Nachweisen (Leitung, Org-Admin). Tokens gehen nur im Körper. Unerwartete Antworten enden in einer
 /// <see cref="HttpRequestException"/>.
 /// </summary>
 public sealed class PersonenApiClient(HttpClient http)
@@ -144,6 +178,186 @@ public sealed class PersonenApiClient(HttpClient http)
     /// <summary><c>POST /api/personen/uebergabe/annehmen</c>: übernommen, nicht gültig (<c>404</c>) oder eigenes Profil (<c>409</c>).</summary>
     public Task<AnnahmeErgebnis> ProfilUebernehmenAsync(string token, CancellationToken abbruch = default) =>
         AnnehmenAsync("/api/personen/uebergabe/annehmen", new ProfilUebernehmen(token), abbruch);
+
+    /// <summary>Pfad der eigenen Nachweise (AD-26).</summary>
+    public const string NachweisePfad = "/api/ich/nachweise";
+
+    /// <summary>Pfad eines eigenen Nachweises, auch für den Autosave-Baustein (<c>PATCH</c>, AD-19).</summary>
+    public static string NachweisPfad(Guid nachweisId) => $"{NachweisePfad}/{nachweisId}";
+
+    /// <summary>Pfad der Datei eines Nachweises einer Einsicht; der Link öffnet sie im neuen Tab (nur bis zur Entscheidung).</summary>
+    public static string EinsichtDateiPfad(PruefOrt ort, Guid einsichtId, Guid nachweisId) =>
+        $"{ort.Basis}/einsichten/{einsichtId}/nachweise/{nachweisId}/datei";
+
+    /// <summary><c>GET /api/ich/nachweise</c>: die eigenen Nachweise und offenen Einsichten.</summary>
+    public async Task<NachweiseAntwort> NachweiseLadenAsync(CancellationToken abbruch = default)
+    {
+        using var antwort = await http.GetAsync(NachweisePfad, abbruch);
+        antwort.EnsureSuccessStatusCode();
+        return await antwort.Content.ReadFromJsonAsync<NachweiseAntwort>(ApiJson.Optionen, abbruch)
+               ?? throw new HttpRequestException("Leere Antwort beim Laden der Nachweise.");
+    }
+
+    /// <summary><c>POST /api/ich/nachweise</c>: <c>201</c> mit Kennung; <c>400</c> an <c>art</c>/<c>ausstellungsdatum</c>; <c>409</c> Art vorhanden.</summary>
+    public async Task<NachweisAnlegenErgebnis> NachweisAnlegenAsync(NachweisArt? art, DateOnly? ausstellungsdatum, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync(NachweisePfad, new NachweisHinzufuegen(art, ausstellungsdatum), ApiJson.Optionen, abbruch);
+        if (antwort.StatusCode == HttpStatusCode.Conflict)
+        {
+            return new NachweisAnlegenErgebnis(null, null, null, Vorhanden: true);
+        }
+
+        if (antwort.StatusCode == HttpStatusCode.BadRequest)
+        {
+            var artFehler = await ApiFehler.FeldFehlerAsync(antwort, NachweisFelder.Art, abbruch);
+            var datumFehler = await ApiFehler.FeldFehlerAsync(antwort, NachweisFelder.Ausstellungsdatum, abbruch);
+            if (artFehler is not null || datumFehler is not null)
+            {
+                return new NachweisAnlegenErgebnis(null, artFehler, datumFehler, Vorhanden: false);
+            }
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        var inhalt = await antwort.Content.ReadFromJsonAsync<NachweisHinzugefuegt>(ApiJson.Optionen, abbruch)
+                     ?? throw new HttpRequestException("Leere Antwort beim Anlegen des Nachweises.");
+        return new NachweisAnlegenErgebnis(inhalt.NachweisId, null, null, Vorhanden: false);
+    }
+
+    /// <summary>
+    /// <c>POST /api/ich/nachweise/{nachweisId}/datei</c> (Multipart-Feld <c>datei</c>): das Hochladedatum, der Fehler am Feld,
+    /// <c>409</c> (gerade zur Prüfung freigegeben) oder <c>404</c>. Netzfehler und andere Antworten enden in einer
+    /// <see cref="HttpRequestException"/>; der Eintrag bleibt dann ohne Datei.
+    /// </summary>
+    public async Task<DateiHochladenErgebnis> DateiHochladenAsync(Guid nachweisId, Stream inhalt, string dateiname, string? contentType, CancellationToken abbruch = default)
+    {
+        ArgumentNullException.ThrowIfNull(inhalt);
+        using var datei = new StreamContent(inhalt);
+        datei.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(string.IsNullOrWhiteSpace(contentType) ? "application/octet-stream" : contentType);
+        using var formular = new MultipartFormDataContent { { datei, NachweisFelder.Datei, string.IsNullOrWhiteSpace(dateiname) ? "datei" : dateiname } };
+        using var antwort = await http.PostAsync($"{NachweisPfad(nachweisId)}/datei", formular, abbruch);
+        if (antwort.StatusCode == HttpStatusCode.BadRequest && await ApiFehler.FeldFehlerAsync(antwort, NachweisFelder.Datei, abbruch) is { } fehler)
+        {
+            return new DateiHochladenErgebnis(null, fehler);
+        }
+
+        switch (antwort.StatusCode)
+        {
+            case HttpStatusCode.Conflict:
+                return new DateiHochladenErgebnis(null, null, InPruefung: true);
+            case HttpStatusCode.NotFound:
+                return new DateiHochladenErgebnis(null, null, NichtGefunden: true);
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        var ergebnis = await antwort.Content.ReadFromJsonAsync<NachweisDateiHochgeladen>(ApiJson.Optionen, abbruch)
+                       ?? throw new HttpRequestException("Leere Antwort beim Hochladen.");
+        return new DateiHochladenErgebnis(ergebnis.HochgeladenAm, null);
+    }
+
+    /// <summary><c>POST /api/ich/nachweise/einsichten/{einsichtId}/freigeben</c>.</summary>
+    public async Task<FreigabeErgebnis> FreigebenAsync(Guid einsichtId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsync($"{NachweisePfad}/einsichten/{einsichtId}/freigeben", content: null, abbruch);
+        switch (antwort.StatusCode)
+        {
+            case HttpStatusCode.NotFound:
+                return new FreigabeErgebnis(null, NichtGefunden: true, OhneDatei: false);
+            case HttpStatusCode.Conflict:
+                return new FreigabeErgebnis(null, NichtGefunden: false, OhneDatei: true);
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        var inhalt = await antwort.Content.ReadFromJsonAsync<EinsichtFreigegeben>(ApiJson.Optionen, abbruch)
+                     ?? throw new HttpRequestException("Leere Antwort beim Freigeben.");
+        return new FreigabeErgebnis(inhalt.FreigegebenBis, NichtGefunden: false, OhneDatei: false);
+    }
+
+    /// <summary><c>GET …/personen/nachweise</c>: die Prüfliste oder <c>null</c> bei <c>403</c>/<c>404</c>.</summary>
+    public Task<List<PruefPerson>?> PruefListeLadenAsync(PruefOrt ort, CancellationToken abbruch = default) =>
+        LadenOderNullAsync<List<PruefPerson>>(ort.Basis, abbruch);
+
+    /// <summary><c>GET …/einsichten/{einsichtId}</c>: die Einsicht oder <c>null</c> bei <c>403</c>/<c>404</c>.</summary>
+    public Task<EinsichtDetail?> EinsichtLadenAsync(PruefOrt ort, Guid einsichtId, CancellationToken abbruch = default) =>
+        LadenOderNullAsync<EinsichtDetail>($"{ort.Basis}/einsichten/{einsichtId}", abbruch);
+
+    /// <summary><c>POST …/anfragen</c>: die Einsicht (neu oder schon offen) oder <c>null</c> bei <c>404</c>.</summary>
+    public async Task<Guid?> EinsichtAnfragenAsync(PruefOrt ort, Guid personId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync($"{ort.Basis}/anfragen", new EinsichtAnfragen(personId), ApiJson.Optionen, abbruch);
+        if (antwort.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return (await antwort.Content.ReadFromJsonAsync<EinsichtAngefragt>(ApiJson.Optionen, abbruch)
+                ?? throw new HttpRequestException("Leere Antwort beim Anfragen.")).EinsichtId;
+    }
+
+    /// <summary><c>POST …/einsichten/{einsichtId}/pruefen</c>: gebunden, nicht übernehmbar (<c>404</c>) oder nicht freigegeben (<c>409</c>).</summary>
+    public async Task<PruefErgebnis> PruefenAsync(PruefOrt ort, Guid einsichtId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsync($"{ort.Basis}/einsichten/{einsichtId}/pruefen", content: null, abbruch);
+        switch (antwort.StatusCode)
+        {
+            case HttpStatusCode.NotFound:
+                return PruefErgebnis.NichtGefunden;
+            case HttpStatusCode.Conflict:
+                return PruefErgebnis.NichtFreigegeben;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return PruefErgebnis.Gebunden;
+    }
+
+    /// <summary><c>POST …/nachweise/{nachweisId}/bestaetigen</c>: <c>true</c>, oder <c>false</c> bei <c>404</c> (nicht mehr möglich).</summary>
+    public async Task<bool> BestaetigenAsync(PruefOrt ort, Guid einsichtId, Guid nachweisId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsync($"{ort.Basis}/einsichten/{einsichtId}/nachweise/{nachweisId}/bestaetigen", content: null, abbruch);
+        if (antwort.StatusCode == HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return true;
+    }
+
+    /// <summary>
+    /// <c>POST …/nachweise/{nachweisId}/ablehnen</c>: <c>(true, null)</c>; Fehler am Feld <c>hinweis</c>; <c>(false, null)</c> bei
+    /// <c>404</c> (nicht mehr möglich).
+    /// </summary>
+    public async Task<(bool Abgelehnt, string? HinweisFehler)> AblehnenAsync(PruefOrt ort, Guid einsichtId, Guid nachweisId, string? hinweis, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync(
+            $"{ort.Basis}/einsichten/{einsichtId}/nachweise/{nachweisId}/ablehnen", new NachweisAblehnen(hinweis), ApiJson.Optionen, abbruch);
+        if (antwort.StatusCode == HttpStatusCode.NotFound)
+        {
+            return (false, null);
+        }
+
+        if (antwort.StatusCode == HttpStatusCode.BadRequest && await ApiFehler.FeldFehlerAsync(antwort, NachweisFelder.Hinweis, abbruch) is { } fehler)
+        {
+            return (false, fehler);
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return (true, null);
+    }
+
+    private async Task<T?> LadenOderNullAsync<T>(string pfad, CancellationToken abbruch)
+        where T : class
+    {
+        using var antwort = await http.GetAsync(pfad, abbruch);
+        if (antwort.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return await antwort.Content.ReadFromJsonAsync<T>(ApiJson.Optionen, abbruch)
+               ?? throw new HttpRequestException($"Leere Antwort von {pfad}.");
+    }
 
     private async Task<AnnahmeErgebnis> AnnehmenAsync<T>(string pfad, T koerper, CancellationToken abbruch)
     {

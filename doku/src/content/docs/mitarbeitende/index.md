@@ -24,4 +24,4 @@ Küche, Einkauf und Tagesleitung sind Aufgaben im Team, keine eigenen Rollen. Je
 
 ## Am eigenen Profil
 
-Nachweise wie Führungszeugnis, JuLeiCa (Jugendleiter-Card) oder Erste-Hilfe-Kurs liegen einmal am eigenen Profil. Eine Organisation sieht sie nur bei einer einmaligen Einsicht und speichert nur die Bestätigung. Mehr dazu unter [Was passiert mit meinen Daten](/daten/).
+Nachweise wie Führungszeugnis, JuLeiCa (Jugendleiter-Card) oder Erste-Hilfe-Kurs liegen einmal am eigenen Profil. Eine Organisation sieht sie nur bei einer einmaligen Einsicht und speichert nur die Bestätigung. Wie das Hochladen und Freigeben geht, steht unter [Nachweise](/mitarbeitende/nachweise/); die Regeln stehen unter [Was passiert mit meinen Daten](/daten/).

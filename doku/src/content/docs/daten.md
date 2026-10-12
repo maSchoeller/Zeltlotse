@@ -38,9 +38,11 @@ Außerdem gibt es per Klick:
 
 Nachweise wie Führungszeugnis, JuLeiCa (Jugendleiter-Card) oder Erste-Hilfe-Bescheinigung liegen nur am eigenen Profil. Eine Organisation bekommt davon keine Kopie:
 
-- Die Einsicht ist **einmalig**: Die Person gibt frei, die prüfende Person sieht den Nachweis einmal an und bestätigt ihn oder lehnt ihn mit einem Hinweis ab. Danach endet der Zugriff.
-- Die Organisation speichert **nur die Bestätigung**: welcher Nachweis, eingesehen am, gültig bis und von wem.
-- Dieselben Nachweise lassen sich mehreren Organisationen zeigen, ohne sie neu hochzuladen.
+- **Die Datei liegt nur am Profil,** verschlüsselt mit dem Schlüssel der Person. Zum Nachweis speichert Zeltlotse Art, Ausstellungsdatum und wann die Datei hochgeladen wurde.
+- **Die Freigabe gilt höchstens 14 Tage und für genau eine prüfende Person.** Die Person gibt frei; eine Leitung der Freizeit oder ein Org-Admin übernimmt die Prüfung und ist ab dann die einzige, die die Dateien öffnen kann. Jede Datei lässt sich nur bis zur Entscheidung öffnen, danach endet der Zugriff.
+- **Der Hinweis bei einer Ablehnung ist verschlüsselt** gespeichert, ebenfalls mit dem Schlüssel der Person. Er verschwindet, sobald eine neue Datei oder ein anderes Ausstellungsdatum da ist.
+- **Die Organisation speichert nur die Bestätigung:** welcher Nachweis, eingesehen am, gültig bis und von wem. Keine Datei und kein Ausstellungsdatum. „Gültig bis“ rechnet Zeltlotse aus dem Ausstellungsdatum und der Richtlinie der Organisation aus.
+- **Mehrere Organisationen:** Dieselben Nachweise lassen sich mehreren Organisationen zeigen, ohne sie neu hochzuladen. Jede Organisation sieht nur ihre eigene Bestätigung.
 
 ## Löschen
 

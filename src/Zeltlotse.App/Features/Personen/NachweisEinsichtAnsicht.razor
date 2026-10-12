@@ -1,0 +1,182 @@
+@page "/freizeiten/{FreizeitId:guid}/nachweise/{EinsichtId:guid}"
+@page "/organisationen/{OrgId:guid}/nachweise/{EinsichtId:guid}"
+@using Zeltlotse.Api.Contracts.Personen
+@inject PersonenApiClient Personen
+@* Einsicht in die Nachweise einer Person (FR-10, AD-9): je Nachweis Art, Ausstellungs- und Hochladedatum; solange offen der Link
+   „Datei öffnen“ (neuer Tab, Endpunkt mit Rechteprüfung), „Bestätigen“ und „Ablehnen“ mit Hinweis. Entschiedene Nachweise zeigen
+   nur noch den Status, die Datei ist danach nicht mehr erreichbar. Nach jeder Entscheidung lädt die Seite neu. Nicht gebunden
+   oder fremd → nicht verfügbar. *@
+<PageTitle>@(_einsicht is null ? "Nachweise" : $"Nachweise von {Anzeige.Name(_einsicht.Vorname, _einsicht.Nachname)}") – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else if (_einsicht is null)
+{
+    <h1>Nachweise</h1>
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+    else
+    {
+        <Ladezustand />
+    }
+}
+else
+{
+    <h1>Nachweise von @Anzeige.Name(_einsicht.Vorname, _einsicht.Nachname)</h1>
+    <p>Jede Datei lässt sich nur bis zur Entscheidung öffnen. Gespeichert wird nur die Bestätigung.</p>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+    @if (_nichtMehrMoeglich)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>Die Entscheidung ist nicht mehr möglich.</p>
+        </Meldung>
+    }
+    @if (_einsicht.Status == EinsichtStatus.Freigegeben && _einsicht.FreigegebenBis is { } bis)
+    {
+        <p>Freigegeben bis @Anzeige.Datum(bis)</p>
+    }
+    else if (_einsicht.FreigabeAbgelaufen && _einsicht.FreigegebenBis is { } abgelaufen)
+    {
+        <p>Die Freigabe ist am @Anzeige.Datum(abgelaufen) abgelaufen. Die Person muss erneut freigeben.</p>
+    }
+    else if (_einsicht.Status == EinsichtStatus.Angefragt)
+    {
+        <p>Noch nicht freigegeben.</p>
+    }
+
+    @foreach (var posten in _einsicht.Posten)
+    {
+        var offen = posten.Ergebnis == PostenErgebnis.Offen && _einsicht.Status == EinsichtStatus.Freigegeben;
+        <Card Titel="@Anzeige.Nachweis(posten.Art)">
+            <p>Ausgestellt am @Anzeige.Datum(posten.Ausstellungsdatum)</p>
+            @if (posten.HochgeladenAm is { } am)
+            {
+                <p>Hochgeladen am @Anzeige.Datum(am)</p>
+            }
+            @switch (posten.Ergebnis)
+            {
+                case PostenErgebnis.Bestaetigt:
+                    <p><Status Wort="Bestätigt" Art="StatusArt.Erfolg" /></p>
+                    break;
+                case PostenErgebnis.Abgelehnt:
+                    <p><Status Wort="Abgelehnt" Art="StatusArt.Fehler" /></p>
+                    break;
+            }
+            @if (offen)
+            {
+                <p><a href="@PersonenApiClient.EinsichtDateiPfad(Ort, EinsichtId, posten.NachweisId)" target="_blank" rel="noopener">Datei öffnen</a></p>
+                <p><Knopf Deaktiviert="@_uebertraegt" @onclick="@(() => BestaetigenAsync(posten.NachweisId))">Bestätigen</Knopf></p>
+                <Feld Label="Hinweis" Id="@($"hinweis-{posten.NachweisId}")" Wert="@Hinweis(posten.NachweisId)" Fehler="@_hinweisFehler.GetValueOrDefault(posten.NachweisId)"
+                      Hinweis="Was nicht passt, z. B. „Das Ausstellungsdatum passt nicht zum Dokument.“" autocomplete="off"
+                      @oninput="@(e => _hinweise[posten.NachweisId] = e.Value?.ToString())" />
+                <Knopf Art="KnopfArt.Outline" Deaktiviert="@_uebertraegt" @onclick="@(() => AblehnenAsync(posten.NachweisId))">Ablehnen</Knopf>
+            }
+        </Card>
+    }
+
+    <p><a href="@Liste">Zurück zur Liste</a></p>
+}
+
+@code {
+    private readonly Dictionary<Guid, string?> _hinweise = [];
+    private readonly Dictionary<Guid, string?> _hinweisFehler = [];
+    private EinsichtDetail? _einsicht;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private bool _nichtMehrMoeglich;
+    private Guid _geladeneEinsicht;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    [Parameter] public Guid OrgId { get; set; }
+
+    [Parameter] public Guid EinsichtId { get; set; }
+
+    private PruefOrt Ort => FreizeitId != Guid.Empty ? PruefOrt.Freizeit(FreizeitId) : PruefOrt.Organisation(OrgId);
+
+    private string Liste => FreizeitId != Guid.Empty ? $"freizeiten/{FreizeitId}/nachweise" : $"organisationen/{OrgId}/nachweise";
+
+    private string? Hinweis(Guid nachweisId) => _hinweise.GetValueOrDefault(nachweisId);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_geladeneEinsicht != EinsichtId)
+        {
+            // Wechsel zu einer anderen Einsicht in derselben Komponente: nichts aus der vorigen übernehmen.
+            _geladeneEinsicht = EinsichtId;
+            _hinweise.Clear();
+            _hinweisFehler.Clear();
+            _nichtMehrMoeglich = false;
+        }
+
+        _einsicht = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        try
+        {
+            await NeuLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    private async Task NeuLadenAsync()
+    {
+        _einsicht = await Personen.EinsichtLadenAsync(Ort, EinsichtId);
+        _nichtVerfuegbar = _einsicht is null;
+    }
+
+    private Task BestaetigenAsync(Guid nachweisId) => EntscheidenAsync(nachweisId, async () =>
+        await Personen.BestaetigenAsync(Ort, EinsichtId, nachweisId));
+
+    private Task AblehnenAsync(Guid nachweisId) => EntscheidenAsync(nachweisId, async () =>
+    {
+        var (abgelehnt, fehler) = await Personen.AblehnenAsync(Ort, EinsichtId, nachweisId, Hinweis(nachweisId));
+        _hinweisFehler[nachweisId] = fehler;
+        return abgelehnt || fehler is not null;
+    });
+
+    /// <summary>
+    /// Entscheidet und lädt die Einsicht neu; <c>false</c> aus dem Schritt heißt: nicht mehr möglich (404). Ein Feldfehler eines
+    /// früheren „Ablehnen“ verschwindet beim nächsten Versuch; nur ein neuer Feldfehler lässt die Seite stehen.
+    /// </summary>
+    private async Task EntscheidenAsync(Guid nachweisId, Func<Task<bool>> schritt)
+    {
+        _uebertraegt = true;
+        _aktionFehler = false;
+        _nichtMehrMoeglich = false;
+        _hinweisFehler.Remove(nachweisId);
+        try
+        {
+            _nichtMehrMoeglich = !await schritt();
+            if (_hinweisFehler.GetValueOrDefault(nachweisId) is null)
+            {
+                await NeuLadenAsync();
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

@@ -1,0 +1,59 @@
+@* Ankreuzfeld (DESIGN.md → Formular, ELKW „choice“): ein Ja/Nein mit sichtbarer Beschriftung rechts vom Kästchen. Statisch
+   tauglich: ohne eigene Ereignis-Handler; weitere Attribute (auch Ereignisse) landen am input-Element. Ein Fehler „Fehler: …“
+   setzt aria-invalid und aria-describedby; UnterDemFeld nimmt z. B. den Speicher-Hinweis auf. *@
+<div class="elkw-field">
+    <label class="elkw-choice">
+        <input @attributes="Attribute" type="checkbox" id="@KennungFeld" name="@Name" value="true" checked="@Wert" disabled="@Deaktiviert"
+               aria-invalid="@(Fehler is null ? null : "true")" aria-describedby="@Beschrieben" />
+        @Label
+    </label>
+    @if (Hinweis is not null)
+    {
+        <span class="elkw-hint" id="@HinweisId">@Hinweis</span>
+    }
+    @if (Fehler is not null)
+    {
+        <span class="elkw-field-error" id="@FehlerId">Fehler: @Fehler</span>
+    }
+    @UnterDemFeld
+</div>
+
+@code {
+    private readonly string _vorgabeId = Kennungen.Neu("ankreuz");
+
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+
+    [Parameter] public string? Name { get; set; }
+
+    [Parameter] public string? Id { get; set; }
+
+    /// <summary>Angekreuzt.</summary>
+    [Parameter] public bool Wert { get; set; }
+
+    [Parameter] public string? Hinweis { get; set; }
+
+    /// <summary>Fehlertext ohne Präfix; angezeigt als „Fehler: …“.</summary>
+    [Parameter] public string? Fehler { get; set; }
+
+    [Parameter] public bool Deaktiviert { get; set; }
+
+    /// <summary>Platz unter dem Feld, z. B. für den Speicher-Hinweis.</summary>
+    [Parameter] public RenderFragment? UnterDemFeld { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? Attribute { get; set; }
+
+    private string KennungFeld => Id ?? _vorgabeId;
+
+    private string HinweisId => KennungFeld + "-hinweis";
+
+    private string FehlerId => KennungFeld + "-fehler";
+
+    private string? Beschrieben
+    {
+        get
+        {
+            var text = string.Join(' ', new[] { Hinweis is null ? null : HinweisId, Fehler is null ? null : FehlerId }.Where(t => t is not null));
+            return text.Length == 0 ? null : text;
+        }
+    }
+}

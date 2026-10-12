@@ -98,6 +98,45 @@ public sealed class OrganisationenApiClient(HttpClient http)
                ?? throw new HttpRequestException("Leere Antwort beim Laden der eigenen Organisationen.");
     }
 
+    /// <summary><c>GET /api/organisationen/{orgId}/nachweis-richtlinie</c>: je Art Pflicht und Gültigkeit oder <c>null</c>.</summary>
+    public Task<List<RichtlinieZeile>?> RichtlinieLadenAsync(Guid orgId, CancellationToken abbruch = default) =>
+        LadenAsync<List<RichtlinieZeile>>($"/api/organisationen/{orgId}/nachweis-richtlinie", abbruch);
+
+    /// <summary>Pfad einer Richtlinien-Zeile für den Autosave-Baustein (<c>PATCH</c>, AD-19).</summary>
+    public static string RichtliniePfad(Guid orgId, NachweisArt art) =>
+        $"/api/organisationen/{orgId}/nachweis-richtlinie/{RichtlinieFelder.JsonName(art)}";
+
+    /// <summary><c>GET /api/ich/organisationen/nachweis-bestaetigungen</c>: die eigenen Bestätigungen aller Organisationen.</summary>
+    public async Task<List<NachweisBestaetigungZeile>> BestaetigungenLadenAsync(CancellationToken abbruch = default)
+    {
+        using var antwort = await http.GetAsync("/api/ich/organisationen/nachweis-bestaetigungen", abbruch);
+        antwort.EnsureSuccessStatusCode();
+        return await antwort.Content.ReadFromJsonAsync<List<NachweisBestaetigungZeile>>(ApiJson.Optionen, abbruch)
+               ?? throw new HttpRequestException("Leere Antwort beim Laden der Bestätigungen.");
+    }
+
+    /// <summary>
+    /// <c>GET /api/ich/organisationen/namen?id=…</c>: die Namen der genannten Organisationen (höchstens
+    /// <see cref="OrganisationsNamen.HoechstensKennungen"/> je Abfrage; mehr werden in Teilen abgefragt).
+    /// </summary>
+    public async Task<Dictionary<Guid, string>> NamenLadenAsync(IEnumerable<Guid> kennungen, CancellationToken abbruch = default)
+    {
+        ArgumentNullException.ThrowIfNull(kennungen);
+        var namen = new Dictionary<Guid, string>();
+        foreach (var teil in kennungen.Distinct().Chunk(OrganisationsNamen.HoechstensKennungen))
+        {
+            var abfrage = string.Join("&", teil.Select(id => $"{OrganisationsNamen.Parameter}={id}"));
+            using var antwort = await http.GetAsync($"/api/ich/organisationen/namen?{abfrage}", abbruch);
+            antwort.EnsureSuccessStatusCode();
+            foreach (var zeile in await antwort.Content.ReadFromJsonAsync<List<OrganisationName>>(ApiJson.Optionen, abbruch) ?? [])
+            {
+                namen[zeile.OrganisationId] = zeile.Name;
+            }
+        }
+
+        return namen;
+    }
+
     private async Task<T?> LadenAsync<T>(string pfad, CancellationToken abbruch)
         where T : class
     {

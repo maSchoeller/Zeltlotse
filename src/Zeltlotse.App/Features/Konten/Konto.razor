@@ -4,7 +4,7 @@
 @inject AppSitzung Sitzung
 @inject AnmeldungAbschluss Abschluss
 @* Konto (EXPERIENCE.md → Flächen „Konto“, FR-1, FR-2): Mail-Adresse, Profil mit Vor- und Nachname per Autosave
-   (AD-19), Passwort festlegen oder ändern, der Weg zum Familienkonto (FR-3), Abmelden. Ohne Sitzung (401) leitet der Sitzungs-Handler zur Anmeldung. *@
+   (AD-19), Passwort festlegen oder ändern, der Weg zu den Nachweisen (FR-8) und zum Familienkonto (FR-3), Abmelden. Ohne Sitzung (401) leitet der Sitzungs-Handler zur Anmeldung. *@
 <PageTitle>Konto – Zeltlotse</PageTitle>
 
 <h1>Konto</h1>
@@ -45,6 +45,11 @@ else
                   Hinweis="10 bis 200 Zeichen" autocomplete="new-password" @oninput="@(e => _passwort = e.Value?.ToString())" />
             <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Passwort speichern</Knopf>
         </Formular>
+    </Card>
+
+    <Card Titel="Nachweise">
+        <p>Führungszeugnis, JuLeiCa, Erste Hilfe und Präventionsschulung am Profil ablegen und einmal zur Prüfung freigeben.</p>
+        <Knopf Art="KnopfArt.Outline" Href="konto/nachweise" Ansichtswechsel="true">Nachweise öffnen</Knopf>
     </Card>
 
     <p><Knopf Art="KnopfArt.Outline" Href="familie" Ansichtswechsel="true">Familienkonto öffnen</Knopf></p>

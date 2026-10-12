@@ -14,7 +14,7 @@ namespace Zeltlotse.E2E.Tests;
 /// des Service Workers entsteht nur beim Veröffentlichen) und startet die DLL als Prozess: Umgebung <c>Testing</c>,
 /// Kestrel auf <c>https://127.0.0.1:&lt;frei&gt;</c> mit einem je Lauf selbst erzeugten Testzertifikat (Secure-Cookies und
 /// Antiforgery verlangen HTTPS, AD-25) und zusätzlich auf <c>http://127.0.0.1:&lt;frei&gt;</c> für die internen Aufrufe der
-/// öffentlichen Seiten, PostgreSQL per Testcontainers, Test-Schlüssel, Mail-Adapter <c>Ordner</c> und eingeschaltete
+/// öffentlichen Seiten, PostgreSQL und S3-Dateispeicher per Testcontainers, Test-Schlüssel, Mail-Adapter <c>Ordner</c> und eingeschaltete
 /// Demo-Daten per Umgebungsvariablen. Dazu ein Chromium von Playwright, das dem Testzertifikat vertraut
 /// (<c>--ignore-certificate-errors</c>, Kontexte über <see cref="KontextAsync"/>).
 /// </summary>
@@ -23,6 +23,9 @@ public sealed class VeroeffentlichterHost : IAsyncLifetime
     private static readonly TimeSpan Wartezeit = TimeSpan.FromMinutes(10);
 
     private readonly PostgresContainer _postgres = new();
+
+    /// <summary>Dateispeicher für die Nachweis-Dateien der Demo-Daten (Story 1-5).</summary>
+    private readonly S3Container _s3 = new();
     private readonly StringBuilder _ausgabe = new();
     private readonly string _ordner = Path.Combine(Path.GetTempPath(), "zeltlotse-e2e-" + Guid.NewGuid().ToString("N"));
     private Process? _host;
@@ -36,7 +39,7 @@ public sealed class VeroeffentlichterHost : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         var veroeffentlichen = VeroeffentlichenAsync();
-        await _postgres.InitializeAsync();
+        await Task.WhenAll(_postgres.InitializeAsync().AsTask(), _s3.InitializeAsync().AsTask());
         var verbindung = await _postgres.NeueDatenbankAsync();
         await veroeffentlichen;
 
@@ -72,6 +75,11 @@ public sealed class VeroeffentlichterHost : IAsyncLifetime
                 ["Zeltlotse__Zugriffsbegrenzung__AnfragenJeMinute"] = "10000",
             },
         };
+        foreach (var (schluessel, wert) in _s3.Einstellungen(S3Container.NeuerBucket()))
+        {
+            start.Environment[schluessel.Replace(":", "__", StringComparison.Ordinal)] = wert;
+        }
+
         _host = Process.Start(start) ?? throw new InvalidOperationException("Der Host ließ sich nicht starten.");
         _host.OutputDataReceived += (_, e) => Mitschreiben(e.Data);
         _host.ErrorDataReceived += (_, e) => Mitschreiben(e.Data);
@@ -137,6 +145,7 @@ public sealed class VeroeffentlichterHost : IAsyncLifetime
 
         _host?.Dispose();
         await _postgres.DisposeAsync();
+        await _s3.DisposeAsync();
         try
         {
             Directory.Delete(_ordner, recursive: true);

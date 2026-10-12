@@ -34,13 +34,20 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         "GET /api/ich/familie",
         "GET /api/ich/freizeiten",
         "GET /api/ich/konto",
+        "GET /api/ich/nachweise",
         "GET /api/ich/organisationen",
+        "GET /api/ich/organisationen/nachweis-bestaetigungen",
+        "GET /api/ich/organisationen/namen",
         "GET /api/ich/profil",
         "PATCH /api/ich/familie/kinder/{personId:guid}",
+        "PATCH /api/ich/nachweise/{nachweisId:guid}",
         "PATCH /api/ich/profil",
         "POST /api/ich/familie/einladungen",
         "POST /api/ich/familie/kinder",
         "POST /api/ich/familie/kinder/{personId:guid}/uebergabe",
+        "POST /api/ich/nachweise",
+        "POST /api/ich/nachweise/einsichten/{einsichtId:guid}/freigeben",
+        "POST /api/ich/nachweise/{nachweisId:guid}/datei",
         "POST /api/ich/profil",
         "PUT /api/ich/konto/passwort",
     ];
@@ -126,7 +133,22 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         // Freizeit-Routen: freizeitId ohne orgId. Org-Routen mit freizeitId (Verwaltung) prüfen die Org-Rolle.
         var mitFreizeit = endpunkte.Where(e => e.Endpunkt.RoutePattern.Parameters.Any(p => p.Name == Rechtemerkmale.FreizeitRouteWert)).ToList();
         var freizeitRouten = mitFreizeit.Where(e => e.Endpunkt.RoutePattern.Parameters.All(p => p.Name != Rechtemerkmale.OrgRouteWert)).ToList();
-        Assert.Equal(["GET /api/freizeiten/{freizeitId:guid}", "GET /api/freizeiten/{freizeitId:guid}/kontext"], freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
+        // Story 1-5: die sieben Prüf-Endpunkte der Leitung (Personen).
+        const string pruefen = "/api/freizeiten/{freizeitId:guid}/personen/nachweise";
+        Assert.Equal(
+            new[]
+            {
+                "GET /api/freizeiten/{freizeitId:guid}",
+                "GET /api/freizeiten/{freizeitId:guid}/kontext",
+                $"GET {pruefen}",
+                $"GET {pruefen}/einsichten/{{einsichtId:guid}}",
+                $"GET {pruefen}/einsichten/{{einsichtId:guid}}/nachweise/{{nachweisId:guid}}/datei",
+                $"POST {pruefen}/anfragen",
+                $"POST {pruefen}/einsichten/{{einsichtId:guid}}/nachweise/{{nachweisId:guid}}/ablehnen",
+                $"POST {pruefen}/einsichten/{{einsichtId:guid}}/nachweise/{{nachweisId:guid}}/bestaetigen",
+                $"POST {pruefen}/einsichten/{{einsichtId:guid}}/pruefen",
+            }.Order(StringComparer.Ordinal),
+            freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
         Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));
         Assert.All(freizeitRouten, e => Assert.NotNull(e.Endpunkt.Metadata.GetMetadata<NurFreizeitRolleMetadaten>()));
         Assert.All(
@@ -143,7 +165,8 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         var endpunkte = await EndpunkteAsync();
 
         var mitOrg = endpunkte.Where(e => e.Endpunkt.RoutePattern.Parameters.Any(p => p.Name == Rechtemerkmale.OrgRouteWert)).ToList();
-        Assert.Equal(7, mitOrg.Count);
+        // Story 1-5: dazu die sieben Prüf-Endpunkte des Org-Admins und die zwei der Nachweis-Richtlinie.
+        Assert.Equal(16, mitOrg.Count);
         Assert.All(mitOrg, e =>
         {
             Assert.NotNull(e.Endpunkt.Metadata.GetMetadata<NurOrgRolleMetadaten>());

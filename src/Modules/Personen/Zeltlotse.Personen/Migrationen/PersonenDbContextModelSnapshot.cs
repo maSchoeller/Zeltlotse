@@ -172,6 +172,126 @@ namespace Zeltlotse.Personen.Migrationen
                     b.ToTable("freizeit_rolle", "personen");
                 });
 
+            modelBuilder.Entity("Zeltlotse.Personen.Nachweise.Nachweis", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("Ablehnungshinweis")
+                        .HasColumnType("bytea");
+
+                    b.Property<short>("Art")
+                        .HasColumnType("smallint");
+
+                    b.Property<DateOnly>("Ausstellungsdatum")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset?>("HochgeladenAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonId", "Art")
+                        .IsUnique();
+
+                    b.ToTable("nachweis", "personen");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Personen.Nachweise.NachweisEinsicht", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("AbgeschlossenAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("AngefragtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("AngefragtVon")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Folgenummer")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("FreigegebenAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("FreigegebenBis")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.PrimitiveCollection<short[]>("NurArten")
+                        .HasColumnType("smallint[]");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PruefendePersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("OrganisationId", "PersonId");
+
+                    b.HasIndex("PersonId", "OrganisationId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_nachweis_einsicht_offen")
+                        .HasFilter("\"Status\" <> 3");
+
+                    b.ToTable("nachweis_einsicht", "personen");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Personen.Nachweise.NachweisEinsichtPosten", b =>
+                {
+                    b.Property<Guid>("EinsichtId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("NachweisId")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Art")
+                        .HasColumnType("smallint");
+
+                    b.Property<DateTimeOffset?>("EntschiedenAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<short>("Ergebnis")
+                        .HasColumnType("smallint");
+
+                    b.HasKey("EinsichtId", "NachweisId");
+
+                    b.HasIndex("NachweisId");
+
+                    b.ToTable("nachweis_einsicht_posten", "personen");
+                });
+
             modelBuilder.Entity("Zeltlotse.Personen.Profil.Person", b =>
                 {
                     b.Property<Guid>("Id")
@@ -348,6 +468,15 @@ namespace Zeltlotse.Personen.Migrationen
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Zeltlotse.Personen.Nachweise.NachweisEinsichtPosten", b =>
+                {
+                    b.HasOne("Zeltlotse.Personen.Nachweise.NachweisEinsicht", null)
+                        .WithMany("Posten")
+                        .HasForeignKey("EinsichtId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.Zustellung", b =>
                 {
                     b.HasOne("Zeltlotse.SharedKernel.Outbox.OutboxNachricht", null)
@@ -355,6 +484,11 @@ namespace Zeltlotse.Personen.Migrationen
                         .HasForeignKey("EreignisId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Zeltlotse.Personen.Nachweise.NachweisEinsicht", b =>
+                {
+                    b.Navigation("Posten");
                 });
 #pragma warning restore 612, 618
         }

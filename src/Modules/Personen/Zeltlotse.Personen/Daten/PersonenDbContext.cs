@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Design;
 using Zeltlotse.Api.Contracts.Personen;
 using Zeltlotse.Personen.Familien;
 using Zeltlotse.Personen.Freizeitrollen;
+using Zeltlotse.Personen.Nachweise;
 using Zeltlotse.Personen.Profil;
 using Zeltlotse.Personen.Schluessel;
 using Zeltlotse.SharedKernel.Daten;
@@ -29,6 +30,12 @@ internal sealed class PersonenDbContext(DbContextOptions<PersonenDbContext> opti
 
     public DbSet<ProfilUebergabe> Uebergaben => Set<ProfilUebergabe>();
 
+    public DbSet<Nachweis> Nachweise => Set<Nachweis>();
+
+    public DbSet<NachweisEinsicht> Einsichten => Set<NachweisEinsicht>();
+
+    public DbSet<NachweisEinsichtPosten> EinsichtPosten => Set<NachweisEinsichtPosten>();
+
     protected override string Schema => PersonenModul.Schema;
 
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => PersonenModell.Konfigurieren(modelBuilder);
@@ -51,6 +58,12 @@ internal sealed class PersonenLeseDbContext(DbContextOptions<PersonenLeseDbConte
     public DbSet<FamilienEinladung> FamilienEinladungen => Set<FamilienEinladung>();
 
     public DbSet<ProfilUebergabe> Uebergaben => Set<ProfilUebergabe>();
+
+    public DbSet<Nachweis> Nachweise => Set<Nachweis>();
+
+    public DbSet<NachweisEinsicht> Einsichten => Set<NachweisEinsicht>();
+
+    public DbSet<NachweisEinsichtPosten> EinsichtPosten => Set<NachweisEinsichtPosten>();
 
     protected override string Schema => PersonenModul.Schema;
 
@@ -130,6 +143,44 @@ internal static class PersonenModell
             e.Property(t => t.Status).HasConversion<short>();
             e.Property(t => t.Version).IsRowVersion();
             e.HasOne<Familie>().WithMany().HasForeignKey(t => t.FamilieId);
+        });
+
+        // FR-8: je Person und Art höchstens ein Nachweis; die Datei liegt verschlüsselt im Dateispeicher (Kennung = Id).
+        modelBuilder.Entity<Nachweis>(e =>
+        {
+            e.ToTable("nachweis");
+            e.Property(n => n.Id).ValueGeneratedNever();
+            e.Property(n => n.Art).HasConversion<short>();
+            e.HasIndex(n => new { n.PersonId, n.Art }).IsUnique();
+            e.Property(n => n.Version).IsRowVersion();
+        });
+
+        // FR-10, AD-9: Einsicht als Aggregat (organisationseigen, Mandantenfilter) mit ihren Posten.
+        modelBuilder.Entity<NachweisEinsicht>(e =>
+        {
+            e.ToTable("nachweis_einsicht");
+            e.Property(t => t.Id).ValueGeneratedNever();
+            e.Property(t => t.Status).HasConversion<short>();
+            e.Property(t => t.NurArten).HasColumnType("smallint[]");
+            e.HasIndex(t => new { t.OrganisationId, t.PersonId });
+            e.HasIndex(t => t.PersonId);
+            // Je (Person, Organisation) höchstens eine offene Einsicht; offen = nicht abgeschlossen (Status 3).
+            e.HasIndex(t => new { t.PersonId, t.OrganisationId })
+                .IsUnique()
+                .HasFilter("\"Status\" <> 3")
+                .HasDatabaseName("IX_nachweis_einsicht_offen");
+            e.Property(t => t.Version).IsRowVersion();
+            e.HasMany(t => t.Posten).WithOne().HasForeignKey(p => p.EinsichtId).OnDelete(DeleteBehavior.Cascade);
+            e.Navigation(t => t.Posten).UsePropertyAccessMode(PropertyAccessMode.Field).HasField("_posten");
+        });
+
+        modelBuilder.Entity<NachweisEinsichtPosten>(e =>
+        {
+            e.ToTable("nachweis_einsicht_posten");
+            e.HasKey(p => new { p.EinsichtId, p.NachweisId });
+            e.Property(p => p.Art).HasConversion<short>();
+            e.Property(p => p.Ergebnis).HasConversion<short>();
+            e.HasIndex(p => p.NachweisId);
         });
     }
 }

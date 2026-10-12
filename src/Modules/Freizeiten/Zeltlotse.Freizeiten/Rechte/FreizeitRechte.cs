@@ -27,6 +27,16 @@ internal static class FreizeitRechte
     /// <summary>Freizeit-Endpunkte für alle, die in der Freizeit mitarbeiten; Org-Rollen zählen nicht (AD-12).</summary>
     public static readonly RolleArt[] Mitarbeit = [RolleArt.Leitung, RolleArt.Team];
 
+    /// <summary>
+    /// Nachweise im Freizeit-Kontext prüfen (FR-10). Die Endpunkte dazu besitzt Personen; dort steht dieselbe Liste
+    /// (<c>NachweisRechte.FreizeitPruefen</c>), ein HTTP-Test hält beide gleich.
+    /// </summary>
+    public static readonly RolleArt[] NachweisePruefen = [RolleArt.Leitung];
+
+    /// <summary>Erlaubte Aktionen im Freizeit-Kontext (AD-29) aus den eigenen Freizeit-Rollen.</summary>
+    public static IReadOnlyList<string> Erlaubt(IReadOnlyCollection<RolleArt> rollen) =>
+        rollen.Any(NachweisePruefen.Contains) ? [Aktionsschluessel.NachweisePruefen] : [];
+
     public static IReadOnlyList<string> ErlaubtInOrganisation(IReadOnlyCollection<OrgRolleArt> rollen)
     {
         var erlaubt = new List<string>();

@@ -1,0 +1,405 @@
+@page "/konto/nachweise"
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.Forms
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Organisationen
+@using Zeltlotse.Api.Contracts.Personen
+@using NachweisArt = Zeltlotse.Api.Contracts.Personen.NachweisArt
+@inject PersonenApiClient Personen
+@inject OrganisationenApiClient Organisationen
+@inject FreizeitenApiClient Freizeiten
+@* Nachweise (FR-8, FR-10, FR-12, EXPERIENCE.md → „Profil und Nachweise“, NS-3): je offener Anfrage ein Hinweis mit dem Namen
+   der Organisation und „Freigeben“ (Inline-Bestätigung), je Nachweis eine Card mit Ausstellungsdatum (Autosave), Hochladedatum,
+   neuer Datei, Ablehnungshinweis und den Bestätigungen der Organisationen (abgelaufene als Warnung); „Nachweis hinzufügen“,
+   solange eine Art fehlt. Erst wird der Eintrag angelegt, dann die Datei hochgeladen; scheitert der Upload, bleibt der Eintrag
+   ohne Datei mit „Erneut versuchen“. Namen der Organisationen liefert nur Organisationen, den der Freizeit „Meine Freizeiten“;
+   scheitert eine dieser Zusatzabfragen, entfallen nur die Zusätze. *@
+<PageTitle>Nachweise – Zeltlotse</PageTitle>
+
+<h1>Nachweise</h1>
+<p><a href="konto">Zurück zum Konto</a></p>
+
+@if (_aktionFehler)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>@AnmeldungAbschluss.FehlerText</p>
+    </Meldung>
+}
+
+@if (_daten is null)
+{
+    @if (!_aktionFehler)
+    {
+        <Ladezustand />
+    }
+}
+else
+{
+    @if (_freigabeFehler is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_freigabeFehler</p>
+        </Meldung>
+    }
+
+    @if (_hinzugefuegt)
+    {
+        <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+            <p>Der Nachweis ist hinzugefügt.</p>
+        </Meldung>
+    }
+
+    @foreach (var anfrage in _daten.Anfragen)
+    {
+        <Meldung Titel="Hinweis">
+            <p>@AnfrageText(anfrage)</p>
+            @if (AnfrageZusatz(anfrage) is { } zusatz)
+            {
+                <p>@zusatz</p>
+            }
+            @if (anfrage.Status == EinsichtStatus.Freigegeben && anfrage.FreigegebenBis is { } bis)
+            {
+                <p>Freigegeben bis @Anzeige.Datum(bis), wartet auf Prüfung.</p>
+            }
+            else
+            {
+                <InlineBestaetigung AusloeserText="Freigeben"
+                                    Satz="Nachweise einmal zur Prüfung freigeben? Die prüfende Person sieht die Dateien bis zur Entscheidung, höchstens 14 Tage."
+                                    JaText="Ja, freigeben" Bestaetigt="@(() => FreigebenAsync(anfrage.Id))" />
+            }
+        </Meldung>
+    }
+
+    @if (_daten.Nachweise.Count == 0)
+    {
+        <LeerZustand Satz="Noch keine Nachweise hochgeladen." />
+    }
+
+    @foreach (var nachweis in _daten.Nachweise)
+    {
+        var stand = Stand(nachweis.Id);
+        <Card Titel="@Anzeige.Nachweis(nachweis.Art)">
+            @if (nachweis.Ablehnungshinweis is { } hinweis)
+            {
+                <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                    <p>Abgelehnt: @hinweis</p>
+                </Meldung>
+            }
+            @foreach (var bestaetigung in Bestaetigungen(nachweis.Art))
+            {
+                @if (bestaetigung.Abgelaufen)
+                {
+                    <Meldung Titel="Achtung" Art="MeldungArt.Warnung">
+                        <p>Abgelaufen am @Anzeige.Datum(bestaetigung.GueltigBis) (@bestaetigung.Organisation)</p>
+                    </Meldung>
+                }
+                else
+                {
+                    <p><Status Wort="Bestätigt" Art="StatusArt.Erfolg" /> · gültig bis @Anzeige.Datum(bestaetigung.GueltigBis) (@bestaetigung.Organisation)</p>
+                }
+            }
+            <AutosaveFeld Label="Ausgestellt am" Id="@($"nachweis-datum-{nachweis.Id}")" Typ="date" Feldname="@NachweisFelder.Ausstellungsdatum"
+                          Pfad="@PersonenApiClient.NachweisPfad(nachweis.Id)"
+                          Wert="@nachweis.Ausstellungsdatum.ToString(NachweisFelder.Datumsformat, CultureInfo.InvariantCulture)"
+                          Version="@nachweis.Version" NeuLaden="NeuLadenAsync"
+                          KonfliktText="@(KannInPruefungSein(nachweis) ? InPruefungText : null)" />
+            <p>@(nachweis.HochgeladenAm is { } am ? $"Hochgeladen am {Anzeige.Datum(am)}" : "Noch keine Datei.")</p>
+            @if (stand.Hochgeladen)
+            {
+                <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+                    <p>Die Datei ist hochgeladen.</p>
+                </Meldung>
+            }
+            @if (stand.Gescheitert)
+            {
+                <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                    <p>Datei nicht hochgeladen.</p>
+                    <Knopf Deaktiviert="@stand.Uebertraegt" @onclick="@(() => HochladenAsync(nachweis.Id, stand))">Erneut versuchen</Knopf>
+                </Meldung>
+            }
+            @if (stand.InPruefung)
+            {
+                <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                    <p>@InPruefungText</p>
+                </Meldung>
+            }
+            @if (stand.NichtGefunden)
+            {
+                <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                    <p>Der Nachweis wurde nicht gefunden.</p>
+                </Meldung>
+            }
+            <DateiFeld Label="Neue Datei hochladen" Id="@($"nachweis-datei-{nachweis.Id}")" Hinweis="@DateiHinweis" Fehler="@stand.DateiFehler"
+                       Deaktiviert="@stand.Uebertraegt" DateiGewaehlt="@(datei => NeueDateiAsync(nachweis.Id, stand, datei))" />
+        </Card>
+    }
+
+    @if (FehlendeArten.Count > 0)
+    {
+        <Card Titel="Nachweis hinzufügen">
+            @if (_vorhanden)
+            {
+                <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                    <p>Einen Nachweis dieser Art gibt es schon.</p>
+                </Meldung>
+            }
+            <Formular id="nachweis-hinzufuegen" Absenden="HinzufuegenAsync">
+                <Auswahl Legende="Art" Gruppe="nachweis-art" Optionen="ArtOptionen" Wert="@_art?.ToString()" Fehler="@_artFehler"
+                         WertGeaendert="@(w => _art = Enum.Parse<NachweisArt>(w))" />
+                <Feld Label="Ausgestellt am" Id="nachweis-ausgestellt" Typ="date" Wert="@_datum" Fehler="@_datumFehler"
+                      @oninput="@(e => _datum = e.Value?.ToString())" />
+                <DateiFeld Id="nachweis-neue-datei" Hinweis="@DateiHinweis" Fehler="@_neuStand.DateiFehler" DateiGewaehlt="@(d => _neuStand.Datei = d)" />
+                <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Nachweis hinzufügen</Knopf>
+            </Formular>
+        </Card>
+    }
+}
+
+@code {
+    private const string DateiHinweis = "Fotos (JPEG, PNG, WebP) oder PDF, höchstens 10 MB.";
+
+    private const string InPruefungText = "Der Nachweis ist gerade zur Prüfung freigegeben. Ändern geht nach der Entscheidung oder nach Ablauf der Freigabe.";
+
+    /// <summary>Höchstgröße beim Lesen im Browser: eine größere Datei lehnt der Server ab, ohne dass alles gelesen wird.</summary>
+    private const long Hoechstgroesse = (10 * 1024 * 1024) + 1;
+
+    /// <summary>Datei und Rückmeldung des Uploads je Nachweis; bleibt über ein Neuladen erhalten.</summary>
+    private sealed class UploadStand
+    {
+        public IBrowserFile? Datei { get; set; }
+
+        public string? DateiFehler { get; set; }
+
+        public bool Hochgeladen { get; set; }
+
+        public bool Gescheitert { get; set; }
+
+        /// <summary>Der Server antwortete <c>409</c>: gerade zur Prüfung freigegeben.</summary>
+        public bool InPruefung { get; set; }
+
+        /// <summary>Der Server antwortete <c>404</c>.</summary>
+        public bool NichtGefunden { get; set; }
+
+        public bool Uebertraegt { get; set; }
+    }
+
+    private readonly Dictionary<Guid, UploadStand> _staende = [];
+    private UploadStand _neuStand = new();
+    private NachweiseAntwort? _daten;
+    private List<NachweisBestaetigungZeile> _bestaetigungen = [];
+    private Dictionary<Guid, string> _freizeiten = [];
+    private Dictionary<Guid, string> _organisationen = [];
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private bool _hinzugefuegt;
+    private bool _vorhanden;
+    private string? _freigabeFehler;
+    private NachweisArt? _art;
+    private string? _datum;
+    private string? _artFehler;
+    private string? _datumFehler;
+
+    private IReadOnlyList<NachweisArt> FehlendeArten =>
+        [.. Enum.GetValues<NachweisArt>().Where(a => _daten!.Nachweise.All(n => n.Art != a))];
+
+    private IReadOnlyList<AuswahlOption> ArtOptionen => [.. FehlendeArten.Select(a => new AuswahlOption(a.ToString(), Anzeige.Nachweis(a)))];
+
+    private UploadStand Stand(Guid nachweisId)
+    {
+        if (!_staende.TryGetValue(nachweisId, out var stand))
+        {
+            stand = new UploadStand();
+            _staende[nachweisId] = stand;
+        }
+
+        return stand;
+    }
+
+    private IEnumerable<NachweisBestaetigungZeile> Bestaetigungen(NachweisArt art) =>
+        _bestaetigungen.Where(b => (int)b.Art == (int)art);
+
+    private string AnfrageText(EinsichtAnfrage anfrage) =>
+        _organisationen.TryGetValue(anfrage.OrganisationId, out var organisation)
+            ? $"{organisation} bittet um Einsicht in Nachweise."
+            : "Eine Organisation bittet um Einsicht in Nachweise.";
+
+    /// <summary>Wer angefragt hat: von Hand die Person, automatisch die Freizeit (fehlt ihr Name, entfällt der Satz).</summary>
+    private string? AnfrageZusatz(EinsichtAnfrage anfrage) => anfrage.AngefragtVon is { } von
+        ? $"Angefragt von {Anzeige.Name(von.Vorname, von.Nachname)}."
+        : anfrage.FreizeitId is { } freizeit && _freizeiten.TryGetValue(freizeit, out var name)
+            ? $"Angefragt wegen der Mitarbeit in „{name}“."
+            : null;
+
+    /// <summary>Ein Nachweis mit Datei, während eine Freigabe läuft: Ein <c>409</c> beim Datum heißt dann „gerade in Prüfung“.</summary>
+    private bool KannInPruefungSein(NachweisZeile nachweis) =>
+        nachweis.HochgeladenAm is not null && _daten!.Anfragen.Any(a => a.Status == EinsichtStatus.Freigegeben);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await NeuLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>
+    /// Lädt die Nachweise; scheitert das, gilt die Seite als nicht geladen. Bestätigungen, Organisationsnamen und Freizeiten sind
+    /// Zusätze: Scheitert eine dieser Abfragen, entfällt nur ihr Teil.
+    /// </summary>
+    private async Task NeuLadenAsync()
+    {
+        var daten = Personen.NachweiseLadenAsync();
+        var bestaetigungen = ZusatzAsync(() => Organisationen.BestaetigungenLadenAsync(), []);
+        var freizeiten = ZusatzAsync(async () => (await Freizeiten.MeineLadenAsync()).ToDictionary(f => f.FreizeitId, f => f.Name), []);
+        var geladen = await daten;
+        var organisationen = ZusatzAsync(() => Organisationen.NamenLadenAsync(geladen.Anfragen.Select(a => a.OrganisationId)), []);
+        _daten = geladen;
+        (_bestaetigungen, _freizeiten, _organisationen) = (await bestaetigungen, await freizeiten, await organisationen);
+    }
+
+    private static async Task<T> ZusatzAsync<T>(Func<Task<T>> laden, T ersatz)
+    {
+        try
+        {
+            return await laden();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            return ersatz;
+        }
+    }
+
+    private async Task FreigebenAsync(Guid einsichtId)
+    {
+        _freigabeFehler = null;
+        _aktionFehler = false;
+        try
+        {
+            var ergebnis = await Personen.FreigebenAsync(einsichtId);
+            if (ergebnis.OhneDatei)
+            {
+                _freigabeFehler = "Freigeben geht gerade nicht: Es fehlt ein Nachweis mit Datei, der noch zu prüfen ist, oder die Freigabe läuft schon.";
+            }
+            else if (ergebnis.NichtGefunden)
+            {
+                _freigabeFehler = "Diese Anfrage ist nicht mehr offen.";
+            }
+
+            await NeuLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    private Task NeueDateiAsync(Guid nachweisId, UploadStand stand, IBrowserFile? datei)
+    {
+        stand.Datei = datei;
+        return datei is null ? Task.CompletedTask : HochladenAsync(nachweisId, stand);
+    }
+
+    /// <summary>Lädt die gewählte Datei hoch; ein Netzfehler zeigt „Datei nicht hochgeladen.“ mit „Erneut versuchen“.</summary>
+    private async Task<bool> HochladenAsync(Guid nachweisId, UploadStand stand)
+    {
+        if (stand.Datei is not { } datei || stand.Uebertraegt)
+        {
+            return false;
+        }
+
+        stand.Uebertraegt = true;
+        stand.Hochgeladen = false;
+        stand.Gescheitert = false;
+        stand.InPruefung = false;
+        stand.NichtGefunden = false;
+        stand.DateiFehler = null;
+        try
+        {
+            DateiHochladenErgebnis ergebnis;
+            if (datei.Size >= Hoechstgroesse)
+            {
+                ergebnis = new DateiHochladenErgebnis(null, "Die Datei ist größer als 10 MB.");
+            }
+            else
+            {
+                try
+                {
+                    await using var strom = datei.OpenReadStream(Hoechstgroesse);
+                    ergebnis = await Personen.DateiHochladenAsync(nachweisId, strom, datei.Name, datei.ContentType);
+                }
+                catch (IOException)
+                {
+                    // Größer als erlaubt: der Browser liest nicht weiter.
+                    ergebnis = new DateiHochladenErgebnis(null, "Die Datei ist größer als 10 MB.");
+                }
+            }
+
+            stand.DateiFehler = ergebnis.DateiFehler;
+            stand.InPruefung = ergebnis.InPruefung;
+            stand.NichtGefunden = ergebnis.NichtGefunden;
+            stand.Hochgeladen = ergebnis.HochgeladenAm is not null;
+            if (stand.Hochgeladen)
+            {
+                stand.Datei = null;
+                await NeuLadenAsync();
+            }
+
+            return stand.Hochgeladen;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            stand.Gescheitert = true;
+            return false;
+        }
+        finally
+        {
+            stand.Uebertraegt = false;
+        }
+    }
+
+    private static DateOnly? Tag(string? wert) =>
+        DateOnly.TryParseExact(wert, NachweisFelder.Datumsformat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var tag) ? tag : null;
+
+    private async Task HinzufuegenAsync()
+    {
+        _uebertraegt = true;
+        _hinzugefuegt = false;
+        _vorhanden = false;
+        _aktionFehler = false;
+        try
+        {
+            var ergebnis = await Personen.NachweisAnlegenAsync(_art, Tag(_datum));
+            (_artFehler, _datumFehler, _vorhanden) = (ergebnis.ArtFehler, ergebnis.DatumFehler, ergebnis.Vorhanden);
+            if (ergebnis.NachweisId is not { } id)
+            {
+                return;
+            }
+
+            // Der Eintrag ist gespeichert; die Datei wird zum Stand dieses Nachweises (auch für „Erneut versuchen“).
+            var stand = Stand(id);
+            stand.Datei = _neuStand.Datei;
+            _neuStand = new UploadStand();
+            (_art, _datum) = (null, null);
+            if (stand.Datei is null || await HochladenAsync(id, stand))
+            {
+                _hinzugefuegt = true;
+                stand.Hochgeladen = false;
+            }
+
+            await NeuLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

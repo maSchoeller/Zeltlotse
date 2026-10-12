@@ -3,9 +3,12 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Organisationen.Contracts.Rollen;
 using Zeltlotse.Organisationen.Daten;
+using Zeltlotse.Organisationen.Nachweise;
 using Zeltlotse.Organisationen.Rollen;
 using Zeltlotse.Organisationen.Verwaltung;
+using Zeltlotse.Personen.Contracts.Events;
 using Zeltlotse.SharedKernel.Daten;
+using Zeltlotse.SharedKernel.Ereignisse;
 using Zeltlotse.SharedKernel.Rechte;
 using Zeltlotse.SharedKernel.Web;
 
@@ -22,6 +25,7 @@ public static class OrganisationenModul
     {
         services.AddModul<OrganisationenDbContext, OrganisationenLeseDbContext>(Name, Schema);
         services.AddScoped<IOrgRollenLesen, OrgRollenLesen>();
+        services.EmpfaengtEreignis<NachweisEingesehen, NachweisBestaetigungSpeichern>();
         return services;
     }
 
@@ -41,8 +45,12 @@ public static class OrganisationenModul
         organisation.MapGet("", OrganisationLadenEndpunkt.Laden).NurOrgRolle(OrgRechte.Lesen);
         organisation.MapGet("/rollen", RollenLadenEndpunkt.Laden).NurOrgRolle(OrgRechte.RollenVergeben);
         organisation.MapPost("/einladungen", EinladungSchickenEndpunkt.Schicken).NurOrgRolle(OrgRechte.RollenVergeben);
+        organisation.MapGet("/nachweis-richtlinie", RichtlinieLadenEndpunkt.Laden).NurOrgRolle(OrgRechte.RichtlinieVerwalten);
+        organisation.MapPatch("/nachweis-richtlinie/{art}", RichtlinieFeldAendernEndpunkt.Aendern).NurOrgRolle(OrgRechte.RichtlinieVerwalten);
 
         api.MapGet("/ich/organisationen", MeineOrganisationenEndpunkt.Laden).Organisationsuebergreifend();
+        api.MapGet("/ich/organisationen/nachweis-bestaetigungen", MeineBestaetigungenEndpunkt.Laden).Organisationsuebergreifend();
+        api.MapGet("/ich/organisationen/namen", OrganisationsNamenEndpunkt.Laden).Organisationsuebergreifend();
         return api;
     }
 }

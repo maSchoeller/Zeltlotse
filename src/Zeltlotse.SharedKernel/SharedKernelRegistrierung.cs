@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Zeltlotse.SharedKernel.Dateien;
 using Zeltlotse.SharedKernel.Datenschutz;
 using Zeltlotse.SharedKernel.Ereignisse;
 using Zeltlotse.SharedKernel.Mandanten;
@@ -23,6 +24,9 @@ public static class SharedKernelRegistrierung
         services.TryAddSingleton<IOutboxZustellung, OutboxZustellung>();
         services.TryAddSingleton(sp => Hauptschluessel.AusKonfiguration(sp.GetRequiredService<IConfiguration>()));
         services.TryAddScoped<IVerschluesselung, Verschluesselung>();
+        // Über eine Fabrik: Den Dateispeicher (Adapter) registriert erst der API-Host (AD-23).
+        services.TryAddScoped<IGeschuetzteDateien>(sp => new GeschuetzteDateien(
+            sp.GetRequiredService<IDateiSpeicher>(), sp.GetRequiredService<IVerschluesselung>()));
         return services;
     }
 

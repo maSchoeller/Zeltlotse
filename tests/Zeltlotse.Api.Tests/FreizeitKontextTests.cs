@@ -80,7 +80,7 @@ public sealed class FreizeitKontextTests(PostgresContainer postgres) : IAsyncLif
     }
 
     [Fact]
-    public async Task Kontext_liefert_Rollen_Phase_und_leere_Schalter_und_Aktionen()
+    public async Task Kontext_liefert_Rollen_Phase_leere_Schalter_und_fuer_die_Leitung_Nachweise_pruefen()
     {
         using var antwort = await _miriam.GetAsync($"/api/freizeiten/{_x}/kontext", Abbruch);
 
@@ -92,7 +92,8 @@ public sealed class FreizeitKontextTests(PostgresContainer postgres) : IAsyncLif
         Assert.Equal("InVorbereitung", json.GetProperty("phase").GetString());
         Assert.Equal(["Leitung"], json.GetProperty("rollen").EnumerateArray().Select(r => r.GetString()));
         Assert.Empty(json.GetProperty("schalter").EnumerateArray());
-        Assert.Empty(json.GetProperty("erlaubt").EnumerateArray());
+        // Story 1-5: die Leitung prüft Nachweise (dieselbe Rollenliste wie die Prüf-Endpunkte).
+        Assert.Equal([Zeltlotse.Api.Contracts.Gemeinsam.Aktionsschluessel.NachweisePruefen], json.GetProperty("erlaubt").EnumerateArray().Select(r => r.GetString()));
     }
 
     [Fact]

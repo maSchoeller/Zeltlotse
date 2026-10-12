@@ -6,7 +6,8 @@
 @inject FreizeitenApiClient Freizeiten
 @* Startseite der Freizeit (FR-45, AD-29): Name, Phase, Zeitraum, eigene Rolle aus dem Freizeit-Kontext, die Leitung und bis
    wann die Freizeit Einsicht in Freizeitpässe hat (Freigabefenster). Der Client setzt die Ansicht aus dem Kontext-Endpunkt
-   und dem Endpunkt der Freizeit zusammen (AD-2). 403/404 → „Diese Seite ist nicht verfügbar.“ *@
+   und dem Endpunkt der Freizeit zusammen (AD-2). Mit der erlaubten Aktion „nachweise-pruefen“ der Weg zur Prüfliste.
+   403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>@(_freizeit?.Name ?? "Freizeit") – Zeltlotse</PageTitle>
 
 @if (_nichtVerfuegbar)
@@ -38,6 +39,10 @@ else
         <p>Leitung: @string.Join(", ", _freizeit.Leitung.Select(l => Anzeige.Name(l.Vorname, l.Nachname)))</p>
     }
     <p>Einsicht in Freizeitpässe bis @Anzeige.Datum(_freizeit.FreigabeBis)</p>
+    @if (FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.NachweisePruefen))
+    {
+        <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/nachweise")" Ansichtswechsel="true">Nachweise prüfen</Knopf></p>
+    }
 }
 
 @code {

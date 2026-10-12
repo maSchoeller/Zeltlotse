@@ -3,6 +3,7 @@ using Mediator;
 using Zeltlotse.Organisationen.Daten;
 using Zeltlotse.Organisationen.Domaene;
 using Zeltlotse.Organisationen.Einladungen;
+using Zeltlotse.Organisationen.Nachweise;
 using Zeltlotse.SharedKernel;
 using Zeltlotse.SharedKernel.Commands;
 using Zeltlotse.SharedKernel.Zugangslinks;
@@ -41,6 +42,8 @@ internal sealed class OrganisationAnlegenHandler(OrganisationenDbContext db, Tim
     {
         var organisation = Organisation.Anlegen(Kennung.Neu(uhr), command.Name!, uhr.GetUtcNow());
         db.Organisationen.Add(organisation);
+        // FR-9, NFR-5: die Nachweis-Richtlinie mit den Vorgabewerten entsteht mit der Organisation.
+        db.Richtlinien.AddRange(NachweisRichtlinie.VorgabenFuer(organisation.Id));
         return await EinladungAusstellen.Async(
             db.Einladungen, organisation, command.Mail!, OrgRolleArt.OrgAdmin, command.EingeladenVon, uhr, cancellationToken);
     }

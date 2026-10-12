@@ -68,7 +68,8 @@ internal static class FreizeitLadenEndpunkt
 
 /// <summary>
 /// <c>GET /api/freizeiten/{freizeitId}/kontext</c> (Leitung, Team, AD-29): Rollen, Phase, Schalter und erlaubte Aktionen aus
-/// derselben Auflösung wie die Rechteprüfung des Hosts. Schalter (3-7) und Freizeit-Aktionen gibt es noch nicht: beide leer.
+/// derselben Auflösung wie die Rechteprüfung des Hosts. Schalter (3-7) gibt es noch nicht (leer); erlaubt sind die Aktionen aus
+/// <see cref="FreizeitRechte.Erlaubt"/>.
 /// </summary>
 internal static class FreizeitKontextEndpunkt
 {
@@ -81,8 +82,9 @@ internal static class FreizeitKontextEndpunkt
             return TypedResults.NotFound();
         }
 
-        var rollen = (await kontextRollen.FreizeitRollenAsync(freizeitId, abbruch)).Order().Select(FreizeitRechte.Api).ToList();
-        return TypedResults.Ok(new FreizeitKontext(freizeit.Id, freizeit.Name, FreizeitRechte.Api(freizeit.Phase(uhr.GetUtcNow())), rollen, [], []));
+        var eigene = (await kontextRollen.FreizeitRollenAsync(freizeitId, abbruch)).Order().ToList();
+        return TypedResults.Ok(new FreizeitKontext(
+            freizeit.Id, freizeit.Name, FreizeitRechte.Api(freizeit.Phase(uhr.GetUtcNow())), [.. eigene.Select(FreizeitRechte.Api)], [], FreizeitRechte.Erlaubt(eigene)));
     }
 }
 

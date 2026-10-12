@@ -3,7 +3,8 @@
 @using Zeltlotse.Api.Contracts.Organisationen
 @inject OrganisationenApiClient Organisationen
 @* Organisation (EXPERIENCE.md → Flächen „Organisation verwalten“, FR-5, FR-6): Name, eigene Rolle und die Freizeiten der
-   Organisation (FreizeitenKarten); nur mit der erlaubten
+   Organisation (FreizeitenKarten); mit „nachweise-pruefen“ der Weg zur Prüfliste, mit „nachweis-richtlinie-verwalten“ die
+   Richtlinie für Nachweise (Autosave je Zelle); nur mit der erlaubten
    Aktion „org-rollen-vergeben“ (AD-29) die Rollen, die offenen Einladungen und das Formular „Person einladen“. Die
    Oberfläche entscheidet nur über „erlaubt“, nie über die Rollen. 403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>@(_organisation?.Name ?? "Organisation") – Zeltlotse</PageTitle>
@@ -38,7 +39,36 @@ else
         </Meldung>
     }
 
+    @if (Darf(Aktionsschluessel.NachweisePruefen))
+    {
+        <p><Knopf Art="KnopfArt.Outline" Href="@($"organisationen/{OrgId}/nachweise")" Ansichtswechsel="true">Nachweise prüfen</Knopf></p>
+    }
+
     <FreizeitenKarten OrgId="OrgId" />
+
+    @if (Darf(Aktionsschluessel.NachweisRichtlinieVerwalten))
+    {
+        <Card Titel="Richtlinie für Nachweise">
+            <p>„Gültig (Monate)“ zählt ab dem Ausstellungsdatum. Die Bestätigung gilt bis Ausstellungsdatum plus diese Monate.</p>
+            @if (_richtlinieFehlt)
+            {
+                <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                    <p>@AnmeldungAbschluss.FehlerText</p>
+                </Meldung>
+            }
+            else if (_richtlinie is null)
+            {
+                @if (!_aktionFehler)
+                {
+                    <Ladezustand />
+                }
+            }
+            else
+            {
+                <Datentabelle TZeile="RichtlinieZeile" Beschriftung="Richtlinie für Nachweise" Spalten="RichtlinienSpalten" Zeilen="_richtlinie" />
+            }
+        </Card>
+    }
 
     @if (RollenVergeben)
     {
@@ -108,6 +138,20 @@ else
         new(nameof(OrgRolle.OrgUeberblick), Anzeige.Rolle(OrgRolle.OrgUeberblick)),
     ];
 
+    private IReadOnlyList<Spalte<RichtlinieZeile>> RichtlinienSpalten =>
+    [
+        new("Nachweis", z => @<text>@Anzeige.Nachweis(z.Art)</text>),
+        new("Pflicht", z => @<AutosaveAnkreuzfeld Label="Pflicht" Id="@($"richtlinie-pflicht-{RichtlinieFelder.JsonName(z.Art)}")"
+                                                    Feldname="@RichtlinieFelder.Pflicht" Pfad="@OrganisationenApiClient.RichtliniePfad(OrgId, z.Art)"
+                                                    Wert="@z.Pflicht" Version="@z.Version" NeuLaden="RichtlinieLadenAsync" />),
+        new("Gültig (Monate)", z => @<AutosaveFeld Label="Gültig (Monate)" Id="@($"richtlinie-monate-{RichtlinieFelder.JsonName(z.Art)}")" Typ="number"
+                                                   Feldname="@RichtlinieFelder.GueltigkeitMonate" Pfad="@OrganisationenApiClient.RichtliniePfad(OrgId, z.Art)"
+                                                   Wert="@z.GueltigkeitMonate.ToString(System.Globalization.CultureInfo.InvariantCulture)" Version="@z.Version"
+                                                   NeuLaden="RichtlinieLadenAsync" />),
+    ];
+
+    private List<RichtlinieZeile>? _richtlinie;
+    private bool _richtlinieFehlt;
     private OrganisationAntwort? _organisation;
     private RollenAntwort? _rollen;
     private bool _nichtVerfuegbar;
@@ -121,12 +165,16 @@ else
 
     [Parameter] public Guid OrgId { get; set; }
 
-    private bool RollenVergeben => _organisation?.Erlaubt.Contains(Aktionsschluessel.OrgRollenVergeben) == true;
+    private bool RollenVergeben => Darf(Aktionsschluessel.OrgRollenVergeben);
+
+    private bool Darf(string schluessel) => _organisation?.Erlaubt.Contains(schluessel) == true;
 
     protected override async Task OnParametersSetAsync()
     {
         _organisation = null;
         _rollen = null;
+        _richtlinie = null;
+        _richtlinieFehlt = false;
         _nichtVerfuegbar = false;
         _aktionFehler = false;
         _eingeladen = false;
@@ -138,12 +186,24 @@ else
             {
                 await RollenLadenAsync();
             }
+
+            if (Darf(Aktionsschluessel.NachweisRichtlinieVerwalten))
+            {
+                await RichtlinieLadenAsync();
+            }
         }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
         {
             // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
             _aktionFehler = true;
         }
+    }
+
+    /// <summary>Lädt die Richtlinie; ohne Antwort (403/404) zeigt die Card die Fehlermeldung statt „Wird geladen …“.</summary>
+    private async Task RichtlinieLadenAsync()
+    {
+        _richtlinie = await Organisationen.RichtlinieLadenAsync(OrgId);
+        _richtlinieFehlt = _richtlinie is null;
     }
 
     private async Task RollenLadenAsync()

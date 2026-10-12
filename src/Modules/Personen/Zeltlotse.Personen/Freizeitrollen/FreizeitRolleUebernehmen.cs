@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Zeltlotse.Freizeiten.Contracts.Events;
 using Zeltlotse.Personen.Daten;
+using Zeltlotse.Personen.Nachweise;
 using Zeltlotse.SharedKernel.Commands;
 using Zeltlotse.SharedKernel.Ereignisse;
 using Zeltlotse.SharedKernel.Mandanten;
@@ -39,7 +40,8 @@ internal sealed class FreizeitRolle : IOrganisationsEigen
 }
 
 /// <summary>
-/// Empfänger von <see cref="FreizeitRolleGeaendert"/> (Tabelle Ereignis-Fluss): legt die Zeile an oder setzt die Rolle. Der
+/// Empfänger von <see cref="FreizeitRolleGeaendert"/> (Tabelle Ereignis-Fluss): legt die Zeile an oder setzt die Rolle und legt
+/// bei der ersten Mitarbeit in der Organisation eine Einsicht in die Nachweise an (FR-10, NS-3, ohne neue Zeile im Ereignis-Fluss). Der
 /// Mandant kommt aus dem Umschlag (AD-4, AD-6); kein Benutzer-Command.
 /// </summary>
 internal sealed record FreizeitRolleUebernehmen(Umschlag Umschlag, Guid FreizeitId, Guid PersonId, FreizeitRolleArt Rolle)
@@ -49,7 +51,7 @@ internal sealed record FreizeitRolleUebernehmen(Umschlag Umschlag, Guid Freizeit
         new(umschlag, ereignis.FreizeitId, ereignis.PersonId, ereignis.Rolle);
 }
 
-internal sealed class FreizeitRolleUebernehmenHandler(PersonenDbContext db) : ICommandHandler<FreizeitRolleUebernehmen>
+internal sealed class FreizeitRolleUebernehmenHandler(PersonenDbContext db, TimeProvider uhr) : ICommandHandler<FreizeitRolleUebernehmen>
 {
     public async ValueTask<Unit> Handle(FreizeitRolleUebernehmen command, CancellationToken cancellationToken)
     {
@@ -66,6 +68,9 @@ internal sealed class FreizeitRolleUebernehmenHandler(PersonenDbContext db) : IC
             vorhanden.RolleSetzen(command.Rolle);
         }
 
+        // FR-10, NS-3: Die erste Mitarbeit in der Organisation fragt die Einsicht in die Nachweise automatisch an (ohne
+        // prüfende Person); gibt es dort schon eine Einsicht, fragt die Organisation später von Hand an.
+        await EinsichtSicherstellen.AutomatischAsync(db, db.Einsichten, organisationId, command.PersonId, command.FreizeitId, uhr, cancellationToken);
         return Unit.Value;
     }
 }

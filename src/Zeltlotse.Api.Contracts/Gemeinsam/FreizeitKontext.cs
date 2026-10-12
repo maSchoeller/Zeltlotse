@@ -65,4 +65,13 @@ public static class Aktionsschluessel
 
     /// <summary>Freizeit verwalten und die Leitung einladen (Org-Admin, in <c>GET /api/organisationen/{orgId}/freizeiten</c>).</summary>
     public const string LeitungEinsetzen = "leitung-einsetzen";
+
+    /// <summary>
+    /// Nachweise prüfen: Einsicht anfragen, übernehmen, bestätigen oder ablehnen (Leitung im Freizeit-Kontext, Org-Admin in
+    /// <c>GET /api/organisationen/{orgId}</c>).
+    /// </summary>
+    public const string NachweisePruefen = "nachweise-pruefen";
+
+    /// <summary>Die Nachweis-Richtlinie der Organisation bearbeiten (Org-Admin, in <c>GET /api/organisationen/{orgId}</c>).</summary>
+    public const string NachweisRichtlinieVerwalten = "nachweis-richtlinie-verwalten";
 }

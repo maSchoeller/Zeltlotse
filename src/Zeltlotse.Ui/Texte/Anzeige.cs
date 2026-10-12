@@ -61,6 +61,21 @@ public static class Anzeige
     public static string Datum(DateTimeOffset zeitpunkt) =>
         TimeZoneInfo.ConvertTime(zeitpunkt, Berlin()).ToString("dd.MM.yyyy", Deutsch);
 
+    /// <summary>Anzeigetext einer Nachweisart: „Führungszeugnis“, „JuLeiCa“, „Erste Hilfe“, „Präventionsschulung“.</summary>
+    public static string Nachweis(Zeltlotse.Api.Contracts.Personen.NachweisArt art) => Nachweis((int)art);
+
+    /// <inheritdoc cref="Nachweis(Zeltlotse.Api.Contracts.Personen.NachweisArt)"/>
+    public static string Nachweis(Zeltlotse.Api.Contracts.Organisationen.NachweisArt art) => Nachweis((int)art);
+
+    private static string Nachweis(int art) => art switch
+    {
+        1 => "Führungszeugnis",
+        2 => "JuLeiCa",
+        3 => "Erste Hilfe",
+        4 => "Präventionsschulung",
+        _ => art.ToString(Deutsch),
+    };
+
     /// <summary>„Vorname Nachname“; ohne beide „Name fehlt“.</summary>
     public static string Name(string? vorname, string? nachname)
     {
