@@ -7,7 +7,8 @@
 @* Vertrauensseite (FR-66, EXPERIENCE.md → Öffentliche Seiten): erklärt in Klartext, welche Daten erhoben werden, wer sie sieht und
    wann sie verschwinden. Sie entsteht nur aus gespeicherten Einstellungen: aus der Freizeit Name, Daten, Freigabe-Intervall und
    „Freigabe bis“, aus der Organisation Name, Löschfristen und Pflicht-Nachweise. Freizeitpass und Freigabefenster sind beim ersten
-   Auftreten erklärt. Statisch gerendert, ohne Skript; ein ungültiger Link ergibt Status 404 mit dem Hinweis. *@
+   Auftreten erklärt. Statisch gerendert, ohne Skript; ein ungültiger Link ergibt Status 404 mit dem Hinweis. Wie die
+   Freizeitseite ohne Aufnahme in Suchmaschinen (noindex). *@
 
 @if (_zuViele)
 {
@@ -16,6 +17,7 @@
 else if (_seite is not null)
 {
     <PageTitle>Vertrauensseite – @_seite.Name</PageTitle>
+    <HeadContent><meta name="robots" content="noindex" /></HeadContent>
     <OeffentlicherRahmen Organisation="@_seite.Organisation">
         <Dachzeile>@_seite.Name · @Anzeige.ZeitraumLang(_seite.ErsterTag, _seite.LetzterTag)</Dachzeile>
         <h1>Vertrauensseite</h1>

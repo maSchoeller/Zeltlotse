@@ -367,6 +367,13 @@ public sealed class FreizeitseiteTests(PostgresContainer postgres) : IAsyncLifet
         var nachher = await JsonAsync(await _anonym.GetAsync(OeffentlichPfad(token) + "/vertrauensseite", Abbruch));
         Assert.Equal(24, nachher.GetProperty("freizeitDatenMonate").GetInt32());
         Assert.Equal(["Führungszeugnis", "Erste Hilfe"], nachher.GetProperty("pflichtNachweise").EnumerateArray().Select(p => p.GetString()));
+
+        // Die Seite selbst zeigt die neuen Werte.
+        using var seite = await SeiteAsync($"/freizeit/{token}/vertrauensseite");
+        var html = WebUtility.HtmlDecode(await seite.Content.ReadAsStringAsync(Abbruch));
+        Assert.Contains("24 Monate nach dem", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("12 Monate nach dem", html, StringComparison.Ordinal);
+        Assert.Contains("Erste Hilfe", html, StringComparison.Ordinal);
     }
 
     // ---------- Öffentliche Seiten (statisch) ----------
@@ -374,7 +381,7 @@ public sealed class FreizeitseiteTests(PostgresContainer postgres) : IAsyncLifet
     [Fact]
     public async Task Freizeitseite_ist_statisches_HTML_mit_Organisation_Zeitraum_Team_und_Link_zur_Vertrauensseite()
     {
-        await FeldAsync("beschreibung", "Eine Woche Zeltlager auf dem Kapf.");
+        await FeldAsync("beschreibung", "Eine Woche Zeltlager auf dem Kapf.\n\n  Mit Lagerfeuer.  ");
         await FeldAsync("ort", "Zeltplatz Kapf");
         var token = Token((await AnmeldelinksAsync(_miriam, _x))["Teilnehmende"]);
 
@@ -387,7 +394,11 @@ public sealed class FreizeitseiteTests(PostgresContainer postgres) : IAsyncLifet
         Assert.Contains("Freizeit · 2. bis 13. August 2027", html, StringComparison.Ordinal);
         Assert.Matches("<h1[^>]*>Zeltlager Kapf 2027</h1>", html);
         Assert.Contains("Zeltplatz Kapf", html, StringComparison.Ordinal);
-        Assert.Contains("Eine Woche Zeltlager auf dem Kapf.", html, StringComparison.Ordinal);
+        // Jede Zeile der Beschreibung ist ein Absatz, leere Zeilen fallen weg.
+        Assert.Contains("<p>Eine Woche Zeltlager auf dem Kapf.</p>", html, StringComparison.Ordinal);
+        Assert.Contains("<p>Mit Lagerfeuer.</p>", html, StringComparison.Ordinal);
+        Assert.DoesNotMatch(@"<p>\s*</p>", html);
+        Assert.Contains("<meta name=\"robots\" content=\"noindex\"", html, StringComparison.Ordinal);
         Assert.Contains("Das Team", html, StringComparison.Ordinal);
         Assert.Contains("<span class=\"elkw-avatar\" aria-hidden=\"true\">MZ</span>", html, StringComparison.Ordinal);
         Assert.Contains("Miriam", html, StringComparison.Ordinal);
@@ -420,6 +431,7 @@ public sealed class FreizeitseiteTests(PostgresContainer postgres) : IAsyncLifet
         Assert.Contains("Freigabefenster", html, StringComparison.Ordinal);
         Assert.Contains("Freizeitpass", html, StringComparison.Ordinal);
         Assert.Contains($"href=\"/freizeit/{token}\"", html, StringComparison.Ordinal);
+        Assert.Contains("<meta name=\"robots\" content=\"noindex\"", html, StringComparison.Ordinal);
         Assert.DoesNotContain("<script", html, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("style=", html, StringComparison.OrdinalIgnoreCase);
     }

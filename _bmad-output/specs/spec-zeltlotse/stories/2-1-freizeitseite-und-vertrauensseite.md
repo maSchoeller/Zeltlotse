@@ -5,13 +5,20 @@ created: '2026-10-12'
 status: 'done'
 baseline_revision: '6a9c76225d3dde35f6282ebaf86c6ce5e52ce2b9'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/specs/spec-zeltlotse/SPEC.md'
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Zeltlotse-2026-10-10/EXPERIENCE.md'
 warnings: ['oversized']
-deferred: []
+deferred:
+  - summary: >-
+      Die Zugriffsbegrenzung der öffentlichen Freizeit- und Vertrauensseite (20 Aufrufe je Minute und Besucher-IP) könnte bei vielen Eltern hinter einer gemeinsamen IP greifen.
+    evidence: |-
+      Die öffentlichen GETs nutzen dieselbe Richtlinie wie die Login-Endpunkte (Zugriffsbegrenzung.cs, Partition je Besucher-IP, Standard 20/min). Ein Aufruf von Freizeitseite und Vertrauensseite kostet 2 Anfragen. Bei einem Elternabend im Gemeindehaus-WLAN oder hinter Carrier-NAT teilen sich viele Eltern eine IP. Die Intent-Regel verlangt `.Zugriffsbegrenzt()` ausdrücklich; eine eigene, großzügigere Richtlinie wäre eine Architekturentscheidung. Klären würde es: reale Zugriffsmuster (Aufrufe je IP und Minute beim Teilen eines Links) oder eine Entscheidung zu einer eigenen Richtlinie für anonyme Ansichten (AD-25).
+    location: >-
+      src/Zeltlotse.Api/Sicherheit/Zugriffsbegrenzung.cs:36
+    severity: medium (unverified)
 ---
 
 <intent-contract>
@@ -178,6 +185,37 @@ deferred: []
   - `[low]` `[patch]` (Edge) Initialen mit Surrogatpaar — gleiche Korrektur wie oben.
   - `[false]` `[reject]` (Edge) Demo-Einspielen bricht bei abgeschlossener Demo-Freizeit ab — Es gibt keinen Code, der AbgeschlossenAm setzt; die Demo-Freizeit liegt 2027.
 
+### 2026-10-12 — Review pass
+- verdicts: 27 findings — high 0, medium 0, low 11, false 15, maybe-false 1
+- findings:
+  - `[low]` `[patch]` (Verification) Abgeschlossener Zustand der Einstellungen-Seite in keinem bUnit-Test gerendert — zwei Tests ergänzt: Phase „Gelaufen“ zeigt den Hinweis, ein 409 beim PATCH zeigt den Text statt „Inzwischen geändert“, ein 409 beim Erneuern zeigt den Hinweis statt „nicht verfügbar“.
+  - `[low]` `[patch]` (Verification) Aufteilen der Beschreibung in Absätze auf der Freizeitseite ungeprüft — HTML-Test mit zweizeiliger Beschreibung und Leerzeile: zwei `<p>`, kein leeres.
+  - `[false]` `[reject]` (Intent) carried „Ausgebucht“ nur mit Testersatz geprüft — Design Notes: Bestätigungen gibt es erst ab 2-3. Regel und Anzeige sind über HTTP mit ersetzter Zählung geprüft.
+  - `[low]` `[patch]` (Intent) „Vertrauensseite zeigt 24 Monate“ nur im JSON geprüft, nicht im HTML — Der Test lädt nach der Änderung die Seite und prüft „24 Monate nach dem“ und „Erste Hilfe“.
+  - `[false]` `[reject]` (Intent) carried Vertrauensseite verspricht Verhalten späterer Stories — Die Sätze geben Systemregeln wieder (NFR-7, AD-9), siehe vorherigen Pass.
+  - `[false]` `[reject]` (Intent) 409 aus dem Handler statt „Schreibschutz der Pipeline“ — Einen Pipeline-Schreibschutz gibt es noch nicht, AD-17 ist nur in den Handlern umgesetzt. Die 409 tritt ein und ist über HTTP getestet. Das Restrisiko ist bereits vermerkt.
+  - `[false]` `[reject]` (Intent) 404-Seite im HTML nur mit unbekanntem Token geprüft — Beide Seiten führen jede Null-Antwort der API durch denselben `NotFound()`-Zweig. Alle Token-Fälle sind an der API geprüft.
+  - `[false]` `[reject]` (Intent) carried Doku-Build nicht belegt — `npm run build` in doku/ lief auch in diesem Pass mit Exit 0.
+  - `[low]` `[reject]` (Edge) Zahl-Eingabe mit ungültigem Text (badInput) leert die Höchstzahl — Chrome lässt nur Ziffern und e/+/- zu, das kommt im Alltag selten vor. Das Speichern ist an „Gespeichert · Rückgängig“ sichtbar. Die Lösung bräuchte einen neuen Parameter (inputmode) am Feld-Baustein.
+  - `[false]` `[reject]` (Edge) carried Höchstzahl „040“ gegen „40“ als falscher Konflikt — Der Client schickt den gespeicherten Wert zurück, so ein Unterschied entsteht im Ablauf nicht.
+  - `[false]` `[reject]` (Edge) carried PATCH-Version wird nicht geprüft — Muster nach AD-19 wie bei den Löschfristen.
+  - `[false]` `[reject]` (Edge) NotFoundPage zeigt bei jeder 404 „Anmeldelink nicht mehr gültig“ — Nur Freizeitseite und Vertrauensseite rufen `NotFound()` auf. Unbekannte Adressen erreichen den Router nicht: MapRazorComponents bildet nur @page-Routen ab, und es gibt kein Re-Execute.
+  - `[false]` `[reject]` (Edge) Hinweistext zur Herkunft weicht vom Wortlaut der Spec ab — Bewusst im vorherigen Pass umformuliert (Zeile „Hinweistext zur Herkunft holprig“). Die Bedeutung ist gleich, es entsteht kein Schaden.
+  - `[low]` `[reject]` (Blind) Felder einer abgeschlossenen Freizeit bleiben bearbeitbar — Oben steht der Hinweis „abgeschlossen und nur lesbar“, ein Speicherversuch zeigt denselben Text. Sperren bräuchte einen neuen Parameter am Autosave-Baustein.
+  - `[low]` `[reject]` (Blind) carried Links nach Freizeitende sichtbar und erneuerbar — siehe vorherigen Pass. Eine Freizeit vor ihrem Ende abschließen ist im Code nicht möglich, weil nichts AbgeschlossenAm setzt.
+  - `[low]` `[reject]` (Blind) carried Unlesbarer Link erscheint als „Noch kein Link“ — tritt nur nach einem Schlüsselwechsel auf, siehe vorherigen Pass.
+  - `[false]` `[reject]` (Blind) Öffentliche Seite unterscheidet den Link für Mitarbeitende nicht — Design Notes: Beide Arten öffnen dieselbe Freizeitseite, die Matrix unterscheidet nur bei „Ausgebucht“.
+  - `[low]` `[patch]` (Blind) Token-Seiten ohne Schutz vor Suchmaschinen — `<meta name="robots" content="noindex">` steht jetzt auf Freizeitseite und Vertrauensseite und ist im HTML-Test geprüft. Der Teil zum Cache trifft nicht zu: Die Seiten haben weder Last-Modified noch ETag, deshalb cachen Browser sie nicht heuristisch.
+  - `[maybe-false]` `[defer]` (Blind) Zugriffsbegrenzung von 20 Aufrufen je Minute und IP zu streng für breit geteilte Links — Der Intent verlangt `.Zugriffsbegrenzt()`. Ob Eltern hinter einer gemeinsamen IP die Grenze erreichen, klären nur reale Zugriffsmuster. Zurückgestellt als medium (unverified).
+  - `[false]` `[reject]` (Blind) Herkunft ohne Wahl je Freizeit, Hinweis in dritter Person — Texte ohne Du/Sie sind Vorgabe. Die Herkunft ist freiwillig, und der Hinweis nennt, wo sie erscheint.
+  - `[false]` `[reject]` (Blind) carried Version im PATCH ungenutzt — siehe oben.
+  - `[false]` `[reject]` (Blind) carried Höchstzahl als Text verglichen — siehe oben.
+  - `[low]` `[reject]` (Blind) Erneuern hinterlässt keine Spur (wer, wann) — wäre eine neue Funktion (Protokoll oder Anzeige „erzeugt am“), die der Intent nicht verlangt.
+  - `[false]` `[reject]` (Blind) carried Feste Versprechen auf der Vertrauensseite — siehe oben.
+  - `[false]` `[reject]` (Blind) Sortierung mit CurrentCulture — Das ist dieselbe Konvention wie im übrigen Code. Die Reihenfolge ist je Server stabil und alphabetisch, Nutzende sehen kein falsches Ergebnis.
+  - `[low]` `[reject]` (Blind) carried Kein Knopf „Link kopieren“ — wäre eine neue Funktion, siehe vorherigen Pass.
+  - `[low]` `[patch]` (Blind) Fehlende Tests — Der abgeschlossene Zustand der Einstellungen ist mit den Tests aus der ersten Zeile abgedeckt. Für die übrigen Punkte zeigt der Code keinen Fehler: Team-Reihenfolge, Min(Rolle), gleichzeitiges Erneuern und Erneuern in der Nachbereitung.
+
 ## Design Notes
 
 Entscheidungen im autonomen Lauf. Spec und Architektur lassen sie offen; gewählt ist jeweils die einfachste Lösung.
@@ -226,3 +264,25 @@ Status: done
 **Verifikation:** `dotnet build Zeltlotse.slnx --no-incremental` 0 Warnungen/0 Fehler; `dotnet test` 1328/1328 grün (inkl. Architektur, E2E und Doku-Screenshots); `npm run build` in `doku/` fehlerfrei (25 Seiten). Screenshot `freizeitseite-handy.png` von Hand angesehen. Screenshots mit reinem Rendering-Rauschen (`app-offline-*`, `meine-daten-auskunft-laptop`) zurückgesetzt.
 
 **Restrisiken:** „Ausgebucht“ erscheint erst, wenn Story 2-3 die echte Zählung bestätigter Teilnehmender anstelle von `KeineBestaetigtenTeilnehmenden` einsetzt. Nach einem Wechsel des Hauptschlüssels lassen sich gespeicherte Links nicht mehr anzeigen (die alten Links gelten aber weiter, bis sie erneuert werden). Der Schreibschutz für abgeschlossene Freizeiten liegt in den Handlern, nicht in der Pipeline (AD-17 dort noch nicht gebaut). Die Vertrauensseite beschreibt die Sichtbarkeitsregeln des Freizeitpasses (FR-24), die erst mit Story 2-5 vollständig durchgesetzt werden.
+
+### Folgedurchlauf 2026-10-12
+
+**Umsetzung:** Review-Folgedurchlauf ohne neue Funktion. Ergänzt wurden fehlende Tests und `noindex` auf den öffentlichen Seiten.
+
+**Geänderte Dateien:**
+- `src/Zeltlotse.Public/Seiten/Freizeitseite.razor`, `Vertrauensseite.razor` – `<meta name="robots" content="noindex">`, damit Suchmaschinen weder Team-Vornamen noch Adressen mit Token aufnehmen.
+- `tests/Zeltlotse.Ui.Tests/FreizeitenSeitenTests.cs` – zwei bUnit-Tests für den abgeschlossenen Zustand der Einstellungen (Hinweis, 409 beim Speichern und beim Erneuern).
+- `tests/Zeltlotse.Api.Tests/FreizeitseiteTests.cs` – prüft die Absätze der Beschreibung, `noindex` und „24 Monate“ im HTML der Vertrauensseite nach einer Änderung der Löschfrist.
+
+**Review:** 27 Befunde (0 high, 0 medium, 11 low, 15 false, 1 maybe-false). 4 Korrekturen umgesetzt, alle low: Tests für den abgeschlossenen Zustand, Absätze, „24 Monate“ im HTML, noindex. Zurückgestellt: die Zugriffsbegrenzung für breit geteilte Links (medium, ungeprüft). Abgelehnt mit Begründung im Triage-Log, unter anderem: Felder bei abgeschlossener Freizeit sperren, badInput im Zahlfeld, Spur beim Erneuern, NotFoundPage, Sortierung.
+
+**Folge-Review empfohlen:** nein – Folgedurchlauf ohne gepatchten high-Befund (gepatcht: high 0, medium 0, low 4).
+
+**Verifikation:**
+- `dotnet build Zeltlotse.slnx --no-incremental`: 0 Warnungen, 0 Fehler.
+- `dotnet test`: 1330/1330 grün, einschließlich Architektur-, E2E- und Doku-Screenshot-Tests.
+- `npm run build` in `doku/`: Exit 0 (25 Seiten).
+- Die Screenshots der Story blieben unverändert, weil `noindex` nicht sichtbar ist.
+- Drei Screenshots mit reinem Rendering-Rauschen (`app-offline-*`, `meine-daten-auskunft-laptop`) zurückgesetzt.
+
+**Restrisiken:** wie im ersten Durchlauf. Neu ist die zurückgestellte Frage, ob 20 Aufrufe je Minute und IP für öffentlich geteilte Anmeldelinks reichen.

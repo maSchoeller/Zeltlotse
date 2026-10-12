@@ -596,6 +596,44 @@ public sealed class FreizeitenSeitenTests : BunitContext
     }
 
     [Fact]
+    public void Einstellungen_einer_abgeschlossenen_Freizeit_zeigen_den_Hinweis_und_beim_409_keinen_Konflikt()
+    {
+        EinstellungenAntworten([Aktionsschluessel.FreizeitEinstellungen], phase: "Gelaufen");
+        _server.Bei(HttpMethod.Patch, $"/api/freizeiten/{FreizeitId}/freizeitseite", () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, "freizeit-abgeschlossen"));
+        var cut = Render<Einstellungen>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+        cut.WaitForAssertion(() => Assert.Equal("Kapf", cut.Find("#freizeitseite-ort").GetAttribute("value")));
+        Assert.Contains("Diese Freizeit ist abgeschlossen und nur lesbar.", cut.Markup, StringComparison.Ordinal);
+
+        var ort = cut.Find("#freizeitseite-ort");
+        ort.Input("Neuer Ort");
+        ort.Blur();
+
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".elkw-alert").Count(m => m.TextContent.Contains("abgeschlossen und nur lesbar", StringComparison.Ordinal))));
+        Assert.DoesNotContain("Inzwischen geändert", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Neuen_Link_erzeugen_bei_inzwischen_abgeschlossener_Freizeit_zeigt_den_Hinweis_statt_nicht_verfuegbar()
+    {
+        EinstellungenAntworten([Aktionsschluessel.FreizeitEinstellungen]);
+        _server.Bei(
+            HttpMethod.Post,
+            $"/api/freizeiten/{FreizeitId}/anmeldelinks/teilnehmende/erneuern",
+            () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, "freizeit-abgeschlossen"));
+        var cut = Render<Einstellungen>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("h3").Count));
+        Assert.DoesNotContain("abgeschlossen und nur lesbar", cut.Markup, StringComparison.Ordinal);
+
+        cut.FindAll("button").First(b => b.TextContent == "Neuen Link erzeugen").Click();
+        cut.FindAll("button").First(b => b.TextContent == "Ja, neuen Link erzeugen").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Diese Freizeit ist abgeschlossen und nur lesbar.", cut.Markup, StringComparison.Ordinal));
+        Assert.Equal("Einstellungen", cut.Find("h1").TextContent);
+        Assert.DoesNotContain("Neuer Link für", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("https://zeltlotse.example/freizeit/tn", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Einstellungen_ohne_erlaubte_Aktion_sind_nicht_verfuegbar_und_die_Startseite_zeigt_keinen_Zugang()
     {
         EinstellungenAntworten([]);
@@ -647,13 +685,13 @@ public sealed class FreizeitenSeitenTests : BunitContext
             : [],
     };
 
-    private void EinstellungenAntworten(string[] erlaubt, bool mitLinks = true)
+    private void EinstellungenAntworten(string[] erlaubt, bool mitLinks = true, string phase = "InVorbereitung")
     {
         _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitId}/kontext", () => Json(new
         {
             freizeitId = FreizeitId,
             name = "Zeltlager Sommer 2027",
-            phase = "InVorbereitung",
+            phase,
             rollen = new[] { "Leitung" },
             schalter = Array.Empty<string>(),
             erlaubt,

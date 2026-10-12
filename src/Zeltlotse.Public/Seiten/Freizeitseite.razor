@@ -7,7 +7,8 @@
 @* Öffentliche Freizeitseite (FR-15, FR-67, EXPERIENCE.md → Öffentliche Seiten, Mock key-gast-anmeldung.html): oben der Name der
    Organisation, Dachzeile mit dem Zeitraum, Name, Ort und Beschreibung, „Ausgebucht“ (nur über den Link für Teilnehmende), das
    Team mit Avatar und der Weg zur Vertrauensseite. Statisch gerendert, ohne Skript; die Daten kommen über die API (AD-5). Ein
-   ungültiger Link ergibt Status 404 mit dem Hinweis (AnmeldelinkUngueltig). Anmelden kommt mit Story 2-2. *@
+   ungültiger Link ergibt Status 404 mit dem Hinweis (AnmeldelinkUngueltig). Anmelden kommt mit Story 2-2. Suchmaschinen nehmen die
+   Seite nicht auf (noindex): sie nennt das Team, und ihre Adresse ist ein Anmeldelink. *@
 
 @if (_zuViele)
 {
@@ -16,6 +17,7 @@
 else if (_seite is not null)
 {
     <PageTitle>@_seite.Name – @_seite.Organisation</PageTitle>
+    <HeadContent><meta name="robots" content="noindex" /></HeadContent>
     <OeffentlicherRahmen Organisation="@_seite.Organisation">
         <Dachzeile>Freizeit · @Anzeige.ZeitraumLang(_seite.ErsterTag, _seite.LetzterTag)</Dachzeile>
         <h1>@_seite.Name</h1>
