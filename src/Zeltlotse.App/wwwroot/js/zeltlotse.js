@@ -1,6 +1,6 @@
 // Das einzige Interop-Modul der Web-App (AD-29), nur über die C#-Schnittstelle IBrowser erreichbar.
 // Inhalt: Online-Status mit Ereignissen, Zeitpunkt der letzten erfolgreichen API-Antwort (localStorage),
-// Neu laden mit Aktivieren eines wartenden Service Workers.
+// Neu laden mit Aktivieren eines wartenden Service Workers, Drucken und Datei speichern (Datenauskunft).
 
 const zuletztSchluessel = 'zeltlotse.zuletztAktualisiert';
 
@@ -50,4 +50,23 @@ export async function neuLaden() {
         await gewechselt;
     }
     location.reload();
+}
+
+// Öffnet den Druckdialog des Browsers; dort lässt sich „Als PDF speichern“ wählen (Konvention „Druck“, keine PDF-Bibliothek).
+export function drucken() {
+    window.print();
+}
+
+// Bietet Bytes als Datei an: Blob, Objekt-URL und Klick auf einen Link mit download-Attribut; kein Pop-up, kein Inline-Skript.
+export function dateiSpeichern(name, medientyp, inhalt) {
+    const blob = new Blob([inhalt], { type: medientyp });
+    const adresse = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = adresse;
+    link.download = name;
+    link.hidden = true;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(adresse), 10000);
 }

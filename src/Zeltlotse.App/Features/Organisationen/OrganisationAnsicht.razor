@@ -4,7 +4,7 @@
 @inject OrganisationenApiClient Organisationen
 @* Organisation (EXPERIENCE.md → Flächen „Organisation verwalten“, FR-5, FR-6): Name, eigene Rolle und die Freizeiten der
    Organisation (FreizeitenKarten); mit „nachweise-pruefen“ der Weg zur Prüfliste, mit „nachweis-richtlinie-verwalten“ die
-   Richtlinie für Nachweise (Autosave je Zelle); nur mit der erlaubten
+   Richtlinie für Nachweise (Autosave je Zelle), mit „loeschfristen-verwalten“ die Löschfristen (Autosave, NFR-5); nur mit der erlaubten
    Aktion „org-rollen-vergeben“ (AD-29) die Rollen, die offenen Einladungen und das Formular „Person einladen“. Die
    Oberfläche entscheidet nur über „erlaubt“, nie über die Rollen. 403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>@(_organisation?.Name ?? "Organisation") – Zeltlotse</PageTitle>
@@ -66,6 +66,37 @@ else
             else
             {
                 <Datentabelle TZeile="RichtlinieZeile" Beschriftung="Richtlinie für Nachweise" Spalten="RichtlinienSpalten" Zeilen="_richtlinie" />
+            }
+        </Card>
+    }
+
+    @if (Darf(Aktionsschluessel.LoeschfristenVerwalten))
+    {
+        <Card Titel="Löschfristen">
+            <p>Nach diesen Fristen löscht Zeltlotse die Daten endgültig.</p>
+            @if (_loeschfristenFehlen)
+            {
+                <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                    <p>@AnmeldungAbschluss.FehlerText</p>
+                </Meldung>
+            }
+            else if (_loeschfristen is null)
+            {
+                @if (!_aktionFehler)
+                {
+                    <Ladezustand />
+                }
+            }
+            else
+            {
+                <AutosaveFeld Label="Daten einer Freizeit (Monate nach Freizeitende)" Id="loeschfristen-freizeit" Typ="number" Hinweis="1 bis 120 Monate"
+                              Feldname="@LoeschfristFelder.FreizeitDatenMonate" Pfad="@OrganisationenApiClient.LoeschfristenPfad(OrgId)"
+                              Wert="@_loeschfristen.FreizeitDatenMonate.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                              Version="@_loeschfristen.Version" NeuLaden="LoeschfristenLadenAsync" />
+                <AutosaveFeld Label="Abgelaufene Nachweis-Bestätigungen (Monate nach Ablauf)" Id="loeschfristen-bestaetigungen" Typ="number" Hinweis="1 bis 120 Monate"
+                              Feldname="@LoeschfristFelder.NachweisBestaetigungMonate" Pfad="@OrganisationenApiClient.LoeschfristenPfad(OrgId)"
+                              Wert="@_loeschfristen.NachweisBestaetigungMonate.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                              Version="@_loeschfristen.Version" NeuLaden="LoeschfristenLadenAsync" />
             }
         </Card>
     }
@@ -152,6 +183,8 @@ else
 
     private List<RichtlinieZeile>? _richtlinie;
     private bool _richtlinieFehlt;
+    private LoeschfristenAntwort? _loeschfristen;
+    private bool _loeschfristenFehlen;
     private OrganisationAntwort? _organisation;
     private RollenAntwort? _rollen;
     private bool _nichtVerfuegbar;
@@ -175,6 +208,8 @@ else
         _rollen = null;
         _richtlinie = null;
         _richtlinieFehlt = false;
+        _loeschfristen = null;
+        _loeschfristenFehlen = false;
         _nichtVerfuegbar = false;
         _aktionFehler = false;
         _eingeladen = false;
@@ -191,6 +226,11 @@ else
             {
                 await RichtlinieLadenAsync();
             }
+
+            if (Darf(Aktionsschluessel.LoeschfristenVerwalten))
+            {
+                await LoeschfristenLadenAsync();
+            }
         }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
         {
@@ -204,6 +244,13 @@ else
     {
         _richtlinie = await Organisationen.RichtlinieLadenAsync(OrgId);
         _richtlinieFehlt = _richtlinie is null;
+    }
+
+    /// <summary>Lädt die Löschfristen; ohne Antwort (403/404) zeigt die Card die Fehlermeldung statt „Wird geladen …“.</summary>
+    private async Task LoeschfristenLadenAsync()
+    {
+        _loeschfristen = await Organisationen.LoeschfristenLadenAsync(OrgId);
+        _loeschfristenFehlen = _loeschfristen is null;
     }
 
     private async Task RollenLadenAsync()

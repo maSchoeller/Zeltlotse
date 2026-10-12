@@ -29,6 +29,9 @@ internal static class OrgRechte
     /// </summary>
     public static readonly OrgRolleArt[] NachweisePruefen = [OrgRolleArt.OrgAdmin];
 
+    /// <summary>Die Löschfristen sehen und bearbeiten (NFR-5).</summary>
+    public static readonly OrgRolleArt[] LoeschfristenVerwalten = [OrgRolleArt.OrgAdmin];
+
     public static IReadOnlyList<string> Erlaubt(IReadOnlyCollection<OrgRolleArt> rollen)
     {
         var erlaubt = new List<string>();
@@ -45,6 +48,11 @@ internal static class OrgRechte
         if (rollen.Any(RichtlinieVerwalten.Contains))
         {
             erlaubt.Add(Aktionsschluessel.NachweisRichtlinieVerwalten);
+        }
+
+        if (rollen.Any(LoeschfristenVerwalten.Contains))
+        {
+            erlaubt.Add(Aktionsschluessel.LoeschfristenVerwalten);
         }
 
         return erlaubt;

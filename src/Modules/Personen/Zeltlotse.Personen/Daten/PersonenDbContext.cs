@@ -6,7 +6,9 @@ using Zeltlotse.Personen.Freizeitrollen;
 using Zeltlotse.Personen.Nachweise;
 using Zeltlotse.Personen.Profil;
 using Zeltlotse.Personen.Schluessel;
+using Zeltlotse.Personen.Zugriffsprotokoll;
 using Zeltlotse.SharedKernel.Daten;
+using Zeltlotse.SharedKernel.Datenschutz;
 using Zeltlotse.SharedKernel.Mandanten;
 using Zeltlotse.SharedKernel.Zugangslinks;
 
@@ -38,6 +40,8 @@ internal sealed class PersonenDbContext(DbContextOptions<PersonenDbContext> opti
 
     public DbSet<NachweisErinnerung> Erinnerungen => Set<NachweisErinnerung>();
 
+    public DbSet<EinsichtProtokollEintrag> EinsichtProtokoll => Set<EinsichtProtokollEintrag>();
+
     protected override string Schema => PersonenModul.Schema;
 
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => PersonenModell.Konfigurieren(modelBuilder);
@@ -68,6 +72,8 @@ internal sealed class PersonenLeseDbContext(DbContextOptions<PersonenLeseDbConte
     public DbSet<NachweisEinsichtPosten> EinsichtPosten => Set<NachweisEinsichtPosten>();
 
     public DbSet<NachweisErinnerung> Erinnerungen => Set<NachweisErinnerung>();
+
+    public DbSet<EinsichtProtokollEintrag> EinsichtProtokoll => Set<EinsichtProtokollEintrag>();
 
     protected override string Schema => PersonenModul.Schema;
 
@@ -194,6 +200,20 @@ internal static class PersonenModell
             e.Property(t => t.Id).ValueGeneratedNever();
             e.HasIndex(t => new { t.FreizeitId, t.PersonId }).IsUnique();
             e.HasIndex(t => t.PersonId);
+        });
+
+        // AD-8: Einsicht-Protokoll der betroffenen Person; höchstens ein Eintrag je (lesend, betroffen, Tag, Zweck). Der Platzhalter
+        // gelöschter Personen ist ausgenommen, damit zwei gelöschte Lesende am selben Tag nicht kollidieren.
+        modelBuilder.Entity<EinsichtProtokollEintrag>(e =>
+        {
+            e.ToTable("einsicht_protokoll");
+            e.Property(t => t.Id).ValueGeneratedNever();
+            e.Property(t => t.Zweck).HasConversion<short>();
+            e.HasIndex(t => new { t.LesendePersonId, t.BetroffenePersonId, t.Tag, t.Zweck })
+                .IsUnique()
+                .HasFilter($"\"LesendePersonId\" <> '{GeloeschtePerson.Id}'")
+                .HasDatabaseName("IX_einsicht_protokoll_je_tag");
+            e.HasIndex(t => t.BetroffenePersonId);
         });
     }
 }

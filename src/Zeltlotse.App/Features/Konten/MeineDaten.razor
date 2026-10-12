@@ -1,0 +1,184 @@
+@page "/konto/daten"
+@using Zeltlotse.Api.Contracts.Betrieb
+@using Zeltlotse.Api.Contracts.Personen
+@inject PersonenApiClient Personen
+@inject OrganisationenApiClient Organisationen
+@inject BetriebApiClient Betrieb
+@inject IBrowser Browser
+@inject AppSitzung Sitzung
+@inject AntiforgeryHandler Antiforgery
+@* Zugriffsprotokoll und Meine Daten (FR-13, FR-14, AD-8, AD-16, AD-25): wer wann Einsicht hatte (für die Person und ihre Kinder),
+   die Auskunft über alle gespeicherten Daten mit „Als PDF speichern“ (Druckdialog des Browsers, Druck-CSS) und „Als CSV
+   herunterladen“ (im Client erzeugt), und „Konto löschen“ mit Inline-Bestätigung. Auskunft und Löschen verlangen eine frische
+   Anmeldung; ein 401 führt der Sitzungs-Handler zur Anmeldung, der Rückweg ist diese Seite. Namen der Organisationen liefert
+   Organisationen; scheitert diese Zusatzabfrage, entfallen nur die Namen. *@
+<PageTitle>Zugriffsprotokoll und Meine Daten – Zeltlotse</PageTitle>
+
+<h1>Zugriffsprotokoll und Meine Daten</h1>
+<p><a href="konto">Zurück zum Konto</a></p>
+
+@if (_geloescht)
+{
+    <Meldung Titel="Gelöscht" Art="MeldungArt.Erfolg">
+        <p>Das Konto ist gelöscht.</p>
+    </Meldung>
+}
+else
+{
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+
+    <h2>Zugriffsprotokoll</h2>
+    @if (_protokoll is null)
+    {
+        @if (!_protokollFehlt)
+        {
+            <Ladezustand />
+        }
+    }
+    else if (_protokoll.Count == 0)
+    {
+        <LeerZustand Satz="Bisher hatte niemand Einsicht." />
+    }
+    else
+    {
+        <Datentabelle TZeile="ZugriffsprotokollEintrag" Beschriftung="Zugriffsprotokoll" Spalten="ProtokollSpalten" Zeilen="_protokoll" />
+    }
+
+    <h2>Auskunft und Export</h2>
+    <p>Für Auskunft und Export ist eine frische Anmeldung nötig (höchstens 10 Minuten alt); sonst führt Zeltlotse zuerst zur Anmeldung.</p>
+    <p><Knopf Art="KnopfArt.Outline" Deaktiviert="@_uebertraegt" @onclick="AuskunftAsync">Auskunft anzeigen</Knopf></p>
+    @if (_auskunft is not null)
+    {
+        @foreach (var abschnitt in _auskunft.Abschnitte)
+        {
+            <h3>@abschnitt.Titel</h3>
+            <Datentabelle TZeile="DatenauskunftZeile" Beschriftung="@abschnitt.Titel" Spalten="AuskunftSpalten" Zeilen="abschnitt.Zeilen" />
+        }
+
+        <p>
+            <Knopf @onclick="DruckenAsync">Als PDF speichern</Knopf>
+            <Knopf Art="KnopfArt.Outline" @onclick="CsvAsync">Als CSV herunterladen</Knopf>
+        </p>
+    }
+
+    <h2>Konto löschen</h2>
+    <p>Löscht Konto, Profil, Nachweise und Zugriffsprotokoll endgültig. Profile von Kindern ohne zweiten Elternteil werden mitgelöscht. Bestätigungen, die Organisationen behalten, bleiben ohne Namen.</p>
+    <InlineBestaetigung AusloeserText="Konto löschen" AusloeserArt="KnopfArt.Outline" Satz="Konto und alle eigenen Daten endgültig löschen?"
+                        JaText="Ja, endgültig löschen" Bestaetigt="LoeschenAsync" />
+}
+
+@code {
+    private List<ZugriffsprotokollEintrag>? _protokoll;
+    private bool _protokollFehlt;
+    private Dictionary<Guid, string> _organisationen = [];
+    private DatenauskunftAntwort? _auskunft;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private bool _geloescht;
+
+    private IReadOnlyList<Spalte<ZugriffsprotokollEintrag>> ProtokollSpalten =>
+    [
+        new("Wann", e => @<text>@Anzeige.Datum(e.Am)</text>),
+        new("Wer", e => @<text>@Person(e.LesenderName)</text>),
+        new("Organisation", e => @<text>@(e.OrganisationId is { } org && _organisationen.TryGetValue(org, out var name) ? name : "–")</text>),
+        new("Was", e => @<text>@Anzeige.Zweck(e.Zweck)</text>),
+        new("Betrifft", e => @<text>@Person(e.BetroffenerName)</text>),
+    ];
+
+    private static readonly IReadOnlyList<Spalte<DatenauskunftZeile>> AuskunftSpalten =
+    [
+        new("Feld", z => @<text>@z.Feld</text>),
+        new("Wert", z => @<text>@z.Wert</text>),
+    ];
+
+    /// <summary>Ohne Namen ist die Person gelöscht; mit leerem Namen gibt es sie, nur ohne Vor- und Nachnamen.</summary>
+    private static string Person(string? name) =>
+        name is null ? "Gelöschte Person" : string.IsNullOrWhiteSpace(name) ? "Name fehlt" : name;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var protokoll = await Personen.ZugriffsprotokollLadenAsync();
+            _organisationen = await NamenAsync(protokoll);
+            _protokoll = protokoll;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+            _protokollFehlt = true;
+        }
+    }
+
+    private async Task<Dictionary<Guid, string>> NamenAsync(List<ZugriffsprotokollEintrag> protokoll)
+    {
+        var kennungen = protokoll.Where(e => e.OrganisationId is not null).Select(e => e.OrganisationId!.Value).Distinct().ToList();
+        if (kennungen.Count == 0)
+        {
+            return [];
+        }
+
+        try
+        {
+            return await Organisationen.NamenLadenAsync(kennungen);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            return [];
+        }
+    }
+
+    private async Task AuskunftAsync()
+    {
+        _uebertraegt = true;
+        _aktionFehler = false;
+        try
+        {
+            // Ohne frische Anmeldung (401) kommt null; der Sitzungs-Handler führt dann zur Anmeldung.
+            _auskunft = await Betrieb.DatenauskunftLadenAsync() ?? _auskunft;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task DruckenAsync() => await Browser.DruckenAsync();
+
+    private async Task CsvAsync()
+    {
+        if (_auskunft is { } auskunft)
+        {
+            await Browser.DateiSpeichernAsync(AuskunftCsv.Dateiname(auskunft.ErstelltAm), AuskunftCsv.Medientyp, AuskunftCsv.Erzeugen(auskunft));
+        }
+    }
+
+    private async Task LoeschenAsync()
+    {
+        _aktionFehler = false;
+        try
+        {
+            if (await Personen.KontoLoeschenAsync() == KontoLoeschenErgebnis.Geloescht)
+            {
+                // Der Server hat die Sitzung beendet; auf dem Gerät ebenso (Token hängt an der Identität).
+                Antiforgery.TokenVerwerfen();
+                Sitzung.Abmelden();
+                _geloescht = true;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+}

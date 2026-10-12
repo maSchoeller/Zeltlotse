@@ -61,6 +61,16 @@ public static class Anzeige
     public static string Datum(DateTimeOffset zeitpunkt) =>
         TimeZoneInfo.ConvertTime(zeitpunkt, Berlin()).ToString("dd.MM.yyyy", Deutsch);
 
+    /// <summary>Der Kalendertag eines Zeitpunkts in Europe/Berlin.</summary>
+    public static DateOnly Tag(DateTimeOffset zeitpunkt) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(zeitpunkt, Berlin()).DateTime);
+
+    /// <summary>Wofür jemand Einsicht hatte (Zugriffsprotokoll): „Nachweise eingesehen“.</summary>
+    public static string Zweck(Zeltlotse.Api.Contracts.Personen.ZugriffZweck zweck) => zweck switch
+    {
+        Zeltlotse.Api.Contracts.Personen.ZugriffZweck.NachweiseEingesehen => "Nachweise eingesehen",
+        _ => zweck.ToString(),
+    };
+
     /// <summary>Anzeigetext einer Nachweisart: „Führungszeugnis“, „JuLeiCa“, „Erste Hilfe“, „Präventionsschulung“.</summary>
     public static string Nachweis(Zeltlotse.Api.Contracts.Personen.NachweisArt art) => Nachweis((int)art);
 

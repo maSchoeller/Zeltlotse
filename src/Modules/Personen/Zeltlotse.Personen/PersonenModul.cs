@@ -4,11 +4,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Freizeiten.Contracts.Events;
 using Zeltlotse.Personen.Contracts.Namen;
 using Zeltlotse.Personen.Daten;
+using Zeltlotse.Personen.Datenschutz;
 using Zeltlotse.Personen.Familien;
 using Zeltlotse.Personen.Freizeitrollen;
 using Zeltlotse.Personen.Nachweise;
 using Zeltlotse.Personen.Profil;
 using Zeltlotse.Personen.Schluessel;
+using Zeltlotse.Personen.Zugriffsprotokoll;
 using Zeltlotse.SharedKernel.Anmeldung;
 using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Datenschutz;
@@ -33,6 +35,8 @@ public static class PersonenModul
         services.AddScoped<IPersonenNamen, PersonenNamen>();
         services.EmpfaengtEreignis<FreizeitRolleGeaendert, FreizeitRolleUebernehmen>();
         services.VerschicktMail<NachweisErinnerungMail, NachweisErinnerungMailAufbau>();
+        services.AddScoped<IDatenauskunft, PersonenAuskunft>();
+        services.AddScoped<ILoeschlauf, PersonenLoeschlauf>();
         return services;
     }
 
@@ -43,7 +47,8 @@ public static class PersonenModul
     /// eine erneute Anmeldung (AD-25). Die eigenen Nachweise liegen unter <c>/api/ich/nachweise</c> (AD-26); geprüft wird unter
     /// <c>/api/freizeiten/{freizeitId}/personen/nachweise</c> (Leitung) und <c>/api/organisationen/{orgId}/personen/nachweise</c>
     /// (Org-Admin), Mandant und Rolle aus der Route (AD-6, AD-12). Erinnern (FR-11) gibt es nur im Freizeit-Kontext unter
-    /// <c>…/personen/nachweise/erinnerungen</c>.
+    /// <c>…/personen/nachweise/erinnerungen</c>. Das Zugriffsprotokoll liegt unter <c>/api/ich/zugriffsprotokoll</c>; Konto löschen
+    /// (<c>POST /api/ich/profil/loeschen</c>) verlangt eine erneute Anmeldung (AD-25).
     /// </summary>
     public static IEndpointRouteBuilder MapPersonenEndpoints(this IEndpointRouteBuilder api)
     {
@@ -51,6 +56,9 @@ public static class PersonenModul
         profil.MapGet("", ProfilLadenEndpunkt.Laden);
         profil.MapPost("", ProfilSicherstellenEndpunkt.Sicherstellen);
         profil.MapPatch("", ProfilFeldAendernEndpunkt.Aendern);
+        profil.MapPost("/loeschen", PersonLoeschenEndpunkt.Loeschen).ErneuteAnmeldung();
+
+        api.MapGet("/ich/zugriffsprotokoll", ZugriffsprotokollEndpunkt.Laden).Organisationsuebergreifend();
 
         var familie = api.MapGroup("/ich/familie").Organisationsuebergreifend();
         familie.MapGet("", FamilieLadenEndpunkt.Laden);

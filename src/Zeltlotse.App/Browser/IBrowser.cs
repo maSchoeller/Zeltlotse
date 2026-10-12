@@ -19,4 +19,10 @@ public interface IBrowser
 
     /// <summary>Lädt die App neu und aktiviert vorher einen wartenden Service Worker.</summary>
     ValueTask NeuLadenAsync();
+
+    /// <summary>Öffnet den Druckdialog des Browsers (z. B. „Als PDF speichern“); das Druck-CSS blendet App-Leiste, Navigation und Knöpfe aus.</summary>
+    ValueTask DruckenAsync();
+
+    /// <summary>Bietet Bytes als Datei zum Speichern an (Blob, Objekt-URL, Link-Klick; ohne Pop-up, CSP-konform).</summary>
+    ValueTask DateiSpeichernAsync(string name, string medientyp, byte[] inhalt);
 }

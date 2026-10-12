@@ -12,7 +12,7 @@ sidebar:
 
 - **Kinder unter 18 anmelden** – über den Anmeldelink für Teilnehmende, den die Leitung einer Freizeit verteilt. Geschwister lassen sich nacheinander anmelden.
 - **Den Freizeitpass pflegen** – Angaben wie Allergien, Medikamente und Notfallkontakte. Der Freizeitpass gehört dem Kind und wird bei der nächsten Freizeit vorausgefüllt.
-- **Sehen, wer Einsicht hatte** – im Zugriffsprotokoll steht, wer wann die Daten des Kindes angesehen hat, und bis wann die Freizeit Einsicht hat.
+- **Sehen, wer Einsicht hatte** – im Zugriffsprotokoll steht, wer wann die Daten des Kindes angesehen hat ([Zugriffsprotokoll und Meine Daten](/erste-schritte/meine-daten/)).
 - **Kinder ins Familienkonto aufnehmen** – mit Vorname und Geburtsdatum, die Angaben jederzeit ändern ([Familienkonto](/eltern/familienkonto/)).
 - **Einen zweiten Elternteil einladen** – per Mail, mit denselben Rechten im Familienkonto.
 - **Das Profil mit 18 übergeben** – wird ein Kind volljährig, geht sein Profil an ein eigenes Konto über ([Profil mit 18 übergeben](/eltern/profil-uebergeben/)).

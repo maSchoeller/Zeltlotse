@@ -1,6 +1,6 @@
 ---
 title: Was passiert mit meinen Daten
-description: Freigabe und Freigabefenster, Einsicht und Zugriffsprotokoll, Nachweise und Löschen – in Klartext.
+description: Freigabe und Freigabefenster, Einsicht und Zugriffsprotokoll, Auskunft, Nachweise, Löschen und Fristen – in Klartext.
 ---
 
 Die Daten in Zeltlotse gehören der Person, nicht der Organisation und nicht der Freizeit. Eine Freizeit bekommt nur eine befristete Einsicht, und nur in das, was sie abgefragt hat. Diese Seite erklärt die Regeln, die für alle Organisationen gleich gelten.
@@ -27,12 +27,14 @@ Der Freizeitpass ist für eine Freizeit nötig und lässt sich daher nicht wider
 
 ## Einsicht und Zugriffsprotokoll
 
-Jeder Blick in einen Freizeitpass wird festgehalten: **wer** wann **wessen** Angaben angesehen hat, in welcher Freizeit und wofür. Im **Zugriffsprotokoll** sieht jede Person, wer wann Einsicht in ihre Daten hatte, Eltern auch für ihre Kinder.
+Jede Einsicht in persönliche Daten wird festgehalten: **wer** wann **wessen** Angaben angesehen hat, für welche Organisation und Freizeit und wofür, höchstens einmal am Tag je Person. Heute betrifft das die Prüfung von Nachweisen; mit dem Freizeitpass kommen die Blicke in Freizeitpässe dazu. Im **Zugriffsprotokoll** auf der Seite „Zugriffsprotokoll und Meine Daten“ sieht jede Person, wer wann Einsicht in ihre Daten hatte, Eltern auch für ihre Kinder. Das Zugriffsprotokoll gehört der Person; die Organisation sieht es nicht.
 
-Außerdem gibt es per Klick:
+Auf derselben Seite gibt es per Klick:
 
-- eine **Auskunft** über alle gespeicherten Daten,
-- einen **Export** der eigenen Daten als PDF oder CSV.
+- eine **Auskunft** über alle gespeicherten Daten, nach Bereichen geordnet,
+- einen **Export** der Auskunft als PDF (über den Druckdialog des Browsers) oder als CSV-Datei.
+
+Für Auskunft und Export muss die letzte Anmeldung höchstens 10 Minuten zurückliegen. Wie das geht, steht unter [Zugriffsprotokoll und Meine Daten](/erste-schritte/meine-daten/).
 
 ## Nachweise: nur eine einmalige Einsicht
 
@@ -46,10 +48,13 @@ Nachweise wie Führungszeugnis, JuLeiCa (Jugendleiter-Card) oder Erste-Hilfe-Bes
 
 ## Löschen
 
-- **Eigenes Konto löschen:** Jede Person kann ihr Konto per Klick löschen. Persönliche Daten wie Profil, Freizeitpass und Nachweise werden dann endgültig gelöscht. Läuft gerade noch ein Freigabefenster, geschieht das nach dessen Ende.
+- **Eigenes Konto löschen:** Jede Person kann ihr Konto auf der Seite „Zugriffsprotokoll und Meine Daten“ löschen, nach einer Bestätigung und mit einer Anmeldung, die höchstens 10 Minuten zurückliegt. Konto, Profil, Nachweise mit Dateien, Einsicht-Anfragen, Erinnerungen und das Zugriffsprotokoll über die Person werden sofort endgültig gelöscht, ebenso ihre Rollen in Organisationen und Freizeiten und die Nachweis-Bestätigungen über sie. Ist sie der einzige Elternteil im Familienkonto, werden die Profile der Kinder mitgelöscht; mit zweitem Elternteil bleiben die Kinder bei ihm.
+- **Was ohne Namen bleibt:** Wo die gelöschte Person bei anderen etwas getan hat – eine Bestätigung geprüft, Nachweise eingesehen, an Nachweise erinnert, jemanden eingeladen –, bleibt dieser Eintrag bei den anderen stehen, aber ohne Namen („Gelöschte Person“). Das Sicherheitsprotokoll bleibt bis zu seiner festen Frist; es enthält nur Kennungen.
 - **Gast-Anmeldung ohne Konto:** Ein Profil ohne Konto wird gelöscht, sobald kein Freigabefenster mehr läuft.
-- **Fristen der Organisation:** Daten, die eine Organisation eine Zeit lang aufbewahren muss, etwa Teilnehmerlisten, Belege oder archivierte Vorfall-Notizen, löscht Zeltlotse automatisch nach den Fristen, die die Organisation festlegt. Zeltlotse gibt dafür Vorgabewerte vor.
-- **Endgültig, auch in Sicherungen:** Gelöschte Daten sind nicht nur ausgeblendet, sondern unlesbar – auch in Sicherungskopien.
+- **Fristen der Organisation:** Daten, die eine Organisation eine Zeit lang braucht, löscht Zeltlotse einmal am Tag automatisch nach den [Löschfristen](/org-admin/loeschfristen/) der Organisation. Vorgabe sind **12 Monate**: die Arbeitsdaten einer Freizeit (heute die Erinnerungen an Nachweise) 12 Monate nach Freizeitende, abgelaufene Nachweis-Bestätigungen 12 Monate nach „gültig bis“. Der Org-Admin kann die Fristen zwischen 1 und 120 Monaten festlegen.
+- **Feste Fristen:** Login-Links und Login-Codes werden **einen Tag** nach ihrem Ablauf gelöscht, Einladungen und Profil-Übergaben **30 Tage** nach ihrem Ablauf, das Sicherheitsprotokoll nach **365 Tagen**.
+- **Keine Frist für persönliche Daten:** Profil, Nachweise und das Zugriffsprotokoll gehören der Person und bleiben, bis sie ihr Konto löscht.
+- **Endgültig, auch in Sicherungen:** Gelöschte Daten sind nicht nur ausgeblendet, sondern gelöscht; mit dem Schlüssel der Person verschlüsselte Daten sind danach auch in Sicherungskopien unlesbar.
 
 ## Konto und Anmeldung
 

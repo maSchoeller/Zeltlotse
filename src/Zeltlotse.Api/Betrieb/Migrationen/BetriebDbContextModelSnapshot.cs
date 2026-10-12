@@ -45,6 +45,8 @@ namespace Zeltlotse.Api.Betrieb.Migrationen
 
                     b.HasKey("Id");
 
+                    b.HasIndex("PersonId");
+
                     b.HasIndex("Zeitpunkt");
 
                     b.ToTable("sicherheitsprotokoll", "betrieb");

@@ -8,7 +8,8 @@ using Zeltlotse.SharedKernel.Outbox;
 namespace Zeltlotse.SharedKernel.Daten;
 
 /// <summary>
-/// Schreibender DbContext eines Moduls. Nur Command-Handler (sowie später Lösch-Dienst und Datenauskunft) erhalten ihn (AD-27).
+/// Schreibender DbContext eines Moduls. Nur Command-Handler erhalten ihn (AD-27); Lösch-Dienst und Datenauskunft brauchen ihn
+/// nicht: Der Lösch-Dienst schickt je Modul einen internen Command, die Datenauskunft liest über den Lese-Kontext.
 /// Trägt die Outbox- und Inbox-Tabellen des Modulschemas (AD-3, AD-4).
 /// </summary>
 public abstract class ModulDbContext(DbContextOptions optionen, IMandantenKontext mandantenKontext)
@@ -30,8 +31,8 @@ public abstract class ModulDbContext(DbContextOptions optionen, IMandantenKontex
         OutboxModell.Konfigurieren(modelBuilder);
 
     /// <summary>
-    /// Outbox-Stufe: sammelt die Ereignisse aller verfolgten Aggregate ein, legt je Ereignis die Outbox-Zeile
-    /// und den Zustellstand je Empfänger an und speichert alles in einem <c>SaveChanges</c> (AD-28).
+    /// Outbox-Stufe: sammelt die Ereignisse aller verfolgten Aggregate ein (auch gelöschter, z. B. <c>PersonGeloescht</c>), legt je
+    /// Ereignis die Outbox-Zeile und den Zustellstand je Empfänger an und speichert alles in einem <c>SaveChanges</c> (AD-28).
     /// </summary>
     internal async Task OutboxSchreibenUndSpeichernAsync(TimeProvider uhr, EreignisKatalog katalog, CancellationToken abbruch)
     {

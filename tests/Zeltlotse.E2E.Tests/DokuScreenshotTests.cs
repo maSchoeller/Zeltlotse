@@ -487,6 +487,94 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await BildAsync(seite, "nachweis-erinnern", geraet);
     }
 
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Meine_Daten(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        // Story 1-7: Jonas sieht Miriams Einsicht (Demo-Daten) und lädt mit frischer Anmeldung die Auskunft.
+        await MeineDatenAsync(seite);
+        var zeile = seite.Locator("tbody tr").Filter(new() { HasText = "Miriam Zeltner" });
+        await Assertions.Expect(zeile).ToContainTextAsync("Jugendwerk Musterstadt", new() { Timeout = 60_000 });
+        await Assertions.Expect(zeile).ToContainTextAsync("Nachweise eingesehen");
+        await Assertions.Expect(zeile).ToContainTextAsync("Jonas Hüttner");
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "meine-daten-zugriffsprotokoll", geraet);
+
+        await seite.GetByRole(AriaRole.Button, new() { Name = "Auskunft anzeigen" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h3").First).ToHaveTextAsync("Konto", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("td").Filter(new() { HasText = DemoMail }).First).ToBeVisibleAsync();
+        var pdf = seite.GetByRole(AriaRole.Button, new() { Name = "Als PDF speichern" });
+        await Assertions.Expect(pdf).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Als CSV herunterladen" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        // Den Abschnitt „Auskunft und Export“ oben zeigen (der Arbeitsbereich scrollt, nicht die Seite).
+        await seite.Locator("h2").Filter(new() { HasText = "Auskunft und Export" }).EvaluateAsync("e => e.scrollIntoView({ block: 'start' })");
+
+        await BildAsync(seite, "meine-daten-auskunft", geraet);
+
+        // Der echte Download-Weg über zeltlotse.js (Blob, Objekt-URL, Link-Klick), nach dem Bild.
+        var download = await seite.RunAndWaitForDownloadAsync(
+            () => seite.GetByRole(AriaRole.Button, new() { Name = "Als CSV herunterladen" }).ClickAsync());
+        Assert.StartsWith("zeltlotse-meine-daten-", download.SuggestedFilename, StringComparison.Ordinal);
+        Assert.EndsWith(".csv", download.SuggestedFilename, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Konto_Loeschen(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        // Story 1-7: Die Inline-Bestätigung ist offen; bestätigt wird nicht (die Demo-Daten bleiben).
+        await MeineDatenAsync(seite);
+        await Assertions.Expect(seite.Locator("tbody tr").Filter(new() { HasText = "Miriam Zeltner" })).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Button, new() { Name = "Konto löschen" }).ClickAsync();
+        var bestaetigung = seite.Locator(".zl-bestaetigung");
+        await Assertions.Expect(bestaetigung).ToContainTextAsync("Konto und alle eigenen Daten endgültig löschen?");
+        await Assertions.Expect(bestaetigung.GetByRole(AriaRole.Button, new() { Name = "Ja, endgültig löschen" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        await bestaetigung.ScrollIntoViewIfNeededAsync();
+
+        await BildAsync(seite, "konto-loeschen", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Loeschfristen(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, OrgAdminMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Organisation öffnen" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Jugendwerk Musterstadt", new() { Timeout = 60_000 });
+        var card = seite.Locator(".elkw-card").Filter(new() { HasText = "Löschfristen" });
+        await Assertions.Expect(card.GetByLabel("Daten einer Freizeit (Monate nach Freizeitende)")).ToHaveValueAsync("12", new() { Timeout = 60_000 });
+        await Assertions.Expect(card.GetByLabel("Abgelaufene Nachweis-Bestätigungen (Monate nach Ablauf)")).ToHaveValueAsync("12");
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        await card.ScrollIntoViewIfNeededAsync();
+
+        await BildAsync(seite, "loeschfristen", geraet);
+    }
+
+    /// <summary>Jonas meldet sich an und öffnet Konto → „Meine Daten öffnen“.</summary>
+    private async Task MeineDatenAsync(IPage seite)
+    {
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, DemoMail);
+        await seite.Locator("header a.zl-konto-link").ClickAsync();
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Meine Daten öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zugriffsprotokoll und Meine Daten", new() { Timeout = 60_000 });
+    }
+
     /// <summary>Miriam öffnet in der Demo-Freizeit „Nachweise prüfen“; liefert Jonas' Zeile (freigegeben, mit „Prüfen“).</summary>
     private async Task<ILocator> PruefListeAsync(IPage seite)
     {

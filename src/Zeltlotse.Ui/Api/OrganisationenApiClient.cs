@@ -106,6 +106,13 @@ public sealed class OrganisationenApiClient(HttpClient http)
     public static string RichtliniePfad(Guid orgId, NachweisArt art) =>
         $"/api/organisationen/{orgId}/nachweis-richtlinie/{RichtlinieFelder.JsonName(art)}";
 
+    /// <summary><c>GET /api/organisationen/{orgId}/loeschfristen</c>: beide Fristen mit Version oder <c>null</c> (<c>403</c>/<c>404</c>).</summary>
+    public Task<LoeschfristenAntwort?> LoeschfristenLadenAsync(Guid orgId, CancellationToken abbruch = default) =>
+        LadenAsync<LoeschfristenAntwort>(LoeschfristenPfad(orgId), abbruch);
+
+    /// <summary>Pfad der Löschfristen, auch für den Autosave-Baustein (<c>PATCH</c>, AD-19).</summary>
+    public static string LoeschfristenPfad(Guid orgId) => $"/api/organisationen/{orgId}/loeschfristen";
+
     /// <summary><c>GET /api/ich/organisationen/nachweis-bestaetigungen</c>: die eigenen Bestätigungen aller Organisationen.</summary>
     public async Task<List<NachweisBestaetigungZeile>> BestaetigungenLadenAsync(CancellationToken abbruch = default)
     {

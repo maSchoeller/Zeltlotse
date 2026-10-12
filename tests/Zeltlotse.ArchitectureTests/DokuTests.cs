@@ -59,7 +59,12 @@ public sealed class DokuTests
 
         var fehlend = DokuRegeln.FehlendeSeiten(dateien).ToList();
 
-        Assert.Equal(["Seite kueche/index.md fehlt.", "Seite daten.md fehlt.", "Seite index.md fehlt.", "Seite erste-schritte/zeltlotse-oeffnen.md fehlt.", "Seite erste-schritte/anmelden.md fehlt."], fehlend);
+        Assert.Equal(
+            [
+                "Seite kueche/index.md fehlt.", "Seite daten.md fehlt.", "Seite index.md fehlt.", "Seite erste-schritte/zeltlotse-oeffnen.md fehlt.",
+                "Seite erste-schritte/anmelden.md fehlt.", "Seite erste-schritte/meine-daten.md fehlt.", "Seite org-admin/loeschfristen.md fehlt.",
+            ],
+            fehlend);
     }
 
     [Fact]

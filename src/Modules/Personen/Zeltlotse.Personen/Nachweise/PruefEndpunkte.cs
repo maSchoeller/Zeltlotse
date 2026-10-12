@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Zeltlotse.Api.Contracts.Personen;
 using Zeltlotse.Personen.Daten;
 using Zeltlotse.Personen.Familien;
+using Zeltlotse.Personen.Zugriffsprotokoll;
 using Zeltlotse.SharedKernel.Anmeldung;
 using Zeltlotse.SharedKernel.Dateien;
 using Zeltlotse.SharedKernel.Mandanten;
@@ -74,16 +75,16 @@ internal static class FreizeitPruefEndpunkt
         PruefAbfragen.AnfragenAsync(Ort(mandant, freizeitId), anfrage, angemeldet, sender, abbruch);
 
     public static Task<Results<Ok<EinsichtDetail>, NotFound>> Detail(
-        Guid freizeitId, Guid einsichtId, IMandantenKontext mandant, IAngemeldet angemeldet, PersonenLeseDbContext db, TimeProvider uhr, CancellationToken abbruch) =>
-        PruefAbfragen.DetailAsync(Ort(mandant, freizeitId), einsichtId, angemeldet, db, uhr, abbruch);
+        Guid freizeitId, Guid einsichtId, IMandantenKontext mandant, IAngemeldet angemeldet, PersonenLeseDbContext db, ISender sender, TimeProvider uhr, CancellationToken abbruch) =>
+        PruefAbfragen.DetailAsync(Ort(mandant, freizeitId), einsichtId, angemeldet, db, sender, uhr, abbruch);
 
     public static Task<Results<NoContent, NotFound, ProblemHttpResult>> Pruefen(
         Guid freizeitId, Guid einsichtId, IMandantenKontext mandant, IAngemeldet angemeldet, ISender sender, CancellationToken abbruch) =>
         PruefAbfragen.PruefenAsync(Ort(mandant, freizeitId), einsichtId, angemeldet, sender, abbruch);
 
     public static Task<IResult> Datei(
-        Guid freizeitId, Guid einsichtId, Guid nachweisId, IAngemeldet angemeldet, PersonenLeseDbContext db, IGeschuetzteDateien dateien, TimeProvider uhr, CancellationToken abbruch) =>
-        PruefAbfragen.DateiAsync(einsichtId, nachweisId, angemeldet, db, dateien, uhr, abbruch);
+        Guid freizeitId, Guid einsichtId, Guid nachweisId, IAngemeldet angemeldet, PersonenLeseDbContext db, IGeschuetzteDateien dateien, ISender sender, TimeProvider uhr, CancellationToken abbruch) =>
+        PruefAbfragen.DateiAsync(einsichtId, nachweisId, angemeldet, db, dateien, sender, uhr, abbruch);
 
     public static Task<Results<NoContent, NotFound>> Bestaetigen(Guid freizeitId, Guid einsichtId, Guid nachweisId, IAngemeldet angemeldet, ISender sender, CancellationToken abbruch) =>
         PruefAbfragen.EntscheidenAsync(einsichtId, nachweisId, true, null, angemeldet, sender, abbruch);
@@ -122,15 +123,15 @@ internal static class OrgPruefEndpunkt
         PruefAbfragen.AnfragenAsync(new PruefOrt(orgId, null), anfrage, angemeldet, sender, abbruch);
 
     public static Task<Results<Ok<EinsichtDetail>, NotFound>> Detail(
-        Guid orgId, Guid einsichtId, IAngemeldet angemeldet, PersonenLeseDbContext db, TimeProvider uhr, CancellationToken abbruch) =>
-        PruefAbfragen.DetailAsync(new PruefOrt(orgId, null), einsichtId, angemeldet, db, uhr, abbruch);
+        Guid orgId, Guid einsichtId, IAngemeldet angemeldet, PersonenLeseDbContext db, ISender sender, TimeProvider uhr, CancellationToken abbruch) =>
+        PruefAbfragen.DetailAsync(new PruefOrt(orgId, null), einsichtId, angemeldet, db, sender, uhr, abbruch);
 
     public static Task<Results<NoContent, NotFound, ProblemHttpResult>> Pruefen(Guid orgId, Guid einsichtId, IAngemeldet angemeldet, ISender sender, CancellationToken abbruch) =>
         PruefAbfragen.PruefenAsync(new PruefOrt(orgId, null), einsichtId, angemeldet, sender, abbruch);
 
     public static Task<IResult> Datei(
-        Guid orgId, Guid einsichtId, Guid nachweisId, IAngemeldet angemeldet, PersonenLeseDbContext db, IGeschuetzteDateien dateien, TimeProvider uhr, CancellationToken abbruch) =>
-        PruefAbfragen.DateiAsync(einsichtId, nachweisId, angemeldet, db, dateien, uhr, abbruch);
+        Guid orgId, Guid einsichtId, Guid nachweisId, IAngemeldet angemeldet, PersonenLeseDbContext db, IGeschuetzteDateien dateien, ISender sender, TimeProvider uhr, CancellationToken abbruch) =>
+        PruefAbfragen.DateiAsync(einsichtId, nachweisId, angemeldet, db, dateien, sender, uhr, abbruch);
 
     public static Task<Results<NoContent, NotFound>> Bestaetigen(Guid orgId, Guid einsichtId, Guid nachweisId, IAngemeldet angemeldet, ISender sender, CancellationToken abbruch) =>
         PruefAbfragen.EntscheidenAsync(einsichtId, nachweisId, true, null, angemeldet, sender, abbruch);
@@ -211,9 +212,12 @@ internal static class PruefAbfragen
             _ => TypedResults.NotFound(),
         };
 
-    /// <summary><c>GET …/einsichten/{einsichtId}</c>: nur gebunden oder übernehmbar, sonst <c>404</c>.</summary>
+    /// <summary>
+    /// <c>GET …/einsichten/{einsichtId}</c>: nur gebunden oder übernehmbar, sonst <c>404</c>. Ein erfolgreicher Abruf kommt ins
+    /// Einsicht-Protokoll der betroffenen Person (AD-8, höchstens einmal am Tag).
+    /// </summary>
     public static async Task<Results<Ok<EinsichtDetail>, NotFound>> DetailAsync(
-        PruefOrt ort, Guid einsichtId, IAngemeldet angemeldet, PersonenLeseDbContext db, TimeProvider uhr, CancellationToken abbruch)
+        PruefOrt ort, Guid einsichtId, IAngemeldet angemeldet, PersonenLeseDbContext db, ISender sender, TimeProvider uhr, CancellationToken abbruch)
     {
         var einsicht = await db.Einsichten.Include(e => e.Posten).SingleOrDefaultAsync(e => e.Id == einsichtId && e.OrganisationId == ort.OrganisationId, abbruch);
         if (einsicht is null
@@ -223,6 +227,7 @@ internal static class PruefAbfragen
             return TypedResults.NotFound();
         }
 
+        await ProtokollierenAsync(sender, einsicht, angemeldet, abbruch);
         var person = await db.Personen.Where(p => p.Id == einsicht.PersonId).Select(p => new { p.Vorname, p.Nachname }).SingleOrDefaultAsync(abbruch);
         var nachweisIds = einsicht.Posten.Select(p => p.NachweisId).ToList();
         var nachweise = await db.Nachweise.Where(n => nachweisIds.Contains(n.Id)).ToDictionaryAsync(n => n.Id, abbruch);
@@ -262,7 +267,7 @@ internal static class PruefAbfragen
     /// Bilder <c>inline</c>, PDF als Anhang, Dateiname <c>&lt;art&gt;.&lt;endung&gt;</c>. Danach <c>404</c>.
     /// </summary>
     public static async Task<IResult> DateiAsync(
-        Guid einsichtId, Guid nachweisId, IAngemeldet angemeldet, PersonenLeseDbContext db, IGeschuetzteDateien dateien, TimeProvider uhr, CancellationToken abbruch)
+        Guid einsichtId, Guid nachweisId, IAngemeldet angemeldet, PersonenLeseDbContext db, IGeschuetzteDateien dateien, ISender sender, TimeProvider uhr, CancellationToken abbruch)
     {
         var einsicht = await db.Einsichten.Include(e => e.Posten).SingleOrDefaultAsync(e => e.Id == einsichtId, abbruch);
         var posten = einsicht?.OffenerPosten(FamilieAntworten.PersonId(angemeldet), nachweisId, uhr.GetUtcNow());
@@ -277,8 +282,15 @@ internal static class PruefAbfragen
             return TypedResults.NotFound();
         }
 
+        await ProtokollierenAsync(sender, einsicht!, angemeldet, abbruch);
         return DateiAuslieferung.Ausliefern(inhalt, $"{NachweisFelder.JsonName(NachweisApi.Art(posten.Art))}.{NachweisRegeln.Endung(art)}");
     }
+
+    /// <summary>Einsicht-Protokoll (AD-8): die prüfende Person hat die Nachweise der Person gesehen; Organisation und Freizeit der Einsicht.</summary>
+    private static async Task ProtokollierenAsync(ISender sender, NachweisEinsicht einsicht, IAngemeldet angemeldet, CancellationToken abbruch) =>
+        await sender.Send(
+            new EinsichtProtokollieren(einsicht.PersonId, FamilieAntworten.PersonId(angemeldet), einsicht.OrganisationId, einsicht.FreizeitId, EinsichtZweck.NachweiseEingesehen),
+            abbruch);
 
     /// <summary><c>POST …/bestaetigen</c> bzw. <c>…/ablehnen</c>: <c>204</c>; nicht gebunden, abgelaufen oder schon entschieden → <c>404</c>.</summary>
     public static async Task<Results<NoContent, NotFound>> EntscheidenAsync(

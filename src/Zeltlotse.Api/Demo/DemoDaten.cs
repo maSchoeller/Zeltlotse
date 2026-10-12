@@ -14,6 +14,7 @@ using Zeltlotse.Personen.Daten;
 using Zeltlotse.Personen.Familien;
 using Zeltlotse.Personen.Nachweise;
 using Zeltlotse.Personen.Profil;
+using Zeltlotse.Personen.Zugriffsprotokoll;
 using Zeltlotse.SharedKernel.Mandanten;
 using Zeltlotse.SharedKernel.Outbox;
 using Zeltlotse.SharedKernel.Rechte;
@@ -44,6 +45,8 @@ namespace Zeltlotse.Api.Demo;
 /// Miriam, Jonas gibt frei, Miriam bestätigt Erste Hilfe.
 /// Story 1-6: Andrea setzt in der Nachweis-Richtlinie „Erste Hilfe“ auf Pflicht (nur, wenn es noch keine Pflicht ist). Damit
 /// zeigt die Freizeit Warnhinweise; eine Demo-Erinnerung gibt es nicht, also verschickt das Einspielen keine Mails.
+/// Story 1-7: Miriam hat Jonas' Nachweise eingesehen: ein Eintrag im Einsicht-Protokoll (Organisation und Freizeit der Demo), nur
+/// wenn es noch keinen Eintrag von Miriam über Jonas gibt. Die Löschfristen der Demo-Organisation haben die Vorgabewerte.
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -85,6 +88,7 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
 
         await RichtlinieAsync(abbruch);
         await NachweiseAsync(abbruch);
+        await ZugriffsprotokollAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -304,6 +308,32 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
 
         // Die Bestätigung erreicht Organisationen über die Outbox (NachweisEingesehen).
         await dienste.GetRequiredService<IOutboxZustellung>().AllesZustellenAsync(abbruch);
+    }
+
+    /// <summary>Story 1-7: Miriam hat Jonas' Nachweise eingesehen (Einsicht-Protokoll); nur, wenn es noch keinen Eintrag gibt.</summary>
+    private async Task ZugriffsprotokollAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        var organisationId = await dienste.GetRequiredService<OrganisationenLeseDbContext>().Organisationen
+            .Where(o => o.Name == DemoKatalog.Organisation.Name)
+            .Select(o => o.Id)
+            .SingleAsync(abbruch);
+        dienste.GetRequiredService<MandantenKontext>().Setzen(organisationId);
+        var freizeitId = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name)
+            .Select(f => f.Id)
+            .SingleAsync(abbruch);
+        var leitung = DemoKatalog.Personen.Where(p => p.Rolle == DemoRolle.Leitung).ToList();
+        var jonas = (await sender.Send(new KontoSicherstellen(leitung[0].Mail!), abbruch)).PersonId;
+        var miriam = (await sender.Send(new KontoSicherstellen(leitung[1].Mail!), abbruch)).PersonId;
+        if (await dienste.GetRequiredService<PersonenLeseDbContext>().EinsichtProtokoll.AnyAsync(e => e.BetroffenePersonId == jonas && e.LesendePersonId == miriam, abbruch))
+        {
+            return;
+        }
+
+        await sender.Send(new EinsichtProtokollieren(jonas, miriam, organisationId, freizeitId, EinsichtZweck.NachweiseEingesehen), abbruch);
     }
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Demo-Daten eingespielt ({AnzahlPersonen} Personen im Katalog, {NeueKonten} neue Konten).")]

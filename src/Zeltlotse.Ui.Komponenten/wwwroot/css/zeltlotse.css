@@ -4,6 +4,7 @@
    Nach elkw-fonts.css, elkw-tokens.css, elkw-components.css, elkw-app.css und elkw-nahbar.css laden.
    1. Pfeil ohne data:-Bild (CSP)        2. Kontrast-Korrekturen (WCAG 2.2 AA)
    3. Dunkelmodus (*-dark-Token)          4. Zeltlotse-Bausteine mit Präfix zl-
+   5. Druck (Konvention „Druck“: Druck-CSS statt PDF-Bibliothek)
    Keine Schatten, keine Verläufe, keine Pills.
    ========================================================================== */
 
@@ -144,3 +145,14 @@ a.zl-gross:not(.elkw-btn) { display: inline-flex; align-items: center; }
 .zl-auswahl { margin: 0; }
 .zl-auswahl legend { font-size: var(--elkw-fs-small); font-weight: 400; margin-bottom: 0.25rem; }
 .zl-auswahl .elkw-choice { min-height: 24px; }
+
+/* ---------- 5. Druck ---------- */
+/* Der Browser druckt nur den Inhalt (z. B. die Datenauskunft „Als PDF speichern“): ohne App-Leiste, Navigation, Knöpfe und
+   Offline-Leiste, hell und in voller Breite. */
+@media print {
+  html.elkw[data-farbwelt][data-stil] { color-scheme: light; }
+  .elkw-app__bar, .elkw-app__nav, .zl-app__unten, .zl-offline-leiste, .elkw-btn, .zl-bestaetigung, .elkw-skiplink { display: none !important; }
+  .elkw-app, .zl-app { display: block; height: auto; min-height: 0; }
+  .elkw-app__main { overflow: visible; padding: 0; }
+  .elkw-table-wrap { overflow: visible; }
+}

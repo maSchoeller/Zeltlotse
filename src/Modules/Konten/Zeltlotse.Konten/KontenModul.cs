@@ -6,6 +6,7 @@ using Zeltlotse.Konten.Anmelden;
 using Zeltlotse.Konten.Contracts.Konten;
 using Zeltlotse.Konten.Contracts.Sitzungen;
 using Zeltlotse.Konten.Daten;
+using Zeltlotse.Konten.Datenschutz;
 using Zeltlotse.Konten.Domaene;
 using Zeltlotse.Konten.Ich;
 using Zeltlotse.Konten.Passwort;
@@ -13,6 +14,7 @@ using Zeltlotse.Konten.Profil;
 using Zeltlotse.Konten.Sitzungen;
 using Zeltlotse.Personen.Contracts.Events;
 using Zeltlotse.SharedKernel.Daten;
+using Zeltlotse.SharedKernel.Datenschutz;
 using Zeltlotse.SharedKernel.Ereignisse;
 using Zeltlotse.SharedKernel.Web;
 
@@ -32,6 +34,9 @@ public static class KontenModul
         services.AddScoped<IKontoPruefung, KontoPruefung>();
         services.AddScoped<IKontoLesen, KontoLesen>();
         services.EmpfaengtEreignis<ProfilUebergabeAngenommen, KontoMitProfilVerbinden>();
+        services.EmpfaengtEreignis<PersonGeloescht, KontoLoeschen>();
+        services.AddScoped<IDatenauskunft, KontenAuskunft>();
+        services.AddScoped<ILoeschlauf, KontenLoeschlauf>();
         return services;
     }
 

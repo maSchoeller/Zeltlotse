@@ -21,7 +21,10 @@ internal static class AbhaengigkeitsRegeln
         .LoadAssemblies(typeof(AbhaengigkeitsRegeln).Assembly, typeof(SharedKernel.Daten.ModulDbContext).Assembly)
         .Build();
 
-    /// <summary>AD-27: Nur Command-Handler hängen vom schreibenden DbContext ab (Lösch-Dienst und Datenauskunft folgen mit ihren Stories).</summary>
+    /// <summary>
+    /// AD-27: Nur Command-Handler hängen vom schreibenden DbContext ab. Lösch-Dienst und Datenauskunft brauchen keine Ausnahme: Der
+    /// Lösch-Lauf eines Moduls schickt nur einen Command, die Auskunft liest über den Lese-Kontext.
+    /// </summary>
     public static IArchRule NurHandlerNutzenSchreibKontext(Architecture architektur, params string[] assemblies) =>
         Types().That().FollowCustomPredicate(t => InAssembly(t, assemblies), "Typen der Module")
             .Should().FollowCustomCondition(

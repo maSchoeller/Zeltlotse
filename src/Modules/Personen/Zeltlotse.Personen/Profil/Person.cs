@@ -1,5 +1,7 @@
 using System.Globalization;
 using Zeltlotse.Api.Contracts.Personen;
+using Zeltlotse.Personen.Contracts.Events;
+using Zeltlotse.SharedKernel;
 
 namespace Zeltlotse.Personen.Profil;
 
@@ -7,14 +9,13 @@ namespace Zeltlotse.Personen.Profil;
 /// Person mit Profil (AD-7): Die Kennung ist die <c>PersonId</c>, die Konten beim Anlegen des Kontos vergibt; Kinderprofile
 /// bekommen ihre Kennung von Personen. Nicht organisationseigen. <see cref="Version"/> ist <c>xmin</c> für das Bearbeiten nach
 /// AD-19. Ein Kinderprofil gehört über <see cref="FamilieId"/> zu einer Familie, bis das volljährige Kind es übernimmt (FR-4).
+/// Aggregat (AD-28): Das Löschen legt <see cref="PersonGeloescht"/> ab (Datensatz im Umschlag ist die Person).
 /// </summary>
-internal sealed class Person
+internal sealed class Person : Aggregat
 {
     private Person()
     {
     }
-
-    public Guid Id { get; private init; }
 
     public string? Vorname { get; private set; }
 
@@ -119,6 +120,12 @@ internal sealed class Person
 
         return true;
     }
+
+    /// <summary>
+    /// Die Person wird gelöscht (FR-14, AD-16): legt <see cref="PersonGeloescht"/> ab; die Zeile entfernt der Handler im selben
+    /// <c>SaveChanges</c>, die Outbox-Stufe sammelt das Ereignis auch von gelöschten Aggregaten ein.
+    /// </summary>
+    public void Loeschen() => EreignisAblegen(new PersonGeloescht(Id));
 
     /// <summary>Das volljährige Kind übernimmt sein Profil (FR-4): Die Eltern verlieren den Zugriff.</summary>
     public void FamilieVerlassen() => FamilieId = null;

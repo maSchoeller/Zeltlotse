@@ -35,6 +35,12 @@ public sealed class JsBrowser(IJSRuntime js) : IBrowser, IAsyncDisposable
     public async ValueTask NeuLadenAsync() =>
         await (await Modul()).InvokeVoidAsync("neuLaden");
 
+    public async ValueTask DruckenAsync() =>
+        await (await Modul()).InvokeVoidAsync("drucken");
+
+    public async ValueTask DateiSpeichernAsync(string name, string medientyp, byte[] inhalt) =>
+        await (await Modul()).InvokeVoidAsync("dateiSpeichern", name, medientyp, inhalt);
+
     public async ValueTask DisposeAsync()
     {
         if (_modul is not null)

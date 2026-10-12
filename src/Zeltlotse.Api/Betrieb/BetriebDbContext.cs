@@ -25,6 +25,8 @@ internal sealed class BetriebDbContext(DbContextOptions<BetriebDbContext> option
             e.Property(z => z.Id).ValueGeneratedNever();
             e.Property(z => z.Art).HasConversion<short>();
             e.HasIndex(z => z.Zeitpunkt);
+            // FR-14: die Datenauskunft liest die Zeilen einer Person.
+            e.HasIndex(z => z.PersonId);
         });
     }
 

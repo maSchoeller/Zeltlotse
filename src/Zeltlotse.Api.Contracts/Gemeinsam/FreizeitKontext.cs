@@ -74,4 +74,7 @@ public static class Aktionsschluessel
 
     /// <summary>Die Nachweis-Richtlinie der Organisation bearbeiten (Org-Admin, in <c>GET /api/organisationen/{orgId}</c>).</summary>
     public const string NachweisRichtlinieVerwalten = "nachweis-richtlinie-verwalten";
+
+    /// <summary>Die Löschfristen der Organisation bearbeiten (Org-Admin, in <c>GET /api/organisationen/{orgId}</c>, NFR-5).</summary>
+    public const string LoeschfristenVerwalten = "loeschfristen-verwalten";
 }

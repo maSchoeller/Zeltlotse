@@ -1,14 +1,17 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Zeltlotse.Organisationen.Contracts.Loeschfristen;
 using Zeltlotse.Organisationen.Contracts.Nachweise;
 using Zeltlotse.Organisationen.Contracts.Rollen;
 using Zeltlotse.Organisationen.Daten;
+using Zeltlotse.Organisationen.Datenschutz;
 using Zeltlotse.Organisationen.Nachweise;
 using Zeltlotse.Organisationen.Rollen;
 using Zeltlotse.Organisationen.Verwaltung;
 using Zeltlotse.Personen.Contracts.Events;
 using Zeltlotse.SharedKernel.Daten;
+using Zeltlotse.SharedKernel.Datenschutz;
 using Zeltlotse.SharedKernel.Ereignisse;
 using Zeltlotse.SharedKernel.Rechte;
 using Zeltlotse.SharedKernel.Web;
@@ -28,6 +31,10 @@ public static class OrganisationenModul
         services.AddScoped<IOrgRollenLesen, OrgRollenLesen>();
         services.AddScoped<INachweisStandLesen, NachweisStandLesen>();
         services.EmpfaengtEreignis<NachweisEingesehen, NachweisBestaetigungSpeichern>();
+        services.EmpfaengtEreignis<PersonGeloescht, OrgPersonLoeschen>();
+        services.AddScoped<ILoeschfristenLesen, LoeschfristenLesen>();
+        services.AddScoped<IDatenauskunft, OrganisationenAuskunft>();
+        services.AddScoped<ILoeschlauf, OrganisationenLoeschlauf>();
         return services;
     }
 
@@ -49,6 +56,8 @@ public static class OrganisationenModul
         organisation.MapPost("/einladungen", EinladungSchickenEndpunkt.Schicken).NurOrgRolle(OrgRechte.RollenVergeben);
         organisation.MapGet("/nachweis-richtlinie", RichtlinieLadenEndpunkt.Laden).NurOrgRolle(OrgRechte.RichtlinieVerwalten);
         organisation.MapPatch("/nachweis-richtlinie/{art}", RichtlinieFeldAendernEndpunkt.Aendern).NurOrgRolle(OrgRechte.RichtlinieVerwalten);
+        organisation.MapGet("/loeschfristen", LoeschfristenLadenEndpunkt.Laden).NurOrgRolle(OrgRechte.LoeschfristenVerwalten);
+        organisation.MapPatch("/loeschfristen", LoeschfristFeldAendernEndpunkt.Aendern).NurOrgRolle(OrgRechte.LoeschfristenVerwalten);
 
         api.MapGet("/ich/organisationen", MeineOrganisationenEndpunkt.Laden).Organisationsuebergreifend();
         api.MapGet("/ich/organisationen/nachweis-bestaetigungen", MeineBestaetigungenEndpunkt.Laden).Organisationsuebergreifend();

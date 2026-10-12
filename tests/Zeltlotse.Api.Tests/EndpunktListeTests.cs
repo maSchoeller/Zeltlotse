@@ -31,6 +31,7 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
     /// <summary>Die personenbezogenen Endpunkte über Organisationen hinweg (AD-26), namentlich.</summary>
     private static readonly string[] Organisationsuebergreifend =
     [
+        "GET /api/ich/daten",
         "GET /api/ich/familie",
         "GET /api/ich/freizeiten",
         "GET /api/ich/konto",
@@ -39,6 +40,7 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         "GET /api/ich/organisationen/nachweis-bestaetigungen",
         "GET /api/ich/organisationen/namen",
         "GET /api/ich/profil",
+        "GET /api/ich/zugriffsprotokoll",
         "PATCH /api/ich/familie/kinder/{personId:guid}",
         "PATCH /api/ich/nachweise/{nachweisId:guid}",
         "PATCH /api/ich/profil",
@@ -49,6 +51,7 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         "POST /api/ich/nachweise/einsichten/{einsichtId:guid}/freigeben",
         "POST /api/ich/nachweise/{nachweisId:guid}/datei",
         "POST /api/ich/profil",
+        "POST /api/ich/profil/loeschen",
         "PUT /api/ich/konto/passwort",
     ];
 
@@ -116,13 +119,16 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
     }
 
     [Fact]
-    public async Task Nur_das_Ausloesen_der_Profil_Uebergabe_verlangt_die_erneute_Anmeldung()
+    public async Task Nur_Profil_Uebergabe_Datenauskunft_und_Konto_loeschen_verlangen_die_erneute_Anmeldung()
     {
         var endpunkte = await EndpunkteAsync();
 
+        // AD-25: vor Export, Konto-Löschung und Profil-Übergabe (Story 1-7: Auskunft und Löschen).
         Assert.Equal(
-            ["POST /api/ich/familie/kinder/{personId:guid}/uebergabe"],
-            endpunkte.Where(e => e.Endpunkt.Metadata.GetMetadata<Zeltlotse.SharedKernel.Anmeldung.ErneuteAnmeldungMetadaten>() is not null).Select(e => e.Name));
+            ["GET /api/ich/daten", "POST /api/ich/familie/kinder/{personId:guid}/uebergabe", "POST /api/ich/profil/loeschen"],
+            endpunkte.Where(e => e.Endpunkt.Metadata.GetMetadata<Zeltlotse.SharedKernel.Anmeldung.ErneuteAnmeldungMetadaten>() is not null)
+                .Select(e => e.Name)
+                .Order(StringComparer.Ordinal));
     }
 
     [Fact]
@@ -168,8 +174,8 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         var endpunkte = await EndpunkteAsync();
 
         var mitOrg = endpunkte.Where(e => e.Endpunkt.RoutePattern.Parameters.Any(p => p.Name == Rechtemerkmale.OrgRouteWert)).ToList();
-        // Story 1-5: dazu die sieben Prüf-Endpunkte des Org-Admins und die zwei der Nachweis-Richtlinie.
-        Assert.Equal(16, mitOrg.Count);
+        // Story 1-5: dazu die sieben Prüf-Endpunkte des Org-Admins und die zwei der Nachweis-Richtlinie; Story 1-7: die zwei der Löschfristen.
+        Assert.Equal(18, mitOrg.Count);
         Assert.All(mitOrg, e =>
         {
             Assert.NotNull(e.Endpunkt.Metadata.GetMetadata<NurOrgRolleMetadaten>());

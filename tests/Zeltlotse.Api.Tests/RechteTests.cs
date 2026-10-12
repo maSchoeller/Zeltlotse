@@ -61,8 +61,9 @@ public sealed class RechteTests(PostgresContainer postgres) : IAsyncLifetime
         Assert.Equal("A", json.GetProperty("name").GetString());
         Assert.Equal(["OrgAdmin"], json.GetProperty("rollen").EnumerateArray().Select(r => r.GetString()));
         // Story 1-5: dazu Nachweise prüfen und die Nachweis-Richtlinie verwalten, aus denselben Rollenlisten wie die Endpunkte.
+        // Story 1-7: dazu die Löschfristen verwalten.
         Assert.Equal(
-            [Aktionsschluessel.OrgRollenVergeben, Aktionsschluessel.NachweisePruefen, Aktionsschluessel.NachweisRichtlinieVerwalten],
+            [Aktionsschluessel.OrgRollenVergeben, Aktionsschluessel.NachweisePruefen, Aktionsschluessel.NachweisRichtlinieVerwalten, Aktionsschluessel.LoeschfristenVerwalten],
             json.GetProperty("erlaubt").EnumerateArray().Select(r => r.GetString()));
     }
 

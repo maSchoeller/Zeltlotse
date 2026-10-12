@@ -1,6 +1,7 @@
 using FluentValidation;
 using Mediator;
 using Zeltlotse.Organisationen.Daten;
+using Zeltlotse.Organisationen.Datenschutz;
 using Zeltlotse.Organisationen.Domaene;
 using Zeltlotse.Organisationen.Einladungen;
 using Zeltlotse.Organisationen.Nachweise;
@@ -44,6 +45,8 @@ internal sealed class OrganisationAnlegenHandler(OrganisationenDbContext db, Tim
         db.Organisationen.Add(organisation);
         // FR-9, NFR-5: die Nachweis-Richtlinie mit den Vorgabewerten entsteht mit der Organisation.
         db.Richtlinien.AddRange(NachweisRichtlinie.VorgabenFuer(organisation.Id));
+        // NFR-5: die Löschfristen mit den Vorgabewerten ebenso.
+        db.Loeschfristen.Add(Loeschfristen.VorgabenFuer(organisation.Id));
         return await EinladungAusstellen.Async(
             db.Einladungen, organisation, command.Mail!, OrgRolleArt.OrgAdmin, command.EingeladenVon, uhr, cancellationToken);
     }

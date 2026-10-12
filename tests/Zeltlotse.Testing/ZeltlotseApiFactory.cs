@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Time.Testing;
 using Zeltlotse.Api.Betrieb;
+using Zeltlotse.Api.Datenschutz;
 using Zeltlotse.Public;
 using Zeltlotse.SharedKernel.Outbox;
 
@@ -117,7 +118,9 @@ public sealed class ZeltlotseApiFactory : WebApplicationFactory<Program>
 
             var hintergrundDienste = services
                 .Where(d => d.ServiceType == typeof(IHostedService)
-                            && (d.ImplementationType == typeof(ZustellDienst) || d.ImplementationType == typeof(SicherheitsprotokollFristDienst)))
+                            && (d.ImplementationType == typeof(ZustellDienst)
+                                || d.ImplementationType == typeof(SicherheitsprotokollFristDienst)
+                                || d.ImplementationType == typeof(LoeschDienst)))
                 .ToList();
             foreach (var dienst in hintergrundDienste)
             {

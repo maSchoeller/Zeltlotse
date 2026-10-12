@@ -337,6 +337,10 @@ namespace Zeltlotse.Personen.Migrationen
                     b.Property<Guid?>("FamilieId")
                         .HasColumnType("uuid");
 
+                    b.Property<long>("Folgenummer")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
                     b.Property<DateOnly?>("Geburtsdatum")
                         .HasColumnType("date");
 
@@ -376,6 +380,44 @@ namespace Zeltlotse.Personen.Migrationen
                     b.HasKey("PersonId");
 
                     b.ToTable("personen_schluessel", "personen");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Personen.Zugriffsprotokoll.EinsichtProtokollEintrag", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("Am")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("BetroffenePersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LesendePersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Tag")
+                        .HasColumnType("date");
+
+                    b.Property<short>("Zweck")
+                        .HasColumnType("smallint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BetroffenePersonId");
+
+                    b.HasIndex("LesendePersonId", "BetroffenePersonId", "Tag", "Zweck")
+                        .IsUnique()
+                        .HasDatabaseName("IX_einsicht_protokoll_je_tag")
+                        .HasFilter("\"LesendePersonId\" <> '00000000-0000-7000-8000-0000000de1e7'");
+
+                    b.ToTable("einsicht_protokoll", "personen");
                 });
 
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.InboxEintrag", b =>

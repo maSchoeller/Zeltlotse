@@ -3,6 +3,7 @@ using Zeltlotse.Api;
 using Zeltlotse.Api.Adapter;
 using Zeltlotse.Api.Auslieferung;
 using Zeltlotse.Api.Betrieb;
+using Zeltlotse.Api.Datenschutz;
 using Zeltlotse.Api.Demo;
 using Zeltlotse.Api.Fehler;
 using Zeltlotse.Api.Sicherheit;
@@ -67,6 +68,8 @@ builder.Services.AddMediator(options =>
 });
 
 builder.Services.AddZeltlotseModule();
+// Nach den Modulen: Die Datenauskunft setzt die Abschnitte in der Reihenfolge der Registrierung zusammen (AD-16).
+builder.Services.AddDatenschutz();
 builder.Services.AddSingleton<ModulMigrationen>();
 builder.Services.AddSingleton<DemoDaten>();
 builder.Services.AddSingleton<GlobalAdmins>();

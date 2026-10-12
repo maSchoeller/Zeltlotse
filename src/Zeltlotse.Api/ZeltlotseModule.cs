@@ -1,4 +1,5 @@
 using Zeltlotse.Api.Betrieb;
+using Zeltlotse.Api.Datenschutz;
 using Zeltlotse.Finanzen;
 using Zeltlotse.Freizeiten;
 using Zeltlotse.Inventar;
@@ -48,6 +49,7 @@ internal static class ZeltlotseModule
         api.MapKuecheEndpoints();
         api.MapFinanzenEndpoints();
         api.MapKanaeleEndpoints();
+        api.MapDatenschutzEndpoints();
         return api;
     }
 }

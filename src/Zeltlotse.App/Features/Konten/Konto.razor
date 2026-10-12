@@ -4,7 +4,8 @@
 @inject AppSitzung Sitzung
 @inject AnmeldungAbschluss Abschluss
 @* Konto (EXPERIENCE.md → Flächen „Konto“, FR-1, FR-2): Mail-Adresse, Profil mit Vor- und Nachname per Autosave
-   (AD-19), Passwort festlegen oder ändern, der Weg zu den Nachweisen (FR-8) und zum Familienkonto (FR-3), Abmelden. Ohne Sitzung (401) leitet der Sitzungs-Handler zur Anmeldung. *@
+   (AD-19), Passwort festlegen oder ändern, der Weg zu den Nachweisen (FR-8), zu Zugriffsprotokoll und Meine Daten (FR-13, FR-14)
+   und zum Familienkonto (FR-3), Abmelden. Ohne Sitzung (401) leitet der Sitzungs-Handler zur Anmeldung. *@
 <PageTitle>Konto – Zeltlotse</PageTitle>
 
 <h1>Konto</h1>
@@ -50,6 +51,11 @@ else
     <Card Titel="Nachweise">
         <p>Führungszeugnis, JuLeiCa, Erste Hilfe und Präventionsschulung am Profil ablegen und einmal zur Prüfung freigeben.</p>
         <Knopf Art="KnopfArt.Outline" Href="konto/nachweise" Ansichtswechsel="true">Nachweise öffnen</Knopf>
+    </Card>
+
+    <Card Titel="Zugriffsprotokoll und Meine Daten">
+        <p>Wer wann Einsicht hatte, Auskunft, Export und Konto löschen.</p>
+        <Knopf Art="KnopfArt.Outline" Href="konto/daten" Ansichtswechsel="true">Meine Daten öffnen</Knopf>
     </Card>
 
     <p><Knopf Art="KnopfArt.Outline" Href="familie" Ansichtswechsel="true">Familienkonto öffnen</Knopf></p>

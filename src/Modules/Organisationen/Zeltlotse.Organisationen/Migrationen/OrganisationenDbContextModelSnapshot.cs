@@ -23,6 +23,28 @@ namespace Zeltlotse.Organisationen.Migrationen
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Zeltlotse.Organisationen.Datenschutz.Loeschfristen", b =>
+                {
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("FreizeitDatenMonate")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NachweisBestaetigungMonate")
+                        .HasColumnType("integer");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("OrganisationId");
+
+                    b.ToTable("loeschfristen", "organisationen");
+                });
+
             modelBuilder.Entity("Zeltlotse.Organisationen.Domaene.OrgEinladung", b =>
                 {
                     b.Property<Guid>("Id")

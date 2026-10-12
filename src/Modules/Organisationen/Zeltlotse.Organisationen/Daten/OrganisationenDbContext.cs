@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Zeltlotse.Organisationen.Datenschutz;
 using Zeltlotse.Organisationen.Domaene;
 using Zeltlotse.Organisationen.Nachweise;
 using Zeltlotse.SharedKernel.Daten;
@@ -22,6 +23,8 @@ internal sealed class OrganisationenDbContext(DbContextOptions<OrganisationenDbC
 
     public DbSet<NachweisBestaetigung> Bestaetigungen => Set<NachweisBestaetigung>();
 
+    public DbSet<Loeschfristen> Loeschfristen => Set<Loeschfristen>();
+
     protected override string Schema => OrganisationenModul.Schema;
 
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => OrganisationenModell.Konfigurieren(modelBuilder);
@@ -40,6 +43,8 @@ internal sealed class OrganisationenLeseDbContext(DbContextOptions<Organisatione
     public DbSet<NachweisRichtlinie> Richtlinien => Set<NachweisRichtlinie>();
 
     public DbSet<NachweisBestaetigung> Bestaetigungen => Set<NachweisBestaetigung>();
+
+    public DbSet<Loeschfristen> Loeschfristen => Set<Loeschfristen>();
 
     protected override string Schema => OrganisationenModul.Schema;
 
@@ -95,6 +100,15 @@ internal static class OrganisationenModell
             e.HasKey(b => new { b.OrganisationId, b.PersonId, b.Art });
             e.Property(b => b.Art).HasConversion<short>();
             e.HasIndex(b => b.PersonId);
+        });
+
+        // NFR-5, AD-16: Löschfristen, eine Zeile je Organisation.
+        modelBuilder.Entity<Loeschfristen>(e =>
+        {
+            e.ToTable("loeschfristen");
+            e.HasKey(f => f.OrganisationId);
+            e.Property(f => f.OrganisationId).ValueGeneratedNever();
+            e.Property(f => f.Version).IsRowVersion();
         });
     }
 }

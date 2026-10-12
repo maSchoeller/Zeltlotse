@@ -40,6 +40,15 @@ public enum ErinnerungErgebnis
     NichtGefunden,
 }
 
+/// <summary>Ergebnis von <see cref="PersonenApiClient.KontoLoeschenAsync"/>.</summary>
+public enum KontoLoeschenErgebnis
+{
+    Geloescht,
+
+    /// <summary><c>401</c>: Die Anmeldung ist älter als 10 Minuten; der Sitzungs-Handler führt zur Anmeldung mit Rückweg.</summary>
+    AnmeldungNoetig,
+}
+
 /// <summary>Ergebnis von <see cref="PersonenApiClient.PruefenAsync"/>.</summary>
 public enum PruefErgebnis
 {
@@ -181,6 +190,34 @@ public sealed class PersonenApiClient(HttpClient http)
         var inhalt = await antwort.Content.ReadFromJsonAsync<ProfilUebergabeVerschickt>(ApiJson.Optionen, abbruch)
                      ?? throw new HttpRequestException("Leere Antwort beim Übergeben.");
         return new UebergabeErgebnis(inhalt.Id, null, NichtVolljaehrig: false);
+    }
+
+    /// <summary>Pfad des Zugriffsprotokolls (AD-8, AD-26).</summary>
+    public const string ZugriffsprotokollPfad = "/api/ich/zugriffsprotokoll";
+
+    /// <summary><c>GET /api/ich/zugriffsprotokoll</c>: wer wann Einsicht hatte, für die Person und ihre Kinder, neueste zuerst.</summary>
+    public async Task<List<ZugriffsprotokollEintrag>> ZugriffsprotokollLadenAsync(CancellationToken abbruch = default)
+    {
+        using var antwort = await http.GetAsync(ZugriffsprotokollPfad, abbruch);
+        antwort.EnsureSuccessStatusCode();
+        return await antwort.Content.ReadFromJsonAsync<List<ZugriffsprotokollEintrag>>(ApiJson.Optionen, abbruch)
+               ?? throw new HttpRequestException("Leere Antwort beim Laden des Zugriffsprotokolls.");
+    }
+
+    /// <summary>
+    /// <c>POST /api/ich/profil/loeschen</c> (FR-14): löscht Konto und eigene Daten endgültig. Ohne frische Anmeldung (<c>401</c>) führt
+    /// der Sitzungs-Handler zur Anmeldung; andere Fehler enden in einer <see cref="HttpRequestException"/>.
+    /// </summary>
+    public async Task<KontoLoeschenErgebnis> KontoLoeschenAsync(CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsync($"{ProfilPfad}/loeschen", content: null, abbruch);
+        if (antwort.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            return KontoLoeschenErgebnis.AnmeldungNoetig;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return KontoLoeschenErgebnis.Geloescht;
     }
 
     /// <summary><c>POST /api/personen/familie/einladungen/annehmen</c>: angenommen, nicht gültig (<c>404</c>) oder Konflikt (<c>409</c>).</summary>

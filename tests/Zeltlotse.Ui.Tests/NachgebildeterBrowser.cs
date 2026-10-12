@@ -2,7 +2,7 @@ using Zeltlotse.App.Browser;
 
 namespace Zeltlotse.Ui.Tests;
 
-/// <summary>Nachgebildeter Browser: Online-Status, Zeitpunkt und Neu laden ohne JavaScript.</summary>
+/// <summary>Nachgebildeter Browser: Online-Status, Zeitpunkt, Neu laden, Drucken und Datei speichern ohne JavaScript.</summary>
 internal sealed class NachgebildeterBrowser : IBrowser
 {
     private Func<bool, Task>? _geaendert;
@@ -12,6 +12,11 @@ internal sealed class NachgebildeterBrowser : IBrowser
     public DateTimeOffset? Zuletzt { get; set; }
 
     public int NeuGeladen { get; private set; }
+
+    public int Gedruckt { get; private set; }
+
+    /// <summary>Die angebotenen Dateien: Name, Medientyp und Inhalt.</summary>
+    public List<(string Name, string Medientyp, byte[] Inhalt)> Dateien { get; } = [];
 
     /// <summary>Hält das Lesen des Zeitpunkts an, bis der Test es freigibt.</summary>
     public TaskCompletionSource? LesenAnhalten { get; set; }
@@ -58,6 +63,18 @@ internal sealed class NachgebildeterBrowser : IBrowser
     public ValueTask NeuLadenAsync()
     {
         NeuGeladen++;
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DruckenAsync()
+    {
+        Gedruckt++;
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DateiSpeichernAsync(string name, string medientyp, byte[] inhalt)
+    {
+        Dateien.Add((name, medientyp, inhalt));
         return ValueTask.CompletedTask;
     }
 

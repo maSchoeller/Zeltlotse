@@ -36,6 +36,8 @@ public sealed class PersonenSchluesselTests(PostgresContainer postgres) : IAsync
         services.AddPersonenModul();
         // Personen liest Konten (Mail-Adresse der Erinnerung, Story 1-6); hier ohne das Modul Konten.
         services.AddScoped<Zeltlotse.Konten.Contracts.Konten.IKontoLesen, OhneKonten>();
+        // Der Lösch-Lauf (Story 1-7) schickt Commands; Mediator verdrahtet nur der Host, hier gibt es keinen.
+        services.AddScoped<Mediator.ISender>(_ => throw new InvalidOperationException("Ohne Mediator im Modultest."));
         _dienste = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
 
         await using var scope = _dienste.CreateAsyncScope();

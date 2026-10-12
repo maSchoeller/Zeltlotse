@@ -187,6 +187,19 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
             jonasWarnung.GetProperty("warnungen").EnumerateArray().Select(w =>
                 $"{w.GetProperty("art").GetString()} {w.GetProperty("grund").GetString()} {(w.TryGetProperty("gueltigBis", out var bis) ? bis.GetString() : "")}"));
 
+        // Story 1-7: Miriam hat Jonas' Nachweise eingesehen (genau ein Eintrag, auch nach dem zweiten Einspielen); die
+        // Demo-Organisation hat die Löschfristen mit den Vorgabewerten.
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.einsicht_protokoll"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(
+            verbindung,
+            "SELECT count(*) FROM personen.einsicht_protokoll WHERE \"BetroffenePersonId\" = @j AND \"LesendePersonId\" = @m AND \"FreizeitId\" = @f AND \"OrganisationId\" = (SELECT \"Id\" FROM organisationen.organisation) AND \"Zweck\" = 1",
+            ("j", jonas), ("m", miriam), ("f", freizeitId)));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.loeschfristen WHERE \"FreizeitDatenMonate\" = 12 AND \"NachweisBestaetigungMonate\" = 12"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.loeschfristen"));
+        using var jonasClient = await AnmeldeHelfer.AngemeldeterClientAsync(zweiter, "jonas.huettner@example.org");
+        var protokoll = await AnmeldeHelfer.JsonAsync(await jonasClient.GetAsync("/api/ich/zugriffsprotokoll", Abbruch));
+        Assert.Equal("Miriam Zeltner", Assert.Single(protokoll.EnumerateArray()).GetProperty("lesenderName").GetString());
+
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,
             "SELECT count(*) FROM konten.konto k LEFT JOIN personen.person p ON p.\"Id\" = k.\"PersonId\" WHERE p.\"Id\" IS NULL OR p.\"Vorname\" IS NULL OR p.\"Nachname\" IS NULL"));

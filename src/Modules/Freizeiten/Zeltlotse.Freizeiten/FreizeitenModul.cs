@@ -4,11 +4,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Freizeiten.Contracts.Rollen;
 using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
 using Zeltlotse.Freizeiten.Daten;
+using Zeltlotse.Freizeiten.Datenschutz;
 using Zeltlotse.Freizeiten.Nachweise;
 using Zeltlotse.Freizeiten.Rechte;
 using Zeltlotse.Freizeiten.Startseite;
 using Zeltlotse.Freizeiten.Verwaltung;
+using Zeltlotse.Personen.Contracts.Events;
 using Zeltlotse.SharedKernel.Daten;
+using Zeltlotse.SharedKernel.Datenschutz;
+using Zeltlotse.SharedKernel.Ereignisse;
 using Zeltlotse.SharedKernel.Rechte;
 using Zeltlotse.SharedKernel.Web;
 
@@ -26,6 +30,10 @@ public static class FreizeitenModul
         services.AddModul<FreizeitenDbContext, FreizeitenLeseDbContext>(Name, Schema);
         services.AddScoped<IFreizeitRollenLesen, FreizeitRollenLesen>();
         services.AddScoped<IFreizeitZeitpunkte, FreizeitZeitpunkteLesen>();
+        services.AddScoped<IFreizeitEndenLesen, FreizeitEndenLesen>();
+        services.EmpfaengtEreignis<PersonGeloescht, FreizeitPersonLoeschen>();
+        services.AddScoped<IDatenauskunft, FreizeitenAuskunft>();
+        services.AddScoped<ILoeschlauf, FreizeitenLoeschlauf>();
         return services;
     }
 
