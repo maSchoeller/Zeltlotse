@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Ereignisse;
+using Zeltlotse.SharedKernel.Mail;
 using Zeltlotse.SharedKernel.Mandanten;
 
 namespace Zeltlotse.SharedKernel.Outbox;
@@ -22,12 +23,15 @@ public interface IOutboxZustellung
 /// <summary>
 /// Zustellung je (Ereignis, Empfänger): jeder Empfänger läuft in eigenem DI-Scope mit dem Mandanten-Kontext
 /// aus dem Umschlag; ein Fehler bei einem Empfänger hält die anderen nicht auf und wird mit wachsender
-/// Wartezeit wiederholt. Je (Datensatz, Empfänger) wird in der Reihenfolge der Folgenummer zugestellt.
+/// Wartezeit wiederholt. Je (Datensatz, Empfänger) wird in der Reihenfolge der Folgenummer zugestellt. Mail-Aufträge
+/// (Empfänger <see cref="MailAuftraege.Empfaenger"/>) baut der registrierte <see cref="IMailAufbau{TAuftrag}"/> erst hier zur Mail
+/// und <see cref="IMailVersand"/> verschickt sie; ohne Inbox und ohne Command.
 /// </summary>
 internal sealed partial class OutboxZustellung(
     IServiceScopeFactory scopes,
     IEnumerable<ModulBeschreibung> module,
     EreignisKatalog katalog,
+    MailKatalog mailKatalog,
     TimeProvider uhr,
     ILogger<OutboxZustellung> logger) : IOutboxZustellung
 {
@@ -125,6 +129,12 @@ internal sealed partial class OutboxZustellung(
 
     private async Task EinzelnZustellenAsync(OutboxNachricht nachricht, string empfaenger, CancellationToken abbruch)
     {
+        if (empfaenger == MailAuftraege.Empfaenger)
+        {
+            await MailZustellenAsync(nachricht, abbruch);
+            return;
+        }
+
         var eintrag = katalog.Finden(nachricht.Typ, empfaenger)
                       ?? throw new EmpfaengerUnbekanntException();
         var ereignis = JsonSerializer.Deserialize(nachricht.Inhalt, eintrag.EreignisTyp, ModulDbContext.JsonOptionen)
@@ -134,6 +144,27 @@ internal sealed partial class OutboxZustellung(
         await using var scope = scopes.CreateAsyncScope();
         scope.ServiceProvider.GetRequiredService<MandantenKontext>().Setzen(umschlag.OrganisationId);
         await scope.ServiceProvider.GetRequiredService<ISender>().Send(eintrag.Erzeugen(umschlag, ereignis), abbruch);
+    }
+
+    /// <summary>
+    /// Baut die Mail eines Auftrags im eigenen Scope mit dem Mandanten aus dem Umschlag und verschickt sie; <c>null</c> heißt
+    /// „nichts zu senden“, die Zustellung ist dann erledigt.
+    /// </summary>
+    private async Task MailZustellenAsync(OutboxNachricht nachricht, CancellationToken abbruch)
+    {
+        var eintrag = mailKatalog.Finden(nachricht.Typ) ?? throw new EmpfaengerUnbekanntException();
+        var auftrag = JsonSerializer.Deserialize(nachricht.Inhalt, eintrag.AuftragTyp, ModulDbContext.JsonOptionen)
+                      ?? throw new JsonException("Leerer Mail-Auftrag in der Outbox.");
+
+        await using var scope = scopes.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<MandantenKontext>().Setzen(nachricht.OrganisationId);
+        var inhalt = await eintrag.Aufbauen(scope.ServiceProvider, auftrag, abbruch);
+        if (inhalt is null)
+        {
+            return;
+        }
+
+        await scope.ServiceProvider.GetRequiredService<IMailVersand>().SendenAsync(inhalt.An, inhalt.Betreff, inhalt.Text, abbruch);
     }
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Zustellung an {Empfaenger} für Ereignis {EreignisId} fehlgeschlagen (Versuch {Versuche}, {FehlerTyp}).")]

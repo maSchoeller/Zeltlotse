@@ -7,7 +7,7 @@ sidebar:
 
 Die **Richtlinie für Nachweise** legt je Nachweisart fest, ob sie **Pflicht** ist und wie viele Monate eine Bestätigung **gültig** ist. Sie steht auf der Seite der Organisation in der Card „Richtlinie für Nachweise“; nur der Org-Admin sieht und ändert sie.
 
-**Pflicht** legt fest, welche Nachweise die Organisation von ihren Mitarbeitenden verlangt. **Gültig (Monate)** bestimmt, wie lange eine Bestätigung ab dem Ausstellungsdatum gilt.
+**Pflicht** legt fest, welche Nachweise die Organisation von ihren Mitarbeitenden verlangt. Fehlt einer Person im Team ein Pflicht-Nachweis oder läuft seine Bestätigung vor dem Ende einer Freizeit ab, sieht die Leitung dieser Freizeit einen Warnhinweis und kann die Person erinnern (siehe [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/)). Nachweise ohne Pflicht lösen keinen Warnhinweis aus. **Gültig (Monate)** bestimmt, wie lange eine Bestätigung ab dem Ausstellungsdatum gilt.
 
 ## Pflicht und Gültigkeit ändern
 

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Zeltlotse.SharedKernel.Dateien;
 using Zeltlotse.SharedKernel.Datenschutz;
 using Zeltlotse.SharedKernel.Ereignisse;
+using Zeltlotse.SharedKernel.Mail;
 using Zeltlotse.SharedKernel.Mandanten;
 using Zeltlotse.SharedKernel.Outbox;
 
@@ -21,6 +22,7 @@ public static class SharedKernelRegistrierung
         services.TryAddScoped<MandantenKontext>();
         services.TryAddScoped<IMandantenKontext>(sp => sp.GetRequiredService<MandantenKontext>());
         services.TryAddSingleton<EreignisKatalog>();
+        services.TryAddSingleton<MailKatalog>();
         services.TryAddSingleton<IOutboxZustellung, OutboxZustellung>();
         services.TryAddSingleton(sp => Hauptschluessel.AusKonfiguration(sp.GetRequiredService<IConfiguration>()));
         services.TryAddScoped<IVerschluesselung, Verschluesselung>();

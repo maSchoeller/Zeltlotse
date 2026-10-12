@@ -12,4 +12,7 @@ internal sealed class KontoLesen(KontenLeseDbContext db) : IKontoLesen
 
     public Task<string?> MailAsync(Guid kontoId, CancellationToken abbruch = default) =>
         db.Konten.Where(k => k.Id == kontoId).Select(k => (string?)k.Mail).SingleOrDefaultAsync(abbruch);
+
+    public Task<string?> MailDerPersonAsync(Guid personId, CancellationToken abbruch = default) =>
+        db.Konten.Where(k => k.PersonId == personId).Select(k => (string?)k.Mail).SingleOrDefaultAsync(abbruch);
 }

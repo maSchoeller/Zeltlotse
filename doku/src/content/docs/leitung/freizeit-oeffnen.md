@@ -35,9 +35,10 @@ Die Startseite der Freizeit zeigt:
 - den **Zeitraum** vom ersten bis zum letzten Tag,
 - die eigene **Rolle**,
 - wer die **Leitung** hat,
-- bis wann die Freizeit **Einsicht in Freizeitpässe** hat.
+- bis wann die Freizeit **Einsicht in Freizeitpässe** hat,
+- für die Leitung den Knopf **Nachweise prüfen** und darüber eine Meldung, wenn im Team Pflicht-Nachweise fehlen oder vor dem Ende der Freizeit ablaufen (siehe [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/)).
 
-![Startseite der Freizeit „Zeltlager Sommer 2027“ am Handy mit Phase „in Vorbereitung“, „Zeitraum: 02.08.2027 – 13.08.2027“, „Rolle: Leitung“, „Leitung: Jonas Hüttner, Miriam Zeltner“ und „Einsicht in Freizeitpässe bis 12.09.2027“](../../../assets/screenshots/freizeit-start-handy.png)
+![Startseite der Freizeit „Zeltlager Sommer 2027“ am Handy mit Phase „in Vorbereitung“, „Zeitraum: 02.08.2027 – 13.08.2027“, „Rolle: Leitung“, „Leitung: Jonas Hüttner, Miriam Zeltner“, „Einsicht in Freizeitpässe bis 12.09.2027“ und der Meldung über fehlende Nachweise](../../../assets/screenshots/freizeit-start-handy.png)
 
 ![Startseite der Freizeit am Laptop](../../../assets/screenshots/freizeit-start-laptop.png)
 

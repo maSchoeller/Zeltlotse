@@ -43,8 +43,13 @@ internal static class NachweisRegeln
         : hinweis.Trim().Length > NachweisFelder.HinweisMaximaleLaenge ? $"Der Hinweis ist zu lang (höchstens {NachweisFelder.HinweisMaximaleLaenge} Zeichen)."
         : null;
 
+    private static readonly TimeZoneInfo Berlin = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
+
     /// <summary>Der heutige Kalendertag in Europe/Berlin.</summary>
     public static DateOnly Heute(TimeProvider uhr) => Volljaehrigkeit.Heute(uhr);
+
+    /// <summary>Der Kalendertag eines Zeitpunkts in Europe/Berlin.</summary>
+    public static DateOnly Tag(DateTimeOffset zeitpunkt) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(zeitpunkt, Berlin).DateTime);
 
     /// <summary>Endung einer Datei je erkanntem Typ, für den Dateinamen <c>&lt;art&gt;.&lt;endung&gt;</c>.</summary>
     public static string Endung(SharedKernel.Dateien.DateiArt art) => art switch
@@ -55,6 +60,10 @@ internal static class NachweisRegeln
         SharedKernel.Dateien.DateiArt.Pdf => "pdf",
         _ => "bin",
     };
+
+    /// <summary>Gleichzeitige Erinnerungen derselben Freizeit an dieselbe Person laufen nacheinander (höchstens eine je Tag).</summary>
+    public static Task ErinnerungSperrenAsync(DbContext db, Guid freizeitId, Guid personId, CancellationToken abbruch) =>
+        db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"erinnerung:" + freizeitId + ":" + personId}, 0))", abbruch);
 
     /// <summary>Gleichzeitige Anfragen derselben Person in derselben Organisation laufen nacheinander (höchstens eine offene Einsicht).</summary>
     public static Task EinsichtSperrenAsync(DbContext db, Guid personId, Guid organisationId, CancellationToken abbruch) =>

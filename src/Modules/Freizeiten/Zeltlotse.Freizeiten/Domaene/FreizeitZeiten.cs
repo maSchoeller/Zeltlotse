@@ -21,6 +21,9 @@ internal static class FreizeitZeiten
     public static DateTimeOffset TagesBeginn(DateOnly tag) =>
         new(TimeZoneInfo.ConvertTimeToUtc(tag.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified), Berlin), TimeSpan.Zero);
 
+    /// <summary>Der Kalendertag eines Zeitpunkts in Europe/Berlin („heute“ nach der Uhr).</summary>
+    public static DateOnly Heute(DateTimeOffset jetzt) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(jetzt, Berlin).DateTime);
+
     /// <summary>Ende des letzten Freizeittages: 24:00 Uhr Europe/Berlin.</summary>
     public static DateTimeOffset Freizeitende(DateOnly letzterTag) => TagesBeginn(letzterTag.AddDays(1));
 

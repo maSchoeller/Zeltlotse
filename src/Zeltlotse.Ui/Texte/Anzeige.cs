@@ -67,6 +67,20 @@ public static class Anzeige
     /// <inheritdoc cref="Nachweis(Zeltlotse.Api.Contracts.Personen.NachweisArt)"/>
     public static string Nachweis(Zeltlotse.Api.Contracts.Organisationen.NachweisArt art) => Nachweis((int)art);
 
+    /// <inheritdoc cref="Nachweis(Zeltlotse.Api.Contracts.Personen.NachweisArt)"/>
+    public static string Nachweis(Zeltlotse.Api.Contracts.Freizeiten.NachweisArt art) => Nachweis((int)art);
+
+    /// <summary>
+    /// Ein Warnhinweis zu einem Pflicht-Nachweis (FR-11): „Führungszeugnis nicht bestätigt“, „Erste Hilfe läuft am TT.MM.JJJJ ab“
+    /// bzw. „Erste Hilfe abgelaufen am TT.MM.JJJJ“.
+    /// </summary>
+    public static string Warnung(Zeltlotse.Api.Contracts.Freizeiten.NachweisWarnung warnung) => warnung switch
+    {
+        { Grund: Zeltlotse.Api.Contracts.Freizeiten.NachweisWarnungGrund.LaeuftAb, GueltigBis: { } bis } => $"{Nachweis(warnung.Art)} läuft am {Datum(bis)} ab",
+        { Grund: Zeltlotse.Api.Contracts.Freizeiten.NachweisWarnungGrund.Abgelaufen, GueltigBis: { } bis } => $"{Nachweis(warnung.Art)} abgelaufen am {Datum(bis)}",
+        _ => $"{Nachweis(warnung.Art)} nicht bestätigt",
+    };
+
     private static string Nachweis(int art) => art switch
     {
         1 => "Führungszeugnis",

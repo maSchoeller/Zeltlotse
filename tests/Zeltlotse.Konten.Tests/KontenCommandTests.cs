@@ -265,6 +265,17 @@ public sealed class KontenCommandTests(PostgresContainer postgres) : IAsyncLifet
         Assert.Null(await lesen.MailAsync(Guid.CreateVersion7(), Abbruch));
     }
 
+    [Fact]
+    public async Task Mail_der_Person_liefert_die_Mail_ihres_Kontos_ohne_Konto_null()
+    {
+        var konto = await SendenAsync(new KontoSicherstellen("Jonas.Huettner@example.org"));
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var lesen = scope.ServiceProvider.GetRequiredService<Zeltlotse.Konten.Contracts.Konten.IKontoLesen>();
+        Assert.Equal("jonas.huettner@example.org", await lesen.MailDerPersonAsync(konto.PersonId, Abbruch));
+        Assert.Null(await lesen.MailDerPersonAsync(Guid.CreateVersion7(), Abbruch));
+    }
+
     private Task<bool> GlobalAdminAsync(string mail) =>
         LesenAsync(db => db.Konten.Where(k => k.Mail == mail).Select(k => k.GlobalAdmin).SingleAsync(Abbruch));
 

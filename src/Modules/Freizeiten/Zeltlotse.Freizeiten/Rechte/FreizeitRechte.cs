@@ -28,8 +28,8 @@ internal static class FreizeitRechte
     public static readonly RolleArt[] Mitarbeit = [RolleArt.Leitung, RolleArt.Team];
 
     /// <summary>
-    /// Nachweise im Freizeit-Kontext prüfen (FR-10). Die Endpunkte dazu besitzt Personen; dort steht dieselbe Liste
-    /// (<c>NachweisRechte.FreizeitPruefen</c>), ein HTTP-Test hält beide gleich.
+    /// Nachweise im Freizeit-Kontext prüfen (FR-10) und Warnhinweise sehen (FR-11). Die Prüf-Endpunkte und „Erinnern“ besitzt
+    /// Personen; dort steht dieselbe Liste (<c>NachweisRechte.FreizeitPruefen</c>), ein HTTP-Test hält beide gleich.
     /// </summary>
     public static readonly RolleArt[] NachweisePruefen = [RolleArt.Leitung];
 

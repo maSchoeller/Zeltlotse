@@ -143,7 +143,8 @@ public static class NachweisFelder
 /// Organisation, außer der anfragenden, mit ihrer jüngsten Einsicht in dieser Organisation.
 /// </summary>
 /// <param name="Anfragbar">Es gibt keine offene Einsicht; „Einsicht anfragen“ legt eine an.</param>
-public sealed record PruefPerson(Guid PersonId, string? Vorname, string? Nachname, bool Anfragbar, PruefEinsicht? Einsicht);
+/// <param name="ErinnertAm">Die letzte Erinnerung an die Person in dieser Freizeit (Story 1-6); auf der Org-Route immer <c>null</c>.</param>
+public sealed record PruefPerson(Guid PersonId, string? Vorname, string? Nachname, bool Anfragbar, PruefEinsicht? Einsicht, DateTimeOffset? ErinnertAm = null);
 
 /// <summary>Die jüngste Einsicht einer Person in der Prüfliste.</summary>
 /// <param name="Status">Mit <see cref="EinsichtStatus.Abgelaufen"/> für eine abgelaufene Freigabe.</param>
@@ -184,6 +185,12 @@ public sealed record EinsichtPosten(
     DateTimeOffset? HochgeladenAm,
     PostenErgebnis Ergebnis,
     DateTimeOffset? EntschiedenAm);
+
+/// <summary>Körper von <c>POST /api/freizeiten/{freizeitId}/personen/nachweise/erinnerungen</c> (Leitung, FR-11).</summary>
+public sealed record NachweisErinnerungSenden(Guid? PersonId);
+
+/// <summary>Antwort <c>200</c> von <c>POST …/personen/nachweise/erinnerungen</c>: wann erinnert wurde.</summary>
+public sealed record NachweisErinnert(DateTimeOffset ErinnertAm);
 
 /// <summary>Körper von <c>POST …/einsichten/{einsichtId}/nachweise/{nachweisId}/ablehnen</c>: Hinweis mit 1–500 Zeichen.</summary>
 public sealed record NachweisAblehnen(string? Hinweis);

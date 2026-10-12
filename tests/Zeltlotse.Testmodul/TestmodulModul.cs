@@ -1,9 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Ereignisse;
+using Zeltlotse.SharedKernel.Mail;
 using Zeltlotse.Testmodul.Daten;
 using Zeltlotse.Testmodul.Empfang;
 using Zeltlotse.Testmodul.Events;
+using Zeltlotse.Testmodul.Mails;
 
 namespace Zeltlotse.Testmodul;
 
@@ -19,6 +21,8 @@ public static class TestmodulModul
         services.EmpfaengtEreignis<NotizAngelegt, AngelegtEmpfangenA>();
         services.EmpfaengtEreignis<NotizAngelegt, AngelegtEmpfangenB>();
         services.EmpfaengtEreignis<NotizGeaendert, GeaendertEmpfangen>();
+        services.AddSingleton<MailAufbauStoerung>();
+        services.VerschicktMail<NotizMail, NotizMailAufbau>();
         return services;
     }
 }

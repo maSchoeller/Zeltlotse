@@ -12,7 +12,9 @@ using Zeltlotse.SharedKernel.Commands;
 using Zeltlotse.SharedKernel.Ereignisse;
 using Zeltlotse.SharedKernel.Mandanten;
 using Zeltlotse.Testing;
+using Zeltlotse.Organisationen.Contracts.Nachweise;
 using EreignisArt = Zeltlotse.Personen.Contracts.Events.NachweisArt;
+using StandArt = Zeltlotse.Organisationen.Contracts.Nachweise.NachweisArt;
 
 namespace Zeltlotse.Organisationen.Tests;
 
@@ -154,6 +156,35 @@ public sealed class NachweisRichtlinieTests(PostgresContainer postgres) : IAsync
         await ZustellenAsync(Umschlag(org), new NachweisEingesehen(Jonas, Guid.CreateVersion7(), EreignisArt.Fuehrungszeugnis, new DateOnly(2025, 11, 3), DateTimeOffset.UtcNow, Miriam));
 
         Assert.Equal(new DateOnly(2030, 11, 3), (await LesenAsync(db => db.Bestaetigungen.SingleAsync(Abbruch), org)).GueltigBis);
+    }
+
+    [Fact]
+    public async Task Nachweis_Stand_liefert_Pflicht_Arten_in_Enum_Reihenfolge_und_gueltig_bis_nur_der_eigenen_Organisation()
+    {
+        var org = await OrganisationAsync();
+        var orgB = await OrganisationAsync();
+        var lea = Guid.CreateVersion7();
+        await SendenAsync(new RichtlinieFeldAendern(org, EreignisArt.ErsteHilfe, RichtlinieFeld.Pflicht, 1, "false", "true"), org);
+        var eingesehen = new DateTimeOffset(2026, 7, 1, 9, 0, 0, TimeSpan.Zero);
+        await ZustellenAsync(Umschlag(org), new NachweisEingesehen(Jonas, Guid.CreateVersion7(), EreignisArt.ErsteHilfe, new DateOnly(2025, 4, 15), eingesehen, Miriam));
+        await ZustellenAsync(Umschlag(org), new NachweisEingesehen(lea, Guid.CreateVersion7(), EreignisArt.Juleica, new DateOnly(2025, 1, 1), eingesehen, Miriam));
+        await ZustellenAsync(Umschlag(orgB), new NachweisEingesehen(Jonas, Guid.CreateVersion7(), EreignisArt.Fuehrungszeugnis, new DateOnly(2025, 11, 3), eingesehen, Tobias));
+
+        var stand = await StandAsync(org, [Jonas, Tobias]);
+
+        Assert.Equal([StandArt.Fuehrungszeugnis, StandArt.ErsteHilfe], stand.PflichtArten);
+        Assert.Equal([new NachweisGueltigkeit(Jonas, StandArt.ErsteHilfe, new DateOnly(2027, 4, 15))], stand.Bestaetigungen);
+        var standB = await StandAsync(orgB, [Jonas]);
+        Assert.Equal([StandArt.Fuehrungszeugnis], standB.PflichtArten);
+        Assert.Equal([new NachweisGueltigkeit(Jonas, StandArt.Fuehrungszeugnis, new DateOnly(2030, 11, 3))], standB.Bestaetigungen);
+        Assert.Empty((await StandAsync(org, [])).Bestaetigungen);
+    }
+
+    private async Task<NachweisStand> StandAsync(Guid org, Guid[] personen)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<MandantenKontext>().Setzen(org);
+        return await scope.ServiceProvider.GetRequiredService<INachweisStandLesen>().StandAsync(personen, Abbruch);
     }
 
     private async Task<Guid> OrganisationAsync() =>

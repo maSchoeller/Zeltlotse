@@ -366,5 +366,7 @@ public sealed class OrganisationenCommandTests(PostgresContainer postgres) : IAs
 
         public Task<string?> MailAsync(Guid kontoId, CancellationToken abbruch = default) =>
             Task.FromResult(TryGetValue(kontoId, out var mail) ? mail : null);
+
+        public Task<string?> MailDerPersonAsync(Guid personId, CancellationToken abbruch = default) => Task.FromResult<string?>(null);
     }
 }

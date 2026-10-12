@@ -8,6 +8,7 @@ using Zeltlotse.Freizeiten.Verwaltung;
 using Zeltlotse.Konten.Anmelden;
 using Zeltlotse.Organisationen.Daten;
 using Zeltlotse.Organisationen.Einladungen;
+using Zeltlotse.Organisationen.Nachweise;
 using Zeltlotse.Organisationen.Verwaltung;
 using Zeltlotse.Personen.Daten;
 using Zeltlotse.Personen.Familien;
@@ -41,6 +42,8 @@ namespace Zeltlotse.Api.Demo;
 /// Emma, Daniel: Mia); ein Kind mit gleichem Vornamen in der Familie wird übersprungen.
 /// Story 1-5: Jonas' Nachweise mit Demo-Dateien (der Dateispeicher muss konfiguriert sein), automatische Einsicht für Jonas und
 /// Miriam, Jonas gibt frei, Miriam bestätigt Erste Hilfe.
+/// Story 1-6: Andrea setzt in der Nachweis-Richtlinie „Erste Hilfe“ auf Pflicht (nur, wenn es noch keine Pflicht ist). Damit
+/// zeigt die Freizeit Warnhinweise; eine Demo-Erinnerung gibt es nicht, also verschickt das Einspielen keine Mails.
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -80,6 +83,7 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             await KinderAsync(eltern, abbruch);
         }
 
+        await RichtlinieAsync(abbruch);
         await NachweiseAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
@@ -198,6 +202,33 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
                     geburtsdatum.ToString(KindFelder.Datumsformat, CultureInfo.InvariantCulture)), abbruch);
                 _ = ergebnis as KindAenderung.Gespeichert ?? throw new InvalidOperationException("Demo-Familie: Das Geburtsdatum ließ sich nicht setzen.");
             }
+        }
+    }
+
+    /// <summary>Story 1-6: „Erste Hilfe“ ist in der Demo-Organisation Pflicht; Andrea ändert die Richtlinie nur, wenn nötig.</summary>
+    private async Task RichtlinieAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var organisationId = await dienste.GetRequiredService<OrganisationenLeseDbContext>().Organisationen
+            .Where(o => o.Name == DemoKatalog.Organisation.Name)
+            .Select(o => o.Id)
+            .SingleAsync(abbruch);
+        dienste.GetRequiredService<MandantenKontext>().Setzen(organisationId);
+        var zeile = await dienste.GetRequiredService<OrganisationenLeseDbContext>().Richtlinien
+            .Where(r => r.Art == NachweisArt.ErsteHilfe)
+            .Select(r => new { r.Pflicht, r.Version })
+            .SingleAsync(abbruch);
+        if (zeile.Pflicht)
+        {
+            return;
+        }
+
+        var ergebnis = await dienste.GetRequiredService<ISender>().Send(
+            new RichtlinieFeldAendern(organisationId, NachweisArt.ErsteHilfe, Zeltlotse.Api.Contracts.Organisationen.RichtlinieFeld.Pflicht, zeile.Version, "false", "true"), abbruch);
+        if (ergebnis is not RichtlinienAenderung.Gespeichert)
+        {
+            throw new InvalidOperationException("Demo-Richtlinie: Erste Hilfe ließ sich nicht auf Pflicht setzen.");
         }
     }
 

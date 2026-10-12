@@ -140,6 +140,9 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
             {
                 "GET /api/freizeiten/{freizeitId:guid}",
                 "GET /api/freizeiten/{freizeitId:guid}/kontext",
+                // Story 1-6: Warnhinweise (Freizeiten) und Erinnern (Personen).
+                "GET /api/freizeiten/{freizeitId:guid}/nachweis-warnungen",
+                $"POST {pruefen}/erinnerungen",
                 $"GET {pruefen}",
                 $"GET {pruefen}/einsichten/{{einsichtId:guid}}",
                 $"GET {pruefen}/einsichten/{{einsichtId:guid}}/nachweise/{{nachweisId:guid}}/datei",

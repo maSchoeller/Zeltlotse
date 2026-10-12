@@ -7,6 +7,8 @@ sidebar:
 
 Die Leitung prüft die Nachweise der Personen, die in der Freizeit mitarbeiten, etwa das Führungszeugnis. Die Dateien bleiben am Profil der Person; Zeltlotse speichert bei der Organisation nur die **Bestätigung** (welcher Nachweis, eingesehen am, gültig bis, von wem).
 
+Fehlt im Team ein Pflicht-Nachweis oder läuft er vor dem Ende der Freizeit ab, zeigt die Liste Warnhinweise, und die Leitung kann die Person erinnern; das steht unter [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/).
+
 ## Die Liste
 
 Auf der Startseite der Freizeit führt der Knopf **Nachweise prüfen** zur Liste. Sie zeigt jede Person mit Rolle in der Freizeit, außer der eigenen, mit dem Stand ihrer Einsicht:
@@ -19,7 +21,7 @@ Auf der Startseite der Freizeit führt der Knopf **Nachweise prüfen** zur Liste
 
 ![Liste „Nachweise prüfen“ am Handy mit der Zeile „Jonas Hüttner“, „Freigegeben bis …“ und dem Knopf „Prüfen“](../../../assets/screenshots/nachweise-pruefen-handy.png)
 
-![Liste „Nachweise prüfen“ am Laptop mit den Spalten „Name“, „Status“ und „Aktion“](../../../assets/screenshots/nachweise-pruefen-laptop.png)
+![Liste „Nachweise prüfen“ am Laptop mit den Spalten „Name“, „Status“, „Warnhinweise“ und „Aktion“](../../../assets/screenshots/nachweise-pruefen-laptop.png)
 
 ## Einsicht anfragen
 

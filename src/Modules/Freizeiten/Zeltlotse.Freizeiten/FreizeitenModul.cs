@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Freizeiten.Contracts.Rollen;
 using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
 using Zeltlotse.Freizeiten.Daten;
+using Zeltlotse.Freizeiten.Nachweise;
 using Zeltlotse.Freizeiten.Rechte;
 using Zeltlotse.Freizeiten.Startseite;
 using Zeltlotse.Freizeiten.Verwaltung;
@@ -31,7 +32,8 @@ public static class FreizeitenModul
     /// <summary>
     /// Bindet die Endpunkte des Moduls in die <c>/api</c>-Gruppe ein (FR-6, FR-45). Rechte prüft der Host zentral über die
     /// Merkmale (AD-12): Organisations-Routen (Liste, Anlegen, Verwalten, Einladen) tragen <c>.NurOrgRolle(…)</c> mit
-    /// <c>{orgId:guid}</c>, Freizeit-Routen <c>.NurFreizeitRolle(…)</c> mit <c>{freizeitId:guid}</c>; nie beide.
+    /// <c>{orgId:guid}</c>, Freizeit-Routen <c>.NurFreizeitRolle(…)</c> mit <c>{freizeitId:guid}</c>; nie beide. Die
+    /// Warnhinweise zu Pflicht-Nachweisen (FR-11) sieht die Leitung mit denselben Rollen wie „Nachweise prüfen“.
     /// </summary>
     public static IEndpointRouteBuilder MapFreizeitenEndpoints(this IEndpointRouteBuilder api)
     {
@@ -48,6 +50,7 @@ public static class FreizeitenModul
         var freizeit = freizeiten.MapGroup($"/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}");
         freizeit.MapGet("", FreizeitLadenEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Mitarbeit);
         freizeit.MapGet("/kontext", FreizeitKontextEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Mitarbeit);
+        freizeit.MapGet("/nachweis-warnungen", NachweisWarnungenEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.NachweisePruefen);
 
         api.MapGet("/ich/freizeiten", MeineFreizeitenEndpunkt.Laden).Organisationsuebergreifend();
         return api;

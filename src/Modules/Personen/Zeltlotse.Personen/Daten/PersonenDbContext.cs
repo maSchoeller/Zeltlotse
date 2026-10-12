@@ -36,6 +36,8 @@ internal sealed class PersonenDbContext(DbContextOptions<PersonenDbContext> opti
 
     public DbSet<NachweisEinsichtPosten> EinsichtPosten => Set<NachweisEinsichtPosten>();
 
+    public DbSet<NachweisErinnerung> Erinnerungen => Set<NachweisErinnerung>();
+
     protected override string Schema => PersonenModul.Schema;
 
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => PersonenModell.Konfigurieren(modelBuilder);
@@ -64,6 +66,8 @@ internal sealed class PersonenLeseDbContext(DbContextOptions<PersonenLeseDbConte
     public DbSet<NachweisEinsicht> Einsichten => Set<NachweisEinsicht>();
 
     public DbSet<NachweisEinsichtPosten> EinsichtPosten => Set<NachweisEinsichtPosten>();
+
+    public DbSet<NachweisErinnerung> Erinnerungen => Set<NachweisErinnerung>();
 
     protected override string Schema => PersonenModul.Schema;
 
@@ -181,6 +185,15 @@ internal static class PersonenModell
             e.Property(p => p.Art).HasConversion<short>();
             e.Property(p => p.Ergebnis).HasConversion<short>();
             e.HasIndex(p => p.NachweisId);
+        });
+
+        // FR-11: die letzte Erinnerung der Leitung je (Freizeit, Person); der eindeutige Index verhindert doppelte Zeilen.
+        modelBuilder.Entity<NachweisErinnerung>(e =>
+        {
+            e.ToTable("nachweis_erinnerung");
+            e.Property(t => t.Id).ValueGeneratedNever();
+            e.HasIndex(t => new { t.FreizeitId, t.PersonId }).IsUnique();
+            e.HasIndex(t => t.PersonId);
         });
     }
 }

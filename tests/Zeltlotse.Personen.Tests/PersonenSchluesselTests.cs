@@ -34,6 +34,8 @@ public sealed class PersonenSchluesselTests(PostgresContainer postgres) : IAsync
             .Build());
         services.AddSingleton<TimeProvider>(new FakeTimeProvider(new DateTimeOffset(2026, 7, 1, 8, 0, 0, TimeSpan.Zero)));
         services.AddPersonenModul();
+        // Personen liest Konten (Mail-Adresse der Erinnerung, Story 1-6); hier ohne das Modul Konten.
+        services.AddScoped<Zeltlotse.Konten.Contracts.Konten.IKontoLesen, OhneKonten>();
         _dienste = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
 
         await using var scope = _dienste.CreateAsyncScope();
@@ -137,5 +139,14 @@ public sealed class PersonenSchluesselTests(PostgresContainer postgres) : IAsync
         await scope.ServiceProvider.GetRequiredService<PersonenDbContext>().PersonenSchluessel
             .Where(s => s.PersonId == personId)
             .ExecuteDeleteAsync(TestContext.Current.CancellationToken);
+    }
+
+    private sealed class OhneKonten : Zeltlotse.Konten.Contracts.Konten.IKontoLesen
+    {
+        public Task<bool> IstGlobalAdminAsync(Guid kontoId, CancellationToken abbruch = default) => Task.FromResult(false);
+
+        public Task<string?> MailAsync(Guid kontoId, CancellationToken abbruch = default) => Task.FromResult<string?>(null);
+
+        public Task<string?> MailDerPersonAsync(Guid personId, CancellationToken abbruch = default) => Task.FromResult<string?>(null);
     }
 }

@@ -270,6 +270,9 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(seite.GetByText("Zeitraum: 02.08.2027 – 13.08.2027")).ToBeVisibleAsync();
         await Assertions.Expect(seite.GetByText("Leitung: Jonas Hüttner, Miriam Zeltner")).ToBeVisibleAsync();
         await Assertions.Expect(seite.GetByText("Einsicht in Freizeitpässe bis 12.09.2027")).ToBeVisibleAsync();
+        // Story 1-6: Miriam fehlen Pflicht-Nachweise (Führungszeugnis, Erste Hilfe); die Warnung steht über „Nachweise prüfen“.
+        await Assertions.Expect(seite.Locator(".elkw-alert--warnung"))
+            .ToContainTextAsync("Bei 1 Person im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.", new() { Timeout = 60_000 });
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await E2EHilfe.AxeAsync(seite);
 
@@ -453,12 +456,35 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(fuehrungszeugnis.GetByLabel("Pflicht")).ToBeCheckedAsync(new() { Timeout = 60_000 });
         await Assertions.Expect(fuehrungszeugnis.GetByLabel("Gültig (Monate)")).ToHaveValueAsync("60");
         await Assertions.Expect(card.Locator("tbody tr").Filter(new() { HasText = "Erste Hilfe" }).GetByLabel("Gültig (Monate)")).ToHaveValueAsync("24");
+        // Story 1-6: In der Demo ist auch Erste Hilfe Pflicht.
+        await Assertions.Expect(card.Locator("tbody tr").Filter(new() { HasText = "Erste Hilfe" }).GetByLabel("Pflicht")).ToBeCheckedAsync();
         await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Nachweise prüfen" })).ToBeVisibleAsync();
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await E2EHilfe.AxeAsync(seite);
         await card.ScrollIntoViewIfNeededAsync();
 
         await BildAsync(seite, "nachweis-richtlinie", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Nachweis_Erinnern(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        // Story 1-6: Warnhinweise bei Jonas, „Erinnern“ aufgeklappt; gesendet wird nichts.
+        var zeile = await PruefListeAsync(seite);
+        await Assertions.Expect(zeile).ToContainTextAsync("Führungszeugnis nicht bestätigt", new() { Timeout = 60_000 });
+        await Assertions.Expect(zeile).ToContainTextAsync("Erste Hilfe läuft am 15.04.2027 ab");
+        await zeile.GetByRole(AriaRole.Button, new() { Name = "Erinnern" }).ClickAsync();
+        await Assertions.Expect(zeile).ToContainTextAsync("Erinnerung an Jonas Hüttner senden? Dabei wird die Einsicht in die Nachweise angefragt.");
+        await Assertions.Expect(zeile.GetByRole(AriaRole.Button, new() { Name = "Ja, senden" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        await zeile.GetByRole(AriaRole.Button, new() { Name = "Ja, senden" }).ScrollIntoViewIfNeededAsync();
+
+        await BildAsync(seite, "nachweis-erinnern", geraet);
     }
 
     /// <summary>Miriam öffnet in der Demo-Freizeit „Nachweise prüfen“; liefert Jonas' Zeile (freigegeben, mit „Prüfen“).</summary>

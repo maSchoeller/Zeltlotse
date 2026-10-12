@@ -98,6 +98,8 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         }
 
         await using var zweiter = new ZeltlotseApiFactory(verbindung);
+        // Echte Zeit, damit der Client das Sitzungs-Cookie annimmt (Story 1-6: Miriam ruft die Warnhinweise ab).
+        zweiter.Uhr.SetUtcNow(DateTimeOffset.UtcNow);
         zweiter.Einstellungen[Schalter] = "true";
         foreach (var (schluessel, wert) in s3.Einstellungen(bucket))
         {
@@ -165,6 +167,25 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.nachweis_einsicht_posten WHERE \"Ergebnis\" = 1 AND \"Art\" = 3"));
         Assert.Equal(4L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.nachweis_richtlinie"));
         Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.nachweis_bestaetigung WHERE \"Art\" = 3 AND \"GueltigBis\" = '2027-04-15' AND \"GeprueftVon\" = @m", ("m", miriam)));
+
+        // Story 1-6: Erste Hilfe ist Pflicht (neben dem Führungszeugnis); Miriam sieht bei Jonas „fehlt“ und „läuft ab“. Keine
+        // Demo-Erinnerung, also auch keine Mail.
+        Assert.Equal(
+            [(short)1, (short)3],
+            await PflichtArtenAsync(verbindung));
+        Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.nachweis_erinnerung"));
+        Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.outbox_zustellung WHERE \"Empfaenger\" = 'Zeltlotse.Mail'"));
+        using var miriamClient = await AnmeldeHelfer.AngemeldeterClientAsync(zweiter, "miriam.zeltner@example.org");
+        var freizeitId = await AnmeldeHelfer.WertAsync<Guid>(verbindung, "SELECT \"Id\" FROM freizeiten.freizeit");
+        using var warnungen = await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/nachweis-warnungen", Abbruch);
+        Assert.Equal(HttpStatusCode.OK, warnungen.StatusCode);
+        var personen = (await AnmeldeHelfer.JsonAsync(warnungen)).GetProperty("personen");
+        var jonasWarnung = Assert.Single(personen.EnumerateArray());
+        Assert.Equal(jonas, jonasWarnung.GetProperty("personId").GetGuid());
+        Assert.Equal(
+            ["fuehrungszeugnis fehlt ", "ersteHilfe laeuftAb 2027-04-15"],
+            jonasWarnung.GetProperty("warnungen").EnumerateArray().Select(w =>
+                $"{w.GetProperty("art").GetString()} {w.GetProperty("grund").GetString()} {(w.TryGetProperty("gueltigBis", out var bis) ? bis.GetString() : "")}"));
 
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,
@@ -281,6 +302,21 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         var familien = personen.Where(p => p.Rolle == DemoRolle.Eltern).Select(p => p.Familie).ToHashSet();
         Assert.All(personen.Where(p => p.Rolle == DemoRolle.Kind), k => Assert.Contains(k.Familie, familien));
         Assert.All(personen, p => Assert.False(string.IsNullOrWhiteSpace(p.Vorname + p.Nachname)));
+    }
+
+    private static async Task<List<short>> PflichtArtenAsync(string verbindung)
+    {
+        await using var db = new Npgsql.NpgsqlConnection(verbindung);
+        await db.OpenAsync(Abbruch);
+        await using var befehl = new Npgsql.NpgsqlCommand("SELECT \"Art\" FROM organisationen.nachweis_richtlinie WHERE \"Pflicht\" ORDER BY \"Art\"", db);
+        await using var leser = await befehl.ExecuteReaderAsync(Abbruch);
+        var arten = new List<short>();
+        while (await leser.ReadAsync(Abbruch))
+        {
+            arten.Add(leser.GetInt16(0));
+        }
+
+        return arten;
     }
 
     private static async Task<List<string>> MailsAsync(string verbindung, string sql)

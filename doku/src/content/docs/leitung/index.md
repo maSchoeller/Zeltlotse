@@ -13,7 +13,7 @@ sidebar:
 Die Leitung darf alles, was das [Team](/mitarbeitende/) darf. **Nur die Leitung** darf außerdem:
 
 - Anmeldungen bestätigen, Absagen eintragen und das Nachrücken bestimmen,
-- Erinnerungen auslösen,
+- Erinnerungen auslösen, zum Beispiel an fehlende Nachweise – siehe [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/),
 - den Stand der Nachweise im Team sehen und Nachweise prüfen – siehe [Nachweise prüfen](/leitung/nachweise-pruefen/),
 - festlegen, welche Module (Verpflegung, Finanzen, Teilnehmer-Zugang) die Freizeit nutzt und welche Fragen aus dem Fragenbaukasten der Freizeitpass enthält,
 - die Sicherheitskette einrichten,

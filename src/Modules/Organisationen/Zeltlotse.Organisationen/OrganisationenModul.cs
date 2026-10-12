@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Zeltlotse.Organisationen.Contracts.Nachweise;
 using Zeltlotse.Organisationen.Contracts.Rollen;
 using Zeltlotse.Organisationen.Daten;
 using Zeltlotse.Organisationen.Nachweise;
@@ -25,6 +26,7 @@ public static class OrganisationenModul
     {
         services.AddModul<OrganisationenDbContext, OrganisationenLeseDbContext>(Name, Schema);
         services.AddScoped<IOrgRollenLesen, OrgRollenLesen>();
+        services.AddScoped<INachweisStandLesen, NachweisStandLesen>();
         services.EmpfaengtEreignis<NachweisEingesehen, NachweisBestaetigungSpeichern>();
         return services;
     }

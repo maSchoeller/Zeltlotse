@@ -1,11 +1,15 @@
 @page "/freizeiten/{FreizeitId:guid}/nachweise"
 @page "/organisationen/{OrgId:guid}/nachweise"
 @using Zeltlotse.Api.Contracts.Personen
+@using Zeltlotse.Api.Contracts.Freizeiten
 @inject PersonenApiClient Personen
+@inject FreizeitenApiClient Freizeiten
 @inject NavigationManager Navigation
 @* Nachweise prüfen (FR-10, AD-9): eine Seite für die Leitung (Freizeit) und den Org-Admin (Organisation). Je Person Status der
    jüngsten Einsicht (auch „Freigabe abgelaufen am …“); „Einsicht anfragen“, wenn keine offen ist; „Prüfen“, wenn die Einsicht
    freigegeben und an die eigene Person gebunden oder von ihr übernehmbar ist (übernimmt die Prüfung und öffnet die Einsicht).
+   Nur auf der Freizeit-Route (FR-11): Spalte „Warnhinweise“ zu Pflicht-Nachweisen und bei Warnungen „Erinnern“ mit
+   Inline-Bestätigung; „Erinnert am …“ nach einer Erinnerung. Scheitern die Warnhinweise, bleibt die Liste ohne sie nutzbar.
    403/404 → nicht verfügbar. *@
 <PageTitle>Nachweise prüfen – Zeltlotse</PageTitle>
 
@@ -26,7 +30,7 @@ else
     }
     @if (_meldung is not null)
     {
-        <Meldung Titel="@(_meldungFehler ? "Fehler" : "Gespeichert")" Art="@(_meldungFehler ? MeldungArt.Fehler : MeldungArt.Erfolg)">
+        <Meldung Titel="@(_meldungFehler ? "Fehler" : _meldungTitel)" Art="@(_meldungFehler ? MeldungArt.Fehler : MeldungArt.Erfolg)">
             <p>@_meldung</p>
         </Meldung>
     }
@@ -55,6 +59,8 @@ else
     private bool _uebertraegt;
     private string? _meldung;
     private bool _meldungFehler;
+    private string _meldungTitel = "Gespeichert";
+    private Dictionary<Guid, IReadOnlyList<NachweisWarnung>> _warnungen = [];
 
     [Parameter] public Guid FreizeitId { get; set; }
 
@@ -72,7 +78,18 @@ else
     [
         new("Name", p => @<text>@Anzeige.Name(p.Vorname, p.Nachname)</text>),
         new("Status", p => @<text>@StatusText(p.Einsicht)</text>),
+        .. InFreizeit ? new Spalte<PruefPerson>[] { new("Warnhinweise", WarnhinweiseZelle) } : [],
         new("Aktion", p => @<text>
+            @if (InFreizeit && p.ErinnertAm is { } erinnertAm)
+            {
+                <p>Erinnert am @Anzeige.Datum(erinnertAm)</p>
+            }
+            @if (InFreizeit && _warnungen.ContainsKey(p.PersonId))
+            {
+                <InlineBestaetigung AusloeserText="Erinnern" AusloeserArt="KnopfArt.Outline"
+                                    Satz="@($"Erinnerung an {Anzeige.Name(p.Vorname, p.Nachname)} senden? Dabei wird die Einsicht in die Nachweise angefragt.")"
+                                    JaText="Ja, senden" Bestaetigt="@(() => ErinnernAsync(p))" />
+            }
             @if (p.Anfragbar)
             {
                 <Knopf Art="KnopfArt.Outline" Deaktiviert="@_uebertraegt" @onclick="@(() => AnfragenAsync(p))">Einsicht anfragen</Knopf>
@@ -83,6 +100,16 @@ else
             }
         </text>),
     ];
+
+    private RenderFragment WarnhinweiseZelle(PruefPerson person) => @<text>
+        @if (_warnungen.TryGetValue(person.PersonId, out var warnungen))
+        {
+            @foreach (var warnung in warnungen)
+            {
+                <div><Status Wort="@Anzeige.Warnung(warnung)" Art="StatusArt.Warnung" /></div>
+            }
+        }
+    </text>;
 
     private static string StatusText(PruefEinsicht? einsicht) => einsicht switch
     {
@@ -112,8 +139,74 @@ else
 
     private async Task NeuLadenAsync()
     {
-        _liste = await Personen.PruefListeLadenAsync(Ort);
-        _nichtVerfuegbar = _liste is null;
+        var warnungen = WarnungenLadenAsync();
+        try
+        {
+            _liste = await Personen.PruefListeLadenAsync(Ort);
+            _nichtVerfuegbar = _liste is null;
+        }
+        finally
+        {
+            // Immer abwarten, auch wenn die Liste scheitert (WarnungenLadenAsync fängt seine Fehler selbst).
+            _warnungen = await warnungen;
+        }
+    }
+
+    /// <summary>Warnhinweise nur im Freizeit-Kontext; scheitert der Abruf, bleibt die Liste ohne sie nutzbar.</summary>
+    private async Task<Dictionary<Guid, IReadOnlyList<NachweisWarnung>>> WarnungenLadenAsync()
+    {
+        if (!InFreizeit)
+        {
+            return [];
+        }
+
+        try
+        {
+            var antwort = await Freizeiten.NachweisWarnungenLadenAsync(FreizeitId);
+            return antwort?.Personen.Where(p => p.Warnungen.Count > 0).ToDictionary(p => p.PersonId, p => p.Warnungen) ?? [];
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            return [];
+        }
+    }
+
+    private async Task ErinnernAsync(PruefPerson person)
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _aktionFehler = false;
+        _meldung = null;
+        var name = Anzeige.Name(person.Vorname, person.Nachname);
+        try
+        {
+            switch (await Personen.ErinnernAsync(FreizeitId, person.PersonId))
+            {
+                case ErinnerungErgebnis.Gesendet:
+                    (_meldung, _meldungFehler, _meldungTitel) = ($"Die Erinnerung an {name} geht per Mail hinaus.", false, "Gesendet");
+                    break;
+                case ErinnerungErgebnis.SchonHeute:
+                    (_meldung, _meldungFehler) = ($"{name} wurde heute schon erinnert.", true);
+                    break;
+                default:
+                    (_meldung, _meldungFehler) = ($"Die Erinnerung an {name} ließ sich nicht senden.", true);
+                    break;
+            }
+
+            await NeuLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
     }
 
     private async Task AnfragenAsync(PruefPerson person)
@@ -124,9 +217,9 @@ else
         try
         {
             var einsicht = await Personen.EinsichtAnfragenAsync(Ort, person.PersonId);
-            (_meldung, _meldungFehler) = einsicht is null
-                ? ("Die Einsicht ließ sich nicht anfragen.", true)
-                : ("Die Einsicht ist angefragt.", false);
+            (_meldung, _meldungFehler, _meldungTitel) = einsicht is null
+                ? ("Die Einsicht ließ sich nicht anfragen.", true, "Gespeichert")
+                : ("Die Einsicht ist angefragt.", false, "Gespeichert");
             await NeuLadenAsync();
         }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))

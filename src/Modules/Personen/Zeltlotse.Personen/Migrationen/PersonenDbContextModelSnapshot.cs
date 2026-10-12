@@ -292,6 +292,40 @@ namespace Zeltlotse.Personen.Migrationen
                     b.ToTable("nachweis_einsicht_posten", "personen");
                 });
 
+            modelBuilder.Entity("Zeltlotse.Personen.Nachweise.NachweisErinnerung", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ErinnertAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ErinnertVon")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Folgenummer")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("FreizeitId", "PersonId")
+                        .IsUnique();
+
+                    b.ToTable("nachweis_erinnerung", "personen");
+                });
+
             modelBuilder.Entity("Zeltlotse.Personen.Profil.Person", b =>
                 {
                     b.Property<Guid>("Id")

@@ -95,10 +95,12 @@ public sealed class NachweisRichtlinieTests(PostgresContainer postgres, S3Contai
     public void Pruef_Endpunkte_nutzen_die_Rollen_der_erlaubten_Aktion()
     {
         var endpunkte = _s.Factory.Services.GetRequiredService<EndpointDataSource>().Endpoints.OfType<RouteEndpoint>().ToList();
-        var freizeit = endpunkte.Where(e => (e.RoutePattern.RawText ?? "").Contains("/freizeiten/{freizeitId:guid}/personen/nachweise", StringComparison.Ordinal)).ToList();
+        // Story 1-6: dazu „Erinnern“ (Personen) und die Warnhinweise (Freizeiten) mit denselben Rollen.
+        var freizeit = endpunkte.Where(e => (e.RoutePattern.RawText ?? "").Contains("/freizeiten/{freizeitId:guid}/personen/nachweise", StringComparison.Ordinal)
+                                            || (e.RoutePattern.RawText ?? "").EndsWith("/freizeiten/{freizeitId:guid}/nachweis-warnungen", StringComparison.Ordinal)).ToList();
         var org = endpunkte.Where(e => (e.RoutePattern.RawText ?? "").Contains("/organisationen/{orgId:guid}/personen/nachweise", StringComparison.Ordinal)).ToList();
 
-        Assert.Equal(7, freizeit.Count);
+        Assert.Equal(9, freizeit.Count);
         Assert.Equal(7, org.Count);
         // Leitung → „nachweise-pruefen“ im Freizeit-Kontext, Org-Admin → in „erlaubt“ der Organisation (je eigene Tests).
         Assert.All(freizeit, e => Assert.Equal([FreizeitRolle.Leitung], e.Metadata.GetMetadata<NurFreizeitRolleMetadaten>()!.Rollen));

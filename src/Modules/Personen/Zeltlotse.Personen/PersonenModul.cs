@@ -13,6 +13,7 @@ using Zeltlotse.SharedKernel.Anmeldung;
 using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Datenschutz;
 using Zeltlotse.SharedKernel.Ereignisse;
+using Zeltlotse.SharedKernel.Mail;
 using Zeltlotse.SharedKernel.Rechte;
 using Zeltlotse.SharedKernel.Web;
 
@@ -31,6 +32,7 @@ public static class PersonenModul
         services.AddScoped<IPersonenSchluesselQuelle, PersonenSchluesselQuelle>();
         services.AddScoped<IPersonenNamen, PersonenNamen>();
         services.EmpfaengtEreignis<FreizeitRolleGeaendert, FreizeitRolleUebernehmen>();
+        services.VerschicktMail<NachweisErinnerungMail, NachweisErinnerungMailAufbau>();
         return services;
     }
 
@@ -40,7 +42,8 @@ public static class PersonenModul
     /// Profil-Übergabe unter <c>/api/personen</c> (angemeldet, zugriffsbegrenzt, AD-11). Das Auslösen der Übergabe verlangt
     /// eine erneute Anmeldung (AD-25). Die eigenen Nachweise liegen unter <c>/api/ich/nachweise</c> (AD-26); geprüft wird unter
     /// <c>/api/freizeiten/{freizeitId}/personen/nachweise</c> (Leitung) und <c>/api/organisationen/{orgId}/personen/nachweise</c>
-    /// (Org-Admin), Mandant und Rolle aus der Route (AD-6, AD-12).
+    /// (Org-Admin), Mandant und Rolle aus der Route (AD-6, AD-12). Erinnern (FR-11) gibt es nur im Freizeit-Kontext unter
+    /// <c>…/personen/nachweise/erinnerungen</c>.
     /// </summary>
     public static IEndpointRouteBuilder MapPersonenEndpoints(this IEndpointRouteBuilder api)
     {

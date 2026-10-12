@@ -375,7 +375,8 @@ public sealed class NachweisEinsichtTests(PostgresContainer postgres, S3Containe
         Assert.All(org, p => Assert.True(p.Einsicht!.Pruefbar));
         using var roh = await _s.MiriamClient.GetAsync(_s.FreizeitPfad, Abbruch);
         var zeile = (await JsonAsync(roh)).EnumerateArray().First();
-        Assert.Equal(["anfragbar", "einsicht", "nachname", "personId", "vorname"], Namen(zeile));
+        // Story 1-6: additiv die letzte Erinnerung in dieser Freizeit.
+        Assert.Equal(["anfragbar", "einsicht", "erinnertAm", "nachname", "personId", "vorname"], Namen(zeile));
         Assert.Equal(["abgeschlossenAm", "angefragtAm", "freigegebenBis", "id", "pruefbar", "status"], Namen(zeile.GetProperty("einsicht")));
     }
 
@@ -484,8 +485,13 @@ public sealed class NachweisEinsichtTests(PostgresContainer postgres, S3Containe
             Assert.Equal(HttpStatusCode.OK, kontext.StatusCode);
             var erlaubt = (await JsonAsync(kontext)).GetProperty("erlaubt").EnumerateArray().Select(e => e.GetString()).ToList();
             using var liste = await client.GetAsync(_s.FreizeitPfad, Abbruch);
+            // Story 1-6: Warnhinweise und Erinnern gehören zur selben Aktion.
+            using var warnungen = await client.GetAsync($"/api/freizeiten/{_s.FreizeitId}/nachweis-warnungen", Abbruch);
+            using var erinnern = await PostAsync(client, $"{_s.FreizeitPfad}/erinnerungen", new NachweisErinnerungSenden(await _s.PersonIdAsync(Jonas)));
             Assert.Equal(darf, erlaubt.Contains(Zeltlotse.Api.Contracts.Gemeinsam.Aktionsschluessel.NachweisePruefen));
             Assert.Equal(darf ? HttpStatusCode.OK : HttpStatusCode.Forbidden, liste.StatusCode);
+            Assert.Equal(darf ? HttpStatusCode.OK : HttpStatusCode.Forbidden, warnungen.StatusCode);
+            Assert.Equal(darf ? HttpStatusCode.OK : HttpStatusCode.Forbidden, erinnern.StatusCode);
         }
 
         // Organisation: Org-Admin ja, Org-Überblick nein.

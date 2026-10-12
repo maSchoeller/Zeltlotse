@@ -28,6 +28,18 @@ public sealed record DateiHochladenErgebnis(DateTimeOffset? HochgeladenAm, strin
 /// </summary>
 public sealed record FreigabeErgebnis(DateTimeOffset? FreigegebenBis, bool NichtGefunden, bool OhneDatei);
 
+/// <summary>Ergebnis von <see cref="PersonenApiClient.ErinnernAsync"/>.</summary>
+public enum ErinnerungErgebnis
+{
+    Gesendet,
+
+    /// <summary><c>409</c>: heute schon erinnert.</summary>
+    SchonHeute,
+
+    /// <summary><c>404</c>: keine Person des Teams dieser Freizeit.</summary>
+    NichtGefunden,
+}
+
 /// <summary>Ergebnis von <see cref="PersonenApiClient.PruefenAsync"/>.</summary>
 public enum PruefErgebnis
 {
@@ -275,6 +287,26 @@ public sealed class PersonenApiClient(HttpClient http)
     /// <summary><c>GET …/personen/nachweise</c>: die Prüfliste oder <c>null</c> bei <c>403</c>/<c>404</c>.</summary>
     public Task<List<PruefPerson>?> PruefListeLadenAsync(PruefOrt ort, CancellationToken abbruch = default) =>
         LadenOderNullAsync<List<PruefPerson>>(ort.Basis, abbruch);
+
+    /// <summary>
+    /// <c>POST /api/freizeiten/{freizeitId}/personen/nachweise/erinnerungen {personId}</c> (Leitung, FR-11): verschickt die
+    /// Erinnerungs-Mail über die Outbox und fragt die Einsicht an; <c>409</c> heute schon erinnert, <c>404</c> nicht im Team.
+    /// </summary>
+    public async Task<ErinnerungErgebnis> ErinnernAsync(Guid freizeitId, Guid personId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync(
+            $"{PruefOrt.Freizeit(freizeitId).Basis}/erinnerungen", new NachweisErinnerungSenden(personId), ApiJson.Optionen, abbruch);
+        switch (antwort.StatusCode)
+        {
+            case HttpStatusCode.Conflict:
+                return ErinnerungErgebnis.SchonHeute;
+            case HttpStatusCode.NotFound:
+                return ErinnerungErgebnis.NichtGefunden;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return ErinnerungErgebnis.Gesendet;
+    }
 
     /// <summary><c>GET …/einsichten/{einsichtId}</c>: die Einsicht oder <c>null</c> bei <c>403</c>/<c>404</c>.</summary>
     public Task<EinsichtDetail?> EinsichtLadenAsync(PruefOrt ort, Guid einsichtId, CancellationToken abbruch = default) =>

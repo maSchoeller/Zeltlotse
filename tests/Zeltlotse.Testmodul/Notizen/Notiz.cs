@@ -28,6 +28,8 @@ internal sealed class Notiz : Aggregat, IOrganisationsEigen
 
     public void VertraulichSetzen(Geschuetzt vertraulich) => Vertraulich = vertraulich;
 
+    public void MailVormerken() => MailVormerken(new Mails.NotizMail(Id));
+
     public void Aendern(string text)
     {
         Text = text;

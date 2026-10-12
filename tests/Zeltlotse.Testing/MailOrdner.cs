@@ -9,7 +9,8 @@ public sealed record GeleseneMail(string An, string Betreff, string Text)
     /// <summary>
     /// Der Link aus der Mail: Login-Link (<c>…/app/anmelden/link/&lt;token&gt;</c>), Einladungslink
     /// (<c>…/app/einladung/&lt;token&gt;</c>), Leitungs-Einladung (<c>…/app/leitung/&lt;token&gt;</c>), Familien-Einladung
-    /// (<c>…/app/familie/einladung/&lt;token&gt;</c>) oder Profil-Übergabe (<c>…/app/uebergabe/&lt;token&gt;</c>).
+    /// (<c>…/app/familie/einladung/&lt;token&gt;</c>), Profil-Übergabe (<c>…/app/uebergabe/&lt;token&gt;</c>) oder die Seite
+    /// „Nachweise“ aus der Erinnerung (<c>…/app/konto/nachweise</c>, ohne Token).
     /// </summary>
     public string Link => LoginMailMuster.Link().Match(Text) is { Success: true } treffer
         ? treffer.Value
@@ -83,7 +84,7 @@ public sealed class MailOrdner(string ordner)
 
 internal static partial class LoginMailMuster
 {
-    [GeneratedRegex(@"https?://\S+/app/(?:anmelden/link|einladung|leitung|familie/einladung|uebergabe)/[A-Za-z0-9_-]+")]
+    [GeneratedRegex(@"https?://\S+/app/(?:(?:anmelden/link|einladung|leitung|familie/einladung|uebergabe)/[A-Za-z0-9_-]+|konto/nachweise\b)")]
     public static partial Regex Link();
 
     [GeneratedRegex(@"Login-Code: (\d{6})")]

@@ -13,7 +13,8 @@ public sealed record LeitungEinladenErgebnis(Guid? Id, string? MailFehler);
 
 /// <summary>
 /// Typisierter Client des Moduls Freizeiten (AD-29, handgeschrieben): Freizeit-Kontext, Freizeiten einer Organisation
-/// (Liste, Anlegen, Verwalten, Leitung einladen), Leitung übernehmen, Startseite der Freizeit und die eigenen Freizeiten.
+/// (Liste, Anlegen, Verwalten, Leitung einladen), Leitung übernehmen, Startseite der Freizeit, Warnhinweise zu Nachweisen und die
+/// eigenen Freizeiten.
 /// <c>403</c> und <c>404</c> beim Laden heißen „nicht verfügbar“ (<c>null</c>); andere Fehler enden in einer
 /// <see cref="HttpRequestException"/>.
 /// </summary>
@@ -89,6 +90,13 @@ public sealed class FreizeitenApiClient(HttpClient http)
     /// <summary><c>GET /api/freizeiten/{freizeitId}</c>: Startseite der Freizeit oder <c>null</c>.</summary>
     public Task<FreizeitAntwort?> LadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
         LadenAsync<FreizeitAntwort>($"/api/freizeiten/{freizeitId}", abbruch);
+
+    /// <summary>
+    /// <c>GET /api/freizeiten/{freizeitId}/nachweis-warnungen</c> (Leitung, FR-11): Personen des Teams mit Warnhinweisen zu
+    /// Pflicht-Nachweisen oder <c>null</c> bei <c>403</c>/<c>404</c>.
+    /// </summary>
+    public Task<NachweisWarnungen?> NachweisWarnungenLadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
+        LadenAsync<NachweisWarnungen>($"/api/freizeiten/{freizeitId}/nachweis-warnungen", abbruch);
 
     /// <summary><c>GET /api/ich/freizeiten</c>: die eigenen Freizeiten mit den eigenen Rollen.</summary>
     public async Task<List<MeineFreizeit>> MeineLadenAsync(CancellationToken abbruch = default)

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using Zeltlotse.SharedKernel.Mail;
 
 namespace Zeltlotse.SharedKernel;
 
@@ -25,6 +26,17 @@ public abstract class Aggregat
         ArgumentNullException.ThrowIfNull(ereignis);
         Folgenummer++;
         _ereignisse.Add(new AbgelegtesEreignis(ereignis, Folgenummer));
+    }
+
+    /// <summary>
+    /// Merkt einen Mail-Auftrag vor (AD-13): Wie ein Ereignis erhöht er die <see cref="Folgenummer"/> und landet über die
+    /// Outbox-Stufe im selben <c>SaveChanges</c> in der Outbox, mit genau einer Zustellung an <see cref="MailAuftraege.Empfaenger"/>.
+    /// </summary>
+    protected void MailVormerken(IMailAuftrag auftrag)
+    {
+        ArgumentNullException.ThrowIfNull(auftrag);
+        Folgenummer++;
+        _ereignisse.Add(new AbgelegtesEreignis(auftrag, Folgenummer));
     }
 
     internal IReadOnlyList<AbgelegtesEreignis> AbgelegteEreignisse => _ereignisse;

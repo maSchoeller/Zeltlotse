@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Zeltlotse.SharedKernel.Ereignisse;
+using Zeltlotse.SharedKernel.Mail;
 using Zeltlotse.SharedKernel.Mandanten;
 using Zeltlotse.SharedKernel.Outbox;
 
@@ -59,12 +60,16 @@ public abstract class ModulDbContext(DbContextOptions optionen, IMandantenKontex
                 };
                 Outbox.Add(nachricht);
 
-                foreach (var empfaenger in katalog.EmpfaengerFuer(typ))
+                // Ein Mail-Auftrag hat genau eine Zustellung an den festen Empfänger der Mail-Zustellung (AD-13).
+                IEnumerable<string> empfaengerNamen = abgelegt.Ereignis is IMailAuftrag
+                    ? [MailAuftraege.Empfaenger]
+                    : katalog.EmpfaengerFuer(typ).Select(e => e.Empfaenger);
+                foreach (var empfaenger in empfaengerNamen)
                 {
                     Zustellungen.Add(new Zustellung
                     {
                         EreignisId = nachricht.Id,
-                        Empfaenger = empfaenger.Empfaenger,
+                        Empfaenger = empfaenger,
                         NaechsterVersuch = jetzt,
                     });
                 }

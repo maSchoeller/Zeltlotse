@@ -6,7 +6,9 @@
 @inject FreizeitenApiClient Freizeiten
 @* Startseite der Freizeit (FR-45, AD-29): Name, Phase, Zeitraum, eigene Rolle aus dem Freizeit-Kontext, die Leitung und bis
    wann die Freizeit Einsicht in Freizeitpässe hat (Freigabefenster). Der Client setzt die Ansicht aus dem Kontext-Endpunkt
-   und dem Endpunkt der Freizeit zusammen (AD-2). Mit der erlaubten Aktion „nachweise-pruefen“ der Weg zur Prüfliste.
+   und dem Endpunkt der Freizeit zusammen (AD-2). Mit der erlaubten Aktion „nachweise-pruefen“ der Weg zur Prüfliste und,
+   wenn im Team Pflicht-Nachweise fehlen oder vor dem Ende ablaufen, eine Warnung darüber (FR-11); scheitert der Abruf der
+   Warnhinweise, entfällt sie.
    403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>@(_freizeit?.Name ?? "Freizeit") – Zeltlotse</PageTitle>
 
@@ -41,6 +43,12 @@ else
     <p>Einsicht in Freizeitpässe bis @Anzeige.Datum(_freizeit.FreigabeBis)</p>
     @if (FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.NachweisePruefen))
     {
+        @if (_personenMitWarnung > 0)
+        {
+            <Meldung Titel="Achtung" Art="MeldungArt.Warnung">
+                <p>Bei @(_personenMitWarnung == 1 ? "1 Person" : $"{_personenMitWarnung} Personen") im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.</p>
+            </Meldung>
+        }
         <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/nachweise")" Ansichtswechsel="true">Nachweise prüfen</Knopf></p>
     }
 }
@@ -50,6 +58,7 @@ else
     private FreizeitAntwort? _freizeit;
     private bool _nichtVerfuegbar;
     private bool _aktionFehler;
+    private int _personenMitWarnung;
 
     [Parameter] public Guid FreizeitId { get; set; }
 
@@ -59,6 +68,7 @@ else
         _freizeit = null;
         _nichtVerfuegbar = false;
         _aktionFehler = false;
+        _personenMitWarnung = 0;
         try
         {
             var kontext = Kontext.LadenAsync(FreizeitId);
@@ -71,6 +81,26 @@ else
         {
             // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
             _aktionFehler = true;
+            return;
+        }
+
+        if (_kontext is not null && FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.NachweisePruefen))
+        {
+            await WarnungenLadenAsync();
+        }
+    }
+
+    /// <summary>Warnhinweise zu Pflicht-Nachweisen (FR-11); scheitert der Abruf, entfällt die Meldung.</summary>
+    private async Task WarnungenLadenAsync()
+    {
+        try
+        {
+            var warnungen = await Freizeiten.NachweisWarnungenLadenAsync(FreizeitId);
+            _personenMitWarnung = warnungen?.Personen.Count(p => p.Warnungen.Count > 0) ?? 0;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _personenMitWarnung = 0;
         }
     }
 }

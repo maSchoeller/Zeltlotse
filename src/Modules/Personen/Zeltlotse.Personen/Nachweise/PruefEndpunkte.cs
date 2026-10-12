@@ -35,8 +35,9 @@ internal static class NachweisRechte
 internal sealed record PruefOrt(Guid OrganisationId, Guid? FreizeitId);
 
 /// <summary>
-/// Die sieben Prüf-Endpunkte unter <c>/api/freizeiten/{freizeitId}/personen/nachweise</c> (Leitung, FR-10, AD-9). Die Rolle prüft
-/// der Host; Personen prüft zusätzlich die Bindung an die eine prüfende Person. Der Mandant ist die Organisation der Freizeit.
+/// Die sieben Prüf-Endpunkte unter <c>/api/freizeiten/{freizeitId}/personen/nachweise</c> (Leitung, FR-10, AD-9) und „Erinnern“
+/// (FR-11, <c>POST …/erinnerungen</c>). Die Rolle prüft der Host; Personen prüft zusätzlich die Bindung an die eine prüfende
+/// Person. Der Mandant ist die Organisation der Freizeit.
 /// </summary>
 internal static class FreizeitPruefEndpunkt
 {
@@ -49,7 +50,21 @@ internal static class FreizeitPruefEndpunkt
         gruppe.MapGet("/einsichten/{einsichtId:guid}/nachweise/{nachweisId:guid}/datei", Datei);
         gruppe.MapPost("/einsichten/{einsichtId:guid}/nachweise/{nachweisId:guid}/bestaetigen", Bestaetigen);
         gruppe.MapPost("/einsichten/{einsichtId:guid}/nachweise/{nachweisId:guid}/ablehnen", Ablehnen);
+        gruppe.MapPost("/erinnerungen", Erinnern);
     }
+
+    /// <summary>
+    /// <c>POST …/erinnerungen {personId}</c> (FR-11, AD-13): <c>200 {erinnertAm}</c>; ohne Rolle in der Freizeit oder für sich selbst
+    /// <c>404</c>; heute schon erinnert (Europe/Berlin) <c>409</c>; ohne <c>personId</c> <c>400</c>. Die Mail geht über die Outbox.
+    /// </summary>
+    public static async Task<Results<Ok<NachweisErinnert>, NotFound, ProblemHttpResult>> Erinnern(
+        Guid freizeitId, NachweisErinnerungSenden anfrage, IMandantenKontext mandant, IAngemeldet angemeldet, ISender sender, CancellationToken abbruch) =>
+        await sender.Send(new NachweisErinnern(Ort(mandant, freizeitId).OrganisationId, freizeitId, FamilieAntworten.PersonId(angemeldet), anfrage.PersonId), abbruch) switch
+        {
+            ErinnerungErgebnis.Erinnert erinnert => TypedResults.Ok(new NachweisErinnert(erinnert.ErinnertAm)),
+            ErinnerungErgebnis.SchonHeute => FamilieAntworten.Konflikt("Die Person wurde heute schon erinnert."),
+            _ => TypedResults.NotFound(),
+        };
 
     public static Task<Ok<List<PruefPerson>>> Liste(Guid freizeitId, IMandantenKontext mandant, IAngemeldet angemeldet, PersonenLeseDbContext db, TimeProvider uhr, CancellationToken abbruch) =>
         PruefAbfragen.ListeAsync(Ort(mandant, freizeitId), angemeldet, db, uhr, abbruch);
@@ -130,7 +145,7 @@ internal static class PruefAbfragen
 {
     /// <summary>
     /// Personen mit Rolle in der Freizeit bzw. in einer Freizeit der Organisation, außer der eigenen, je mit der jüngsten Einsicht
-    /// in dieser Organisation.
+    /// in dieser Organisation; auf der Freizeit-Route dazu die letzte Erinnerung in dieser Freizeit (auf der Org-Route <c>null</c>).
     /// </summary>
     public static async Task<Ok<List<PruefPerson>>> ListeAsync(PruefOrt ort, IAngemeldet angemeldet, PersonenLeseDbContext db, TimeProvider uhr, CancellationToken abbruch)
     {
@@ -149,6 +164,11 @@ internal static class PruefAbfragen
                 .Select(e => new { e.Id, e.PersonId, e.PruefendePersonId, e.Status, e.AngefragtAm, e.FreigegebenBis, e.AbgeschlossenAm })
                 .ToListAsync(abbruch))
             .ToLookup(e => e.PersonId);
+        var erinnert = ort.FreizeitId is { } erinnerungsFreizeit
+            ? await db.Erinnerungen
+                .Where(e => e.FreizeitId == erinnerungsFreizeit && personIds.Contains(e.PersonId))
+                .ToDictionaryAsync(e => e.PersonId, e => (DateTimeOffset?)e.ErinnertAm, abbruch)
+            : new Dictionary<Guid, DateTimeOffset?>();
 
         return TypedResults.Ok(personIds
             .Select(id => (Id: id, Name: namen.GetValueOrDefault(id)))
@@ -176,7 +196,7 @@ internal static class PruefAbfragen
                         EinsichtZugang.Pruefbar(juengste.PruefendePersonId, p.Id, ich, rolleInRoutenFreizeit: true));
                 }
 
-                return new PruefPerson(p.Id, p.Name?.Vorname, p.Name?.Nachname, !offen, einsicht);
+                return new PruefPerson(p.Id, p.Name?.Vorname, p.Name?.Nachname, !offen, einsicht, erinnert.GetValueOrDefault(p.Id));
             })
             .ToList());
     }

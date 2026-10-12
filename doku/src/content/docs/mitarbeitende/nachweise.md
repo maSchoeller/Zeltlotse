@@ -49,6 +49,18 @@ Danach steht beim Hinweis „Freigegeben bis TT.MM.JJJJ, wartet auf Prüfung.“
 
 ![Seite „Nachweise“ am Laptop mit der Card „Erste Hilfe“; dort steht „Bestätigt · gültig bis 15.04.2027 (Jugendwerk Musterstadt)“](../../../assets/screenshots/nachweise-laptop.png)
 
+## Erinnerung per Mail
+
+Fehlt der Organisation ein Nachweis, den sie verlangt, oder läuft er vor dem Ende einer Freizeit ab, kann die Leitung dieser Freizeit eine Erinnerung schicken. Die Mail heißt „Erinnerung: Nachweise in Zeltlotse“, nennt die Leitung beim Namen und enthält einen Link auf die Seite **Nachweise**. Welcher Nachweis fehlt, steht nicht in der Mail.
+
+Was danach zu tun ist:
+
+1. Den Link aus der Mail öffnen und anmelden.
+2. Fehlende Nachweise mit **Nachweis hinzufügen** ergänzen; einen abgelaufenen Nachweis mit **Neue Datei hochladen** und dem neuen **Ausstellungsdatum** erneuern.
+3. Beim Hinweis zur Anfrage **Freigeben** und **Ja, freigeben** wählen. Die Erinnerung hat die Einsicht schon angefragt, falls noch keine Anfrage offen war.
+
+Eine Leitung erinnert höchstens einmal am Tag, und nur, wenn sie es ausdrücklich bestätigt; Zeltlotse schickt keine Erinnerungen von selbst.
+
 ## Während der Prüfung nicht änderbar
 
 Solange ein Nachweis zur Prüfung freigegeben und noch nicht entschieden ist, lassen sich **Ausgestellt am** und die Datei nicht ändern. So bestätigt die prüfende Person genau das, was sie gesehen hat. Ein Änderungsversuch zeigt „Fehler: Der Nachweis ist gerade zur Prüfung freigegeben. Ändern geht nach der Entscheidung oder nach Ablauf der Freigabe.“

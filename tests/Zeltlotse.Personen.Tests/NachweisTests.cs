@@ -170,7 +170,7 @@ public sealed class NachweisTests(PostgresContainer postgres) : NachweisTestBasi
     }
 
     [Fact]
-    public void Die_drei_Nachweisarten_haben_dieselben_Namen_und_Werte()
+    public void Alle_Nachweisarten_haben_dieselben_Namen_und_Werte()
     {
         static IEnumerable<(string, int)> Werte<T>()
             where T : struct, Enum =>
@@ -178,6 +178,9 @@ public sealed class NachweisTests(PostgresContainer postgres) : NachweisTestBasi
 
         Assert.Equal(Werte<EreignisArt>(), Werte<PersonenArt>());
         Assert.Equal(Werte<EreignisArt>(), Werte<OrgArt>());
+        // Story 1-6: die Art in Organisationen.Contracts (Nachweis-Stand) und in Api.Contracts/Freizeiten (Warnhinweise).
+        Assert.Equal(Werte<EreignisArt>(), Werte<Zeltlotse.Organisationen.Contracts.Nachweise.NachweisArt>());
+        Assert.Equal(Werte<EreignisArt>(), Werte<Zeltlotse.Api.Contracts.Freizeiten.NachweisArt>());
         Assert.Equal([("Fuehrungszeugnis", 1), ("Juleica", 2), ("ErsteHilfe", 3), ("Praeventionsschulung", 4)], Werte<EreignisArt>());
     }
 
