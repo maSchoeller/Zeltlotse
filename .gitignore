@@ -20,3 +20,6 @@ doku/.astro/
 # Sonstiges
 .DS_Store
 Thumbs.db
+
+# Von dotnet run erzeugte Startprofile (zufällige Ports)
+src/Zeltlotse.App/Properties/launchSettings.json

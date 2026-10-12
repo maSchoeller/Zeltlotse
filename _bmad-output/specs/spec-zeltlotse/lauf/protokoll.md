@@ -4,6 +4,8 @@ Gepflegt vom Orchestrator. Eine Zeile je Durchlauf, nur anhängen. Maßgeblich f
 
 Branch: `mvp` · Start: 2026-10-11 12:30 · Ende: –
 
+Test-Tempo ab 2-3 (Vorgabe von Marvin, 2026-10-12): Story-Sitzungen testen während der Umsetzung nur gezielt (betroffenes Testprojekt + Architekturtests) und lassen die ganze Lösung inkl. Playwright und Doku-Build nur einmal am Ende laufen (Regel in `_bmad/custom/bmad-build-auto.toml`). Die Regression des Orchestrators nach jeder Story ist schnell (Build + Architektur- und UI-Tests); die volle Regression (ganze Lösung + Doku-Build) läuft nach jeder dritten Story, am Ende jedes Epics und vor 7-1.
+
 ## Durchläufe
 
 | Zeit | Story | Ergebnis | Folgedurchlauf | Regression (Tests / Doku-Build) | Commit | Bemerkung |
