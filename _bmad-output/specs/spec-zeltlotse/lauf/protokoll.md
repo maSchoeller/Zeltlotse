@@ -21,6 +21,7 @@ Branch: `mvp` · Start: 2026-10-11 12:30 · Ende: –
 | 2026-10-12 10:40 | 1-6 | done | nein (nicht empfohlen) | grün 1191/1191 / grün (21 Seiten) | 60b6472 | –  |
 | 2026-10-12 12:39 | 1-7 | done | ja (done, keiner mehr) | grün 1256/1256 / grün (23 Seiten) | 6796ecb | –  |
 | 2026-10-12 14:40 | 2-1 | done | ja (done, keiner mehr) | grün 1330/1330 / grün (25 Seiten) | 8004600 | Auskunft-Screenshot (Laptop) zeigte das neue Profilfeld Herkunft noch nicht; in der Regression nachgezogen |
+| 2026-10-12 17:58 | 2-2 | done (2. Versuch) | ja (done, keiner mehr) | grün 1409/1409 / grün (27 Seiten) | 87d3104 | 1. Versuch abgeschnitten: claude -p beendete den Umsetzungs-Subagenten nach 10 Min. Wartezeit; Story-Skript setzt jetzt CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0 (557f007). Danach Lauf auf Wunsch von Marvin pausiert, weiter mit 2-3 |
 
 ## Entscheidungen im Lauf
 
