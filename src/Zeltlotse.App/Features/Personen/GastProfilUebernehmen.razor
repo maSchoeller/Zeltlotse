@@ -51,7 +51,7 @@ else if (!_aktionFehler)
     private bool _uebertraegt;
     private bool _aktionFehler;
 
-    /// <summary>Das Gast-Token aus dem Link; es verlässt die Seite nur im Körper des POST.</summary>
+    /// <summary>Das Gast-Token aus dem Link; an die API geht es nur im Körper des POST.</summary>
     [Parameter] public string Token { get; set; } = "";
 
     protected override async Task OnInitializedAsync()

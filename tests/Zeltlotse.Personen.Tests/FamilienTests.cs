@@ -7,6 +7,7 @@ using Zeltlotse.Api.Contracts.Personen;
 using Zeltlotse.Freizeiten.Contracts.Events;
 using Zeltlotse.Personen.Daten;
 using Zeltlotse.Personen.Familien;
+using Zeltlotse.Personen.Freigaben;
 using Zeltlotse.Personen.Freizeitrollen;
 using Zeltlotse.Personen.Profil;
 using Zeltlotse.SharedKernel.Commands;
@@ -355,7 +356,7 @@ public sealed class FamilienTests(PostgresContainer postgres) : IAsyncLifetime
         Assert.IsType<Uebernahme.Uebernommen>(await UebernehmenAsync(neu.Token, PaulMail));
     }
 
-    public static TheoryData<string> EigeneProfile => ["Vorname", "Nachname", "Freizeit-Rolle", "Elternteil"];
+    public static TheoryData<string> EigeneProfile => ["Vorname", "Nachname", "Freizeit-Rolle", "Freigabe", "Elternteil"];
 
     [Theory]
     [MemberData(nameof(EigeneProfile))]
@@ -373,6 +374,10 @@ public sealed class FamilienTests(PostgresContainer postgres) : IAsyncLifetime
                 break;
             case "Freizeit-Rolle":
                 await RolleZustellenAsync(Paul);
+                break;
+            case "Freigabe":
+                // Eine eigene Anmeldung (z. B. über den Link für Mitarbeitende) hinterlässt eine Freigabe, auch ohne Namen.
+                await FreigabeZustellenAsync(Paul);
                 break;
             case "Elternteil":
                 await SendenAsync(new ElternteilEinladenCommand(Paul, "irgendwer@example.org"));
@@ -468,6 +473,19 @@ public sealed class FamilienTests(PostgresContainer postgres) : IAsyncLifetime
         scope.ServiceProvider.GetRequiredService<MandantenKontext>().Setzen(organisation);
         await scope.ServiceProvider.GetRequiredService<ISender>().Send(
             FreizeitRolleUebernehmen.Aus(new Umschlag(Guid.CreateVersion7(), DateTimeOffset.UtcNow, organisation, freizeit, 1), new FreizeitRolleGeaendert(freizeit, person, FreizeitRolleArt.Leitung)),
+            Abbruch);
+    }
+
+    private async Task FreigabeZustellenAsync(Guid person)
+    {
+        var organisation = Guid.CreateVersion7();
+        var freizeit = Guid.CreateVersion7();
+        await using var scope = _factory.Services.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<MandantenKontext>().Setzen(organisation);
+        await scope.ServiceProvider.GetRequiredService<ISender>().Send(
+            FreigabeAnlegen.Aus(
+                new Umschlag(Guid.CreateVersion7(), DateTimeOffset.UtcNow, organisation, freizeit, 1),
+                new AnmeldungEingegangen(Guid.CreateVersion7(), freizeit, person, AnmeldungArt.Mitarbeitende, DateTimeOffset.UtcNow.AddDays(30))),
             Abbruch);
     }
 

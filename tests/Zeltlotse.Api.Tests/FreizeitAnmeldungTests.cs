@@ -192,6 +192,21 @@ public sealed class FreizeitAnmeldungTests(PostgresContainer postgres) : IAsyncL
     }
 
     [Fact]
+    public async Task Die_Eingangsmail_nennt_das_spaetere_Ende_wenn_die_Gast_Familie_schon_ein_laengeres_Freigabefenster_hat()
+    {
+        var (token, kind) = await GastAsync();
+        // Z endet am 03.09.2027, sein Freigabefenster also nach dem von X.
+        Assert.Equal(HttpStatusCode.Created, (await GastAnmeldenAsync(_tnZ, token, kind)).StatusCode);
+        await _factory.OutboxJetztZustellenAsync(Abbruch);
+
+        Assert.Equal(HttpStatusCode.Created, (await GastAnmeldenAsync(_tnX, token, kind)).StatusCode);
+
+        var mails = _factory.Mails.An(Lina);
+        Assert.Equal(2, mails.Count);
+        Assert.Contains("Der Gast-Link gilt bis 03.10.2027.", mails[1].Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Weiteres_Kind_mit_ungueltigem_Gast_Token_ergibt_404_und_einen_Protokolleintrag()
     {
         var vorher = await ProtokollAsync(_verbindung, SicherheitsEreignisArt.LinkEinloesungFehlgeschlagen);
@@ -428,6 +443,33 @@ public sealed class FreizeitAnmeldungTests(PostgresContainer postgres) : IAsyncL
         Assert.Equal(1L, await WertAsync<long>(_verbindung, "SELECT count(*) FROM personen.person WHERE \"Id\" = @p", ("p", thomasId)));
         Assert.Equal(1L, await WertAsync<long>(_verbindung, "SELECT count(*) FROM personen.gast_zugang WHERE \"UebernommenAm\" IS NULL"));
         Assert.Equal(HttpStatusCode.OK, (await _anonym.GetAsync(GastPfad(token), Abbruch)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Ein_Konto_ohne_Namen_mit_eigener_Anmeldung_oder_Freizeit_Rolle_bekommt_409_und_bleibt_bestehen()
+    {
+        var (token, _) = await GastAsync();
+        // Ohne Namen über den Link für Mitarbeitende selbst angemeldet: Nach der Zustellung besteht eine Freigabe.
+        using var ohneNamen = await AngemeldeterClientAsync(_factory, "ohne.namen@example.org");
+        Assert.Equal(HttpStatusCode.OK, (await PostAsync(ohneNamen, "/api/ich/profil")).StatusCode);
+        var selbst = await PersonIdAsync(_verbindung, "ohne.namen@example.org");
+        Assert.Equal(HttpStatusCode.Created, (await AnmeldenAsync(ohneNamen, _maX, selbst)).StatusCode);
+        await _factory.OutboxJetztZustellenAsync(Abbruch);
+        Assert.Equal(1L, await WertAsync<long>(_verbindung, "SELECT count(*) FROM personen.freigabe WHERE \"PersonId\" = @p", ("p", selbst)));
+        // Miriam hat als Leitung von X und Z Freizeit-Rollen, aber weder Profil mit Namen noch Freigabe: Bei ihr zählen nur die Rollen.
+        var miriam = await PersonIdAsync(_verbindung, Miriam);
+        Assert.Equal(2L, await WertAsync<long>(_verbindung, "SELECT count(*) FROM personen.freizeit_rolle WHERE \"PersonId\" = @p", ("p", miriam)));
+        Assert.Equal(0L, await WertAsync<long>(_verbindung, "SELECT count(*) FROM personen.freigabe WHERE \"PersonId\" = @p", ("p", miriam)));
+        Assert.Equal(0L, await WertAsync<long>(_verbindung, "SELECT count(*) FROM personen.person WHERE \"Id\" = @p AND \"Vorname\" IS NOT NULL", ("p", miriam)));
+
+        using var mitFreigabe = await PostAsync(ohneNamen, "/api/ich/gastprofil/uebernehmen", new GastprofilUebernehmen(token));
+        using var mitRolle = await PostAsync(_miriam, "/api/ich/gastprofil/uebernehmen", new GastprofilUebernehmen(token));
+
+        Assert.Equal(HttpStatusCode.Conflict, mitFreigabe.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, mitRolle.StatusCode);
+        Assert.Equal(1L, await WertAsync<long>(_verbindung, "SELECT count(*) FROM personen.person WHERE \"Id\" = @p", ("p", selbst)));
+        Assert.Equal(2L, await WertAsync<long>(_verbindung, "SELECT count(*) FROM personen.freizeit_rolle WHERE \"PersonId\" = @p", ("p", miriam)));
+        Assert.Equal(1L, await WertAsync<long>(_verbindung, "SELECT count(*) FROM personen.gast_zugang WHERE \"UebernommenAm\" IS NULL"));
     }
 
     // ---------- Mit Konto ----------

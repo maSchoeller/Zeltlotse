@@ -14,7 +14,9 @@ Ins Team einer Freizeit kommt, wer sich über den **Anmeldelink für Mitarbeiten
 
 Die Seite sieht aus wie die Anmeldung mit Konto für Eltern, nur ohne die Auswahl einer Person (siehe [Kind anmelden](/eltern/kind-anmelden/#mit-konto-anmelden)):
 
-![Seite „Anmeldung“ mit Konto am Handy mit den Teilnahmebedingungen und dem Knopf „Anmeldung absenden“](../../../assets/screenshots/anmeldung-mit-konto-handy.png)
+![Seite „Anmeldung“ für das Team am Handy: „Angemeldet wird die eigene Person für das Team der Freizeit.“, die Teilnahmebedingungen und der Knopf „Anmeldung absenden“](../../../assets/screenshots/anmeldung-team-handy.png)
+
+![Seite „Anmeldung“ für das Team am Laptop](../../../assets/screenshots/anmeldung-team-laptop.png)
 
 Eine Mail gibt es bei dieser Anmeldung nicht. Die Rechte im Team entstehen erst, wenn die Leitung die Anmeldung bestätigt. Danach am besten gleich die [Nachweise](/mitarbeitende/nachweise/) am eigenen Profil hochladen.
 

@@ -77,9 +77,10 @@ internal sealed class PersonLoeschenHandler(PersonenDbContext db) : ICommandHand
                 continue;
             }
 
+            // Erst die Zeile, dann die Sperre je Person: dieselbe Reihenfolge wie „Weiteres Kind“ (GastKindAnlegen), sonst droht ein Deadlock.
+            await db.Database.ExecuteSqlAsync($"SELECT 1 FROM personen.gast_zugang WHERE \"Id\" = {zugang.Id} FOR UPDATE", cancellationToken);
             await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({zugang.ElternPersonId.ToString()}, 0))", cancellationToken);
             // Nach den Sperren neu prüfen: Eine Übernahme (sperrt die Zeile) oder eine neue Freigabe kann inzwischen eingetroffen sein.
-            await db.Database.ExecuteSqlAsync($"SELECT 1 FROM personen.gast_zugang WHERE \"Id\" = {zugang.Id} FOR UPDATE", cancellationToken);
             await db.Entry(zugang).ReloadAsync(cancellationToken);
             if (zugang.UebernommenAm is not null
                 || (await GastFamilie.LesenAsync(db.Elternteile, db.Personen, db.Freigaben, zugang, cancellationToken)).GueltigBis > command.Jetzt)

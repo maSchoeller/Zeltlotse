@@ -75,8 +75,9 @@ internal sealed class ProfilUebernehmenHandler(PersonenDbContext db, ISicherheit
 
         var eigene = await FamilienSperre.PersonAsync(db.Personen, command.PersonId, cancellationToken);
         if (eigene is { OhneNamen: false }
-            // Die Liste der Freizeit-Rollen ist organisationseigen; hier zählt jede Organisation (eigene Person, AD-26).
+            // Freizeit-Rollen und Freigaben sind organisationseigen; hier zählt jede Organisation (eigene Person, AD-26).
             || await db.FreizeitRollen.IgnoreQueryFilters().AnyAsync(r => r.PersonId == command.PersonId, cancellationToken)
+            || await db.Freigaben.IgnoreQueryFilters().AnyAsync(f => f.PersonId == command.PersonId, cancellationToken)
             || await db.Elternteile.AnyAsync(e => e.PersonId == command.PersonId, cancellationToken))
         {
             return new Uebernahme.EigenesProfil();

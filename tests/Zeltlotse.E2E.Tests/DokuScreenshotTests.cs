@@ -727,6 +727,27 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await BildAsync(seite, "anmeldung-mit-konto", geraet);
     }
 
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Anmeldung_Fuer_Das_Team(string geraet)
+    {
+        var link = await E2EHilfe.AnmeldelinkAsync(host, teilnehmende: false);
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, PruefMail);
+        await seite.GotoAsync(new Uri(host.Adresse, $"/app/anmeldung/{E2EHilfe.Token(link)}").ToString());
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Anmeldung", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByText("Angemeldet wird die eigene Person für das Team der Freizeit.")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("fieldset")).ToHaveCountAsync(0);
+        await Assertions.Expect(seite.GetByLabel("Teilnahmebedingungen gelesen und bestätigt *")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Anmeldung absenden" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "anmeldung-team", geraet);
+    }
+
     /// <summary>Öffnet die Freizeitseite über den Anmeldelink für Teilnehmende und tippt „Anmelden“.</summary>
     private async Task GastFormularAsync(IPage seite)
     {

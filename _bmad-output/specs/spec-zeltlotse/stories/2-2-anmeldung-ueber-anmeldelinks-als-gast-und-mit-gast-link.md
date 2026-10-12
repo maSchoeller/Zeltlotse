@@ -5,7 +5,7 @@ created: '2026-10-12'
 status: 'done'
 baseline_revision: '4bc2089887888a5246f37d59f5587435f79fa77a'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/specs/spec-zeltlotse/SPEC.md'
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
@@ -222,6 +222,44 @@ Abkürzungen: **Frz** = `src/Modules/Freizeiten/Zeltlotse.Freizeiten`, **Per** =
   - `[false]` `[reject]` (Intent h) „Fremde Organisation → 404“ für das PATCH fehlt — besteht seit 2-1 (`Team_bekommt_403_ohne_Rolle_fremde_Organisation_und_unbekannte_Freizeit_404`) für denselben Endpunkt.
   - `[false]` `[reject]` (Intent i) Texte erwähnen die Zusage — der Ausgebucht-Satz ist von der Matrix aus 2-1 verlangt; der Demo-Text ist Inhalt der Leitung und verspricht keine ausgeschlossene Funktion.
 
+### 2026-10-12 — Review pass (Folgedurchlauf)
+- verdicts: 34 findings — high 0, medium 6, low 20, false 7, maybe-false 1
+- findings:
+  - `[medium]` `[defer]` (Blind) Zwei Aufrufe ohne gemeinsame Transaktion, Wiederholung erzeugt verwaiste/doppelte Gast-Familien — carried: wie Eintrag „doppelte Gast-Anmeldung“ in `deferred`.
+  - `[low]` `[reject]` (Blind) Eingangsmail nach dem Commit ohne Fehlerbehandlung — carried: gleiches Muster wie alle selbst angeforderten Mails.
+  - `[low]` `[reject]` (Blind) `POST /api/personen/oeffentlich/gaeste` ohne Anmeldelink-Prüfung — carried: so im Approach festgelegt.
+  - `[false]` `[reject]` (Blind) Gast-Mail nie geprüft, Übernahme vergleicht keine Mail — der Gast-Link ist laut AD-11 selbst der Berechtigungsnachweis; die Mail geht nur an die selbst eingetragene Adresse, ohne Token kann niemand übernehmen.
+  - `[low]` `[reject]` (Blind) Bestätigung der Teilnahmebedingungen speichert nur den Zeitpunkt, keinen Textstand — so in Matrix und Design Notes verlangt (`TeilnahmebedingungenBestaetigtAm`); Versionierung bräuchte ein neues Datenmodell.
+  - `[false]` `[reject]` (Blind) Freigabefenster folgen späteren Datumsänderungen nicht — `ErsterTag`/`LetzterTag` werden nur beim Anlegen gesetzt (`Domaene/Freizeit.cs:79`); das Intervall ist laut AD-8 beim Anlegen festgeschrieben.
+  - `[low]` `[reject]` (Blind) Abgelaufene Freigaben bleiben bis zur Löschung der Person liegen — real, enthalten nur Kennungen und gewähren nach „gültig bis“ nichts; eine eigene Frist wäre eine neue Löschregel (Ende/Absage kommt mit 2-3).
+  - `[false]` `[reject]` (Blind) Eltern sehen Anmeldungen volljähriger Kinder — carried: volljährige Kinder ohne Übergabe gehören weiter zur Familie (FR-4).
+  - `[low]` `[reject]` (Blind) Auskunft „Freigaben“ nennt keine Freizeit — Personen kennt keine Freizeitnamen, der Zusammenhang steht im Abschnitt von Freizeiten; Fix bräuchte modulübergreifendes Lesen.
+  - `[low]` `[reject]` (Blind) Ohne Haken prüft das Formular nur Pflichtangaben — weitere Fehler erscheinen beim nächsten Absenden; Fix bräuchte einen Prüf-Endpunkt ohne Speichern.
+  - `[low]` `[patch]` (Blind) Kommentar „verlässt die Seite nur im Körper des POST“ in `GastProfilUebernehmen.razor` irreführend — die Adresse `/app/gast/{token}/konto` gibt die Matrix vor; Kommentar korrigiert.
+  - `[low]` `[reject]` (Blind) Antwortseite nach „Weiteres Kind“ zeigt die Mail aus dem versteckten Feld — carried: betrifft nur die eigene Anzeige.
+  - `[low]` `[reject]` (Blind) Fremde PersonId mit Konto ohne Protokolleintrag — kein Token-Fehler; die Protokollpflicht betrifft Link-Einlösungen; 404 verrät nichts.
+  - `[low]` `[reject]` (Blind) Löschlauf für Gast-Profile skaliert nicht, ein Fehler blockiert alle — carried: gleiches Muster wie `PersonenFristenLoeschen`.
+  - `[low]` `[reject]` (Blind) Familienübersicht scheitert ganz bei Fehler der Anmeldungen — carried.
+  - `[medium]` `[patch]` (Blind) Seite „Für das Team anmelden“ zeigt den Eltern-Screenshot mit Personenauswahl — neue Theory `Anmeldung_Fuer_Das_Team` (Handy und Laptop, axe) mit dem Link für Mitarbeitende; `anmeldung-team-*.png` in `mitarbeitende/anmelden.md` eingebunden.
+  - `[low]` `[reject]` (Blind) Allgemein fehlende Tests für Fehler- und Wettlaufpfade — Sammelbefund ohne eigene Fehlwirkung; konkrete Lücken siehe Verification-Zeilen.
+  - `[medium]` `[defer]` (Edge) Neu laden/Doppelklick erzeugt doppelte Gast-Familien — carried (`deferred`).
+  - `[low]` `[reject]` (Edge) Mailfehler ergibt 500 — carried.
+  - `[low]` `[reject]` (Edge) Zweiter Aufruf scheitert, verwaistes Gast-Profil — carried.
+  - `[low]` `[patch]` (Edge) Deadlock: „Weiteres Kind“ sperrt erst die Zeile des Gast-Zugangs, dann die Personen-Sperre, der Löschlauf umgekehrt — real (`GastAnlegen.cs` gegen `PersonLoeschen.cs`); der Löschlauf nimmt jetzt erst die Zeile, dann die Sperre; die Übernahme sperrt eine andere Person und bleibt verträglich.
+  - `[low]` `[reject]` (Edge) Gast-Kind wird während der Gültigkeit volljährig — carried.
+  - `[maybe-false]` `[reject]` (Edge) Gast-Anmeldung im selben Moment, in dem der Löschlauf die Familie löscht — nur genau beim Ablauf des Gast-Links möglich; zu klären wäre, ob `PersonGeloescht` vor der Anmeldung verarbeitet wird; wäre höchstens low.
+  - `[low]` `[reject]` (Edge) 404 aus dem zweiten Aufruf erscheint als „Anmeldelink ungültig“ — das Gast-Token wurde unmittelbar davor geprüft bzw. erzeugt, 404 heißt dort praktisch immer Anmeldelink; Unterscheidung bräuchte einen Zusatzaufruf.
+  - `[medium]` `[patch]` (Verification, gap) 409-Zweige Freigabe und Freizeit-Rolle der Gast-Übernahme ungetestet — Test `Ein_Konto_ohne_Namen_mit_eigener_Anmeldung_oder_Freizeit_Rolle_bekommt_409_und_bleibt_bestehen` ergänzt.
+  - `[medium]` `[patch]` (Verification, gap) Profil-Übergabe mit 18 (`ProfilUebernehmenHandler`) prüft keine Freigaben; ein namenloses Konto mit eigener Anmeldung würde gelöscht — Freigabe-Prüfung wie in der Gast-Übernahme ergänzt, Fall „Freigabe“ in `FamilienTests.Eigenes_Profil_mit_Inhalt_…`.
+  - `[low]` `[patch]` (Verification, gap) „gilt bis“ der Eingangsmail nimmt das spätere Ende, nur ein Fall getestet — Test `Die_Eingangsmail_nennt_das_spaetere_Ende_…` (erst Z, dann X; die Mail nennt 03.10.2027).
+  - `[low]` `[reject]` (Verification, other) Übernahme, bevor die Freigabe einer eigenen Anmeldung zugestellt ist — carried: Zeitfenster von Sekunden.
+  - `[low]` `[reject]` (Intent) „Konto erstellen“ nur über API und bUnit geprüft, Neu-Anmelden nötig — carried (Intent d).
+  - `[false]` `[reject]` (Intent) Anmeldung mit Konto im Browser nicht bis zum Absenden — der Browser-Test ist laut Intent nur für die Gast-Anmeldung verlangt; Absenden ist per API und bUnit geprüft.
+  - `[medium]` `[patch]` (Intent) Mitarbeitenden-Doku verwendet den Eltern-Screenshot — gruppiert mit dem Blind-Befund zur Team-Seite.
+  - `[false]` `[reject]` (Intent) Status der Familienübersicht im Browser nur über Demo-Daten — die Demo-Anmeldung läuft über denselben Command; der Intent verlangt keinen weiteren Browser-Test.
+  - `[false]` `[reject]` (Intent) Mandantenfilter an weiteren Stellen umgangen — carried (Intent e).
+  - `[false]` `[reject]` (Intent) Testgetrieben und Doku-Build im Diff nicht sichtbar — Prozessangaben; Doku-Build und Tests liefen in diesem Durchlauf grün.
+
 ## Design Notes
 
 Entscheidungen im autonomen Lauf. Spec und Architektur lassen sie offen; gewählt ist jeweils die einfachste Lösung.
@@ -291,3 +329,25 @@ Status: done
 - Doppelte Gast-Anmeldungen beim erneuten Absenden (zurückgestellt).
 - Selbst angeforderte Eingangsmail ohne Wiederholung bei Mailfehlern (gleiches Muster wie alle Token-Mails).
 - Nach der Übernahme ist ein Neu-Anmelden nötig, bevor die Familienübersicht die Kinder zeigt.
+
+### Folgedurchlauf 2026-10-12
+
+**Review (34 Befunde: hoch 0, mittel 6, gering 20, falsch 7, vielleicht-falsch 1):**
+- Patches (gepatchte Einträge nach Eintragsverdikt: mittel 3, gering 3):
+  - `ProfilUebernehmen.cs`: Die Profil-Übergabe mit 18 zählt jetzt auch eine Freigabe als „eigenes Profil mit Inhalt“ (409), damit ein namenloses Konto mit eigener Anmeldung nicht gelöscht wird.
+  - `PersonLoeschen.cs`: Der Löschlauf für Gast-Profile sperrt zuerst die Zeile des Gast-Zugangs, dann die Person; gleiche Reihenfolge wie „Weiteres Kind“, kein Deadlock.
+  - `GastProfilUebernehmen.razor`: Kommentar zum Token korrigiert.
+  - Tests: 409 bei Freigabe und Freizeit-Rolle (Gast-Übernahme), Fall „Freigabe“ in der Profil-Übergabe, „gilt bis“ der Eingangsmail mit späterem Freigabefenster.
+  - Doku: eigener Screenshot `anmeldung-team-{handy,laptop}.png` (neue Theory `Anmeldung_Fuer_Das_Team` mit axe) in `mitarbeitende/anmelden.md`.
+- Zurückgestellt: nichts Neues (doppelte Gast-Anmeldung bleibt in `deferred`).
+- Verworfen: alle übrigen Befunde mit Begründung im Review Triage Log (Folgedurchlauf).
+
+**Folge-Review empfohlen: nein.** Folgedurchlauf ohne gepatchten hohen Befund; die Arbeit ist konvergiert.
+
+**Verifikation:**
+- `dotnet build Zeltlotse.slnx --no-incremental`: 0 Fehler, 0 Warnungen.
+- `dotnet test`: 1409 Tests, 0 fehlgeschlagen (einschließlich Architektur-, Ablauf-, E2E-, Screenshot- und Doku-Tests).
+- `npm run build` in `doku/`: 27 Seiten, fehlerfrei (nur die bekannte Sitemap-Warnung).
+- Screenshot `anmeldung-team-handy.png` angesehen; `app-offline-*` und `vertrauensseite-laptop` mit reinem Rendering-Rauschen zurückgesetzt.
+
+**Restrisiken:** wie oben; zusätzlich bleiben abgelaufene Freigaben bis zur Löschung der Person liegen (nur Kennungen, kein Zugriff).
