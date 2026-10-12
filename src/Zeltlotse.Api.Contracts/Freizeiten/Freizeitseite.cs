@@ -39,12 +39,14 @@ public static class AnmeldelinkArten
 /// Version (AD-19) und die beiden Anmeldelinks.
 /// </summary>
 /// <param name="Anmeldelinks">Teilnehmende vor Mitarbeitende; fehlt ein Link, steht er nicht in der Liste.</param>
+/// <param name="Teilnahmebedingungen">Text der Teilnahmebedingungen, der im Anmeldeformular steht (Story 2-2).</param>
 public sealed record FreizeitseiteEinstellungen(
     uint Version,
     string? Beschreibung,
     string? Ort,
     int? HoechstzahlTeilnehmende,
-    IReadOnlyList<Anmeldelink> Anmeldelinks);
+    IReadOnlyList<Anmeldelink> Anmeldelinks,
+    string? Teilnahmebedingungen = null);
 
 /// <summary>Ein Anmeldelink mit seiner vollständigen Adresse (öffentliche Adresse plus <c>/freizeit/{token}</c>).</summary>
 public sealed record Anmeldelink(AnmeldelinkArt Art, string Adresse);
@@ -55,6 +57,7 @@ public enum FreizeitseiteFeld
     Beschreibung,
     Ort,
     HoechstzahlTeilnehmende,
+    Teilnahmebedingungen,
 }
 
 /// <summary>
@@ -70,9 +73,13 @@ public static class FreizeitseiteFelder
 
     public const string HoechstzahlTeilnehmende = "hoechstzahlTeilnehmende";
 
+    public const string Teilnahmebedingungen = AnmeldungFelder.Teilnahmebedingungen;
+
     public const int BeschreibungMaximaleLaenge = 2000;
 
     public const int OrtMaximaleLaenge = 100;
+
+    public const int TeilnahmebedingungenMaximaleLaenge = AnmeldungFelder.TeilnahmebedingungenMaximaleLaenge;
 
     public const int HoechstzahlMindestens = 1;
 
@@ -83,6 +90,7 @@ public static class FreizeitseiteFelder
         FreizeitseiteFeld.Beschreibung => Beschreibung,
         FreizeitseiteFeld.Ort => Ort,
         FreizeitseiteFeld.HoechstzahlTeilnehmende => HoechstzahlTeilnehmende,
+        FreizeitseiteFeld.Teilnahmebedingungen => Teilnahmebedingungen,
         _ => throw new ArgumentOutOfRangeException(nameof(feld), feld, null),
     };
 }
@@ -94,6 +102,7 @@ public static class FreizeitseiteFelder
 /// <param name="Art">Art des aufgerufenen Anmeldelinks.</param>
 /// <param name="Ausgebucht">Nur beim Link für Teilnehmende: bestätigte Teilnehmende erreichen die Höchstzahl.</param>
 /// <param name="Team">Leitung vor Team; nur Vorname, Initialen, Rolle und Herkunft.</param>
+/// <param name="Teilnahmebedingungen">Text der Teilnahmebedingungen für das Anmeldeformular; leer, wenn keine hinterlegt sind.</param>
 public sealed record Freizeitseite(
     string Organisation,
     string Name,
@@ -103,7 +112,8 @@ public sealed record Freizeitseite(
     string? Beschreibung,
     AnmeldelinkArt Art,
     bool Ausgebucht,
-    IReadOnlyList<TeamPerson> Team);
+    IReadOnlyList<TeamPerson> Team,
+    string? Teilnahmebedingungen = null);
 
 /// <summary>Eine Person des Teams auf der Freizeitseite: kein Nachname, keine Mail-Adresse, keine Kennung.</summary>
 public sealed record TeamPerson(string Vorname, string Initialen, FreizeitRolle Rolle, string? Herkunft);

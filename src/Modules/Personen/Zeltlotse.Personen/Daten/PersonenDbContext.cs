@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Zeltlotse.Api.Contracts.Personen;
 using Zeltlotse.Personen.Familien;
+using Zeltlotse.Personen.Freigaben;
+using Zeltlotse.Personen.Gaeste;
 using Zeltlotse.Personen.Freizeitrollen;
 using Zeltlotse.Personen.Nachweise;
 using Zeltlotse.Personen.Profil;
@@ -42,6 +44,10 @@ internal sealed class PersonenDbContext(DbContextOptions<PersonenDbContext> opti
 
     public DbSet<EinsichtProtokollEintrag> EinsichtProtokoll => Set<EinsichtProtokollEintrag>();
 
+    public DbSet<GastZugang> GastZugaenge => Set<GastZugang>();
+
+    public DbSet<Freigabe> Freigaben => Set<Freigabe>();
+
     protected override string Schema => PersonenModul.Schema;
 
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => PersonenModell.Konfigurieren(modelBuilder);
@@ -74,6 +80,10 @@ internal sealed class PersonenLeseDbContext(DbContextOptions<PersonenLeseDbConte
     public DbSet<NachweisErinnerung> Erinnerungen => Set<NachweisErinnerung>();
 
     public DbSet<EinsichtProtokollEintrag> EinsichtProtokoll => Set<EinsichtProtokollEintrag>();
+
+    public DbSet<GastZugang> GastZugaenge => Set<GastZugang>();
+
+    public DbSet<Freigabe> Freigaben => Set<Freigabe>();
 
     protected override string Schema => PersonenModul.Schema;
 
@@ -215,6 +225,28 @@ internal static class PersonenModell
                 .HasFilter($"\"LesendePersonId\" <> '{GeloeschtePerson.Id}'")
                 .HasDatabaseName("IX_einsicht_protokoll_je_tag");
             e.HasIndex(t => t.BetroffenePersonId);
+        });
+
+        // AD-11, FR-17: Gast-Link einer Gast-Familie; nur der Hash des Tokens, je Elternteil höchstens einer.
+        modelBuilder.Entity<GastZugang>(e =>
+        {
+            e.ToTable("gast_zugang");
+            e.Property(t => t.Id).ValueGeneratedNever();
+            e.Property(t => t.Mail).HasMaxLength(MailAdresse.MaximaleLaenge);
+            e.Property(t => t.TokenHash).HasColumnType("bytea");
+            e.HasIndex(t => t.TokenHash).IsUnique();
+            e.HasIndex(t => t.ElternPersonId).IsUnique();
+        });
+
+        // AD-8: Freigabe (organisationseigen, Mandantenfilter); je Anmeldung höchstens eine.
+        modelBuilder.Entity<Freigabe>(e =>
+        {
+            e.ToTable("freigabe");
+            e.Property(t => t.Id).ValueGeneratedNever();
+            e.Property(t => t.Stufe).HasConversion<short>();
+            e.HasIndex(t => t.AnmeldungId).IsUnique();
+            e.HasIndex(t => t.PersonId);
+            e.HasIndex(t => new { t.OrganisationId, t.FreizeitId });
         });
     }
 }

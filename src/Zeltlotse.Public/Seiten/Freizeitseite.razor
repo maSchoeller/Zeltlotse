@@ -7,8 +7,9 @@
 @* Öffentliche Freizeitseite (FR-15, FR-67, EXPERIENCE.md → Öffentliche Seiten, Mock key-gast-anmeldung.html): oben der Name der
    Organisation, Dachzeile mit dem Zeitraum, Name, Ort und Beschreibung, „Ausgebucht“ (nur über den Link für Teilnehmende), das
    Team mit Avatar und der Weg zur Vertrauensseite. Statisch gerendert, ohne Skript; die Daten kommen über die API (AD-5). Ein
-   ungültiger Link ergibt Status 404 mit dem Hinweis (AnmeldelinkUngueltig). Anmelden kommt mit Story 2-2. Suchmaschinen nehmen die
-   Seite nicht auf (noindex): sie nennt das Team, und ihre Adresse ist ein Anmeldelink. *@
+   ungültiger Link ergibt Status 404 mit dem Hinweis (AnmeldelinkUngueltig). „Anmelden“ führt beim Link für Teilnehmende zum
+   Gast-Formular, darunter „Mit Konto anmelden“ in die Web-App; beim Link für Mitarbeitende direkt in die Web-App (Story 2-2, Gast nur
+   für Teilnehmende). Suchmaschinen nehmen die Seite nicht auf (noindex): sie nennt das Team, und ihre Adresse ist ein Anmeldelink. *@
 
 @if (_zuViele)
 {
@@ -36,6 +37,16 @@ else if (_seite is not null)
                 <p><Status Wort="Ausgebucht" Art="StatusArt.Offen" /></p>
                 <p>Anmelden ist trotzdem möglich, eine Zusage gibt es erst, wenn ein Platz frei wird.</p>
             </Card>
+        }
+
+        @if (_seite.Art == Zeltlotse.Api.Contracts.Freizeiten.AnmeldelinkArt.Teilnehmende)
+        {
+            <p><Knopf Href="@($"/freizeit/{Token}/anmelden")" Block="true" Ansichtswechsel="true">Anmelden</Knopf></p>
+            <p><a href="@($"/app/anmeldung/{Token}")">Mit Konto anmelden</a></p>
+        }
+        else
+        {
+            <p><Knopf Href="@($"/app/anmeldung/{Token}")" Block="true" Ansichtswechsel="true">Anmelden</Knopf></p>
         }
 
         @if (_seite.Team.Count > 0)

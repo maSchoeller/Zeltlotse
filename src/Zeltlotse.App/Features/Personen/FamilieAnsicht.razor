@@ -1,11 +1,14 @@
 @page "/familie"
 @using System.Globalization
 @using Zeltlotse.Api.Contracts.Personen
+@using Zeltlotse.Api.Contracts.Freizeiten
 @inject PersonenApiClient Personen
-@* Familie (FR-3, FR-4, EXPERIENCE.md → Familienübersicht, NS-11): je Kind eine Card mit Geburtsdatum und „Angaben ändern“;
-   nur bei einem volljährigen Kind (der Server rechnet, der Client nie) die Übergabe mit Inline-Bestätigung. Darunter „Kind
-   hinzufügen“, die Eltern mit offenen Einladungen und, solange es weniger als 2 Eltern gibt, „Zweiten Elternteil
-   hinzufügen“. Freizeiten und Anmeldestatus kommen mit der Anmeldung. Ohne frische Anmeldung (401 bei der Übergabe) führt
+@inject FreizeitenApiClient Freizeiten
+@* Familie (FR-3, FR-4, FR-20, EXPERIENCE.md → Familienübersicht, NS-1, NS-11): je Kind eine Card mit Geburtsdatum, seinen
+   Freizeiten mit Anmeldestatus (Status-Wort mit Quadrat) und „Angaben ändern“; nur bei einem volljährigen Kind (der Server rechnet,
+   der Client nie) die Übergabe mit Inline-Bestätigung. Eigene Anmeldungen stehen in einer eigenen Card. Darunter „Kind
+   hinzufügen“, die Eltern mit offenen Einladungen und, solange es weniger als 2 Eltern gibt, „Zweiten Elternteil hinzufügen“. Kein
+   eigener Anmelden-Knopf: angemeldet wird über den Anmeldelink der Freizeit. Ohne frische Anmeldung (401 bei der Übergabe) führt
    der Sitzungs-Handler zur Anmeldung und danach hierher zurück. *@
 <PageTitle>Familie – Zeltlotse</PageTitle>
 
@@ -38,6 +41,7 @@ else
         var stand = Stand(kind.PersonId);
         <Card Titel="@Anzeige.Name(kind.Vorname, kind.Nachname)">
             <p>Geboren am @Anzeige.Datum(kind.Geburtsdatum)</p>
+            @AnmeldungenListe(kind.PersonId)
             @if (kind.Uebergabe is { } uebergabe)
             {
                 <p>Übergabe verschickt an @uebergabe.Mail, gültig bis @Anzeige.Datum(uebergabe.GueltigBis)</p>
@@ -63,6 +67,13 @@ else
                                     Satz="@($"Profil an {Vorname(kind)} übergeben? Danach hat das Familienkonto keinen Zugriff mehr.")"
                                     JaText="Ja, übergeben" Bestaetigt="@(() => UebergebenAsync(kind))" />
             }
+        </Card>
+    }
+
+    @if (EigeneAnmeldungen.Count > 0)
+    {
+        <Card Titel="Eigene Anmeldungen">
+            @AnmeldungenListe(null)
         </Card>
     }
 
@@ -144,6 +155,7 @@ else
 
     private readonly Dictionary<Guid, UebergabeStand> _uebergaben = [];
     private FamilieAntwort? _familie;
+    private IReadOnlyList<AnmeldungZeile> _anmeldungen = [];
     private bool _aktionFehler;
     private bool _uebertraegt;
     private bool _kindHinzugefuegt;
@@ -190,7 +202,29 @@ else
         }
     }
 
-    private async Task NeuLadenAsync() => _familie = await Personen.FamilieLadenAsync();
+    private async Task NeuLadenAsync()
+    {
+        var familie = Personen.FamilieLadenAsync();
+        var anmeldungen = Freizeiten.MeineAnmeldungenLadenAsync();
+        _anmeldungen = await anmeldungen;
+        _familie = await familie;
+    }
+
+    /// <summary>Anmeldungen der Person selbst: alle, die keinem Kind der Familie gehören.</summary>
+    private IReadOnlyList<AnmeldungZeile> EigeneAnmeldungen =>
+        [.. _anmeldungen.Where(a => _familie?.Kinder.Any(k => k.PersonId == a.PersonId) != true)];
+
+    /// <summary>Die Freizeiten einer Person mit Zeitraum und Anmeldestatus; <c>null</c> heißt: die eigenen Anmeldungen.</summary>
+    private RenderFragment AnmeldungenListe(Guid? personId)
+    {
+        var zeilen = personId is { } id ? _anmeldungen.Where(a => a.PersonId == id) : EigeneAnmeldungen;
+        IReadOnlyList<StatusEintrag> eintraege =
+        [
+            .. zeilen.Select(a => new StatusEintrag(
+                $"{a.FreizeitName}, {Anzeige.Zeitraum(a.ErsterTag, a.LetzterTag)}", Anzeige.Status(a.Status), Anzeige.AnmeldungStatusArt(a.Status))),
+        ];
+        return @<StatusListe Eintraege="@eintraege" />;
+    }
 
     /// <summary>Wert eines Datumsfelds (<c>yyyy-MM-dd</c>); alles andere gilt als fehlend, den Fehler meldet der Server am Feld.</summary>
     private static DateOnly? Tag(string? wert) =>

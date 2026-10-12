@@ -20,7 +20,11 @@ internal static class DemoKatalog
         new DateOnly(2027, 8, 2),
         new DateOnly(2027, 8, 13),
         "Zwölf Tage Zeltlager am Mühlbach: Geländespiel, Lagerfeuer, Bachwanderung und gemeinsames Essen im großen Zelt.\nFür Kinder und Jugendliche von 9 bis 14 Jahren.",
-        40);
+        40,
+        "Die Lagerregeln und die Anweisungen der Mitarbeitenden gelten für alle Teilnehmenden.\nDer Teilnahmebeitrag wird nach der Zusage fällig. Wer krank wird, sagt bei der Leitung ab.");
+
+    /// <summary>Story 2-2: Katrin meldet Emma mit Konto über den Anmeldelink für Teilnehmende an (Status „eingegangen“).</summary>
+    public static (string ElternMail, string Kind) MitKontoAngemeldet { get; } = ("katrin.muster@example.org", "Emma");
 
     /// <summary>
     /// Jonas' Nachweise (Story 1-5): Art, Ausstellungsdatum und eine kleine erfundene Demo-Datei. Ohne Präventionsschulung, damit
@@ -156,7 +160,9 @@ internal static class DemoDateien
 
 /// <param name="Beschreibung">Text der Freizeitseite (Story 2-1).</param>
 /// <param name="HoechstzahlTeilnehmende">Höchstzahl Teilnehmende auf der Freizeitseite (Story 2-1).</param>
-internal sealed record DemoFreizeit(string Name, string Ort, DateOnly Beginn, DateOnly Ende, string Beschreibung, int HoechstzahlTeilnehmende);
+/// <param name="Teilnahmebedingungen">Text der Teilnahmebedingungen im Anmeldeformular (Story 2-2).</param>
+internal sealed record DemoFreizeit(
+    string Name, string Ort, DateOnly Beginn, DateOnly Ende, string Beschreibung, int HoechstzahlTeilnehmende, string Teilnahmebedingungen);
 
 /// <summary>
 /// Rolle einer Demo-Person; <see cref="Kind"/> ist ein Kinderprofil im Familienkonto, ohne eigenes Konto (Paul ist schon

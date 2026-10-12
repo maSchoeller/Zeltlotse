@@ -80,7 +80,8 @@ internal static class FreizeitseiteOeffentlichEndpunkt
             freizeit.Beschreibung,
             AnmeldelinkErzeugen.Api(link.Art),
             ausgebucht,
-            team));
+            team,
+            freizeit.Teilnahmebedingungen));
     }
 
     /// <summary>

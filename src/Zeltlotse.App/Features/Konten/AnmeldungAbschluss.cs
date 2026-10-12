@@ -38,8 +38,12 @@ public sealed class AnmeldungAbschluss(
         navigation.NavigateTo(sitzung.RueckwegNehmen() ?? "./");
     }
 
-    /// <summary>Abmelden; auch wenn der Aufruf scheitert, endet die Sitzung auf dem Gerät und es geht zur Seite „Anmelden“.</summary>
-    public async Task AbmeldenAsync(CancellationToken abbruch = default)
+    /// <summary>
+    /// Abmelden; auch wenn der Aufruf scheitert, endet die Sitzung auf dem Gerät und es geht zur Seite „Anmelden“. Mit
+    /// <paramref name="rueckweg"/> (relativ zur Basis <c>/app/</c>) geht es nach der nächsten Anmeldung dorthin, z. B. nach der
+    /// Übernahme eines Gast-Profils zur Familienübersicht.
+    /// </summary>
+    public async Task AbmeldenAsync(string? rueckweg = null, CancellationToken abbruch = default)
     {
         try
         {
@@ -51,7 +55,7 @@ public sealed class AnmeldungAbschluss(
         }
 
         antiforgery.TokenVerwerfen();
-        sitzung.Abmelden();
+        sitzung.Abmelden(rueckweg);
         navigation.NavigateTo(AppSitzung.AnmeldenPfad);
     }
 }

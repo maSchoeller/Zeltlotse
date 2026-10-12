@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Zeltlotse.Freizeiten.Anmeldungen;
 using Zeltlotse.Freizeiten.Contracts.Rollen;
 using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
 using Zeltlotse.Freizeiten.Daten;
@@ -45,6 +46,8 @@ public static class FreizeitenModul
     /// <c>{orgId:guid}</c>, Freizeit-Routen <c>.NurFreizeitRolle(…)</c> mit <c>{freizeitId:guid}</c>; nie beide. Die
     /// Warnhinweise zu Pflicht-Nachweisen (FR-11) sieht die Leitung mit denselben Rollen wie „Nachweise prüfen“. Die Einstellungen
     /// der Freizeitseite und die Anmeldelinks pflegt nur die Leitung (Story 2-1); die beiden Seiten eines Anmeldelinks sind anonym.
+    /// Story 2-2: Gast-Anmeldung über den Anmeldelink und der Gast-Link sind anonym und zugriffsbegrenzt; die Anmeldung mit Konto und
+    /// die eigenen Anmeldungen liegen unter <c>/api/ich/anmeldungen</c> (AD-26).
     /// </summary>
     public static IEndpointRouteBuilder MapFreizeitenEndpoints(this IEndpointRouteBuilder api)
     {
@@ -62,6 +65,11 @@ public static class FreizeitenModul
         var oeffentlich = freizeiten.MapGroup("/oeffentlich/{token}").AllowAnonymous().Zugriffsbegrenzt();
         oeffentlich.MapGet("", FreizeitseiteOeffentlichEndpunkt.Laden);
         oeffentlich.MapGet("/vertrauensseite", VertrauensseiteEndpunkt.Laden);
+        // Story 2-2: Gast-Anmeldung über den Anmeldelink (Antiforgery über die Dienst-Kennung der öffentlichen Seiten, AD-25).
+        oeffentlich.MapPost("/anmeldungen", GastAnmeldenEndpunkt.Absenden);
+
+        // Gast-Link (AD-11): anonym, zugriffsbegrenzt; nur die Anmeldungen der Gast-Familie.
+        freizeiten.MapGet("/gast/{gastToken}", GastLinkEndpunkt.Laden).AllowAnonymous().Zugriffsbegrenzt();
 
         var freizeit = freizeiten.MapGroup($"/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}");
         freizeit.MapGet("", FreizeitLadenEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Mitarbeit);
@@ -72,6 +80,9 @@ public static class FreizeitenModul
         freizeit.MapPost("/anmeldelinks/{art}/erneuern", AnmeldelinkErneuernEndpunkt.Erneuern).NurFreizeitRolle(FreizeitRechte.Einstellungen);
 
         api.MapGet("/ich/freizeiten", MeineFreizeitenEndpunkt.Laden).Organisationsuebergreifend();
+        var anmeldungen = api.MapGroup("/ich/anmeldungen").Organisationsuebergreifend();
+        anmeldungen.MapGet("", MeineAnmeldungenEndpunkt.Laden);
+        anmeldungen.MapPost("", AnmeldenMitKontoEndpunkt.Absenden).Zugriffsbegrenzt();
         return api;
     }
 }

@@ -138,7 +138,8 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.freizeit_rolle WHERE \"Rolle\" = 1 AND \"PersonId\" = ANY(@p)", ("p", leitung)));
         Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.leitungs_einladung WHERE \"Status\" = 2"));
         Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.leitungs_einladung"));
-        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.outbox"));
+        // Zwei Rollenvergaben (Story 1-3) und Emmas Anmeldung (Story 2-2).
+        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.outbox"));
         await zweiter.OutboxJetztZustellenAsync(Abbruch);
         Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeit_rolle WHERE \"Rolle\" = 1 AND \"PersonId\" = ANY(@p)", ("p", leitung)));
 
@@ -221,6 +222,22 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal(
             ["Jonas Leitung Musterstadt", "Miriam Leitung Musterstadt"],
             seite.GetProperty("team").EnumerateArray().Select(p => $"{p.GetProperty("vorname").GetString()} {p.GetProperty("rolle").GetString()} {p.GetProperty("herkunft").GetString()}"));
+
+        // Story 2-2: Teilnahmebedingungen der Demo-Freizeit; Katrin hat Emma mit Konto angemeldet (genau eine Anmeldung, auch nach dem
+        // zweiten Einspielen) und die Freigabe der Stufe Leitung ist zugestellt; die Familie zeigt Emmas Status.
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(
+            verbindung, "SELECT count(*) FROM freizeiten.freizeit WHERE \"Teilnahmebedingungen\" = @t", ("t", DemoKatalog.Freizeit.Teilnahmebedingungen)));
+        Assert.Equal(DemoKatalog.Freizeit.Teilnahmebedingungen, seite.GetProperty("teilnahmebedingungen").GetString());
+        var emma = await AnmeldeHelfer.WertAsync<Guid>(verbindung, "SELECT \"Id\" FROM personen.person WHERE \"Vorname\" = 'Emma'");
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.anmeldung"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(
+            verbindung, "SELECT count(*) FROM freizeiten.anmeldung WHERE \"PersonId\" = @e AND \"FreizeitId\" = @f AND \"Art\" = 1 AND \"Status\" = 1", ("e", emma), ("f", freizeitId)));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freigabe WHERE \"PersonId\" = @e AND \"Stufe\" = 1", ("e", emma)));
+        Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.gast_zugang"));
+        using var katrinClient = await AnmeldeHelfer.AngemeldeterClientAsync(zweiter, DemoKatalog.MitKontoAngemeldet.ElternMail);
+        var anmeldungen = (await AnmeldeHelfer.JsonAsync(await katrinClient.GetAsync("/api/ich/anmeldungen", Abbruch))).EnumerateArray().ToList();
+        Assert.Equal((emma, "Zeltlager Sommer 2027", "Eingegangen"), (
+            Assert.Single(anmeldungen).GetProperty("personId").GetGuid(), anmeldungen[0].GetProperty("freizeitName").GetString(), anmeldungen[0].GetProperty("status").GetString()));
 
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,

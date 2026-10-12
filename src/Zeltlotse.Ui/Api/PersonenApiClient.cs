@@ -68,6 +68,15 @@ public sealed record PruefOrt(string Basis)
     public static PruefOrt Organisation(Guid orgId) => new($"/api/organisationen/{orgId}/personen/nachweise");
 }
 
+/// <summary>Ergebnis von <see cref="PersonenApiClient.GastAnlegenAsync"/>: die angelegte Gast-Familie oder die Fehler an den Feldern (<c>400</c>).</summary>
+public sealed record GastAnlegenErgebnis(GastAngelegt? Angelegt, IReadOnlyDictionary<string, string> Fehler);
+
+/// <summary>
+/// Ergebnis von <see cref="PersonenApiClient.GastKindAnlegenAsync"/>: das angelegte Kind, die Fehler an den Feldern (<c>400</c>) oder
+/// der Gast-Link gilt nicht (mehr) (<c>404</c>).
+/// </summary>
+public sealed record GastKindErgebnis(Guid? KindPersonId, IReadOnlyDictionary<string, string> Fehler, bool NichtGefunden);
+
 /// <summary>Ergebnis des Annehmens eines Zugangslinks: angenommen, nicht (mehr) gültig (<c>404</c>) oder ein Konflikt (<c>409</c>).</summary>
 public enum AnnahmeErgebnis
 {
@@ -227,6 +236,51 @@ public sealed class PersonenApiClient(HttpClient http)
     /// <summary><c>POST /api/personen/uebergabe/annehmen</c>: übernommen, nicht gültig (<c>404</c>) oder eigenes Profil (<c>409</c>).</summary>
     public Task<AnnahmeErgebnis> ProfilUebernehmenAsync(string token, CancellationToken abbruch = default) =>
         AnnehmenAsync("/api/personen/uebergabe/annehmen", new ProfilUebernehmen(token), abbruch);
+
+    /// <summary>
+    /// <c>POST /api/personen/oeffentlich/gaeste</c> (anonym, Gast-Anmeldung): legt Elternteil, Familie, Kind und Gast-Link an; <c>400</c>
+    /// mit den Fehlern je Feld.
+    /// </summary>
+    public async Task<GastAnlegenErgebnis> GastAnlegenAsync(GastAnlegen anfrage, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync("/api/personen/oeffentlich/gaeste", anfrage, ApiJson.Optionen, abbruch);
+        if (antwort.StatusCode == HttpStatusCode.BadRequest && await ApiFehler.AlleFeldFehlerAsync(antwort, abbruch) is { Count: > 0 } fehler)
+        {
+            return new GastAnlegenErgebnis(null, fehler);
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return new GastAnlegenErgebnis(
+            await antwort.Content.ReadFromJsonAsync<GastAngelegt>(ApiJson.Optionen, abbruch) ?? throw new HttpRequestException("Leere Antwort beim Anlegen des Gasts."),
+            new Dictionary<string, string>());
+    }
+
+    /// <summary><c>POST /api/personen/oeffentlich/gaeste/{gastToken}/kinder</c> (anonym): ein weiteres Kind der Gast-Familie.</summary>
+    public async Task<GastKindErgebnis> GastKindAnlegenAsync(string gastToken, GastKindHinzufuegen anfrage, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync($"/api/personen/oeffentlich/gaeste/{Uri.EscapeDataString(gastToken)}/kinder", anfrage, ApiJson.Optionen, abbruch);
+        if (antwort.StatusCode == HttpStatusCode.NotFound)
+        {
+            return new GastKindErgebnis(null, new Dictionary<string, string>(), NichtGefunden: true);
+        }
+
+        if (antwort.StatusCode == HttpStatusCode.BadRequest && await ApiFehler.AlleFeldFehlerAsync(antwort, abbruch) is { Count: > 0 } fehler)
+        {
+            return new GastKindErgebnis(null, fehler, NichtGefunden: false);
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        var inhalt = await antwort.Content.ReadFromJsonAsync<GastKindAngelegt>(ApiJson.Optionen, abbruch)
+                     ?? throw new HttpRequestException("Leere Antwort beim Anlegen des Kindes.");
+        return new GastKindErgebnis(inhalt.KindPersonId, new Dictionary<string, string>(), NichtGefunden: false);
+    }
+
+    /// <summary>
+    /// <c>POST /api/ich/gastprofil/uebernehmen</c>: übernommen, nicht gültig (<c>404</c>) oder das Konto hat schon eigene Angaben
+    /// (<c>409</c>). Das Token geht nur im Körper.
+    /// </summary>
+    public Task<AnnahmeErgebnis> GastprofilUebernehmenAsync(string gastToken, CancellationToken abbruch = default) =>
+        AnnehmenAsync("/api/ich/gastprofil/uebernehmen", new GastprofilUebernehmen(gastToken), abbruch);
 
     /// <summary>Pfad der eigenen Nachweise (AD-26).</summary>
     public const string NachweisePfad = "/api/ich/nachweise";

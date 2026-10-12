@@ -58,6 +58,12 @@ internal sealed class Freizeit : Aggregat, IOrganisationsEigen
     /// <summary>Höchstzahl Teilnehmende (1–1000); leer heißt: nie ausgebucht (FR-67). Mitarbeitende zählen nie.</summary>
     public int? HoechstzahlTeilnehmende { get; private set; }
 
+    /// <summary>
+    /// Teilnahmebedingungen, die im Anmeldeformular vor dem Absenden stehen und digital bestätigt werden (FR-19), höchstens
+    /// <see cref="FreizeitseiteFelder.TeilnahmebedingungenMaximaleLaenge"/> Zeichen.
+    /// </summary>
+    public string? Teilnahmebedingungen { get; private set; }
+
     /// <summary>Versionsprüfung (xmin, AD-19).</summary>
     public uint Version { get; private set; }
 
@@ -98,6 +104,7 @@ internal sealed class Freizeit : Aggregat, IOrganisationsEigen
         FreizeitseiteFeld.Beschreibung => Beschreibung,
         FreizeitseiteFeld.Ort => Ort,
         FreizeitseiteFeld.HoechstzahlTeilnehmende => HoechstzahlTeilnehmende?.ToString(CultureInfo.InvariantCulture),
+        FreizeitseiteFeld.Teilnahmebedingungen => Teilnahmebedingungen,
         _ => throw new ArgumentOutOfRangeException(nameof(feld), feld, null),
     };
 
@@ -124,6 +131,9 @@ internal sealed class Freizeit : Aggregat, IOrganisationsEigen
                 break;
             case FreizeitseiteFeld.HoechstzahlTeilnehmende:
                 HoechstzahlTeilnehmende = wert is null ? null : int.Parse(wert, NumberStyles.None, CultureInfo.InvariantCulture);
+                break;
+            case FreizeitseiteFeld.Teilnahmebedingungen:
+                Teilnahmebedingungen = wert;
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(feld), feld, null);

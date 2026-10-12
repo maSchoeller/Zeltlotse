@@ -118,8 +118,16 @@ internal sealed class AnmeldelinkErneuernHandler(FreizeitenDbContext db, ILinkSc
 /// </summary>
 internal static class AnmeldelinkSuche
 {
+    public static Task<(Anmeldelink Link, Freizeit Freizeit)?> FindenAsync(
+        FreizeitenLeseDbContext db, MandantenKontext mandant, string? token, DateTimeOffset jetzt, CancellationToken abbruch) =>
+        FindenAsync(db.Anmeldelinks, db.Freizeiten, mandant, token, jetzt, abbruch);
+
+    /// <summary>
+    /// Dieselbe Suche über die Tabellen eines Command-Handlers (Einlösen beim Absenden einer Anmeldung, Story 2-2); bekommt nur die
+    /// Tabellen, nicht den schreibenden DbContext (AD-27).
+    /// </summary>
     public static async Task<(Anmeldelink Link, Freizeit Freizeit)?> FindenAsync(
-        FreizeitenLeseDbContext db, MandantenKontext mandant, string? token, DateTimeOffset jetzt, CancellationToken abbruch)
+        IQueryable<Anmeldelink> links, IQueryable<Freizeit> freizeiten, MandantenKontext mandant, string? token, DateTimeOffset jetzt, CancellationToken abbruch)
     {
         if (!Zugangslink.KannTokenSein(token))
         {
@@ -128,7 +136,7 @@ internal static class AnmeldelinkSuche
 
         var teilnehmende = Zugangslink.TokenHash(Anmeldelink.ZweckTeilnehmende, token!);
         var mitarbeitende = Zugangslink.TokenHash(Anmeldelink.ZweckMitarbeitende, token!);
-        var link = await db.Anmeldelinks.IgnoreQueryFilters()
+        var link = await links.IgnoreQueryFilters()
             .SingleOrDefaultAsync(l => l.TokenHash == teilnehmende || l.TokenHash == mitarbeitende, abbruch);
         if (link is null || !link.TokenHash.AsSpan().SequenceEqual(link.Art == LinkArt.Teilnehmende ? teilnehmende : mitarbeitende))
         {
@@ -136,7 +144,7 @@ internal static class AnmeldelinkSuche
         }
 
         mandant.Setzen(link.OrganisationId);
-        var freizeit = await db.Freizeiten.SingleOrDefaultAsync(f => f.Id == link.FreizeitId, abbruch);
+        var freizeit = await freizeiten.SingleOrDefaultAsync(f => f.Id == link.FreizeitId, abbruch);
         if (freizeit is null || jetzt >= FreizeitZeiten.Freizeitende(freizeit.LetzterTag))
         {
             return null;

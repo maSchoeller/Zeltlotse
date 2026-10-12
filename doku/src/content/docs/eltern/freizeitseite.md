@@ -13,13 +13,14 @@ Jede Freizeit hat eine öffentliche **Freizeitseite**. Sie öffnet sich über de
 - den **Zeitraum**, zum Beispiel „Freizeit · 2. bis 13. August 2027“,
 - den **Namen** der Freizeit, den **Ort** und die **Beschreibung**,
 - **Das Team:** je Person einen Kreis mit den Initialen von Vor- und Nachname, den Vornamen, die Rolle und, wenn die Person sie in ihrem Profil eingetragen hat, die Herkunft, zum Beispiel „Leitung · aus Musterstadt“. Der volle Nachname, Mail-Adressen und Fotos stehen dort nicht.
+- den Knopf **Anmelden** und darunter den Link **Mit Konto anmelden** (beim Anmeldelink für Mitarbeitende nur **Anmelden**, mit Konto),
 - den Link zur **Vertrauensseite**.
 
 ![Freizeitseite „Zeltlager Sommer 2027“ am Handy: oben „Jugendwerk Musterstadt“, darunter „Freizeit · 2. bis 13. August 2027“, Ort, Beschreibung und die Card „Das Team“ mit Jonas und Miriam als „Leitung · aus Musterstadt“](../../../assets/screenshots/freizeitseite-handy.png)
 
 ![Freizeitseite am Laptop](../../../assets/screenshots/freizeitseite-laptop.png)
 
-Das Anmeldeformular selbst kommt in einer späteren Version auf diese Seite.
+Wie die Anmeldung als Gast oder mit Konto geht, steht unter [Kind anmelden](/eltern/kind-anmelden/); für das Team unter [Für das Team anmelden](/mitarbeitende/anmelden/).
 
 ## Ausgebucht
 

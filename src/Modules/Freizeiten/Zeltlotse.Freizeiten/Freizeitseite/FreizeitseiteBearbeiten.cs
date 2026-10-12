@@ -18,7 +18,7 @@ using Zeltlotse.SharedKernel.Zugangslinks;
 namespace Zeltlotse.Freizeiten.Freizeitseite;
 
 /// <summary>
-/// Ändert genau ein Feld der Freizeitseite (AD-19, Leitung): Beschreibung, Ort oder Höchstzahl Teilnehmende. Konfliktregel: Weicht
+/// Ändert genau ein Feld der Freizeitseite (AD-19, Leitung): Beschreibung, Ort, Höchstzahl Teilnehmende oder Teilnahmebedingungen. Konfliktregel: Weicht
 /// der aktuelle Wert desselben Felds vom mitgeschickten alten Wert ab, ist das Ergebnis <see cref="FreizeitseiteAenderung.Konflikt"/>.
 /// Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
@@ -63,6 +63,9 @@ internal sealed class FreizeitseiteFeldAendernValidator : AbstractValidator<Frei
             {
                 case FreizeitseiteFeld.Beschreibung when wert is { Length: > FreizeitseiteFelder.BeschreibungMaximaleLaenge }:
                     kontext.AddFailure(new ValidationFailure(name, $"Höchstens {FreizeitseiteFelder.BeschreibungMaximaleLaenge} Zeichen."));
+                    break;
+                case FreizeitseiteFeld.Teilnahmebedingungen when wert is { Length: > FreizeitseiteFelder.TeilnahmebedingungenMaximaleLaenge }:
+                    kontext.AddFailure(new ValidationFailure(name, $"Höchstens {FreizeitseiteFelder.TeilnahmebedingungenMaximaleLaenge} Zeichen."));
                     break;
                 case FreizeitseiteFeld.Ort when wert is { Length: > FreizeitseiteFelder.OrtMaximaleLaenge }:
                     kontext.AddFailure(new ValidationFailure(name, $"Höchstens {FreizeitseiteFelder.OrtMaximaleLaenge} Zeichen."));
@@ -140,7 +143,8 @@ internal static class FreizeitseiteLadenEndpunkt
             freizeit.Beschreibung,
             freizeit.Ort,
             freizeit.HoechstzahlTeilnehmende,
-            [.. links.Select(l => Anzeigen(l, schutz, konfiguration)).OfType<Api.Contracts.Freizeiten.Anmeldelink>()]));
+            [.. links.Select(l => Anzeigen(l, schutz, konfiguration)).OfType<Api.Contracts.Freizeiten.Anmeldelink>()],
+            freizeit.Teilnahmebedingungen));
     }
 
     /// <summary>
@@ -168,7 +172,8 @@ internal static class FreizeitseiteLadenEndpunkt
 /// </summary>
 internal static class FreizeitseiteFeldAendernEndpunkt
 {
-    private static readonly FreizeitseiteFeld[] Felder = [FreizeitseiteFeld.Beschreibung, FreizeitseiteFeld.Ort, FreizeitseiteFeld.HoechstzahlTeilnehmende];
+    private static readonly FreizeitseiteFeld[] Felder =
+        [FreizeitseiteFeld.Beschreibung, FreizeitseiteFeld.Ort, FreizeitseiteFeld.HoechstzahlTeilnehmende, FreizeitseiteFeld.Teilnahmebedingungen];
 
     public static async Task<IResult> Aendern(Guid freizeitId, JsonElement koerper, ISender sender, CancellationToken abbruch)
     {
@@ -205,7 +210,7 @@ internal static class FreizeitseiteFeldAendernEndpunkt
         {
             throw Fehler(
                 "feld",
-                $"Genau ein Feld: {FreizeitseiteFelder.Beschreibung}, {FreizeitseiteFelder.Ort} oder {FreizeitseiteFelder.HoechstzahlTeilnehmende}.");
+                $"Genau ein Feld: {FreizeitseiteFelder.Beschreibung}, {FreizeitseiteFelder.Ort}, {FreizeitseiteFelder.HoechstzahlTeilnehmende} oder {FreizeitseiteFelder.Teilnahmebedingungen}.");
         }
 
         var feld = felder[0];

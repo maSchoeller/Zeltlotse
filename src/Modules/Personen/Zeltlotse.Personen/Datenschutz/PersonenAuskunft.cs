@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Zeltlotse.Personen.Daten;
+using Zeltlotse.Personen.Freigaben;
 using Zeltlotse.Personen.Nachweise;
 using Zeltlotse.Personen.Zugriffsprotokoll;
 using Zeltlotse.SharedKernel.Datenschutz;
@@ -9,7 +10,7 @@ namespace Zeltlotse.Personen.Datenschutz;
 
 /// <summary>
 /// Datenauskunft von Personen (AD-16, FR-14): Profil, Familie, Nachweise, Einsicht-Anfragen (mit entschlüsseltem Hinweis),
-/// Erinnerungen und Zugriffsprotokoll der Person. Liest nur über den Lese-Kontext; organisationseigene Zeilen
+/// Erinnerungen, Zugriffsprotokoll, Gast-Link und Freigaben der Person. Liest nur über den Lese-Kontext; organisationseigene Zeilen
 /// (Einsichten, Erinnerungen) ohne Mandantenfilter, aber nur die der Person (AD-6).
 /// </summary>
 internal sealed class PersonenAuskunft(PersonenLeseDbContext db, IVerschluesselung verschluesselung) : IDatenauskunft
@@ -44,8 +45,46 @@ internal sealed class PersonenAuskunft(PersonenLeseDbContext db, IVerschluesselu
         abschnitte.Add(new AuskunftAbschnitt("Einsicht-Anfragen", await EinsichtenAsync(personId, abbruch)));
         abschnitte.Add(new AuskunftAbschnitt("Erinnerungen", await ErinnerungenAsync(personId, abbruch)));
         abschnitte.Add(new AuskunftAbschnitt("Zugriffsprotokoll", await ProtokollAsync(personId, abbruch)));
+        abschnitte.Add(new AuskunftAbschnitt("Gast-Link", await GastZugangAsync(personId, abbruch)));
+        abschnitte.Add(new AuskunftAbschnitt("Freigaben", await FreigabenAsync(personId, abbruch)));
         return abschnitte;
     }
+
+    /// <summary>Der Gast-Link, wenn die Person als Elternteil ohne Konto angemeldet hat (nie das Token, nur der Hash ist gespeichert).</summary>
+    private async Task<List<AuskunftZeile>> GastZugangAsync(Guid personId, CancellationToken abbruch)
+    {
+        var zugang = await db.GastZugaenge.SingleOrDefaultAsync(z => z.ElternPersonId == personId, abbruch);
+        return zugang is null
+            ? []
+            :
+            [
+                new AuskunftZeile("Mail-Adresse", zugang.Mail),
+                new AuskunftZeile("Angelegt am", AuskunftFormat.Datum(zugang.AngelegtAm)),
+                .. zugang.UebernommenAm is { } am ? [new AuskunftZeile("In ein Konto übernommen am", AuskunftFormat.Datum(am))] : Array.Empty<AuskunftZeile>(),
+            ];
+    }
+
+    /// <summary>Freigaben der Person und der Kinder ihrer Familie (AD-8), ohne Mandantenfilter, nur diese Personen.</summary>
+    private async Task<List<AuskunftZeile>> FreigabenAsync(Guid personId, CancellationToken abbruch)
+    {
+        var familieId = await db.Elternteile.Where(e => e.PersonId == personId).Select(e => (Guid?)e.FamilieId).SingleOrDefaultAsync(abbruch);
+        List<Profil.Person> kinder = familieId is { } familie ? await db.Personen.Where(p => p.FamilieId == familie).ToListAsync(abbruch) : [];
+        var namen = kinder.ToDictionary(k => k.Id, k => AuskunftFormat.Name(k.Vorname, k.Nachname));
+        List<Guid> ids = [personId, .. kinder.Select(k => k.Id)];
+        var freigaben = await db.Freigaben.IgnoreQueryFilters().Where(f => ids.Contains(f.PersonId)).OrderBy(f => f.AngelegtAm).ToListAsync(abbruch);
+        return
+        [
+            .. freigaben.Select(f => new AuskunftZeile(
+                $"Freigabe an eine Freizeit, Stufe {Stufe(f.Stufe)}",
+                $"{(namen.TryGetValue(f.PersonId, out var name) ? name + ", " : "")}seit {AuskunftFormat.Datum(f.AngelegtAm)}, gültig bis {AuskunftFormat.Datum(f.GueltigBis.AddTicks(-1))}")),
+        ];
+    }
+
+    private static string Stufe(FreigabeStufe stufe) => stufe switch
+    {
+        FreigabeStufe.Leitung => "Leitung",
+        _ => stufe.ToString(),
+    };
 
     /// <summary>Anzeigetext einer Nachweisart.</summary>
     internal static string Art(NachweisArt art) => art switch

@@ -2,11 +2,14 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Freizeiten.Contracts.Events;
+using Zeltlotse.Personen.Contracts.Anmeldung;
 using Zeltlotse.Personen.Contracts.Namen;
 using Zeltlotse.Personen.Daten;
 using Zeltlotse.Personen.Datenschutz;
 using Zeltlotse.Personen.Familien;
+using Zeltlotse.Personen.Freigaben;
 using Zeltlotse.Personen.Freizeitrollen;
+using Zeltlotse.Personen.Gaeste;
 using Zeltlotse.Personen.Nachweise;
 using Zeltlotse.Personen.Profil;
 using Zeltlotse.Personen.Schluessel;
@@ -34,7 +37,10 @@ public static class PersonenModul
         services.AddScoped<IPersonenSchluesselQuelle, PersonenSchluesselQuelle>();
         services.AddScoped<IPersonenNamen, PersonenNamen>();
         services.AddScoped<IPersonenSteckbriefe, PersonenSteckbriefe>();
+        services.AddScoped<IGastZugaenge, GastZugaengeLesen>();
+        services.AddScoped<IVertretung, VertretungLesen>();
         services.EmpfaengtEreignis<FreizeitRolleGeaendert, FreizeitRolleUebernehmen>();
+        services.EmpfaengtEreignis<AnmeldungEingegangen, FreigabeAnlegen>();
         services.VerschicktMail<NachweisErinnerungMail, NachweisErinnerungMailAufbau>();
         services.AddScoped<IDatenauskunft, PersonenAuskunft>();
         services.AddScoped<ILoeschlauf, PersonenLoeschlauf>();
@@ -83,6 +89,13 @@ public static class PersonenModul
         var personen = api.MapGroup("/personen");
         personen.MapPost("/familie/einladungen/annehmen", FamilienEinladungAnnehmenEndpunkt.Annehmen).Zugriffsbegrenzt();
         personen.MapPost("/uebergabe/annehmen", ProfilUebernehmenEndpunkt.Uebernehmen).Zugriffsbegrenzt();
+
+        // Story 2-2: Gast-Anmeldung (anonym, zugriffsbegrenzt; Antiforgery über die Dienst-Kennung der öffentlichen Seiten, AD-25)
+        // und „Konto aus diesen Daten erstellen“ (angemeldet, zugriffsbegrenzt, AD-11, AD-26).
+        var gaeste = personen.MapGroup("/oeffentlich/gaeste").AllowAnonymous().Zugriffsbegrenzt();
+        gaeste.MapPost("", GastAnlegenEndpunkt.Anlegen);
+        gaeste.MapPost("/{gastToken}/kinder", GastKindAnlegenEndpunkt.Anlegen);
+        api.MapPost("/ich/gastprofil/uebernehmen", GastprofilUebernehmenEndpunkt.Uebernehmen).Organisationsuebergreifend().Zugriffsbegrenzt();
         return api;
     }
 }

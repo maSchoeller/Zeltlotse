@@ -14,6 +14,12 @@ public sealed record FreizeitAnlegenErgebnis(Guid? Id, string? NameFehler, strin
 /// </summary>
 public sealed record AnmeldelinkErneuernErgebnis(Anmeldelink? Link, bool Abgeschlossen);
 
+/// <summary>
+/// Ergebnis der Anmelde-Aufrufe (<see cref="FreizeitenApiClient.GastAnmeldenAsync"/>, <see cref="FreizeitenApiClient.AnmeldenAsync"/>):
+/// die Kennung der Anmeldung, die Fehler an den Feldern (<c>400</c>), nicht (mehr) gültig (<c>404</c>) oder schon angemeldet (<c>409</c>).
+/// </summary>
+public sealed record AnmeldungErgebnis(Guid? AnmeldungId, IReadOnlyDictionary<string, string> Fehler, bool NichtGefunden, bool SchonAngemeldet);
+
 /// <summary>Ergebnis von <see cref="FreizeitenApiClient.LeitungEinladenAsync"/>: die Kennung der Einladung oder der Fehler an der Mail-Adresse.</summary>
 public sealed record LeitungEinladenErgebnis(Guid? Id, string? MailFehler);
 
@@ -160,6 +166,64 @@ public sealed class FreizeitenApiClient(HttpClient http)
     /// </summary>
     public Task<Vertrauensseite?> VertrauensseiteLadenAsync(string token, CancellationToken abbruch = default) =>
         LadenAsync<Vertrauensseite>($"/api/freizeiten/oeffentlich/{Uri.EscapeDataString(token)}/vertrauensseite", abbruch);
+
+    /// <summary>
+    /// <c>POST /api/freizeiten/oeffentlich/{token}/anmeldungen</c> (anonym, Gast-Anmeldung): Anmeldelink im Pfad, Gast-Token und Kind
+    /// im Körper.
+    /// </summary>
+    public async Task<AnmeldungErgebnis> GastAnmeldenAsync(
+        string anmeldelinkToken, string gastToken, Guid kindPersonId, bool teilnahmebedingungenBestaetigt, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync(
+            $"/api/freizeiten/oeffentlich/{Uri.EscapeDataString(anmeldelinkToken)}/anmeldungen",
+            new GastAnmeldungAbsenden(gastToken, kindPersonId, teilnahmebedingungenBestaetigt),
+            ApiJson.Optionen,
+            abbruch);
+        return await AnmeldungErgebnisAsync(antwort, abbruch);
+    }
+
+    /// <summary>
+    /// <c>POST /api/ich/anmeldungen</c> (mit Konto): die angemeldete Person selbst (<paramref name="personId"/> leer) oder ein Kind unter
+    /// 18 der eigenen Familie. Das Token geht nur im Körper.
+    /// </summary>
+    public async Task<AnmeldungErgebnis> AnmeldenAsync(string anmeldelinkToken, Guid? personId, bool teilnahmebedingungenBestaetigt, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync(
+            "/api/ich/anmeldungen", new AnmeldungAbsenden(anmeldelinkToken, personId, teilnahmebedingungenBestaetigt), ApiJson.Optionen, abbruch);
+        return await AnmeldungErgebnisAsync(antwort, abbruch);
+    }
+
+    /// <summary><c>GET /api/ich/anmeldungen</c>: die eigenen Anmeldungen und die der Kinder der Familie, über Organisationen hinweg.</summary>
+    public async Task<List<AnmeldungZeile>> MeineAnmeldungenLadenAsync(CancellationToken abbruch = default)
+    {
+        using var antwort = await http.GetAsync("/api/ich/anmeldungen", abbruch);
+        antwort.EnsureSuccessStatusCode();
+        return await antwort.Content.ReadFromJsonAsync<List<AnmeldungZeile>>(ApiJson.Optionen, abbruch)
+               ?? throw new HttpRequestException("Leere Antwort beim Laden der Anmeldungen.");
+    }
+
+    /// <summary><c>GET /api/freizeiten/gast/{gastToken}</c> (anonym): die Anmeldungen der Gast-Familie oder <c>null</c>, wenn der Gast-Link nicht (mehr) gilt.</summary>
+    public Task<GastLinkAnsicht?> GastLinkLadenAsync(string gastToken, CancellationToken abbruch = default) =>
+        LadenAsync<GastLinkAnsicht>($"/api/freizeiten/gast/{Uri.EscapeDataString(gastToken)}", abbruch);
+
+    private static async Task<AnmeldungErgebnis> AnmeldungErgebnisAsync(HttpResponseMessage antwort, CancellationToken abbruch)
+    {
+        if (antwort.StatusCode == HttpStatusCode.BadRequest && await ApiFehler.AlleFeldFehlerAsync(antwort, abbruch) is { Count: > 0 } fehler)
+        {
+            return new AnmeldungErgebnis(null, fehler, NichtGefunden: false, SchonAngemeldet: false);
+        }
+
+        if (antwort.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Conflict)
+        {
+            return new AnmeldungErgebnis(
+                null, new Dictionary<string, string>(), NichtGefunden: antwort.StatusCode == HttpStatusCode.NotFound, SchonAngemeldet: antwort.StatusCode == HttpStatusCode.Conflict);
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        var inhalt = await antwort.Content.ReadFromJsonAsync<AnmeldungAngelegt>(ApiJson.Optionen, abbruch)
+                     ?? throw new HttpRequestException("Leere Antwort beim Anmelden.");
+        return new AnmeldungErgebnis(inhalt.AnmeldungId, new Dictionary<string, string>(), NichtGefunden: false, SchonAngemeldet: false);
+    }
 
     private async Task<T?> LadenAsync<T>(string pfad, CancellationToken abbruch)
         where T : class

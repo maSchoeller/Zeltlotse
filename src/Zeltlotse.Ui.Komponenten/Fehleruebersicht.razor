@@ -1,0 +1,25 @@
+@* Fehlerübersicht (EXPERIENCE.md → Formular, State Patterns „Fehler (Feld)“): oben im Formular eine Fehler-Meldung mit
+   role="alert" und je Fehler ein Sprunglink zur Kennung des Feldes. Statisch tauglich (nur Links, keine Ereignis-Handler); ohne
+   Fehler erscheint nichts. *@
+@if (Fehler.Count > 0)
+{
+    <section class="elkw-alert elkw-alert--fehler zl-fehleruebersicht" role="alert" aria-labelledby="@_titelId">
+        <span class="elkw-alert__title" id="@_titelId">@Titel</span>
+        <ul>
+            @foreach (var fehler in Fehler)
+            {
+                <li><a href="@($"#{fehler.FeldId}")">@fehler.Text</a></li>
+            }
+        </ul>
+    </section>
+}
+
+@code {
+    private readonly string _titelId = Kennungen.Neu("fehleruebersicht");
+
+    /// <summary>Die Fehler in der Reihenfolge der Felder; leer heißt: keine Übersicht.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<FeldFehler> Fehler { get; set; } = [];
+
+    /// <summary>Überschrift der Übersicht, mit Doppelpunkt wie jede Meldung.</summary>
+    [Parameter] public string Titel { get; set; } = "Fehler: Bitte die markierten Angaben prüfen.";
+}

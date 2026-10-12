@@ -107,6 +107,26 @@ public static class Anzeige
     /// <summary>Der Kalendertag eines Zeitpunkts in Europe/Berlin.</summary>
     public static DateOnly Tag(DateTimeOffset zeitpunkt) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(zeitpunkt, Berlin()).DateTime);
 
+    /// <summary>
+    /// Der letzte Tag, an dem etwas mit dem Ende <paramref name="ende"/> noch gilt, als TT.MM.JJJJ: Ein Ende um 00:00 Uhr gilt bis
+    /// einschließlich des Vortags (z. B. das Ende des Freigabefensters).
+    /// </summary>
+    public static string BisEinschliesslich(DateTimeOffset ende) => Datum(Tag(ende.AddTicks(-1)));
+
+    /// <summary>Status einer Anmeldung als Wort (EXPERIENCE.md → State Patterns): „Eingegangen“.</summary>
+    public static string Status(Zeltlotse.Api.Contracts.Freizeiten.AnmeldungStatus status) => status switch
+    {
+        Zeltlotse.Api.Contracts.Freizeiten.AnmeldungStatus.Eingegangen => "Eingegangen",
+        _ => status.ToString(),
+    };
+
+    /// <summary>Status-Art einer Anmeldung: eingegangen = offen.</summary>
+    public static StatusArt AnmeldungStatusArt(Zeltlotse.Api.Contracts.Freizeiten.AnmeldungStatus status) => status switch
+    {
+        Zeltlotse.Api.Contracts.Freizeiten.AnmeldungStatus.Eingegangen => StatusArt.Offen,
+        _ => StatusArt.Aktiv,
+    };
+
     /// <summary>Wofür jemand Einsicht hatte (Zugriffsprotokoll): „Nachweise eingesehen“.</summary>
     public static string Zweck(Zeltlotse.Api.Contracts.Personen.ZugriffZweck zweck) => zweck switch
     {

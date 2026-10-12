@@ -1,0 +1,107 @@
+@page "/gast/{Token}/konto"
+@inject PersonenApiClient Personen
+@inject AnmeldungAbschluss Abschluss
+@* „Konto aus diesen Daten erstellen“ (FR-17, AD-7, Muster Profil-Übergabe): Ohne Sitzung führt das Laden des Profils (401) zur
+   Anmeldung und danach hierher zurück; ein neues Konto entsteht dabei mit dem Login-Link. Übernommen wird erst beim Klick (POST,
+   AD-11). Danach gehört das Konto erst mit der neuen Anmeldung zu den Angaben; darum „Neu anmelden“, und nach der Anmeldung geht es
+   zur Familienübersicht. Profile werden nie zusammengeführt: Ein Konto mit eigenen Angaben bekommt einen Hinweis. *@
+<PageTitle>Konto aus diesen Daten erstellen – Zeltlotse</PageTitle>
+
+<h1>Konto aus diesen Daten erstellen</h1>
+
+@if (_aktionFehler)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>@AnmeldungAbschluss.FehlerText</p>
+    </Meldung>
+}
+@if (_ergebnis == AnnahmeErgebnis.NichtGueltig)
+{
+    <Meldung Titel="Hinweis" Art="MeldungArt.Warnung">
+        <p>Dieser Link ist nicht mehr gültig.</p>
+    </Meldung>
+}
+@if (_ergebnis == AnnahmeErgebnis.Konflikt)
+{
+    <Meldung Titel="Hinweis" Art="MeldungArt.Warnung">
+        <p>Dieses Konto hat schon eigene Angaben. Die Gast-Anmeldung bleibt über den Gast-Link erreichbar.</p>
+    </Meldung>
+}
+
+@if (_ergebnis == AnnahmeErgebnis.Angenommen)
+{
+    <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+        <p>Die Angaben sind übernommen. Zum Abschluss neu anmelden; danach zeigt die Familienübersicht die Anmeldungen.</p>
+    </Meldung>
+    <Knopf Deaktiviert="@_uebertraegt" @onclick="NeuAnmeldenAsync">Neu anmelden</Knopf>
+}
+else if (_geladen)
+{
+    <p>Die Angaben aus der Gast-Anmeldung kommen in dieses Konto: der Elternteil, die Kinder und ihre Anmeldungen. Danach gilt der Gast-Link nicht mehr.</p>
+    <Knopf Deaktiviert="@_uebertraegt" @onclick="UebernehmenAsync">Angaben übernehmen</Knopf>
+}
+else if (!_aktionFehler)
+{
+    <Ladezustand />
+}
+
+@code {
+    private AnnahmeErgebnis? _ergebnis;
+    private bool _geladen;
+    private bool _uebertraegt;
+    private bool _aktionFehler;
+
+    /// <summary>Das Gast-Token aus dem Link; es verlässt die Seite nur im Körper des POST.</summary>
+    [Parameter] public string Token { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Ein Aufruf mit Sitzung: ohne Anmeldung führt die 401 zur Seite „Anmelden“ und danach hierher zurück.
+            await Personen.ProfilLadenOderAnlegenAsync();
+            _geladen = true;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    private async Task UebernehmenAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _aktionFehler = false;
+        _ergebnis = null;
+        try
+        {
+            _ergebnis = await Personen.GastprofilUebernehmenAsync(Token);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task NeuAnmeldenAsync()
+    {
+        _uebertraegt = true;
+        try
+        {
+            await Abschluss.AbmeldenAsync(rueckweg: "familie");
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

@@ -151,6 +151,44 @@ namespace Zeltlotse.Personen.Migrationen
                     b.ToTable("profil_uebergabe", "personen");
                 });
 
+            modelBuilder.Entity("Zeltlotse.Personen.Freigaben.Freigabe", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AngelegtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("AnmeldungId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("GueltigBis")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Stufe")
+                        .HasColumnType("smallint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnmeldungId")
+                        .IsUnique();
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("OrganisationId", "FreizeitId");
+
+                    b.ToTable("freigabe", "personen");
+                });
+
             modelBuilder.Entity("Zeltlotse.Personen.Freizeitrollen.FreizeitRolle", b =>
                 {
                     b.Property<Guid>("FreizeitId")
@@ -170,6 +208,44 @@ namespace Zeltlotse.Personen.Migrationen
                     b.HasIndex("PersonId");
 
                     b.ToTable("freizeit_rolle", "personen");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Personen.Gaeste.GastZugang", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AngelegtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ElternPersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Folgenummer")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Mail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<DateTimeOffset?>("UebernommenAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ElternPersonId")
+                        .IsUnique();
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("gast_zugang", "personen");
                 });
 
             modelBuilder.Entity("Zeltlotse.Personen.Nachweise.Nachweis", b =>

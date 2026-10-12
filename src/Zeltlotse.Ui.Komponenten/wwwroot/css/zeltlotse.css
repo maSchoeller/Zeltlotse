@@ -140,6 +140,11 @@ a.zl-gross:not(.elkw-btn) { display: inline-flex; align-items: center; }
 .zl-oeffentlich-spalte { max-width: 75ch; margin: 0 auto; padding: 0 var(--elkw-space-m); }
 .zl-oeffentlich-kopf { padding: var(--elkw-header-pad) 0; border-bottom: 1px solid var(--elkw-light); background: var(--elkw-white); }
 .zl-oeffentlich-inhalt { padding-top: var(--elkw-space-l); padding-bottom: var(--elkw-space-xl); }
+.zl-oeffentlich-inhalt :is(.elkw-card, .elkw-alert) { margin-bottom: var(--elkw-space-m); }
+.zl-fehleruebersicht a { color: inherit; }
+/* Statusliste, z. B. Freizeiten mit Anmeldestatus in der Familienübersicht: je Zeile ein Text, daneben das Status-Wort. */
+.zl-statusliste { margin: var(--elkw-space-xs) 0 var(--elkw-space-s); padding: 0; list-style: none; }
+.zl-statusliste li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
 
 /* ---------- Datentabelle und Auswahl ---------- */
 /* Nur für Screenreader sichtbar (z. B. die Beschriftung der Datentabelle). */

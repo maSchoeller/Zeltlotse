@@ -17,13 +17,20 @@ namespace Zeltlotse.Api.Tests;
 /// </summary>
 public sealed class EndpunktListeTests(PostgresContainer postgres)
 {
-    /// <summary>Die anonymen Endpunkte: Betrieb, die vier Anmelde-Endpunkte und die zwei Anmeldelink-Seiten (Story 2-1).</summary>
+    /// <summary>
+    /// Die anonymen Endpunkte: Betrieb, die vier Anmelde-Endpunkte, die zwei Anmeldelink-Seiten (Story 2-1) und die Gast-Anmeldung mit
+    /// Gast-Link (Story 2-2).
+    /// </summary>
     private static readonly string[] Anonym =
     [
         "GET /api/betrieb/antiforgery",
+        "GET /api/freizeiten/gast/{gastToken}",
         "GET /api/freizeiten/oeffentlich/{token}",
         "GET /api/freizeiten/oeffentlich/{token}/vertrauensseite",
         "POST /api/betrieb/fehler",
+        "POST /api/freizeiten/oeffentlich/{token}/anmeldungen",
+        "POST /api/personen/oeffentlich/gaeste",
+        "POST /api/personen/oeffentlich/gaeste/{gastToken}/kinder",
         "POST /api/konten/anmelden",
         "POST /api/konten/login-code/einloesen",
         "POST /api/konten/login-link",
@@ -33,6 +40,7 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
     /// <summary>Die personenbezogenen Endpunkte über Organisationen hinweg (AD-26), namentlich.</summary>
     private static readonly string[] Organisationsuebergreifend =
     [
+        "GET /api/ich/anmeldungen",
         "GET /api/ich/daten",
         "GET /api/ich/familie",
         "GET /api/ich/freizeiten",
@@ -46,9 +54,11 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         "PATCH /api/ich/familie/kinder/{personId:guid}",
         "PATCH /api/ich/nachweise/{nachweisId:guid}",
         "PATCH /api/ich/profil",
+        "POST /api/ich/anmeldungen",
         "POST /api/ich/familie/einladungen",
         "POST /api/ich/familie/kinder",
         "POST /api/ich/familie/kinder/{personId:guid}/uebergabe",
+        "POST /api/ich/gastprofil/uebernehmen",
         "POST /api/ich/nachweise",
         "POST /api/ich/nachweise/einsichten/{einsichtId:guid}/freigeben",
         "POST /api/ich/nachweise/{nachweisId:guid}/datei",
@@ -87,8 +97,11 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
     {
         var endpunkte = await EndpunkteAsync();
 
-        var oeffentlich = endpunkte.Where(e => e.Pfad.StartsWith("/api/freizeiten/oeffentlich/", StringComparison.Ordinal)).ToList();
-        Assert.Equal(2, oeffentlich.Count);
+        // Story 2-2: dazu der Gast-Link, das Absenden der Gast-Anmeldung und die zwei Gast-Endpunkte von Personen.
+        var oeffentlich = endpunkte.Where(e => e.Pfad.StartsWith("/api/freizeiten/oeffentlich/", StringComparison.Ordinal)
+                                               || e.Pfad.StartsWith("/api/freizeiten/gast/", StringComparison.Ordinal)
+                                               || e.Pfad.StartsWith("/api/personen/oeffentlich/", StringComparison.Ordinal)).ToList();
+        Assert.Equal(6, oeffentlich.Count);
         Assert.All(oeffentlich, e =>
         {
             Assert.Contains(e.Name, Anonym);
@@ -128,6 +141,8 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
     [Theory]
     [InlineData("POST /api/personen/familie/einladungen/annehmen")]
     [InlineData("POST /api/personen/uebergabe/annehmen")]
+    [InlineData("POST /api/ich/gastprofil/uebernehmen")]
+    [InlineData("POST /api/ich/anmeldungen")]
     public async Task Annehmen_von_Familien_Einladung_und_Profil_Uebergabe_ist_angemeldet_und_zugriffsbegrenzt(string name)
     {
         var endpunkte = await EndpunkteAsync();

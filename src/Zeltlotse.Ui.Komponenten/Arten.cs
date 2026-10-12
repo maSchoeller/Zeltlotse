@@ -64,3 +64,9 @@ public sealed record AuswahlOption(string Wert, string Text);
 
 /// <summary>Ein Eintrag einer <see cref="PersonenListe"/>: Initialen für den Avatar, Name und eine optionale Zeile darunter.</summary>
 public sealed record PersonenEintrag(string Initialen, string Name, string? Zeile);
+
+/// <summary>Ein Eintrag einer <see cref="Fehleruebersicht"/>: Kennung des Feldes (Ziel des Sprunglinks) und der Fehlertext ohne Präfix.</summary>
+public sealed record FeldFehler(string FeldId, string Text);
+
+/// <summary>Eine Zeile einer <see cref="StatusListe"/>: Text, Status-Wort und seine Art.</summary>
+public sealed record StatusEintrag(string Text, string Wort, StatusArt Art);

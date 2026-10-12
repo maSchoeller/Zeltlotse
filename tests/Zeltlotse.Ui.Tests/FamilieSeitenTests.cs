@@ -25,6 +25,7 @@ public sealed class FamilieSeitenTests : BunitContext
     private static readonly Guid Katrin = Guid.Parse("0199e000-0000-7000-8000-0000000000b1");
 
     private readonly NachgebildeterHandler _server = new();
+    private object[] _anmeldungen = [];
     private int _tokens;
 
     public FamilieSeitenTests()
@@ -32,6 +33,8 @@ public sealed class FamilieSeitenTests : BunitContext
         JSInterop.Mode = JSRuntimeMode.Loose;
         _server.Bei(HttpMethod.Get, "/api/betrieb/antiforgery", () => NachgebildeterHandler.Json(HttpStatusCode.OK, $$"""{"token":"token-{{++_tokens}}"}"""));
         _server.Bei(HttpMethod.Post, "/api/ich/profil", () => NachgebildeterHandler.Json(HttpStatusCode.OK, """{"version":1,"vorname":"Katrin","nachname":"Muster"}"""));
+        // Story 2-2: Die Familie lädt die eigenen Anmeldungen mit; ohne eigene Liste eines Tests ist sie leer.
+        _server.Bei(HttpMethod.Get, "/api/ich/anmeldungen", () => Json(_anmeldungen));
         Services.AddScoped<AppSitzung>();
         Services.AddScoped<ISitzung>(sp => sp.GetRequiredService<AppSitzung>());
         Services.AddScoped(_ => new AntiforgeryHandler { InnerHandler = _server });
@@ -462,6 +465,98 @@ public sealed class FamilieSeitenTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.Equal("http://localhost/anmelden", Navigation.Uri));
         Assert.Equal("uebergabe/Tk_2", Sitzung.Rueckweg);
+    }
+
+    // ---------- Anmeldestatus (Story 2-2) ----------
+
+    [Fact]
+    public void Familie_zeigt_je_Kind_die_Freizeiten_mit_Anmeldestatus_und_die_eigenen_Anmeldungen()
+    {
+        Familie([KatrinZeile()], [PaulZeile(), EmmaZeile()]);
+        _anmeldungen =
+        [
+            new { anmeldungId = Guid.CreateVersion7(), personId = Emma, freizeitName = "Zeltlager Sommer 2027", ersterTag = "2027-08-02", letzterTag = "2027-08-13", art = "Teilnehmende", status = "Eingegangen" },
+            new { anmeldungId = Guid.CreateVersion7(), personId = Katrin, freizeitName = "Familienfreizeit", ersterTag = "2027-05-01", letzterTag = "2027-05-03", art = "Teilnehmende", status = "Eingegangen" },
+        ];
+
+        var cut = Render<FamilieAnsicht>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Eigene Anmeldungen", cut.Markup, StringComparison.Ordinal));
+        var emma = cut.FindAll(".elkw-card").Single(c => c.QuerySelector("h2")?.TextContent == "Emma Muster");
+        var zeile = Assert.Single(emma.QuerySelectorAll(".zl-statusliste li"));
+        Assert.Contains("Zeltlager Sommer 2027, 02.08.2027 – 13.08.2027", zeile.TextContent, StringComparison.Ordinal);
+        Assert.Equal("<span class=\"elkw-status elkw-status--offen\">Eingegangen</span>", zeile.QuerySelector(".elkw-status")!.OuterHtml);
+        var paul = cut.FindAll(".elkw-card").Single(c => c.QuerySelector("h2")?.TextContent == "Paul Muster");
+        Assert.Empty(paul.QuerySelectorAll(".zl-statusliste"));
+        var eigene = cut.FindAll(".elkw-card").Single(c => c.QuerySelector("h2")?.TextContent == "Eigene Anmeldungen");
+        Assert.Contains("Familienfreizeit", Assert.Single(eigene.QuerySelectorAll(".zl-statusliste li")).TextContent, StringComparison.Ordinal);
+        // Kein eigener Anmelden-Knopf: angemeldet wird über den Anmeldelink.
+        Assert.DoesNotContain(cut.FindAll("a, button"), k => k.TextContent.Contains("Anmelden", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Ohne_Anmeldungen_fehlt_die_Card_Eigene_Anmeldungen()
+    {
+        Familie([KatrinZeile()], [EmmaZeile()]);
+
+        var cut = Render<FamilieAnsicht>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Emma Muster", cut.Markup, StringComparison.Ordinal));
+        Assert.DoesNotContain("Eigene Anmeldungen", cut.Markup, StringComparison.Ordinal);
+        Assert.Empty(cut.FindAll(".zl-statusliste"));
+    }
+
+    // ---------- Konto aus diesen Daten erstellen (Story 2-2) ----------
+
+    [Fact]
+    public void Gastprofil_wird_erst_beim_Klick_uebernommen_und_Neu_anmelden_fuehrt_danach_zur_Familie()
+    {
+        _server.Bei(HttpMethod.Get, "/api/ich/profil", () => Json(new { version = 1u, vorname = (string?)null, nachname = (string?)null, herkunft = (string?)null }));
+        _server.Bei(HttpMethod.Post, "/api/ich/gastprofil/uebernehmen", () => Json(new { personId = Katrin }));
+        _server.Bei(HttpMethod.Post, "/api/konten/abmelden", () => new HttpResponseMessage(HttpStatusCode.NoContent));
+        var cut = Render<GastProfilUebernehmen>(ps => ps.Add(p => p.Token, "Gt_1"));
+
+        cut.WaitForAssertion(() => Assert.Equal("Angaben übernehmen", cut.Find("button").TextContent));
+        Assert.Equal("Konto aus diesen Daten erstellen", cut.Find("h1").TextContent);
+        Assert.Contains("Die Angaben aus der Gast-Anmeldung kommen in dieses Konto", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain(_server.Anfragen, a => a.Pfad == "/api/ich/gastprofil/uebernehmen");
+
+        cut.Find("button").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Die Angaben sind übernommen.", cut.Markup, StringComparison.Ordinal));
+        Assert.Equal("{\"gastToken\":\"Gt_1\"}", Koerper("/api/ich/gastprofil/uebernehmen"));
+        cut.FindAll("button").Single(b => b.TextContent == "Neu anmelden").Click();
+        cut.WaitForAssertion(() => Assert.Equal("http://localhost/anmelden", Navigation.Uri));
+        Assert.Equal("familie", Sitzung.Rueckweg);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.NotFound, "Dieser Link ist nicht mehr gültig.")]
+    [InlineData(HttpStatusCode.Conflict, "Dieses Konto hat schon eigene Angaben. Die Gast-Anmeldung bleibt über den Gast-Link erreichbar.")]
+    public void Gastprofil_zeigt_404_und_409_als_Hinweis(HttpStatusCode status, string satz)
+    {
+        _server.Bei(HttpMethod.Get, "/api/ich/profil", () => Json(new { version = 1u, vorname = "Katrin", nachname = "Muster", herkunft = (string?)null }));
+        _server.Bei(HttpMethod.Post, "/api/ich/gastprofil/uebernehmen", () => status == HttpStatusCode.Conflict ? Konflikt() : new HttpResponseMessage(status));
+        var cut = Render<GastProfilUebernehmen>(ps => ps.Add(p => p.Token, "alt"));
+
+        cut.WaitForAssertion(() => Assert.Equal("Angaben übernehmen", cut.Find("button").TextContent));
+        cut.Find("button").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains(satz, cut.Markup, StringComparison.Ordinal));
+        Assert.Equal("Hinweis:", cut.Find(".elkw-alert--warnung .elkw-alert__title").TextContent);
+        Assert.Empty(cut.FindAll(".elkw-alert--erfolg"));
+    }
+
+    [Fact]
+    public void Gastprofil_ohne_Sitzung_fuehrt_zur_Anmeldung_mit_Rueckweg()
+    {
+        _server.Bei(HttpMethod.Get, "/api/ich/profil", () => NachgebildeterHandler.Problem(HttpStatusCode.Unauthorized, ""));
+        Navigation.NavigateTo("gast/Gt_1/konto");
+
+        var cut = Render<GastProfilUebernehmen>(ps => ps.Add(p => p.Token, "Gt_1"));
+
+        cut.WaitForAssertion(() => Assert.Equal("http://localhost/anmelden", Navigation.Uri));
+        Assert.Equal("gast/Gt_1/konto", Sitzung.Rueckweg);
     }
 
     // ---------- Startseite und Konto ----------

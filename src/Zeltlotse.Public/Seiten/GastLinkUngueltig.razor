@@ -1,0 +1,25 @@
+@* Hinweis für einen ungültigen Gast-Link (AD-11, EXPERIENCE.md → State Patterns): unbekannt, abgelaufen, von einem Konto übernommen
+   oder ein Link mit anderem Zweck. Kein eigener Pfad: Gast-Link und „Weiteres Kind anmelden“ markieren die Anfrage (Markieren) und
+   rufen NavigationManager.NotFound() auf; die Seite für Status 404 (AnmeldelinkUngueltig) zeigt dann diesen Hinweis. *@
+<PageTitle>Link nicht gültig – Zeltlotse</PageTitle>
+<HeadContent><meta name="robots" content="noindex" /></HeadContent>
+<OeffentlicherRahmen>
+    <h1>Dieser Link ist nicht mehr gültig.</h1>
+    <p>Ein Gast-Link gilt nur eine bestimmte Zeit, und er endet, sobald ein Konto die Angaben übernommen hat. Mit einem Konto steht der Stand der Anmeldung in der Familienübersicht.</p>
+</OeffentlicherRahmen>
+
+@code {
+    private const string Schluessel = "zeltlotse:gast-link-ungueltig";
+
+    /// <summary>Merkt an der Anfrage, dass die Seite für Status 404 den Hinweis zum Gast-Link zeigen soll.</summary>
+    public static void Markieren(HttpContext? kontext)
+    {
+        if (kontext is not null)
+        {
+            kontext.Items[Schluessel] = true;
+        }
+    }
+
+    /// <summary>Ob die Anfrage als ungültiger Gast-Link markiert ist.</summary>
+    public static bool IstMarkiert(HttpContext? kontext) => kontext?.Items.ContainsKey(Schluessel) == true;
+}

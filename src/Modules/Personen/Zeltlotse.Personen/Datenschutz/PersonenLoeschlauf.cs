@@ -6,11 +6,17 @@ using Zeltlotse.SharedKernel.Datenschutz;
 
 namespace Zeltlotse.Personen.Datenschutz;
 
-/// <summary>Täglicher Lösch-Lauf von Personen (AD-16): schickt nur <see cref="PersonenFristenLoeschen"/>.</summary>
+/// <summary>
+/// Täglicher Lösch-Lauf von Personen (AD-16): schickt <see cref="PersonenFristenLoeschen"/> und <see cref="GastProfileLoeschen"/>
+/// (abgelaufene, nie übernommene Gast-Links, AD-7).
+/// </summary>
 internal sealed class PersonenLoeschlauf(ISender sender) : ILoeschlauf
 {
-    public async Task LaufAsync(LoeschAuftrag auftrag, CancellationToken abbruch) =>
+    public async Task LaufAsync(LoeschAuftrag auftrag, CancellationToken abbruch)
+    {
         await sender.Send(new PersonenFristenLoeschen(auftrag.Jetzt, auftrag.FreizeitenMitAbgelaufenenDaten), abbruch);
+        await sender.Send(new GastProfileLoeschen(auftrag.Jetzt), abbruch);
+    }
 }
 
 /// <summary>

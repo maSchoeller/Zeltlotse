@@ -1,0 +1,18 @@
+@* Statusliste (DESIGN.md → Status, EXPERIENCE.md → Kind-Card): je Zeile ein Text, z. B. Freizeit und Zeitraum, daneben das
+   Status-Wort mit Quadrat (Farbe nie allein). Statisch tauglich, ohne Ereignis-Handler; ohne Einträge erscheint nichts. *@
+@if (Eintraege.Count > 0)
+{
+    <ul class="zl-statusliste">
+        @foreach (var eintrag in Eintraege)
+        {
+            <li>
+                <span>@eintrag.Text</span>
+                <Status Wort="@eintrag.Wort" Art="@eintrag.Art" />
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<StatusEintrag> Eintraege { get; set; } = [];
+}

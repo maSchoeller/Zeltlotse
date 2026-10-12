@@ -554,6 +554,9 @@ public sealed class FreizeitenSeitenTests : BunitContext
         Assert.Equal("Eine Woche.", beschreibung.GetAttribute("value") ?? beschreibung.TextContent);
         Assert.Equal("40", cut.Find("#freizeitseite-hoechstzahl").GetAttribute("value"));
         Assert.Equal("number", cut.Find("#freizeitseite-hoechstzahl").GetAttribute("type"));
+        // Story 2-2: Teilnahmebedingungen mehrzeilig, mit Hinweis, wo sie erscheinen.
+        Assert.Equal("TEXTAREA", cut.Find("#freizeitseite-teilnahmebedingungen").TagName);
+        Assert.Contains("Erscheint bei der Anmeldung vor dem Absenden.", cut.Markup, StringComparison.Ordinal);
         Assert.Equal(["Für Teilnehmende", "Für Mitarbeitende"], cut.FindAll("h3").Select(h => h.TextContent));
         Assert.Contains("https://zeltlotse.example/freizeit/tn", cut.Markup, StringComparison.Ordinal);
         var oeffnen = cut.FindAll("a").Where(a => a.TextContent == "Freizeitseite öffnen").Select(a => a.GetAttribute("href")).ToList();

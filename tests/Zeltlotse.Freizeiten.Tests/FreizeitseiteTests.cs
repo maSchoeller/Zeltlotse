@@ -37,6 +37,8 @@ public sealed class FreizeitseiteTests(PostgresContainer postgres) : IAsyncLifet
         _verbindung = await postgres.NeueDatenbankAsync();
         _factory = new ZeltlotseApiFactory(_verbindung);
         _factory.ZusatzDienste.Add(s => s.Replace(ServiceDescriptor.Singleton<IBestaetigteTeilnehmende>(_bestaetigt)));
+        // Story 2-2: Anmelden über die Seiten und mit Konto braucht mehr Aufrufe je Minute als die Vorgabe.
+        _factory.Einstellungen["Zeltlotse:Zugriffsbegrenzung:AnfragenJeMinute"] = "10000";
         _ = _factory.CreateClient();
         await AusfuehrenAsync(
             "INSERT INTO organisationen.organisation (\"Id\", \"Name\", \"AngelegtAm\") VALUES (@id, 'CVJM Musterstadt', now())", ("id", OrgA));
@@ -144,10 +146,83 @@ public sealed class FreizeitseiteTests(PostgresContainer postgres) : IAsyncLifet
         Assert.Contains("elkw-status--offen", seite, StringComparison.Ordinal);
         var seiteMitarbeitende = await SeiteAsync(client, mitarbeitende);
         Assert.DoesNotContain("Ausgebucht", seiteMitarbeitende, StringComparison.Ordinal);
+        // Story 2-2: Das Anmeldeformular zeigt „Ausgebucht“ oben, Absenden bleibt möglich (FR-67).
+        var formular = await SeiteAsync(client, teilnehmende + "/anmelden");
+        Assert.Contains("Ausgebucht", formular, StringComparison.Ordinal);
+        Assert.Contains("Anmelden ist trotzdem möglich, eine Zusage gibt es erst, wenn ein Platz frei wird.", formular, StringComparison.Ordinal);
+        Assert.Contains("Anmeldung absenden", formular, StringComparison.Ordinal);
 
         _bestaetigt.Anzahl = 39;
         Assert.False(await AusgebuchtAsync(client, teilnehmende));
         Assert.DoesNotContain("Ausgebucht", await SeiteAsync(client, teilnehmende), StringComparison.Ordinal);
+    }
+
+    // ---------- Story 2-2: Anmelden trotz „Ausgebucht“ ----------
+
+    [Fact]
+    public async Task Bei_ausgebuchter_Freizeit_legt_das_Gast_Formular_trotzdem_eine_Anmeldung_an()
+    {
+        var freizeit = await AnlegenAsync();
+        var teilnehmende = await TokenAsync((await LinksAsync(freizeit))[0]);
+        await HoechstzahlAsync(freizeit, "40");
+        _bestaetigt.Anzahl = 40;
+        using var client = _factory.CreateClient();
+
+        using var seite = await SeiteAnfrageAsync(client, HttpMethod.Get, $"/freizeit/{teilnehmende}/anmelden");
+        var formular = await seite.Content.ReadAsStringAsync(Abbruch);
+        Assert.Contains("Ausgebucht", WebUtility.HtmlDecode(formular), StringComparison.Ordinal);
+        var antiforgery = System.Text.RegularExpressions.Regex.Match(formular, "name=\"__RequestVerificationToken\" value=\"([^\"]+)\"").Groups[1].Value;
+
+        using var antwort = await SeiteAnfrageAsync(client, HttpMethod.Post, $"/freizeit/{teilnehmende}/anmelden", new FormUrlEncodedContent(
+        [
+            new("_handler", "anmelden"), new("__RequestVerificationToken", antiforgery),
+            new("e.KindVorname", "Lina"), new("e.KindGeburtsdatum", "2016-04-01"),
+            new("e.ElternVorname", "Sabine"), new("e.Mail", "lina.eltern@example.org"), new("e.Bestaetigt", "true"),
+        ]));
+
+        Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
+        Assert.Contains("Anmeldung für Lina", WebUtility.HtmlDecode(await antwort.Content.ReadAsStringAsync(Abbruch)), StringComparison.Ordinal);
+        Assert.Equal(1, await LesenAsync(db => db.Anmeldungen.CountAsync(a => a.FreizeitId == freizeit && a.Art == AnmeldeArt.Teilnehmende, Abbruch), OrgA));
+        Assert.True(await AusgebuchtAsync(client, teilnehmende));
+    }
+
+    [Fact]
+    public async Task Bei_ausgebuchter_Freizeit_meldet_sich_eine_Person_mit_Konto_ueber_den_Link_fuer_Mitarbeitende_an_201()
+    {
+        // Echte Zeit, damit der Client das Sitzungs-Cookie annimmt.
+        _factory.Uhr.SetUtcNow(DateTimeOffset.UtcNow);
+        var freizeit = await AnlegenAsync();
+        var mitarbeitende = await TokenAsync((await LinksAsync(freizeit))[1]);
+        await HoechstzahlAsync(freizeit, "1");
+        _bestaetigt.Anzahl = 5;
+        using var client = _factory.CreateClient();
+        const string mail = "jonas.huettner@example.org";
+        Assert.Equal(HttpStatusCode.Accepted, (await ApiPostAsync(client, "/api/konten/login-link", new Zeltlotse.Api.Contracts.Konten.LoginLinkAnfordern(mail))).StatusCode);
+        var login = (await _factory.Mails.WartenAufAsync(mail)).Token;
+        Assert.Equal(HttpStatusCode.NoContent, (await ApiPostAsync(client, "/api/konten/login-link/einloesen", new Zeltlotse.Api.Contracts.Konten.LoginLinkEinloesen(login))).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await ApiPostAsync(client, "/api/ich/profil", null)).StatusCode);
+
+        using var antwort = await ApiPostAsync(client, "/api/ich/anmeldungen", new Zeltlotse.Api.Contracts.Freizeiten.AnmeldungAbsenden(mitarbeitende, null, true));
+
+        Assert.Equal(HttpStatusCode.Created, antwort.StatusCode);
+        Assert.Equal(1, await LesenAsync(db => db.Anmeldungen.CountAsync(a => a.FreizeitId == freizeit && a.Art == AnmeldeArt.Mitarbeitende, Abbruch), OrgA));
+        Assert.False(await AusgebuchtAsync(client, mitarbeitende));
+    }
+
+    private static async Task<HttpResponseMessage> SeiteAnfrageAsync(HttpClient client, HttpMethod methode, string pfad, HttpContent? inhalt = null)
+    {
+        using var anfrage = new HttpRequestMessage(methode, pfad) { Content = inhalt };
+        anfrage.Headers.Add(ZeltlotseApiFactory.TestAbsenderIp, "203.0.113.9");
+        return await client.SendAsync(anfrage, Abbruch);
+    }
+
+    /// <summary>Ändernder API-Aufruf mit frisch geholtem Antiforgery-Token (das Token hängt an der angemeldeten Identität).</summary>
+    private static async Task<HttpResponseMessage> ApiPostAsync(HttpClient client, string pfad, object? koerper)
+    {
+        var token = (await client.GetFromJsonAsync<Zeltlotse.Api.Contracts.Betrieb.AntiforgeryAntwort>("/api/betrieb/antiforgery", Abbruch))!.Token;
+        using var anfrage = new HttpRequestMessage(HttpMethod.Post, pfad) { Content = koerper is null ? null : JsonContent.Create(koerper, koerper.GetType()) };
+        anfrage.Headers.Add(Zeltlotse.Api.Contracts.Gemeinsam.Kopfzeilen.Antiforgery, token);
+        return await client.SendAsync(anfrage, Abbruch);
     }
 
     // ---------- Hilfen ----------

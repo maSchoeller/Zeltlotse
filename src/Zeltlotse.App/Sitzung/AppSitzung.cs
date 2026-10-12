@@ -39,9 +39,15 @@ public sealed class AppSitzung(NavigationManager navigation) : ISitzung
     }
 
     /// <summary>Ausdrückliches Abmelden: Sitzung und Rückweg sind weg.</summary>
-    public void Abmelden()
+    public void Abmelden() => Abmelden(null);
+
+    /// <summary>
+    /// Ausdrückliches Abmelden: Die Sitzung ist weg, der Rückweg auch, außer einem neuen eigenen Pfad <paramref name="rueckweg"/> für
+    /// die nächste Anmeldung.
+    /// </summary>
+    public void Abmelden(string? rueckweg)
     {
-        _rueckweg = null;
+        _rueckweg = rueckweg is not null && IstEigenerPfad(rueckweg) ? rueckweg : null;
         Zuruecksetzen();
     }
 

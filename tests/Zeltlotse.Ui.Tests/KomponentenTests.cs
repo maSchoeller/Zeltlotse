@@ -188,6 +188,65 @@ public sealed class KomponentenTests : BunitContext
         Assert.Empty(cut.FindAll("button, a, img"));
     }
 
+    // ---------- Statusliste ----------
+
+    [Fact]
+    public void Statusliste_zeigt_je_Zeile_Text_und_Status_Wort_mit_Quadrat()
+    {
+        var cut = Render<StatusListe>(ps => ps.Add(p => p.Eintraege, new[]
+        {
+            new StatusEintrag("Zeltlager Sommer 2027, 02.08.2027 – 13.08.2027", "Eingegangen", StatusArt.Offen),
+            new StatusEintrag("Herbstfreizeit", "Bestätigt", StatusArt.Erfolg),
+        }));
+
+        var zeilen = cut.FindAll("ul.zl-statusliste li");
+        Assert.Equal(2, zeilen.Count);
+        Assert.Equal("Zeltlager Sommer 2027, 02.08.2027 – 13.08.2027", zeilen[0].QuerySelector("span")!.TextContent);
+        Assert.Equal("<span class=\"elkw-status elkw-status--offen\">Eingegangen</span>", zeilen[0].QuerySelector(".elkw-status")!.OuterHtml);
+        Assert.Equal("<span class=\"elkw-status elkw-status--erfolg\">Bestätigt</span>", zeilen[1].QuerySelector(".elkw-status")!.OuterHtml);
+        Assert.Empty(cut.FindAll("button, a"));
+    }
+
+    [Fact]
+    public void Statusliste_ohne_Eintraege_zeigt_nichts()
+    {
+        var cut = Render<StatusListe>(ps => ps.Add(p => p.Eintraege, Array.Empty<StatusEintrag>()));
+
+        Assert.Empty(cut.FindAll("ul"));
+    }
+
+    // ---------- Fehlerübersicht ----------
+
+    [Fact]
+    public void Fehleruebersicht_ist_eine_Fehler_Meldung_mit_Sprunglinks_zu_den_Feldern()
+    {
+        var cut = Render<Fehleruebersicht>(ps => ps.Add(p => p.Fehler, new[]
+        {
+            new FeldFehler("kind-vorname", "Kind: Vorname fehlt."),
+            new FeldFehler("eltern-mail", "Elternteil: Mail-Adresse fehlt."),
+        }));
+
+        var uebersicht = cut.Find("section");
+        Assert.Equal("alert", uebersicht.GetAttribute("role"));
+        Assert.Contains("elkw-alert--fehler", uebersicht.ClassList);
+        var titel = cut.Find(".elkw-alert__title");
+        Assert.Equal(titel.Id, uebersicht.GetAttribute("aria-labelledby"));
+        Assert.StartsWith("Fehler:", titel.TextContent, StringComparison.Ordinal);
+        Assert.Equal(
+            ["#kind-vorname Kind: Vorname fehlt.", "#eltern-mail Elternteil: Mail-Adresse fehlt."],
+            cut.FindAll("li a").Select(a => $"{a.GetAttribute("href")} {a.TextContent}"));
+        // Statisch tauglich: nur Links, keine Knöpfe.
+        Assert.Empty(cut.FindAll("button"));
+    }
+
+    [Fact]
+    public void Fehleruebersicht_ohne_Fehler_zeigt_nichts()
+    {
+        var cut = Render<Fehleruebersicht>(ps => ps.Add(p => p.Fehler, Array.Empty<FeldFehler>()));
+
+        Assert.Empty(cut.Markup.Trim());
+    }
+
     [Fact]
     public void Personenliste_ohne_Personen_zeigt_nichts()
     {

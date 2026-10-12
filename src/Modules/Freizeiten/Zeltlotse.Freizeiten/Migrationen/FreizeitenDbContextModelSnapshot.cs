@@ -59,6 +59,50 @@ namespace Zeltlotse.Freizeiten.Migrationen
                     b.ToTable("anmeldelink", "freizeiten");
                 });
 
+            modelBuilder.Entity("Zeltlotse.Freizeiten.Domaene.Anmeldung", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Art")
+                        .HasColumnType("smallint");
+
+                    b.Property<DateTimeOffset>("EingegangenAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("Folgenummer")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint");
+
+                    b.Property<DateTimeOffset>("TeilnahmebedingungenBestaetigtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("FreizeitId", "PersonId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_anmeldung_je_person")
+                        .HasFilter("\"PersonId\" <> '00000000-0000-7000-8000-0000000de1e7'");
+
+                    b.ToTable("anmeldung", "freizeiten");
+                });
+
             modelBuilder.Entity("Zeltlotse.Freizeiten.Domaene.Freizeit", b =>
                 {
                     b.Property<Guid>("Id")
@@ -104,6 +148,10 @@ namespace Zeltlotse.Freizeiten.Migrationen
                     b.Property<string>("Ort")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Teilnahmebedingungen")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
 
                     b.Property<uint>("Version")
                         .IsConcurrencyToken()
@@ -288,6 +336,15 @@ namespace Zeltlotse.Freizeiten.Migrationen
                 });
 
             modelBuilder.Entity("Zeltlotse.Freizeiten.Domaene.Anmeldelink", b =>
+                {
+                    b.HasOne("Zeltlotse.Freizeiten.Domaene.Freizeit", null)
+                        .WithMany()
+                        .HasForeignKey("FreizeitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zeltlotse.Freizeiten.Domaene.Anmeldung", b =>
                 {
                     b.HasOne("Zeltlotse.Freizeiten.Domaene.Freizeit", null)
                         .WithMany()

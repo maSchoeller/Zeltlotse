@@ -1,0 +1,201 @@
+@page "/anmeldung/{Token}"
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Personen
+@inject FreizeitenApiClient Freizeiten
+@inject PersonenApiClient Personen
+@* Anmeldung mit Konto über einen Anmeldelink (FR-16, FR-18, FR-19, NS-1 „Wiederanmeldung“, NS-3): Ohne Sitzung führt das Laden der
+   Familie (401) zur Anmeldung und danach hierher zurück. Die Freizeit kommt über das öffentliche GET des Anmeldelinks. Beim Link für
+   Teilnehmende wählt die Person ein Kind unter 18 der Familie oder sich selbst, beim Link für Mitarbeitende meldet sie sich selbst
+   an. Teilnahmebedingungen, Haken, „Anmeldung absenden“; danach die Meldung und der Weg zur Familienübersicht. Keine Mail: Der
+   Status steht in der Familienübersicht. Ein ungültiger Link zeigt „Dieser Anmeldelink ist nicht mehr gültig.“ *@
+<PageTitle>Anmeldung – Zeltlotse</PageTitle>
+
+<h1>Anmeldung</h1>
+
+@if (_aktionFehler)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>@AnmeldungAbschluss.FehlerText</p>
+    </Meldung>
+}
+
+@if (_ungueltig)
+{
+    <Meldung Titel="Hinweis" Art="MeldungArt.Warnung">
+        <p>Dieser Anmeldelink ist nicht mehr gültig.</p>
+    </Meldung>
+    <p>Die Leitung der Freizeit kann einen aktuellen Link schicken.</p>
+}
+else if (_seite is null || _familie is null)
+{
+    @if (!_aktionFehler)
+    {
+        <Ladezustand />
+    }
+}
+else
+{
+    <p>Freizeit: @_seite.Name, @Anzeige.ZeitraumLang(_seite.ErsterTag, _seite.LetzterTag)</p>
+    @if (_eingegangen)
+    {
+        <Meldung Titel="Anmeldung eingegangen" Art="MeldungArt.Erfolg">
+            <p>Die Leitung meldet sich in Kürze.</p>
+        </Meldung>
+        <p><Status Wort="Eingegangen" Art="StatusArt.Offen" /></p>
+        <p><Knopf Href="familie" Ansichtswechsel="true">Zur Familienübersicht</Knopf></p>
+    }
+    else
+    {
+        @if (Teilnehmende && _seite.Ausgebucht)
+        {
+            <Card>
+                <p><Status Wort="Ausgebucht" Art="StatusArt.Offen" /></p>
+                <p>Anmelden ist trotzdem möglich, eine Zusage gibt es erst, wenn ein Platz frei wird.</p>
+            </Card>
+        }
+        @if (_hinweis is not null)
+        {
+            <Meldung Titel="Hinweis" Art="MeldungArt.Warnung">
+                <p>@_hinweis</p>
+            </Meldung>
+        }
+        <Formular id="anmeldung-mit-konto" Absenden="AbsendenAsync">
+            @if (Teilnehmende)
+            {
+                <Auswahl Legende="Wer wird angemeldet? *" Gruppe="anmeldung-person" Optionen="@Optionen" Wert="@_person" Fehler="@_personFehler"
+                         WertGeaendert="@(w => _person = w)" />
+            }
+            else
+            {
+                <p>Angemeldet wird die eigene Person für das Team der Freizeit.</p>
+            }
+            <Card Titel="Teilnahmebedingungen">
+                @if (string.IsNullOrWhiteSpace(_seite.Teilnahmebedingungen))
+                {
+                    <p>Für diese Freizeit sind keine eigenen Teilnahmebedingungen hinterlegt.</p>
+                }
+                else
+                {
+                    @foreach (var absatz in _seite.Teilnahmebedingungen.Split('\n').Select(z => z.Trim()).Where(z => z.Length > 0))
+                    {
+                        <p>@absatz</p>
+                    }
+                }
+            </Card>
+            <Ankreuzfeld Label="Teilnahmebedingungen gelesen und bestätigt *" Id="anmeldung-bestaetigt" Wert="@_bestaetigt" Fehler="@_bestaetigungFehler"
+                         @onchange="@(e => _bestaetigt = e.Value is true)" />
+            <p>* Pflichtfeld</p>
+            <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Anmeldung absenden</Knopf>
+        </Formular>
+    }
+}
+
+@code {
+    /// <summary>Wert der Option „Selbst“ in der Auswahl.</summary>
+    private const string Selbst = "selbst";
+
+    private Freizeitseite? _seite;
+    private FamilieAntwort? _familie;
+    private string? _person;
+    private bool _bestaetigt;
+    private string? _personFehler;
+    private string? _bestaetigungFehler;
+    private string? _hinweis;
+    private bool _ungueltig;
+    private bool _eingegangen;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+
+    /// <summary>Das Token des Anmeldelinks; es verlässt die Seite nur im Pfad des öffentlichen GET und im Körper des POST.</summary>
+    [Parameter] public string Token { get; set; } = "";
+
+    private bool Teilnehmende => _seite?.Art == AnmeldelinkArt.Teilnehmende;
+
+    /// <summary>Die Kinder unter 18 der Familie (der Server rechnet die Volljährigkeit) und „Selbst“.</summary>
+    private IReadOnlyList<AuswahlOption> Optionen =>
+    [
+        .. (_familie?.Kinder ?? []).Where(k => !k.Volljaehrig).Select(k => new AuswahlOption(k.PersonId.ToString(), Anzeige.Name(k.Vorname, k.Nachname))),
+        new(Selbst, "Selbst"),
+    ];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _seite = null;
+        _familie = null;
+        _ungueltig = false;
+        _eingegangen = false;
+        _aktionFehler = false;
+        try
+        {
+            // Zuerst ein Aufruf mit Sitzung: ohne Anmeldung führt die 401 zur Seite „Anmelden“ und danach hierher zurück.
+            _familie = await Personen.FamilieLadenAsync();
+            _seite = await Freizeiten.FreizeitseiteOeffentlichLadenAsync(Token);
+            _ungueltig = _seite is null;
+            if (Teilnehmende && Optionen.Count == 1)
+            {
+                _person = Selbst;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    private async Task AbsendenAsync()
+    {
+        if (_uebertraegt || _seite is null)
+        {
+            return;
+        }
+
+        _personFehler = null;
+        _bestaetigungFehler = null;
+        _hinweis = null;
+        _aktionFehler = false;
+        if (Teilnehmende && _person is null)
+        {
+            _personFehler = "Person fehlt.";
+            return;
+        }
+
+        var person = Teilnehmende && _person != Selbst && Guid.TryParse(_person, out var kind) ? kind : (Guid?)null;
+        _uebertraegt = true;
+        try
+        {
+            var ergebnis = await Freizeiten.AnmeldenAsync(Token, person, _bestaetigt);
+            if (ergebnis.AnmeldungId is not null)
+            {
+                _eingegangen = true;
+            }
+            else if (ergebnis.NichtGefunden)
+            {
+                _ungueltig = true;
+            }
+            else if (ergebnis.SchonAngemeldet)
+            {
+                _hinweis = person is null
+                    ? "Die eigene Anmeldung für diese Freizeit besteht schon."
+                    : $"{Name(person)} ist für diese Freizeit schon angemeldet.";
+            }
+            else
+            {
+                _bestaetigungFehler = ergebnis.Fehler.GetValueOrDefault(AnmeldungFelder.TeilnahmebedingungenBestaetigt);
+                _personFehler = ergebnis.Fehler.GetValueOrDefault(AnmeldungFelder.PersonId);
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private string Name(Guid? person) =>
+        person is { } id && _familie?.Kinder.FirstOrDefault(k => k.PersonId == id) is { } kind && !string.IsNullOrWhiteSpace(kind.Vorname)
+            ? kind.Vorname
+            : "Die Person";
+}

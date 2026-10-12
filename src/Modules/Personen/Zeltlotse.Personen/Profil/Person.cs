@@ -39,6 +39,18 @@ internal sealed class Person : Aggregat
 
     public static Person Anlegen(Guid personId, DateTimeOffset jetzt) => new() { Id = personId, AngelegtAm = jetzt };
 
+    /// <summary>
+    /// Der Elternteil einer Gast-Anmeldung (FR-17, AD-7): ein Profil ohne Konto mit Namen; Namen getrimmt, ein leerer Nachname gilt als
+    /// nicht angegeben. Hat es kein Konto und keine laufende Freigabe mehr, wird es gelöscht.
+    /// </summary>
+    public static Person Gast(Guid personId, string vorname, string? nachname, DateTimeOffset jetzt) => new()
+    {
+        Id = personId,
+        Vorname = Normalisieren(vorname),
+        Nachname = Normalisieren(nachname),
+        AngelegtAm = jetzt,
+    };
+
     /// <summary>Ein Kinderprofil in einer Familie; Namen getrimmt, ein leerer Nachname gilt als nicht angegeben.</summary>
     public static Person Kind(Guid personId, Guid familieId, string vorname, string? nachname, DateOnly geburtsdatum, DateTimeOffset jetzt) => new()
     {

@@ -1,6 +1,6 @@
 ---
 title: Freizeitseite einrichten
-description: Beschreibung, Ort und Höchstzahl der Freizeitseite pflegen, die beiden Anmeldelinks teilen und bei Bedarf erneuern.
+description: Beschreibung, Ort, Höchstzahl und Teilnahmebedingungen der Freizeitseite pflegen, die beiden Anmeldelinks teilen und bei Bedarf erneuern.
 sidebar:
   order: 2
 ---
@@ -18,13 +18,14 @@ Die öffentliche Freizeitseite ist das, was Eltern und Mitarbeitende über den *
 
 ## Freizeitseite
 
-Im Abschnitt **Freizeitseite** stehen drei Felder. Jede Angabe speichert beim Verlassen des Feldes; danach steht „Gespeichert“ mit „Rückgängig“ am Feld.
+Im Abschnitt **Freizeitseite** stehen vier Felder. Jede Angabe speichert beim Verlassen des Feldes; danach steht „Gespeichert“ mit „Rückgängig“ am Feld.
 
 | Feld | Bedeutung |
 | --- | --- |
 | **Beschreibung** | Freier Text für die Freizeitseite, mehrzeilig, höchstens 2000 Zeichen. Jede Zeile wird ein eigener Absatz. |
 | **Ort** | Wo die Freizeit stattfindet, höchstens 100 Zeichen. |
 | **Höchstzahl Teilnehmende** | 1 bis 1000 oder leer. Sind so viele Teilnehmende bestätigt, zeigt die Freizeitseite „Ausgebucht“; anmelden bleibt trotzdem möglich. Leer heißt: nie ausgebucht. Mitarbeitende zählen nicht mit. |
+| **Teilnahmebedingungen** | Freier Text, mehrzeilig, höchstens 4000 Zeichen. Erscheint bei der Anmeldung vor dem Absenden; wer anmeldet, bestätigt sie mit einem Haken. Bleibt das Feld leer, steht im Formular „Für diese Freizeit sind keine eigenen Teilnahmebedingungen hinterlegt.“ |
 
 Name und Zeitraum der Freizeit legt der Org-Admin beim Anlegen fest. Das Team auf der Freizeitseite ergibt sich aus der Leitung und dem Team der Freizeit; die Herkunft trägt jede Person selbst in ihrem Konto ein (siehe [Anmelden](/erste-schritte/anmelden/)).
 
@@ -37,7 +38,7 @@ Jede Freizeit hat zwei Anmeldelinks:
 - **Für Teilnehmende** – für Eltern und volljährige Teilnehmende,
 - **Für Mitarbeitende** – für das Team.
 
-Beide öffnen dieselbe Freizeitseite. Ein Link lässt sich beliebig oft teilen und gilt bis zum Ende des letzten Freizeittages. Der Link steht als Text auf der Seite und lässt sich von dort kopieren. **Freizeitseite öffnen** zeigt die Seite so, wie Eltern sie sehen. Der Aufruf allein meldet niemanden an; Rechte entstehen erst, wenn die Leitung eine Anmeldung bestätigt.
+Beide öffnen dieselbe Freizeitseite. Über den Link für Teilnehmende melden Eltern ihre Kinder als Gast oder mit Konto an ([Kind anmelden](/eltern/kind-anmelden/)); über den Link für Mitarbeitende meldet sich das Team mit dem eigenen Konto an ([Für das Team anmelden](/mitarbeitende/anmelden/)). Ein Link lässt sich beliebig oft teilen und gilt bis zum Ende des letzten Freizeittages. Der Link steht als Text auf der Seite und lässt sich von dort kopieren. **Freizeitseite öffnen** zeigt die Seite so, wie Eltern sie sehen. Der Aufruf allein meldet niemanden an; Rechte entstehen erst, wenn die Leitung eine Anmeldung bestätigt.
 
 Steht bei einer Art „Noch kein Link.“, fehlt der Link oder lässt sich nicht mehr lesen, etwa bei einer Freizeit aus einer älteren Version; **Link erzeugen** erzeugt dann einen neuen.
 

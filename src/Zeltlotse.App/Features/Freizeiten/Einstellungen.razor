@@ -5,7 +5,8 @@
 @inject FreizeitKontextDienst Kontext
 @inject FreizeitenApiClient Freizeiten
 @* Einstellungen der Freizeit (EXPERIENCE.md → Fläche „Einstellungen der Freizeit“, nur Leitung; FR-15, FR-16, FR-67): Abschnitt
-   „Freizeitseite“ mit Beschreibung (mehrzeilig), Ort und Höchstzahl Teilnehmende per Autosave (AD-19) und Abschnitt
+   „Freizeitseite“ mit Beschreibung (mehrzeilig), Ort, Höchstzahl Teilnehmende und Teilnahmebedingungen (mehrzeilig, FR-19) per
+   Autosave (AD-19) und Abschnitt
    „Anmeldelinks“ mit beiden Links als Text, „Freizeitseite öffnen“ und „Neuen Link erzeugen“ über die Inline-Bestätigung. Ohne
    die erlaubte Aktion „freizeit-einstellungen“ oder bei 403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>Einstellungen – Zeltlotse</PageTitle>
@@ -59,6 +60,9 @@ else
                           Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.HoechstzahlTeilnehmende?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                           Version="@_einstellungen.Version" Hinweis="Leer lassen, wenn es keine Grenze gibt. Ist sie erreicht, zeigt die Freizeitseite „Ausgebucht“."
                           NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+            <AutosaveFeld Label="Teilnahmebedingungen" Id="freizeitseite-teilnahmebedingungen" Feldname="@FreizeitseiteFelder.Teilnahmebedingungen" Mehrzeilig="true"
+                          Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.Teilnahmebedingungen" Version="@_einstellungen.Version"
+                          Hinweis="Erscheint bei der Anmeldung vor dem Absenden." NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
         </Card>
 
         <Card Titel="Anmeldelinks">

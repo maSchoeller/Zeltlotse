@@ -1,0 +1,71 @@
+@page "/gast/{Token}"
+@layout OhneRahmenLayout
+@using Zeltlotse.Ui.Api
+@using Zeltlotse.Ui.Texte
+@inject FreizeitenApiClient Freizeiten
+@inject NavigationManager Navigation
+@* Gast-Link aus der Eingangsmail (AD-11, FR-17, FR-20): die Anmeldungen der Gast-Familie mit Vorname, Freizeit, Zeitraum und Status,
+   wie lange der Gast-Link gilt, und das Angebot „Konto aus diesen Daten erstellen?“. Nur eine Ansicht, statisch gerendert, ohne
+   Skript. Ungültig, abgelaufen oder übernommen: Status 404 mit „Dieser Link ist nicht mehr gültig.“; Zugriffsbegrenzung: Status 429.
+   Suchmaschinen nehmen die Seite nicht auf (noindex). *@
+
+@if (_zuViele)
+{
+    <ZuVieleAufrufe />
+}
+else if (_ansicht is not null)
+{
+    <PageTitle>Anmeldungen – Zeltlotse</PageTitle>
+    <HeadContent><meta name="robots" content="noindex" /></HeadContent>
+    <OeffentlicherRahmen>
+        <h1>Anmeldungen</h1>
+        @if (_ansicht.Anmeldungen.Count == 0)
+        {
+            <p>Noch keine Anmeldung über diesen Gast-Link.</p>
+        }
+        @foreach (var anmeldung in _ansicht.Anmeldungen)
+        {
+            <Card Titel="@anmeldung.Vorname">
+                <p>@anmeldung.FreizeitName</p>
+                <p>@Anzeige.ZeitraumLang(anmeldung.ErsterTag, anmeldung.LetzterTag)</p>
+                <p><Status Wort="@Anzeige.Status(anmeldung.Status)" Art="@Anzeige.AnmeldungStatusArt(anmeldung.Status)" /></p>
+            </Card>
+        }
+        <p>Gast-Link gilt bis @Anzeige.BisEinschliesslich(_ansicht.GueltigBis).</p>
+
+        <Card Titel="Konto aus diesen Daten erstellen?">
+            <p>Mit einem Konto stehen die Angaben bei der nächsten Anmeldung bereit, und der Stand jeder Anmeldung steht in der Familienübersicht. Danach gilt dieser Gast-Link nicht mehr.</p>
+            <p><Knopf Href="@($"/app/gast/{Token}/konto")" Ansichtswechsel="true">Konto erstellen</Knopf></p>
+        </Card>
+    </OeffentlicherRahmen>
+}
+
+@code {
+    private Zeltlotse.Api.Contracts.Freizeiten.GastLinkAnsicht? _ansicht;
+    private bool _zuViele;
+
+    [Parameter] public string Token { get; set; } = "";
+
+    [CascadingParameter] public HttpContext? HttpKontext { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _ansicht = await Freizeiten.GastLinkLadenAsync(Token);
+        }
+        catch (Exception fehler) when (ZuVieleAufrufe.IstZugriffsbegrenzt(fehler))
+        {
+            _zuViele = true;
+            ZuVieleAufrufe.Status429(HttpKontext);
+            return;
+        }
+
+        if (_ansicht is null)
+        {
+            // Status 404 mit „Dieser Link ist nicht mehr gültig.“ (NotFoundPage des Routers, markiert als Gast-Link).
+            GastLinkUngueltig.Markieren(HttpKontext);
+            Navigation.NotFound();
+        }
+    }
+}

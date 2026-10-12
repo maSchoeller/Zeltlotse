@@ -15,13 +15,13 @@ Das Familienkonto entsteht von selbst beim ersten „Kind hinzufügen“ oder �
 2. **Vorname** und **Geburtsdatum** eintragen; beide sind Pflicht (mit „*“ markiert). Der **Nachname** ist freiwillig.
 3. **Kind hinzufügen** wählen. Es erscheint „Gespeichert: Das Kind ist hinzugefügt.“, und das Kind steht als eigene Card in der Liste.
 
-Kinder stehen nach Geburtsdatum, das älteste zuerst. Jede Card zeigt den Namen und „Geboren am …“. Fehlt eine Angabe oder stimmt sie nicht, steht der Fehler direkt am Feld, etwa „Fehler: Geburtsdatum fehlt.“ oder „Fehler: Das Geburtsdatum liegt in der Zukunft.“
+Kinder stehen nach Geburtsdatum, das älteste zuerst. Jede Card zeigt den Namen, „Geboren am …“ und die Freizeiten, zu denen das Kind angemeldet ist, mit Zeitraum und Status, zum Beispiel „Eingegangen“. Eigene Anmeldungen stehen in der Card **Eigene Anmeldungen**. Einen Anmelden-Knopf gibt es hier nicht; angemeldet wird über den Anmeldelink der Freizeit (siehe [Kind anmelden](/eltern/kind-anmelden/)). Fehlt eine Angabe oder stimmt sie nicht, steht der Fehler direkt am Feld, etwa „Fehler: Geburtsdatum fehlt.“ oder „Fehler: Das Geburtsdatum liegt in der Zukunft.“
 
 :::note[Ab 18 ein eigenes Konto]
 Wer schon 18 ist, lässt sich nicht als Kind hinzufügen („Fehler: Kinder ab 18 legen ein eigenes Konto an.“); Volljährige melden sich mit ihrer eigenen Mail-Adresse selbst an. Ein später geändertes Geburtsdatum darf ein Kind im Familienkonto dagegen volljährig machen, dann erscheint bei ihm die [Übergabe](/eltern/profil-uebergeben/).
 :::
 
-![Seite „Familie“ am Handy mit den Cards „Paul Muster“ (mit dem Feld „Mail-Adresse von Paul“ und dem Knopf „Profil an Paul übergeben“) und „Emma Muster“](../../../assets/screenshots/familie-handy.png)
+![Seite „Familie“ am Handy mit den Cards „Paul Muster“ (mit dem Feld „Mail-Adresse von Paul“ und dem Knopf „Profil an Paul übergeben“) und „Emma Muster“ mit „Zeltlager Sommer 2027“ und dem Status „Eingegangen“](../../../assets/screenshots/familie-handy.png)
 
 ![Seite „Familie“ am Laptop mit den Cards „Paul Muster“ und „Emma Muster“, je mit „Geboren am …“ und „Angaben ändern“](../../../assets/screenshots/familie-laptop.png)
 

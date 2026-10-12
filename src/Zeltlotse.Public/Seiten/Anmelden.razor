@@ -1,0 +1,482 @@
+@page "/freizeit/{Token}/anmelden"
+@layout OhneRahmenLayout
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.Forms
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Personen
+@using Zeltlotse.Ui.Api
+@using Zeltlotse.Ui.Texte
+@inject FreizeitenApiClient Freizeiten
+@inject PersonenApiClient Personen
+@inject NavigationManager Navigation
+@* Gast-Anmeldung über den Anmeldelink für Teilnehmende (FR-17 bis FR-19, EXPERIENCE.md → Fläche „Anmeldung Teilnehmende“, NS-1):
+   ein einseitiges klassisches Formular ohne Skript (AD-29) mit den Abschnitten „Kind“ und „Elternteil“, den Teilnahmebedingungen der
+   Freizeit und dem Haken. Das Absenden setzt zwei API-Aufrufe zusammen (AD-2): Personen legt die Gast-Familie an, Freizeiten die
+   Anmeldung und schickt die Eingangsmail mit dem Gast-Link. Die Antwortseite rendert direkt im POST (keine Weiterleitung, damit der
+   Gast-Link nicht im Verlauf steht). „Weiteres Kind anmelden“ trägt Gast-Token und Elternangaben nur als versteckte Felder derselben
+   Sitzung; auf dem Gerät wird nichts gespeichert. Ohne Haken wird nichts angelegt. Drei Formularnamen: anmelden, weiteres-kind,
+   weiteres-kind-absenden. Link für Mitarbeitende oder ungültiger Link: Status 404 mit „Dieser Anmeldelink ist nicht mehr gültig.“;
+   ungültiger Gast-Link: Status 404 mit „Dieser Link ist nicht mehr gültig.“; Zugriffsbegrenzung: Status 429. Suchmaschinen nehmen
+   die Seite nicht auf (noindex). *@
+
+@if (_zuViele)
+{
+    <ZuVieleAufrufe />
+}
+else if (_ungueltig)
+{
+    @* Ein Absenden nach Ablauf des Links findet sein Formular, damit Blazor nicht mit 400 abbricht; angezeigt wird die Seite für
+       Status 404 (NotFoundPage), diese leeren Formulare erscheinen nie. *@
+    <form method="post" @formname="anmelden" @onsubmit="AnmeldenAsync"></form>
+    <form method="post" @formname="weiteres-kind" @onsubmit="WeiteresKindAsync"></form>
+    <form method="post" @formname="weiteres-kind-absenden" @onsubmit="WeiteresKindAbsendenAsync"></form>
+}
+else if (_seite is not null && !_ungueltig)
+{
+    <HeadContent><meta name="robots" content="noindex" /></HeadContent>
+    <OeffentlicherRahmen Organisation="@_seite.Organisation">
+        <Dachzeile>@_seite.Name · @Anzeige.ZeitraumLang(_seite.ErsterTag, _seite.LetzterTag)</Dachzeile>
+        @if (_eingegangen is { } eingegangen)
+        {
+            <PageTitle>Anmeldung eingegangen – @_seite.Name</PageTitle>
+            <h1>Anmeldung für @eingegangen.KindVorname</h1>
+            <Meldung Titel="Anmeldung eingegangen" Art="MeldungArt.Erfolg">
+                <p>Die Leitung meldet sich in Kürze.</p>
+            </Meldung>
+            <p><Status Wort="Eingegangen" Art="StatusArt.Offen" /></p>
+            <p>Eine Mail mit dem Gast-Link geht an @eingegangen.Mail. Über den Gast-Link lässt sich der Stand der Anmeldung jederzeit ansehen.</p>
+
+            <Card Titel="Konto aus diesen Daten erstellen?">
+                <p>Mit einem Konto stehen die Angaben bei der nächsten Anmeldung bereit, und der Stand jeder Anmeldung steht in der Familienübersicht. Ein Konto braucht nur die Mail-Adresse, angemeldet wird mit einem Link aus einer Mail.</p>
+                <p><Knopf Href="@($"/app/gast/{eingegangen.GastToken}/konto")" Ansichtswechsel="true">Konto erstellen</Knopf></p>
+            </Card>
+
+            <form method="post" @formname="weiteres-kind" @onsubmit="WeiteresKindAsync">
+                <AntiforgeryToken />
+                @Verborgen(eingegangen.Eingabe)
+                <Knopf Typ="submit" Art="KnopfArt.Outline">Weiteres Kind anmelden</Knopf>
+            </form>
+        }
+        else
+        {
+            <PageTitle>Anmeldung – @_seite.Name</PageTitle>
+            <h1>Anmeldung</h1>
+            <p>Ohne Konto möglich. Gefragt wird nur das Nötigste.</p>
+            @if (_seite.Ausgebucht)
+            {
+                <Card>
+                    <p><Status Wort="Ausgebucht" Art="StatusArt.Offen" /></p>
+                    <p>Anmelden ist trotzdem möglich, eine Zusage gibt es erst, wenn ein Platz frei wird.</p>
+                </Card>
+            }
+            @if (_hinweis is not null)
+            {
+                <Meldung Titel="Hinweis" Art="MeldungArt.Warnung">
+                    <p>@_hinweis</p>
+                </Meldung>
+            }
+            <Fehleruebersicht Fehler="@Uebersicht" />
+            <p>* Pflichtfeld</p>
+
+            @if (_weiteresKind)
+            {
+                <form method="post" @formname="weiteres-kind-absenden" @onsubmit="WeiteresKindAbsendenAsync" novalidate>
+                    <AntiforgeryToken />
+                    @Verborgen(_eingabe)
+                    @KindAbschnitt(_eingabe)
+                    <Card Titel="Elternteil">
+                        <p>@Anzeige.Name(_eingabe.ElternVorname, _eingabe.ElternNachname)</p>
+                        <p>@_eingabe.Mail</p>
+                        <p>Die Angaben zum Elternteil sind aus der vorigen Anmeldung übernommen.</p>
+                    </Card>
+                    @Bedingungen(_eingabe)
+                    <Knopf Typ="submit">Anmeldung absenden</Knopf>
+                </form>
+            }
+            else
+            {
+                <form method="post" @formname="anmelden" @onsubmit="AnmeldenAsync" novalidate>
+                    <AntiforgeryToken />
+                    @KindAbschnitt(_eingabe)
+                    <Card Titel="Elternteil">
+                        <Feld Label="Vorname *" Id="eltern-vorname" Name="e.ElternVorname" Wert="@_eingabe.ElternVorname" Fehler="@Fehler("eltern-vorname")" autocomplete="given-name" />
+                        <Feld Label="Nachname" Id="eltern-nachname" Name="e.ElternNachname" Wert="@_eingabe.ElternNachname" Fehler="@Fehler("eltern-nachname")" autocomplete="family-name" />
+                        <Feld Label="E-Mail *" Id="eltern-mail" Name="e.Mail" Typ="email" Wert="@_eingabe.Mail" Fehler="@Fehler("eltern-mail")" autocomplete="email"
+                              Hinweis="Dorthin gehen Bestätigung oder Absage." />
+                    </Card>
+                    @Bedingungen(_eingabe)
+                    <Knopf Typ="submit">Anmeldung absenden</Knopf>
+                </form>
+            }
+        }
+    </OeffentlicherRahmen>
+}
+
+@code {
+    /// <summary>
+    /// Die Formularfelder aller drei Formulare (Präfix <c>e.</c>): Kind, Elternteil, Haken und das Gast-Token als verstecktes Feld beim
+    /// weiteren Kind. Das Geburtsdatum kommt als <c>yyyy-MM-dd</c> aus dem Datumsfeld.
+    /// </summary>
+    public sealed class Eingabe
+    {
+        public string? KindVorname { get; set; }
+
+        public string? KindNachname { get; set; }
+
+        public string? KindGeburtsdatum { get; set; }
+
+        public string? ElternVorname { get; set; }
+
+        public string? ElternNachname { get; set; }
+
+        public string? Mail { get; set; }
+
+        public bool Bestaetigt { get; set; }
+
+        public string? GastToken { get; set; }
+    }
+
+    /// <summary>Die Antwortseite nach dem Absenden; trägt die Eingabe für „Weiteres Kind anmelden“ weiter.</summary>
+    private sealed record Eingegangen(string KindVorname, string Mail, string GastToken, Eingabe Eingabe);
+
+    /// <summary>JSON-Feldnamen der API zu den Kennungen der Felder.</summary>
+    private static readonly IReadOnlyDictionary<string, string> FeldIds = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        [GastFelder.KindVorname] = "kind-vorname",
+        [GastFelder.KindNachname] = "kind-nachname",
+        [GastFelder.KindGeburtsdatum] = "kind-geburtsdatum",
+        [GastFelder.Vorname] = "kind-vorname",
+        [GastFelder.Nachname] = "kind-nachname",
+        [GastFelder.Geburtsdatum] = "kind-geburtsdatum",
+        [GastFelder.ElternVorname] = "eltern-vorname",
+        [GastFelder.ElternNachname] = "eltern-nachname",
+        [GastFelder.Mail] = "eltern-mail",
+        [AnmeldungFelder.TeilnahmebedingungenBestaetigt] = "teilnahmebedingungen-bestaetigt",
+    };
+
+    /// <summary>Reihenfolge der Felder im Formular und ihr Abschnitt für die Fehlerübersicht.</summary>
+    private static readonly (string Id, string? Abschnitt)[] Reihenfolge =
+    [
+        ("kind-vorname", "Kind"),
+        ("kind-nachname", "Kind"),
+        ("kind-geburtsdatum", "Kind"),
+        ("eltern-vorname", "Elternteil"),
+        ("eltern-nachname", "Elternteil"),
+        ("eltern-mail", "Elternteil"),
+        ("teilnahmebedingungen-bestaetigt", null),
+    ];
+
+    private readonly Dictionary<string, string> _fehler = new(StringComparer.Ordinal);
+    private Zeltlotse.Api.Contracts.Freizeiten.Freizeitseite? _seite;
+    private Eingabe _eingabe = new();
+    private Eingegangen? _eingegangen;
+    private bool _weiteresKind;
+    private bool _zuViele;
+    private bool _ungueltig;
+    private string? _hinweis;
+
+    [Parameter] public string Token { get; set; } = "";
+
+    [CascadingParameter] public HttpContext? HttpKontext { get; set; }
+
+    [SupplyParameterFromForm(FormName = "anmelden", Name = "e")] private Eingabe? AnmeldenEingabe { get; set; }
+
+    [SupplyParameterFromForm(FormName = "weiteres-kind", Name = "e")] private Eingabe? WeiteresKindEingabe { get; set; }
+
+    [SupplyParameterFromForm(FormName = "weiteres-kind-absenden", Name = "e")] private Eingabe? WeiteresKindAbsendenEingabe { get; set; }
+
+    private IReadOnlyList<FeldFehler> Uebersicht =>
+    [
+        .. Reihenfolge
+            .Where(f => _fehler.ContainsKey(f.Id))
+            .Select(f => new FeldFehler(f.Id, f.Abschnitt is null ? _fehler[f.Id] : $"{f.Abschnitt}: {_fehler[f.Id]}")),
+    ];
+
+    private string? Fehler(string id) => _fehler.GetValueOrDefault(id);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _seite = await Freizeiten.FreizeitseiteOeffentlichLadenAsync(Token);
+        }
+        catch (Exception fehler) when (ZuVieleAufrufe.IstZugriffsbegrenzt(fehler))
+        {
+            ZuViele();
+            return;
+        }
+
+        // Gast-Anmeldung nur über den Link für Teilnehmende; Mitarbeitende melden sich mit Konto an.
+        if (_seite is not { Art: AnmeldelinkArt.Teilnehmende })
+        {
+            // Beim Absenden erst im Handler (das abgeschickte Formular muss gerendert sein, sonst bricht Blazor mit 400 ab).
+            if (HttpMethods.IsPost(HttpKontext?.Request.Method ?? ""))
+            {
+                _ungueltig = true;
+            }
+            else
+            {
+                ZeigeAnmeldelinkUngueltig();
+            }
+
+            return;
+        }
+
+        // Beim Absenden muss das abgeschickte Formular schon gerendert sein, damit Blazor es findet: „weiteres-kind“ steht auf der
+        // Antwortseite, „weiteres-kind-absenden“ im Formular für das weitere Kind. Die Handler setzen danach den eigentlichen Stand.
+        if (WeiteresKindEingabe is { } weiteres)
+        {
+            _eingegangen = new Eingegangen(weiteres.KindVorname ?? "", weiteres.Mail ?? "", weiteres.GastToken ?? "", weiteres);
+        }
+        else if (WeiteresKindAbsendenEingabe is { } absenden)
+        {
+            _eingabe = absenden;
+            _weiteresKind = true;
+        }
+    }
+
+    private async Task AnmeldenAsync()
+    {
+        if (_zuViele)
+        {
+            return;
+        }
+
+        if (_seite is null || _ungueltig)
+        {
+            ZeigeAnmeldelinkUngueltig();
+            return;
+        }
+
+        var eingabe = AnmeldenEingabe ?? new Eingabe();
+
+        _eingabe = eingabe;
+        if (!eingabe.Bestaetigt)
+        {
+            // Ohne Haken wird nichts angelegt; die Pflichtangaben prüft die Seite dann selbst, damit alle Fehler auf einmal erscheinen.
+            Pflicht("kind-vorname", eingabe.KindVorname, "Vorname fehlt.");
+            Pflicht("kind-geburtsdatum", eingabe.KindGeburtsdatum, "Geburtsdatum fehlt.");
+            Pflicht("eltern-vorname", eingabe.ElternVorname, "Vorname fehlt.");
+            Pflicht("eltern-mail", eingabe.Mail, "Mail-Adresse fehlt.");
+            _fehler["teilnahmebedingungen-bestaetigt"] = NichtBestaetigt;
+            return;
+        }
+
+        try
+        {
+            var gast = await Personen.GastAnlegenAsync(new GastAnlegen(
+                eingabe.ElternVorname, eingabe.ElternNachname, eingabe.Mail, eingabe.KindVorname, eingabe.KindNachname, Tag(eingabe.KindGeburtsdatum)));
+            if (gast.Angelegt is not { } angelegt)
+            {
+                FehlerUebernehmen(gast.Fehler);
+                return;
+            }
+
+            await AbsendenAsync(eingabe, angelegt.GastToken, angelegt.KindPersonId);
+        }
+        catch (Exception fehler) when (ZuVieleAufrufe.IstZugriffsbegrenzt(fehler))
+        {
+            ZuViele();
+        }
+    }
+
+    private async Task WeiteresKindAsync()
+    {
+        if (_zuViele)
+        {
+            return;
+        }
+
+        if (_seite is null || _ungueltig)
+        {
+            ZeigeAnmeldelinkUngueltig();
+            return;
+        }
+
+        var eingabe = WeiteresKindEingabe ?? new Eingabe();
+        _eingegangen = null;
+
+        try
+        {
+            if (string.IsNullOrEmpty(eingabe.GastToken) || await Freizeiten.GastLinkLadenAsync(eingabe.GastToken) is null)
+            {
+                ZeigeGastLinkUngueltig();
+                return;
+            }
+        }
+        catch (Exception fehler) when (ZuVieleAufrufe.IstZugriffsbegrenzt(fehler))
+        {
+            ZuViele();
+            return;
+        }
+
+        _eingabe = new Eingabe { GastToken = eingabe.GastToken, ElternVorname = eingabe.ElternVorname, ElternNachname = eingabe.ElternNachname, Mail = eingabe.Mail };
+        _weiteresKind = true;
+    }
+
+    private async Task WeiteresKindAbsendenAsync()
+    {
+        if (_zuViele)
+        {
+            return;
+        }
+
+        if (_seite is null || _ungueltig)
+        {
+            ZeigeAnmeldelinkUngueltig();
+            return;
+        }
+
+        var eingabe = WeiteresKindAbsendenEingabe ?? new Eingabe();
+
+        _eingabe = eingabe;
+        _weiteresKind = true;
+        if (string.IsNullOrEmpty(eingabe.GastToken))
+        {
+            ZeigeGastLinkUngueltig();
+            return;
+        }
+
+        if (!eingabe.Bestaetigt)
+        {
+            Pflicht("kind-vorname", eingabe.KindVorname, "Vorname fehlt.");
+            Pflicht("kind-geburtsdatum", eingabe.KindGeburtsdatum, "Geburtsdatum fehlt.");
+            _fehler["teilnahmebedingungen-bestaetigt"] = NichtBestaetigt;
+            return;
+        }
+
+        try
+        {
+            var kind = await Personen.GastKindAnlegenAsync(eingabe.GastToken, new GastKindHinzufuegen(eingabe.KindVorname, eingabe.KindNachname, Tag(eingabe.KindGeburtsdatum)));
+            if (kind.NichtGefunden)
+            {
+                ZeigeGastLinkUngueltig();
+                return;
+            }
+
+            if (kind.KindPersonId is not { } kindId)
+            {
+                FehlerUebernehmen(kind.Fehler);
+                return;
+            }
+
+            await AbsendenAsync(eingabe, eingabe.GastToken, kindId);
+        }
+        catch (Exception fehler) when (ZuVieleAufrufe.IstZugriffsbegrenzt(fehler))
+        {
+            ZuViele();
+        }
+    }
+
+    /// <summary>Zweiter Aufruf: Freizeiten legt die Anmeldung an und schickt die Eingangsmail mit dem Gast-Link.</summary>
+    private async Task AbsendenAsync(Eingabe eingabe, string gastToken, Guid kindId)
+    {
+        var ergebnis = await Freizeiten.GastAnmeldenAsync(Token, gastToken, kindId, eingabe.Bestaetigt);
+        var vorname = eingabe.KindVorname?.Trim() ?? "";
+        if (ergebnis.AnmeldungId is not null)
+        {
+            var weiter = new Eingabe { GastToken = gastToken, ElternVorname = eingabe.ElternVorname, ElternNachname = eingabe.ElternNachname, Mail = eingabe.Mail };
+            _eingegangen = new Eingegangen(vorname, eingabe.Mail?.Trim() ?? "", gastToken, weiter);
+        }
+        else if (ergebnis.SchonAngemeldet)
+        {
+            _hinweis = $"{vorname} ist für diese Freizeit schon angemeldet.";
+        }
+        else if (ergebnis.NichtGefunden)
+        {
+            ZeigeAnmeldelinkUngueltig();
+        }
+        else
+        {
+            FehlerUebernehmen(ergebnis.Fehler);
+        }
+    }
+
+    private const string NichtBestaetigt = "Teilnahmebedingungen nicht bestätigt.";
+
+    private void Pflicht(string id, string? wert, string text)
+    {
+        if (string.IsNullOrWhiteSpace(wert))
+        {
+            _fehler[id] = text;
+        }
+    }
+
+    private void FehlerUebernehmen(IReadOnlyDictionary<string, string> fehler)
+    {
+        foreach (var (feld, text) in fehler)
+        {
+            _fehler[FeldIds.GetValueOrDefault(feld) ?? feld] = text;
+        }
+    }
+
+    private void ZuViele()
+    {
+        _zuViele = true;
+        ZuVieleAufrufe.Status429(HttpKontext);
+    }
+
+    /// <summary>Status 404 mit „Dieser Anmeldelink ist nicht mehr gültig.“ (NotFoundPage des Routers).</summary>
+    private void ZeigeAnmeldelinkUngueltig()
+    {
+        _ungueltig = true;
+        Navigation.NotFound();
+    }
+
+    /// <summary>Status 404 mit „Dieser Link ist nicht mehr gültig.“ (dieselbe NotFoundPage, markiert als Gast-Link).</summary>
+    private void ZeigeGastLinkUngueltig()
+    {
+        _ungueltig = true;
+        Seiten.GastLinkUngueltig.Markieren(HttpKontext);
+        Navigation.NotFound();
+    }
+
+    /// <summary>Wert eines Datumsfelds (<c>yyyy-MM-dd</c>); alles andere gilt als fehlend, den Fehler meldet der Server am Feld.</summary>
+    private static DateOnly? Tag(string? wert) =>
+        DateOnly.TryParseExact(wert, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var tag) ? tag : null;
+
+    /// <summary>Absätze der Teilnahmebedingungen: je Zeile einer, leere Zeilen fallen weg.</summary>
+    private static IEnumerable<string> Absaetze(string? text) =>
+        (text ?? "").Split('\n').Select(z => z.Trim()).Where(z => z.Length > 0);
+
+    /// <summary>Gast-Token und Elternangaben als versteckte Felder (nur „Weiteres Kind anmelden“, nie im Gerätespeicher).</summary>
+    private static RenderFragment Verborgen(Eingabe eingabe) =>
+        @<text>
+            <input type="hidden" name="e.GastToken" value="@eingabe.GastToken" />
+            <input type="hidden" name="e.ElternVorname" value="@eingabe.ElternVorname" />
+            <input type="hidden" name="e.ElternNachname" value="@eingabe.ElternNachname" />
+            <input type="hidden" name="e.Mail" value="@eingabe.Mail" />
+        </text>;
+
+    private RenderFragment KindAbschnitt(Eingabe eingabe) =>
+        @<Card Titel="Kind">
+            <Feld Label="Vorname *" Id="kind-vorname" Name="e.KindVorname" Wert="@eingabe.KindVorname" Fehler="@Fehler("kind-vorname")" autocomplete="off" />
+            <Feld Label="Nachname" Id="kind-nachname" Name="e.KindNachname" Wert="@eingabe.KindNachname" Fehler="@Fehler("kind-nachname")" autocomplete="off" />
+            <Feld Label="Geburtsdatum *" Id="kind-geburtsdatum" Name="e.KindGeburtsdatum" Typ="date" Wert="@eingabe.KindGeburtsdatum" Fehler="@Fehler("kind-geburtsdatum")">
+                <UnterDemFeld>
+                    @if (Fehler("kind-geburtsdatum") == GastFelder.Volljaehrig)
+                    {
+                        <p><a href="@($"/app/anmeldung/{Token}")">Mit Konto anmelden</a></p>
+                    }
+                </UnterDemFeld>
+            </Feld>
+        </Card>;
+
+    private RenderFragment Bedingungen(Eingabe eingabe) =>
+        @<Card Titel="Teilnahmebedingungen">
+            @if (string.IsNullOrWhiteSpace(_seite?.Teilnahmebedingungen))
+            {
+                <p>Für diese Freizeit sind keine eigenen Teilnahmebedingungen hinterlegt.</p>
+            }
+            else
+            {
+                @foreach (var absatz in Absaetze(_seite.Teilnahmebedingungen))
+                {
+                    <p>@absatz</p>
+                }
+            }
+            <Ankreuzfeld Label="Teilnahmebedingungen gelesen und bestätigt *" Id="teilnahmebedingungen-bestaetigt" Name="e.Bestaetigt" Wert="@eingabe.Bestaetigt"
+                         Fehler="@Fehler("teilnahmebedingungen-bestaetigt")" />
+            <p>Welche Angaben erhoben werden, wer sie sieht und wann sie gelöscht werden: <a href="@($"/freizeit/{Token}/vertrauensseite")">Vertrauensseite</a></p>
+        </Card>;
+}

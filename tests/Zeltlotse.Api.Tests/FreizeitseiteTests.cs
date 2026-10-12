@@ -79,7 +79,7 @@ public sealed class FreizeitseiteTests(PostgresContainer postgres) : IAsyncLifet
 
         Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
         var json = await JsonAsync(antwort);
-        Assert.Equal(["anmeldelinks", "beschreibung", "hoechstzahlTeilnehmende", "ort", "version"], Namen(json));
+        Assert.Equal(["anmeldelinks", "beschreibung", "hoechstzahlTeilnehmende", "ort", "teilnahmebedingungen", "version"], Namen(json));
         Assert.True(json.GetProperty("version").GetUInt32() > 0);
         Assert.Equal(JsonValueKind.Null, json.GetProperty("beschreibung").ValueKind);
         Assert.Equal(JsonValueKind.Null, json.GetProperty("ort").ValueKind);
@@ -248,7 +248,7 @@ public sealed class FreizeitseiteTests(PostgresContainer postgres) : IAsyncLifet
         Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
         var roh = await antwort.Content.ReadAsStringAsync(Abbruch);
         var json = await JsonAsync(antwort);
-        Assert.Equal(["art", "ausgebucht", "beschreibung", "ersterTag", "letzterTag", "name", "organisation", "ort", "team"], Namen(json));
+        Assert.Equal(["art", "ausgebucht", "beschreibung", "ersterTag", "letzterTag", "name", "organisation", "ort", "team", "teilnahmebedingungen"], Namen(json));
         Assert.Equal(("CVJM Musterstadt", "Zeltlager Kapf 2027", "2027-08-02", "2027-08-13", "Zeltplatz Kapf", "Eine Woche Zeltlager auf dem Kapf.", "Teilnehmende", false), (
             json.GetProperty("organisation").GetString(),
             json.GetProperty("name").GetString(),

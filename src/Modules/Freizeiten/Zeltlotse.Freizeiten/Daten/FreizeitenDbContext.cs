@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Design;
 using FreizeitseiteFelder = Zeltlotse.Api.Contracts.Freizeiten.FreizeitseiteFelder;
 using Zeltlotse.Freizeiten.Domaene;
 using Zeltlotse.SharedKernel.Daten;
+using Zeltlotse.SharedKernel.Datenschutz;
 using Zeltlotse.SharedKernel.Mandanten;
 using Zeltlotse.SharedKernel.Zugangslinks;
 
@@ -19,6 +20,8 @@ internal sealed class FreizeitenDbContext(DbContextOptions<FreizeitenDbContext> 
     public DbSet<LeitungsEinladung> Einladungen => Set<LeitungsEinladung>();
 
     public DbSet<Anmeldelink> Anmeldelinks => Set<Anmeldelink>();
+
+    public DbSet<Anmeldung> Anmeldungen => Set<Anmeldung>();
 
     protected override string Schema => FreizeitenModul.Schema;
 
@@ -37,6 +40,8 @@ internal sealed class FreizeitenLeseDbContext(DbContextOptions<FreizeitenLeseDbC
 
     public DbSet<Anmeldelink> Anmeldelinks => Set<Anmeldelink>();
 
+    public DbSet<Anmeldung> Anmeldungen => Set<Anmeldung>();
+
     protected override string Schema => FreizeitenModul.Schema;
 
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => FreizeitenModell.Konfigurieren(modelBuilder);
@@ -54,6 +59,7 @@ internal static class FreizeitenModell
             e.Property(f => f.Name).HasMaxLength(Freizeit.MaximaleNamensLaenge);
             e.Property(f => f.Beschreibung).HasMaxLength(FreizeitseiteFelder.BeschreibungMaximaleLaenge);
             e.Property(f => f.Ort).HasMaxLength(FreizeitseiteFelder.OrtMaximaleLaenge);
+            e.Property(f => f.Teilnahmebedingungen).HasMaxLength(FreizeitseiteFelder.TeilnahmebedingungenMaximaleLaenge);
             e.Property(f => f.Version).IsRowVersion();
             e.HasIndex(f => f.OrganisationId);
             e.HasMany(f => f.Rollen).WithOne().HasForeignKey(r => r.FreizeitId);
@@ -89,6 +95,23 @@ internal static class FreizeitenModell
             e.HasIndex(l => l.TokenHash).IsUnique();
             e.Property(l => l.TokenGeschuetzt).HasColumnType("bytea");
             e.HasOne<Freizeit>().WithMany().HasForeignKey(l => l.FreizeitId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // FR-16: je Freizeit und Person höchstens eine Anmeldung; der Platzhalter gelöschter Personen ist ausgenommen, damit zwei
+        // gelöschte Personen derselben Freizeit nicht kollidieren (AD-16).
+        modelBuilder.Entity<Anmeldung>(e =>
+        {
+            e.ToTable("anmeldung");
+            e.Property(a => a.Id).ValueGeneratedNever();
+            e.Property(a => a.Art).HasConversion<short>();
+            e.Property(a => a.Status).HasConversion<short>();
+            e.HasIndex(a => new { a.FreizeitId, a.PersonId })
+                .IsUnique()
+                .HasFilter($"\"PersonId\" <> '{GeloeschtePerson.Id}'")
+                .HasDatabaseName("IX_anmeldung_je_person");
+            e.HasIndex(a => a.PersonId);
+            e.HasIndex(a => a.OrganisationId);
+            e.HasOne<Freizeit>().WithMany().HasForeignKey(a => a.FreizeitId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

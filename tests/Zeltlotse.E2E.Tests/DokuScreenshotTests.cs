@@ -298,6 +298,9 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         var emma = seite.Locator(".elkw-card").Filter(new() { HasText = "Emma Muster" });
         await Assertions.Expect(paul).ToContainTextAsync("Geboren am 14.03.2008", new() { Timeout = 60_000 });
         await Assertions.Expect(emma).ToContainTextAsync("Geboren am 02.09.2017");
+        // Story 2-2: Katrin hat Emma mit Konto angemeldet; die Card zeigt die Freizeit mit dem Status.
+        await Assertions.Expect(emma.Locator(".zl-statusliste li")).ToContainTextAsync("Zeltlager Sommer 2027, 02.08.2027 – 13.08.2027");
+        await Assertions.Expect(emma.Locator(".zl-statusliste .elkw-status")).ToHaveTextAsync("Eingegangen");
         // Nur bei Paul (volljährig) steht die Übergabe.
         await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Profil an Paul übergeben" })).ToHaveCountAsync(1);
         await Assertions.Expect(emma.GetByRole(AriaRole.Button)).ToHaveCountAsync(0);
@@ -627,6 +630,109 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await E2EHilfe.AxeAsync(seite);
 
         await BildAsync(seite, "vertrauensseite", geraet);
+    }
+
+    // ---------- Story 2-2: Anmeldung ----------
+
+    /// <summary>Fester Gast der Doku-Bilder: Elternteil ohne Konto mit Kind „Lina Beispiel“.</summary>
+    private const string GastMail = "lina.eltern@example.org";
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Anmeldung_Formular(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await GastFormularAsync(seite);
+        await Assertions.Expect(seite.GetByText("Ohne Konto möglich. Gefragt wird nur das Nötigste.")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Heading, new() { Name = "Kind" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Heading, new() { Name = "Elternteil" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByText("Dorthin gehen Bestätigung oder Absage.")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByText("Die Lagerregeln und die Anweisungen der Mitarbeitenden gelten für alle Teilnehmenden.")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Anmeldung absenden" })).ToBeVisibleAsync();
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "anmeldung-formular", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Anmeldung_Eingegangen(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await GastFormularAsync(seite);
+        await E2EHilfe.GastFormularAbsendenAsync(seite, "Lina", "Sabine", GastMail);
+        await Assertions.Expect(seite.GetByText("Anmeldung eingegangen:")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByText($"Eine Mail mit dem Gast-Link geht an {GastMail}.", new() { Exact = false })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Heading, new() { Name = "Konto aus diesen Daten erstellen?" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Weiteres Kind anmelden" })).ToBeVisibleAsync();
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "anmeldung-eingegangen", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Gast_Link(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+        var vorher = host.Mails.An(GastMail).Count;
+        await GastFormularAsync(seite);
+        await E2EHilfe.GastFormularAbsendenAsync(seite, "Lina", "Sabine", GastMail);
+        var link = (await host.Mails.WartenAufAsync(GastMail, vorher + 1)).Link;
+
+        // Der Zustelldienst legt die Freigabe nach wenigen Sekunden an; ab dann gilt der Gast-Link bis zum Ende des Freigabefensters.
+        await seite.GotoAsync(link);
+        var bis = DateTime.UtcNow.AddSeconds(60);
+        while (!(await seite.Locator("main").InnerTextAsync()).Contains("Gast-Link gilt bis 12.09.2027", StringComparison.Ordinal) && DateTime.UtcNow < bis)
+        {
+            await Task.Delay(1000, TestContext.Current.CancellationToken);
+            await seite.ReloadAsync();
+        }
+
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Anmeldungen");
+        var karte = seite.Locator(".elkw-card").Filter(new() { HasText = "Lina" });
+        await Assertions.Expect(karte.Locator(".elkw-status")).ToHaveTextAsync("Eingegangen");
+        await Assertions.Expect(seite.GetByText("Gast-Link gilt bis 12.09.2027.")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Konto erstellen" })).ToBeVisibleAsync();
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "gast-link", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Anmeldung_Mit_Konto(string geraet)
+    {
+        var link = await E2EHilfe.AnmeldelinkAsync(host);
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, ElternMail);
+        await seite.GotoAsync(new Uri(host.Adresse, $"/app/anmeldung/{E2EHilfe.Token(link)}").ToString());
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Anmeldung", new() { Timeout = 60_000 });
+        var auswahl = seite.Locator("fieldset");
+        await Assertions.Expect(auswahl.GetByLabel("Emma Muster")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(auswahl.GetByLabel("Selbst")).ToBeVisibleAsync();
+        await Assertions.Expect(auswahl.GetByText("Paul")).ToHaveCountAsync(0);
+        await Assertions.Expect(seite.GetByLabel("Teilnahmebedingungen gelesen und bestätigt *")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Anmeldung absenden" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "anmeldung-mit-konto", geraet);
+    }
+
+    /// <summary>Öffnet die Freizeitseite über den Anmeldelink für Teilnehmende und tippt „Anmelden“.</summary>
+    private async Task GastFormularAsync(IPage seite)
+    {
+        await FreizeitseiteAsync(seite);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Anmelden", Exact = true }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Anmeldung", new() { Timeout = 60_000 });
     }
 
     /// <summary>Jonas (Leitung) meldet sich an und öffnet in der Demo-Freizeit „Einstellungen“.</summary>

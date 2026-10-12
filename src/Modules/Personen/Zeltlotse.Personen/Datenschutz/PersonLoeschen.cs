@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Zeltlotse.Personen.Daten;
 using Zeltlotse.Personen.Familien;
+using Zeltlotse.Personen.Gaeste;
 using Zeltlotse.Personen.Nachweise;
 using Zeltlotse.Personen.Profil;
 using Zeltlotse.SharedKernel.Anmeldung;
@@ -42,7 +43,15 @@ internal abstract record PersonLoeschung
     public sealed record NichtGefunden : PersonLoeschung;
 }
 
-internal sealed class PersonLoeschenHandler(PersonenDbContext db) : ICommandHandler<PersonLoeschen, PersonLoeschung>
+/// <summary>
+/// Gast-Profile, deren Gast-Link abgelaufen ist und die nie ein Konto übernommen hat (AD-7, AD-16): Der Elternteil wird über denselben
+/// Lösch-Weg wie „Konto löschen“ gelöscht, und mit ihm als einzigem Elternteil die Kinder der Familie, der Gast-Zugang und die
+/// Freigaben; je Person legt das <c>PersonGeloescht</c> ab. Über alle Organisationen hinweg; kein Benutzer-Command.
+/// </summary>
+internal sealed record GastProfileLoeschen(DateTimeOffset Jetzt) : ICommand, IModulCommand<PersonenDbContext>;
+
+/// <summary>Ein Handler für beide Lösch-Commands, damit Konto löschen und das Löschen abgelaufener Gast-Profile denselben Weg nehmen.</summary>
+internal sealed class PersonLoeschenHandler(PersonenDbContext db) : ICommandHandler<PersonLoeschen, PersonLoeschung>, ICommandHandler<GastProfileLoeschen>
 {
     public async ValueTask<PersonLoeschung> Handle(PersonLoeschen command, CancellationToken cancellationToken)
     {
@@ -54,6 +63,45 @@ internal sealed class PersonLoeschenHandler(PersonenDbContext db) : ICommandHand
             return new PersonLoeschung.NichtGefunden();
         }
 
+        return await LoeschenAsync(person, cancellationToken);
+    }
+
+    public async ValueTask<Unit> Handle(GastProfileLoeschen command, CancellationToken cancellationToken)
+    {
+        var offen = await db.GastZugaenge.Where(z => z.UebernommenAm == null).OrderBy(z => z.AngelegtAm).ToListAsync(cancellationToken);
+        foreach (var zugang in offen)
+        {
+            var familie = await GastFamilie.LesenAsync(db.Elternteile, db.Personen, db.Freigaben, zugang, cancellationToken);
+            if (familie.GueltigBis > command.Jetzt)
+            {
+                continue;
+            }
+
+            await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({zugang.ElternPersonId.ToString()}, 0))", cancellationToken);
+            // Nach den Sperren neu prüfen: Eine Übernahme (sperrt die Zeile) oder eine neue Freigabe kann inzwischen eingetroffen sein.
+            await db.Database.ExecuteSqlAsync($"SELECT 1 FROM personen.gast_zugang WHERE \"Id\" = {zugang.Id} FOR UPDATE", cancellationToken);
+            await db.Entry(zugang).ReloadAsync(cancellationToken);
+            if (zugang.UebernommenAm is not null
+                || (await GastFamilie.LesenAsync(db.Elternteile, db.Personen, db.Freigaben, zugang, cancellationToken)).GueltigBis > command.Jetzt)
+            {
+                continue;
+            }
+
+            if (await FamilienSperre.PersonAsync(db.Personen, zugang.ElternPersonId, cancellationToken) is { } eltern)
+            {
+                await LoeschenAsync(eltern, cancellationToken);
+            }
+            else
+            {
+                db.GastZugaenge.Remove(zugang);
+            }
+        }
+
+        return Unit.Value;
+    }
+
+    private async Task<PersonLoeschung> LoeschenAsync(Person person, CancellationToken cancellationToken)
+    {
         var zuLoeschen = new List<Person> { person };
         Guid? familieLoeschen = null;
         var elternteil = await db.Elternteile.SingleOrDefaultAsync(e => e.PersonId == person.Id, cancellationToken);
@@ -99,6 +147,8 @@ internal sealed class PersonLoeschenHandler(PersonenDbContext db) : ICommandHand
         await db.Einsichten.IgnoreQueryFilters().Where(e => ids.Contains(e.PersonId)).ExecuteDeleteAsync(abbruch);
         await db.Erinnerungen.IgnoreQueryFilters().Where(e => ids.Contains(e.PersonId)).ExecuteDeleteAsync(abbruch);
         await db.Uebergaben.Where(u => ids.Contains(u.PersonId)).ExecuteDeleteAsync(abbruch);
+        await db.Freigaben.IgnoreQueryFilters().Where(f => ids.Contains(f.PersonId)).ExecuteDeleteAsync(abbruch);
+        await db.GastZugaenge.Where(z => ids.Contains(z.ElternPersonId)).ExecuteDeleteAsync(abbruch);
         await db.FreizeitRollen.IgnoreQueryFilters().Where(r => ids.Contains(r.PersonId)).ExecuteDeleteAsync(abbruch);
         await db.EinsichtProtokoll.Where(e => ids.Contains(e.BetroffenePersonId)).ExecuteDeleteAsync(abbruch);
         await db.Elternteile.Where(e => ids.Contains(e.PersonId)).ExecuteDeleteAsync(abbruch);
