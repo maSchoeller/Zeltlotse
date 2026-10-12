@@ -272,4 +272,32 @@ public sealed class NachweisRichtlinieMigrationTests(PostgresContainer postgres)
             [(EreignisArt.Fuehrungszeugnis, true, 60), (EreignisArt.Juleica, false, 36), (EreignisArt.ErsteHilfe, false, 24), (EreignisArt.Praeventionsschulung, false, 60)],
             zeilen.Select(z => (z.Art, z.Pflicht, z.GueltigkeitMonate)));
     }
+
+    [Fact]
+    public async Task Bestehende_Organisationen_bekommen_die_Vorgabe_Loeschfristen()
+    {
+        var abbruch = TestContext.Current.CancellationToken;
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<Microsoft.Extensions.Configuration.IConfiguration>(new Microsoft.Extensions.Configuration.ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:zeltlotse"] = await postgres.NeueDatenbankAsync(),
+                [Zeltlotse.SharedKernel.Datenschutz.Hauptschluessel.Konfigurationsschluessel] = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)),
+            })
+            .Build());
+        services.AddOrganisationenModul();
+        await using var dienste = services.BuildServiceProvider();
+        await using var scope = dienste.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<OrganisationenDbContext>();
+        var migrator = Microsoft.EntityFrameworkCore.Infrastructure.AccessorExtensions.GetService<Microsoft.EntityFrameworkCore.Migrations.IMigrator>(db);
+
+        await migrator.MigrateAsync("20261012050556_NachweisRichtlinieUndBestaetigung", abbruch);
+        var org = Guid.CreateVersion7();
+        await db.Database.ExecuteSqlAsync($"INSERT INTO organisationen.organisation (\"Id\", \"Name\", \"AngelegtAm\") VALUES ({org}, 'Alt', now())", abbruch);
+        await migrator.MigrateAsync(cancellationToken: abbruch);
+
+        var zeile = Assert.Single(await db.Loeschfristen.IgnoreQueryFilters().Where(l => l.OrganisationId == org).ToListAsync(abbruch));
+        Assert.Equal((12, 12), (zeile.FreizeitDatenMonate, zeile.NachweisBestaetigungMonate));
+    }
 }

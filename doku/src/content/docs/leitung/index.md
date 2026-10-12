@@ -22,7 +22,7 @@ Die Leitung darf alles, was das [Team](/mitarbeitende/) darf. **Nur die Leitung*
 
 ## Einsicht in Freizeitpässe
 
-Die Leitung sieht den Freizeitpass einer Person ab dem Eingang der Anmeldung, das Team erst ab der Bestätigung. Beide sehen nur die Antworten auf die Fragen, die die Freizeit abgefragt hat. Einzelheiten stehen unter [Was passiert mit meinen Daten](/daten/). Jede Einsicht der Leitung, auch in Nachweise, steht im Zugriffsprotokoll der betroffenen Person (siehe [Zugriffsprotokoll und Meine Daten](/erste-schritte/meine-daten/)).
+Die Leitung sieht den Freizeitpass einer Person ab dem Eingang der Anmeldung, das Team erst ab der Bestätigung. Beide sehen nur die Antworten auf die Fragen, die die Freizeit abgefragt hat. Einzelheiten stehen unter [Was passiert mit meinen Daten](/daten/). Öffnet die Leitung die Nachweise einer Person, steht das im Zugriffsprotokoll dieser Person (siehe [Zugriffsprotokoll und Meine Daten](/erste-schritte/meine-daten/)).
 
 ## Leitungs-Cockpit
 

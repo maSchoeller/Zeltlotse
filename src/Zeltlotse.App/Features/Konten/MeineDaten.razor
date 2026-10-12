@@ -15,7 +15,6 @@
 <PageTitle>Zugriffsprotokoll und Meine Daten – Zeltlotse</PageTitle>
 
 <h1>Zugriffsprotokoll und Meine Daten</h1>
-<p><a href="konto">Zurück zum Konto</a></p>
 
 @if (_geloescht)
 {
@@ -25,6 +24,8 @@
 }
 else
 {
+    <p><a href="konto">Zurück zum Konto</a></p>
+
     @if (_aktionFehler)
     {
         <Meldung Titel="Fehler" Art="MeldungArt.Fehler">

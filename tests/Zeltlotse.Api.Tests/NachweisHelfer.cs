@@ -62,8 +62,8 @@ internal sealed class NachweisSzenario : IAsyncDisposable
 
     public string OrgPfad => $"/api/organisationen/{OrgId}/personen/nachweise";
 
-    /// <summary>Factory mit Global Admin und S3; noch ohne Organisation.</summary>
-    public static async Task<NachweisSzenario> LeerAsync(PostgresContainer postgres, S3Container s3)
+    /// <summary>Factory mit Global Admin und S3; noch ohne Organisation. <paramref name="vorbereiten"/> läuft vor dem Start.</summary>
+    public static async Task<NachweisSzenario> LeerAsync(PostgresContainer postgres, S3Container s3, Action<ZeltlotseApiFactory>? vorbereiten = null)
     {
         var verbindung = await postgres.NeueDatenbankAsync();
         var bucket = S3Container.NeuerBucket();
@@ -73,15 +73,16 @@ internal sealed class NachweisSzenario : IAsyncDisposable
             factory.Einstellungen[schluessel] = wert;
         }
 
+        vorbereiten?.Invoke(factory);
         var szenario = new NachweisSzenario(factory, verbindung, bucket);
         szenario.GerdClient = await szenario.AngemeldetAsync(Gerd);
         return szenario;
     }
 
     /// <summary>Organisation A, Zeltlager mit Jonas, Miriam und Tobias als Leitung, Outbox zugestellt.</summary>
-    public static async Task<NachweisSzenario> ErstellenAsync(PostgresContainer postgres, S3Container s3)
+    public static async Task<NachweisSzenario> ErstellenAsync(PostgresContainer postgres, S3Container s3, Action<ZeltlotseApiFactory>? vorbereiten = null)
     {
-        var szenario = await LeerAsync(postgres, s3);
+        var szenario = await LeerAsync(postgres, s3, vorbereiten);
         (szenario.OrgId, szenario.AndreaClient) = await OrgHelfer.OrganisationMitOrgAdminAsync(szenario.Factory, szenario.GerdClient, "Jugendwerk Musterstadt", Andrea);
         szenario._clients.Add(szenario.AndreaClient);
         szenario.FreizeitId = await FreizeitHelfer.AnlegenAsync(szenario.AndreaClient, szenario.OrgId);

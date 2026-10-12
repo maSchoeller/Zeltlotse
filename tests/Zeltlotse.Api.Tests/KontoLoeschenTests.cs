@@ -1,8 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Npgsql;
 using Zeltlotse.Api.Contracts.Gemeinsam;
 using Zeltlotse.Api.Contracts.Personen;
+using Zeltlotse.SharedKernel.Dateien;
 using Zeltlotse.SharedKernel.Datenschutz;
 using Zeltlotse.SharedKernel.Sicherheitsprotokoll;
 using Zeltlotse.Testing;
@@ -192,6 +196,81 @@ public sealed class KontoLoeschenTests(PostgresContainer postgres, S3Container s
         // Die angenommene Einladung von Katrin trägt den Platzhalter.
         Assert.Equal(GeloeschtePerson.Id, await WertAsync<Guid>(verbindung, "SELECT \"EingeladenVon\" FROM personen.familien_einladung"));
         Assert.Empty(await SpaltenMitKennungAsync(verbindung, katrinId));
+    }
+
+    [Fact]
+    public async Task Scheitert_das_Loeschen_einer_Datei_bleibt_es_bei_204_mit_Abmeldung_und_Loeschung_und_der_Fehler_nennt_nur_Kennungen()
+    {
+        await using var s = await ErstellenAsync(postgres, s3, factory => factory.ZusatzDienste.Add(dienste =>
+        {
+            dienste.AddLogging(b => b.AddFakeLogging());
+            var speicher = dienste.Single(d => d.ServiceType == typeof(IDateiSpeicher));
+            dienste.Remove(speicher);
+            dienste.AddSingleton<IDateiSpeicher>(sp => new LoeschenScheitert(
+                (IDateiSpeicher)ActivatorUtilities.CreateInstance(sp, speicher.ImplementationType!)));
+        }));
+        var jonas = await s.PersonIdAsync(Jonas);
+        var fz = await NachweisAsync(s.JonasClient, "fuehrungszeugnis", "2025-11-03", Pdf);
+        await AnmeldenAsync(s.Factory, s.JonasClient, Jonas);
+
+        using var antwort = await PostAsync(s.JonasClient, Pfad);
+
+        Assert.Equal(HttpStatusCode.NoContent, antwort.StatusCode);
+        Assert.Contains(antwort.Headers.GetValues("Set-Cookie"), c => c.StartsWith(SharedKernel.Anmeldung.Sitzung.CookieName + "=;", StringComparison.Ordinal));
+        Assert.Equal(1L, await ProtokollAsync(s.Verbindung, SicherheitsEreignisArt.Loeschung, jonas));
+        Assert.Equal(0L, await WertAsync<long>(s.Verbindung, "SELECT count(*) FROM personen.person WHERE \"Id\" = @p", ("p", jonas)));
+        var fehler = Assert.Single(
+            s.Factory.Services.GetFakeLogCollector().GetSnapshot(),
+            e => e.Level == LogLevel.Error && e.Category?.EndsWith("PersonLoeschenEndpunkt", StringComparison.Ordinal) == true);
+        Assert.Contains(fz.ToString(), fehler.Message, StringComparison.Ordinal);
+        Assert.Contains(nameof(IOException), fehler.Message, StringComparison.Ordinal);
+        // Nur Kennungen und Typen, nie die Meldung der Ausnahme (AD-22).
+        Assert.DoesNotContain("Erika", fehler.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Zwei_Leser_derselben_Person_am_selben_Tag_loeschen_beide_ihr_Konto_und_beide_Eintraege_bleiben_mit_Platzhalter()
+    {
+        await using var s = await ErstellenAsync(postgres, s3);
+        var jonas = await s.PersonIdAsync(Jonas);
+        var miriam = await s.PersonIdAsync(Miriam);
+        var tobias = await s.PersonIdAsync(Tobias);
+        var (einsicht, _, _, _) = await s.FreigegebenUndUebernommenAsync();
+        await DetailAsync(s.MiriamClient, s.FreizeitPfad, einsicht);
+        // Tobias hat Jonas am selben Tag zum selben Zweck eingesehen (zweiter Leser).
+        await AusfuehrenAsync(
+            s.Verbindung,
+            "INSERT INTO personen.einsicht_protokoll (\"Id\", \"BetroffenePersonId\", \"LesendePersonId\", \"OrganisationId\", \"FreizeitId\", \"Zweck\", \"Am\", \"Tag\") " +
+            "SELECT @id, \"BetroffenePersonId\", @tobias, \"OrganisationId\", \"FreizeitId\", \"Zweck\", \"Am\", \"Tag\" FROM personen.einsicht_protokoll WHERE \"LesendePersonId\" = @miriam",
+            ("id", Guid.CreateVersion7()), ("tobias", tobias), ("miriam", miriam));
+        await AnmeldenAsync(s.Factory, s.MiriamClient, Miriam);
+        await AnmeldenAsync(s.Factory, s.TobiasClient, Tobias);
+
+        using var miriamAntwort = await PostAsync(s.MiriamClient, Pfad);
+        using var tobiasAntwort = await PostAsync(s.TobiasClient, Pfad);
+
+        Assert.Equal(HttpStatusCode.NoContent, miriamAntwort.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, tobiasAntwort.StatusCode);
+        Assert.Equal(2L, await WertAsync<long>(
+            s.Verbindung,
+            "SELECT count(*) FROM personen.einsicht_protokoll WHERE \"BetroffenePersonId\" = @j AND \"LesendePersonId\" = @p",
+            ("j", jonas), ("p", GeloeschtePerson.Id)));
+        var protokoll = (await s.JonasClient.GetFromJsonAsync<List<ZugriffsprotokollEintrag>>("/api/ich/zugriffsprotokoll", Abbruch))!;
+        Assert.Equal(2, protokoll.Count);
+        Assert.All(protokoll, e => Assert.Null(e.LesenderName));
+    }
+
+    /// <summary>Datei-Speicher, dessen Löschen immer scheitert; Speichern und Lesen gehen an den echten Speicher.</summary>
+    private sealed class LoeschenScheitert(IDateiSpeicher innen) : IDateiSpeicher
+    {
+        public Task SpeichernAsync(string modulPraefix, Guid kennung, byte[] inhalt, string contentType, CancellationToken abbruch = default) =>
+            innen.SpeichernAsync(modulPraefix, kennung, inhalt, contentType, abbruch);
+
+        public Task<GespeicherteDatei?> LesenAsync(string modulPraefix, Guid kennung, CancellationToken abbruch = default) =>
+            innen.LesenAsync(modulPraefix, kennung, abbruch);
+
+        public Task LoeschenAsync(string modulPraefix, Guid kennung, CancellationToken abbruch = default) =>
+            throw new IOException("Speicher von Erika Muster nicht erreichbar.");
     }
 
     /// <summary>Alle Spalten vom Typ uuid in den Schemas der Module (außer Outbox und Inbox), die die Kennung noch enthalten.</summary>

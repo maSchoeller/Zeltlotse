@@ -231,6 +231,8 @@ public sealed class MeineDatenSeitenTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.Contains("Gelöscht:", cut.Find(".elkw-alert--erfolg").TextContent, StringComparison.Ordinal));
         Assert.Contains("Das Konto ist gelöscht.", cut.Find(".elkw-alert--erfolg").TextContent, StringComparison.Ordinal);
+        // Der Weg zurück ins Konto führt nach dem Löschen ins Leere.
+        Assert.DoesNotContain(cut.FindAll("a"), l => l.TextContent == "Zurück zum Konto");
         var post = Assert.Single(_server.Anfragen, a => a.Methode == HttpMethod.Post);
         Assert.Equal("/api/ich/profil/loeschen", post.Pfad);
         Assert.True(post.Kopfzeilen.ContainsKey(Kopfzeilen.Antiforgery));

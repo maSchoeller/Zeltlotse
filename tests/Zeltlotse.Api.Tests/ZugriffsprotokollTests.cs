@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Zeltlotse.Api.Contracts.Gemeinsam;
 using Zeltlotse.Api.Contracts.Personen;
 using Zeltlotse.Testing;
 using static Zeltlotse.Api.Tests.AnmeldeHelfer;
@@ -85,14 +86,21 @@ public sealed class ZugriffsprotokollTests(PostgresContainer postgres, S3Contain
         await using var s = await ErstellenAsync(postgres, s3);
         var (einsicht, fz, _, _) = await s.FreigegebenUndUebernommenAsync();
         var lea = await s.AngemeldetAsync(Lea);
+        // Tobias hat zusätzlich Org-Überblick: falsche Rolle für die Org-Route.
+        await OrgHelfer.EinladenAsync(s.AndreaClient, s.OrgId, Tobias, OrgRolle.OrgUeberblick);
+        (await OrgHelfer.AnnehmenAsync(s.TobiasClient, OrgHelfer.Token(s.Factory, Tobias))).Dispose();
 
         using var tobias = await s.TobiasClient.GetAsync($"{s.FreizeitPfad}/einsichten/{einsicht}", Abbruch);
+        using var tobiasOrg = await s.TobiasClient.GetAsync($"{s.OrgPfad}/einsichten/{einsicht}", Abbruch);
+        using var tobiasOrgDatei = await DateiAsync(s.TobiasClient, s.OrgPfad, einsicht, fz);
         using var tobiasDatei = await DateiAsync(s.TobiasClient, s.FreizeitPfad, einsicht, fz);
         using var andrea = await s.AndreaClient.GetAsync($"{s.OrgPfad}/einsichten/{einsicht}", Abbruch);
         using var leaAntwort = await lea.GetAsync($"{s.FreizeitPfad}/einsichten/{einsicht}", Abbruch);
 
         Assert.Equal(HttpStatusCode.NotFound, tobias.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, tobiasDatei.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, tobiasOrg.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, tobiasOrgDatei.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, andrea.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, leaAntwort.StatusCode);
         Assert.Equal(0L, await WertAsync<long>(s.Verbindung, "SELECT count(*) FROM personen.einsicht_protokoll"));

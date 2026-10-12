@@ -5,7 +5,7 @@ created: '2026-10-12'
 status: 'done'
 baseline_revision: 'b8e7e0c9fd10d23fdacaaa89925f544f286e8b13'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/specs/spec-zeltlotse/stories/1-6-warnung-und-erinnerung-bei-nachweisen.md'
@@ -330,6 +330,45 @@ deferred:
   - `[medium]` `[patch]` (Verifikation) Bestätigungs-Frist nicht getrennt getestet — Test mit zwei Organisationen und verschiedenen Fristen.
   - `[medium]` `[patch]` (Verifikation) Auskunft „Familie“, „Erinnerungen“ und Hinweis ungetestet — Test mit Elternteil, Kind, Erinnerung und abgelehntem Nachweis.
 
+### 2026-10-12 — Review pass (Folgedurchlauf)
+- verdicts: 35 findings — high 0, medium 9, low 23, false 3, maybe-false 0
+- findings:
+  - `[low]` `[reject]` (Blind) Eine noch gültige zweite Sitzung legt über `POST /api/ich/profil` vor der Outbox-Zustellung wieder eine Person mit der alten `PersonId` an — real, aber nur im Fenster von Sekunden bis zur Zustellung und nur mit leerem Profil; die Lösung bräuchte einen Grabstein-Zustand (neue Speziallogik).
+  - `[medium]` `[patch]` (Blind) `Loeschung` im Sicherheitsprotokoll geht verloren, wenn der Client nach dem Commit abbricht — `SchreibenAsync` läuft jetzt mit `CancellationToken.None` (`PersonLoeschen.cs`).
+  - `[low]` `[reject]` (Blind) Scheitert das Lesen der Fristen in `Loeschlauf.AuftragAsync`, läuft kein Modul — nur bei Datenbankfehlern, die die Module ebenso träfen; der nächste Lauf holt alles nach. Ein Ersatz-Auftrag wäre zusätzliche Fehlerlogik.
+  - `[low]` `[reject]` (Blind) Mehr als 20 Organisationen im Protokoll lassen die Org-Namen auf „–“ fallen; Protokoll ohne Paging — eine Person mit Einsichten aus über 20 Organisationen ist im Alltag nicht zu erwarten.
+  - `[low]` `[reject]` (Blind) Auskunft zeigt im Zugriffsprotokoll weniger als die Seite (ohne Organisation, ohne Kinder) und enthält den eigenen `Export` nicht — die Seite zeigt das Protokoll vollständig; Kinder sind laut Intent ausgenommen; der `Export` entsteht durch genau diese Abfrage.
+  - `[low]` `[patch]` (Blind) Platzhalter in der Auskunft teils klein („gelöschte Person“) — auf „Gelöschte Person“ vereinheitlicht wie in Oberfläche und Doku (`PersonenAuskunft.cs`). Doppelte Namens- und Art-Formatierung ohne benannten Schaden: nicht geändert.
+  - `[low]` `[reject]` (Blind) „Als PDF speichern“ druckt die ganze Seite, `ErstelltAm` wird nicht angezeigt — Druck-CSS blendet laut Spec nur Leiste, Navigation und Knöpfe aus; eine Datumszeile wäre neue Oberfläche.
+  - `[low]` `[patch]` (Blind) Doku verspricht mehr als das System — `leitung/index.md` sagte „Jede Einsicht der Leitung … steht im Zugriffsprotokoll“; umformuliert auf Nachweise. „Gast-Anmeldung ohne Konto“ in `daten.md` stand schon vorher dort (nicht von dieser Story). Wegfall der Freigabefenster-Regel ist gewollt: Die Spec verlangt sofortiges Löschen.
+  - `[low]` `[reject]` (Blind) Architekturregel AD-16 prüft weder DI-Registrierung noch `ILoeschlauf` noch andere Spaltennamen — Regel entspricht der Spec; fehlende Registrierung fiele in den Durchlauf- und API-Tests auf.
+  - `[low]` `[patch]` (Blind) Lösch-Ablauf in `MeineDaten.razor`: „Zurück zum Konto“ bleibt nach dem Löschen sichtbar und führt ins `401` — Link steht jetzt nur, solange nicht gelöscht; bUnit-Test ergänzt. Doppel-Klick und 404-Text: selten, `InlineBestaetigung` schließt nach dem Ja; nicht geändert.
+  - `[low]` `[reject]` (Blind) Demo-Seed wählt Jonas und Miriam über die Listenposition — der Katalog ist fest; die Screenshot-Tests zeigen die Namen und fielen bei Vertauschung auf.
+  - `[low]` `[reject]` (Blind) `OrgFristenLoeschenHandler` lädt Bestätigungen und löscht nicht mengenbasiert — Leistung erst bei großem Bestand; Verhalten korrekt und getestet.
+  - `[low]` `[reject]` (Blind) Restrisiken stehen nicht in `deferred` — die Lösung wäre eine Änderung dieser Spec.
+  - `[low]` `[reject]` (Blind) Spaltensuche im Lösch-Test sieht nur `uuid`-Spalten — Mail-Spalten sind als `deferred` erfasst; Login-Anfragen prüft der Test ausdrücklich.
+  - `[medium]` `[patch]` (Edge) `Loeschung` mit dem Abbruch-Token des Requests — gleiche Ursache wie der Blind-Befund; mit ihm behoben.
+  - `[low]` `[reject]` (Edge) carried — Konto ohne Profil lässt sich nicht löschen (404); Begründung wie im ersten Durchlauf.
+  - `[low]` `[reject]` (Edge) `ProfilSicherstellen` legt die gelöschte `PersonId` neu an — gleiche Ursache wie der erste Blind-Befund.
+  - `[low]` `[reject]` (Edge) `AuftragAsync` wirft, kein Modul läuft — gleiche Ursache wie der Blind-Befund.
+  - `[low]` `[reject]` (Edge) Ablehnungshinweis erscheint bei jeder älteren Einsicht desselben Nachweises — der Hinweis liegt am Nachweis (nur einer); die Auskunft zeigt, was gespeichert ist. Eine Zuordnung je Einsicht bräuchte ein neues Datenmodell.
+  - `[false]` `[reject]` (Edge) carried — `version` im Löschfristen-PATCH nie verglichen; AD-19 entscheidet über den alten Feldwert.
+  - `[medium]` `[defer]` (Edge) carried — Outbox- und Inbox-Tabellen behalten die `PersonId`; steht schon in `deferred`.
+  - `[medium]` `[patch]` (Verifikation) Fehlschlag beim Löschen einer Datei ungetestet — Test `Scheitert_das_Loeschen_einer_Datei…` mit werfendem `IDateiSpeicher`: `204`, Cookie gelöscht, `Loeschung` protokolliert, genau ein Error-Log mit `NachweisId` und Ausnahmetyp, ohne Meldung. Dafür `NachweisSzenario.ErstellenAsync` mit optionalem Vorbereitungs-Schritt.
+  - `[medium]` `[patch]` (Verifikation) Migration ergänzt Löschfristen für bestehende Organisationen ungetestet — Test `Bestehende_Organisationen_bekommen_die_Vorgabe_Loeschfristen` (Migration bis zur Vorgänger-Migration, Organisation einfügen, dann aktuell).
+  - `[medium]` `[patch]` (Verifikation) Filter des eindeutigen Index für den Platzhalter ungetestet — Test `Zwei_Leser_derselben_Person_am_selben_Tag_loeschen_beide_ihr_Konto…`: beide `204`, zwei Platzhalter-Einträge, Jonas sieht zwei Einträge ohne Namen.
+  - `[low]` `[reject]` (Intent) Dateien werden nach dem Commit statt in der Transaktion gelöscht — bewusste Korrektur aus dem ersten Durchlauf (S3 ist nicht transaktional); der Fehlerweg ist jetzt getestet.
+  - `[medium]` `[patch]` (Intent) AD-30 „falsche Rolle 403“ an den Prüf-Endpunkten nicht belegt — `Fremde_Aufrufe…` prüft jetzt Org-Überblick auf der Org-Route: Detail und Datei `403`, kein Eintrag. Anonymer `POST …/loeschen` ist durch `Jeder_angemeldete_Endpunkt_antwortet_ohne_Sitzung_mit_401_ProblemDetails` abgedeckt; Token-Fälle gibt es in dieser Story nicht (carried).
+  - `[low]` `[reject]` (Intent) Schreibweg „Protokoll Kind“ nur per SQL — derselbe Schreibweg ist für Erwachsene getestet; das Kind unterscheidet sich nur beim Lesen.
+  - `[low]` `[reject]` (Intent) Rückweg nach `401` nur in bUnit, nicht im echten Browser — der Rückweg ist bestehende Infrastruktur aus den Anmelde-Stories.
+  - `[low]` `[reject]` (Intent) Druckausgabe nicht im Browser geprüft — nur ein Zähler in bUnit; ein Druck-Medien-Test wäre neue Test-Infrastruktur für kosmetisches Verhalten.
+  - `[false]` `[reject]` (Intent) Playwright bestätigt das Löschen nie — die Spec verlangt ausdrücklich „Inline-Bestätigung offen, NICHT bestätigen“; das echte Löschen prüfen die HTTP-Tests.
+  - `[low]` `[reject]` (Intent) Kleine Abweichungen im Wortlaut („Name fehlt“, „–“ für fehlende Organisation) — „Gelöschte Person“ steht wie verlangt bei fehlendem Namen; die anderen Fälle sind keine gelöschten Personen.
+  - `[low]` `[reject]` (Intent) carried — Hintergrund-Schleife des `LoeschDienst` ungetestet.
+  - `[medium]` `[patch]` (Intent) Migration ohne Test gegen Altbestand — gleiche Ursache wie der Verifikations-Befund; mit ihm behoben.
+  - `[medium]` `[defer]` (Intent) carried — Abnahme „keine Tabelle“ wörtlich gelesen schließt Outbox/Inbox ein; steht schon in `deferred`.
+  - `[false]` `[reject]` (Intent) Test- und Build-Ergebnisse nur als Behauptung — in diesem Durchlauf neu ausgeführt (siehe Auto Run Result).
+
 ## Design Notes
 
 - **PDF über Druck:** Die Spine verbietet PDF-Bibliotheken und druckt über Druck-CSS. Deshalb ist „Als PDF speichern“ der Druckdialog des Browsers mit dem Ziel „Als PDF speichern“. Die Doku erklärt das.
@@ -431,3 +470,33 @@ Status: done
 - Letzter Org-Admin oder einzige Leitung kann sich löschen.
 - Crypto-Shredding in Backups bleibt offen bis zur Hosting-Wahl.
 - Siehe auch `deferred`.
+
+### Folgedurchlauf 2026-10-12
+
+**Zusammenfassung:** Neuer Review-Durchgang mit vier Prüfern (Blind, Edge, Verifikation, Intent). 35 Befunde, keiner `high`. Korrigiert wurden ein Code-Fehler, fehlende Tests und drei kleine Stellen in Oberfläche, Auskunft und Doku.
+
+**Geänderte Dateien:**
+- `src/Modules/Personen/Zeltlotse.Personen/Datenschutz/PersonLoeschen.cs` – `Loeschung` nach dem Commit ohne Abbruch-Token schreiben.
+- `src/Modules/Personen/Zeltlotse.Personen/Datenschutz/PersonenAuskunft.cs` – Platzhalter einheitlich „Gelöschte Person“.
+- `src/Zeltlotse.App/Features/Konten/MeineDaten.razor` – „Zurück zum Konto“ nur vor dem Löschen.
+- `doku/src/content/docs/leitung/index.md` – Satz zum Zugriffsprotokoll auf das beschränkt, was heute protokolliert wird.
+- `tests/Zeltlotse.Api.Tests/KontoLoeschenTests.cs` – Datei-Löschen scheitert; zwei gelöschte Leser am selben Tag.
+- `tests/Zeltlotse.Api.Tests/NachweisHelfer.cs` – optionaler Vorbereitungs-Schritt für die Factory.
+- `tests/Zeltlotse.Api.Tests/ZugriffsprotokollTests.cs` – falsche Rolle (Org-Überblick) → `403`, kein Eintrag.
+- `tests/Zeltlotse.Organisationen.Tests/NachweisRichtlinieTests.cs` – Migrationstest für die Löschfristen bestehender Organisationen.
+- `tests/Zeltlotse.Ui.Tests/MeineDatenSeitenTests.cs` – kein Rückweg-Link nach dem Löschen.
+
+**Review:** 35 Befunde (high 0, medium 9, low 23, false 3).
+- Korrigiert (patch): 5 medium-Einträge (Protokolleintrag ohne Abbruch, Test Datei-Fehler, Migrationstest, Test Platzhalter-Index, Test 403 an den Prüf-Endpunkten) und 3 low-Einträge (Schreibweise Platzhalter, Doku Leitung, Rückweg-Link).
+- Zurückgestellt: nichts Neues; die Outbox-Befunde stehen schon in `deferred` (carried).
+- Abgelehnt: alle anderen, mit Begründung im Review Triage Log.
+
+**Folge-Review empfohlen:** nein. Folgedurchlauf ohne korrigierten `high`-Befund; gepatcht: medium 5, low 3.
+
+**Verifikation:**
+- `dotnet build Zeltlotse.slnx --no-incremental`: 0 Warnungen, 0 Fehler.
+- `dotnet test` je Testprojekt: 1256/1256 grün (Api 428, Ui 305, Architektur 133, Personen 112, SharedKernel 95, E2E 59, Organisationen 48, Freizeiten 46, Konten 26, Abläufe 4).
+- `npm ci` und `npm run build` in `doku/`: Exit-Code 0, 23 Seiten, `erste-schritte/meine-daten/` und `org-admin/loeschfristen/` in `dist/`.
+- Screenshots: keine echte Änderung; `app-offline-*` war Rendering-Rauschen und ist zurückgesetzt.
+
+**Restrisiken:** wie oben. Zusätzlich kann eine zweite, noch gültige Sitzung im Sekunden-Fenster vor der Outbox-Zustellung ein leeres Profil mit der alten `PersonId` anlegen.

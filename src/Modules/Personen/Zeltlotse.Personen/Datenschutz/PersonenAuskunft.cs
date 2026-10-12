@@ -101,7 +101,7 @@ internal sealed class PersonenAuskunft(PersonenLeseDbContext db, IVerschluesselu
             var teile = new List<string> { $"Status: {Status(einsicht.Status)}" };
             if (einsicht.PruefendePersonId is { } pruefend)
             {
-                teile.Add($"prüfende Person: {namen.GetValueOrDefault(pruefend) ?? "gelöschte Person"}");
+                teile.Add($"prüfende Person: {namen.GetValueOrDefault(pruefend) ?? "Gelöschte Person"}");
             }
 
             foreach (var posten in einsicht.Posten.Where(p => p.Ergebnis == PostenErgebnisArt.Abgelehnt))
@@ -127,7 +127,7 @@ internal sealed class PersonenAuskunft(PersonenLeseDbContext db, IVerschluesselu
         [
             .. erinnerungen.Select(e => new AuskunftZeile(
                 $"Erinnert am {AuskunftFormat.Datum(e.ErinnertAm)}",
-                $"von {namen.GetValueOrDefault(e.ErinnertVon) ?? "gelöschte Person"}")),
+                $"von {namen.GetValueOrDefault(e.ErinnertVon) ?? "Gelöschte Person"}")),
         ];
     }
 

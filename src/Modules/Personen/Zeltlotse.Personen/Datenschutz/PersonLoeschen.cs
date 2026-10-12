@@ -157,7 +157,8 @@ internal static partial class PersonLoeschenEndpunkt
             }
         }
 
-        await protokoll.SchreibenAsync(SicherheitsEreignisArt.Loeschung, personId, abbruch: abbruch);
+        // Nach dem Commit ohne Abbruch: Bricht der Client jetzt ab, fehlen sonst Protokolleintrag und Abmeldung.
+        await protokoll.SchreibenAsync(SicherheitsEreignisArt.Loeschung, personId, abbruch: CancellationToken.None);
         await kontext.SignOutAsync(Sitzung.Schema);
         return TypedResults.NoContent();
     }
