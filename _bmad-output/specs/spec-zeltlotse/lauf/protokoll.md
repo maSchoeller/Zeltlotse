@@ -20,6 +20,7 @@ Branch: `mvp` · Start: 2026-10-11 12:30 · Ende: –
 | 2026-10-12 09:25 | 1-5 | done | nein (nicht empfohlen) | grün 1150/1150 / grün (20 Seiten) | cc2b258 | –  |
 | 2026-10-12 10:40 | 1-6 | done | nein (nicht empfohlen) | grün 1191/1191 / grün (21 Seiten) | 60b6472 | –  |
 | 2026-10-12 12:39 | 1-7 | done | ja (done, keiner mehr) | grün 1256/1256 / grün (23 Seiten) | 6796ecb | –  |
+| 2026-10-12 14:40 | 2-1 | done | ja (done, keiner mehr) | grün 1330/1330 / grün (25 Seiten) | 8004600 | Auskunft-Screenshot (Laptop) zeigte das neue Profilfeld Herkunft noch nicht; in der Regression nachgezogen |
 
 ## Entscheidungen im Lauf
 
