@@ -25,6 +25,7 @@ Test-Tempo ab 2-3 (Vorgabe von Marvin, 2026-10-12): Story-Sitzungen testen währ
 | 2026-10-12 14:40 | 2-1 | done | ja (done, keiner mehr) | grün 1330/1330 / grün (25 Seiten) | 8004600 | Auskunft-Screenshot (Laptop) zeigte das neue Profilfeld Herkunft noch nicht; in der Regression nachgezogen |
 | 2026-10-12 17:58 | 2-2 | done (2. Versuch) | ja (done, keiner mehr) | grün 1409/1409 / grün (27 Seiten) | 87d3104 | 1. Versuch abgeschnitten: claude -p beendete den Umsetzungs-Subagenten nach 10 Min. Wartezeit; Story-Skript setzt jetzt CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0 (557f007). Danach Lauf auf Wunsch von Marvin pausiert, weiter mit 2-3 |
 | 2026-10-13 06:40 | 2-3 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 354/354 / – | fccd1ad | Story um 22:57 fertig, Fertig-Meldung erreichte den Orchestrator nicht (Pipe von Kindprozessen offen gehalten) → ~7 h Leerlauf. Start jetzt entkoppelt mit Warten auf ERGEBNIS-Zeile im Log |
+| 2026-10-13 08:12 | 2-4 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 368/368 / – | 3f8ed3d | Dauer 1 h 36 min |
 
 ## Entscheidungen im Lauf
 
