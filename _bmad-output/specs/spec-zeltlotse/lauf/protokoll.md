@@ -34,6 +34,7 @@ Test-Tempo ab 2-3 (Vorgabe von Marvin, 2026-10-12): Story-Sitzungen testen währ
 | 2026-10-13 18:14 | 2-10 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 506/506 / – | c743460 | Archiv der Vorfall-Notizen hängt am Ereignis „Freizeit abgeschlossen“ – Auslösen und Ablauftest gehören zu 3-8 |
 | 2026-10-13 20:25 | 2-11 | done | nein (nicht empfohlen) | voll grün (Ende Epic 2): 1935/1935 in 34 min / grün (43 Seiten) | 9a00f99 | Bei Abnahme prüfen: API liefert Pässe bestätigter Mitarbeitender, wenn man sie direkt mit deren Kennungen aufruft (protokolliert; nur die Web-App filtert auf Teilnehmende). Limit 150 Kinder je Notfallordner. Team darf drucken (CAP-18 nennt nur Leitung). 26 Screenshots mit Rendering-Rauschen zurückgesetzt |
 | 2026-10-13 22:30 | 3-1 | done (mit Folgedurchlauf) | ja (done, keiner mehr) | schnell grün: Build, Architektur 133/133, UI 548/548 / – (Sitzung: 2011 grün) | a4761a8 | Übernommener Programmpunkt bleibt blockiert, wenn die Person ihre Rolle verliert; Screenshots zeigen Uhrzeit im US-Format (→ Korrektur Spracheinstellung Playwright) |
+| 2026-10-13 23:55 | 3-2 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 577/577 / – (Sitzung: 2085 grün) | c46930b | „Bringt mit“ bleibt stehen, wenn die Person ihre Rolle verliert (gleiche Lücke wie 3-1) |
 
 ## Entscheidungen im Lauf
 
