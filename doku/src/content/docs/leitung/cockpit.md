@@ -23,10 +23,11 @@ Die Card **Warnhinweise** sammelt, was noch offen ist, je Art eine Zeile:
 
 - **„4 Freizeitpässe unvollständig“** – der Link springt zur Tabelle weiter unten.
 - **„Bei 2 Personen im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.“** – mit dem Knopf **Nachweise prüfen** (siehe [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/)).
+- **„Sicherheitskette ist noch nicht eingerichtet“** – der Link führt zur Card **Sicherheitskette** in den Einstellungen. Die Zeile verschwindet, sobald die Kette eingerichtet ist (siehe [Sicherheitskette einrichten](/leitung/sicherheitskette/)).
 
 Gibt es mindestens eine Zeile, steht darüber „Achtung: 2 Punkte sind offen.“, gezählt wird je Zeile. Ist nichts offen, steht dort „Alles erledigt: Keine offenen Punkte.“ Lässt sich ein Teil gerade nicht laden, fehlt seine Zeile, und „Keine offenen Punkte.“ erscheint nicht.
 
-Warnhinweise zu unbesetzten Aufgaben und zur fehlenden Sicherheitskette kommen dazu, sobald es Aufgaben und die Sicherheitskette in Zeltlotse gibt.
+Warnhinweise zu unbesetzten Aufgaben kommen dazu, sobald es Aufgaben in Zeltlotse gibt.
 
 ## Unvollständige Freizeitpässe
 

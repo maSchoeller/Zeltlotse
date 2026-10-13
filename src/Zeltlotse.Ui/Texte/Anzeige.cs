@@ -250,6 +250,16 @@ public static class Anzeige
     public static bool TitelTrifft(string titel, string? suche) =>
         string.IsNullOrWhiteSpace(suche) || Deutsch.CompareInfo.IndexOf(titel, suche.Trim(), CompareOptions.IgnoreCase) >= 0;
 
+    /// <summary>Story 2-8: Ziel eines Telefon-Links: „tel:“ plus nur „+“ und Ziffern (dieselbe Regel wie <see cref="TelefonLink"/>).</summary>
+    public static string TelefonHref(string? nummer) => TelefonLink.Href(nummer);
+
+    /// <summary>Story 2-8: Initialen für den Avatar aus Vor- und Nachname, z. B. „EM“; ohne beide „?“.</summary>
+    public static string Initialen(string? vorname, string? nachname)
+    {
+        var initialen = string.Concat(new[] { vorname, nachname }.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => char.ToUpper(t!.Trim()[0], Deutsch)));
+        return initialen.Length == 0 ? "?" : initialen;
+    }
+
     /// <summary>„Vorname Nachname“; ohne beide „Name fehlt“.</summary>
     public static string Name(string? vorname, string? nachname)
     {

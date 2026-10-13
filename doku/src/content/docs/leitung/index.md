@@ -19,7 +19,7 @@ Die Leitung darf alles, was das [Team](/mitarbeitende/) darf. **Nur die Leitung*
 - den Stand der Nachweise im Team sehen und Nachweise prüfen – siehe [Nachweise prüfen](/leitung/nachweise-pruefen/),
 - festlegen, welche Fragen der Freizeitpass für Teilnehmende und für Mitarbeitende abfragt – siehe [Freizeitpass zusammenstellen](/leitung/freizeitpass-fragen/),
 - festlegen, welche Module (Verpflegung, Finanzen, Teilnehmer-Zugang) die Freizeit nutzt,
-- die Sicherheitskette einrichten,
+- die Sicherheitskette einrichten (was im Notfall zu tun ist, wen das Team anruft) – siehe [Sicherheitskette einrichten](/leitung/sicherheitskette/),
 - den Teilnehmer-Zugang per QR-Code an- und abschalten,
 - die Freizeit abschließen.
 

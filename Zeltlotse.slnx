@@ -60,6 +60,7 @@
     <Project Path="tests/Zeltlotse.Organisationen.Tests/Zeltlotse.Organisationen.Tests.csproj" />
     <Project Path="tests/Zeltlotse.Personen.Tests/Zeltlotse.Personen.Tests.csproj" />
     <Project Path="tests/Zeltlotse.SharedKernel.Tests/Zeltlotse.SharedKernel.Tests.csproj" />
+    <Project Path="tests/Zeltlotse.Sicherheit.Tests/Zeltlotse.Sicherheit.Tests.csproj" />
     <Project Path="tests/Zeltlotse.Testing/Zeltlotse.Testing.csproj" />
     <Project Path="tests/Zeltlotse.Testmodul/Zeltlotse.Testmodul.csproj" />
     <Project Path="tests/Zeltlotse.Ui.Tests/Zeltlotse.Ui.Tests.csproj" />

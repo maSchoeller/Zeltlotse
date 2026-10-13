@@ -51,6 +51,14 @@ public sealed class LeitungsCockpitSeitenTests : BunitContext
 
     private static string ErinnernPfad => $"/api/freizeiten/{Freizeit}/personen/freizeitpass/erinnerungen";
 
+    private static string KettePfad => $"/api/freizeiten/{Freizeit}/sicherheit/sicherheitskette";
+
+    private static string[] LeitungMitEinstellungen => [.. Leitung, Aktionsschluessel.FreizeitEinstellungen];
+
+    private static HttpResponseMessage Kette(bool eingerichtet) => Json(eingerichtet
+        ? new { wasTun = (string?)"Ruhe bewahren.", leitungTelefon = (string?)"0123 456782", heimatName = (string?)null, heimatTelefon = (string?)"0123 456783", eingerichtet = true, version = 4u }
+        : new { wasTun = (string?)null, leitungTelefon = (string?)null, heimatName = (string?)null, heimatTelefon = (string?)null, eingerichtet = false, version = 0u });
+
     private static HttpResponseMessage Json(object inhalt, HttpStatusCode status = HttpStatusCode.OK) =>
         NachgebildeterHandler.Json(status, JsonSerializer.Serialize(inhalt, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
 
@@ -94,13 +102,15 @@ public sealed class LeitungsCockpitSeitenTests : BunitContext
     });
 
     private IRenderedComponent<FreizeitStart> Startseite(
-        string[] erlaubt, Func<HttpResponseMessage>? anmeldungen = null, Func<HttpResponseMessage>? stand = null, Func<HttpResponseMessage>? warnungen = null)
+        string[] erlaubt, Func<HttpResponseMessage>? anmeldungen = null, Func<HttpResponseMessage>? stand = null, Func<HttpResponseMessage>? warnungen = null,
+        Func<HttpResponseMessage>? kette = null, string phase = "InVorbereitung")
     {
-        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{Freizeit}/kontext", () => Json(new { freizeitId = Freizeit, name = "Zeltlager", phase = "InVorbereitung", rollen = new[] { "Leitung" }, schalter = Array.Empty<string>(), erlaubt }));
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{Freizeit}/kontext", () => Json(new { freizeitId = Freizeit, name = "Zeltlager", phase, rollen = new[] { "Leitung" }, schalter = Array.Empty<string>(), erlaubt }));
         _server.Bei(HttpMethod.Get, $"/api/freizeiten/{Freizeit}", () => Json(new { id = Freizeit, name = "Zeltlager", ersterTag = "2027-08-02", letzterTag = "2027-08-13", phase = "InVorbereitung", freigabeBis = "2027-09-12", leitung = Array.Empty<object>() }));
         _server.Bei(HttpMethod.Get, AnmeldungenPfad, anmeldungen ?? Anmeldungen);
         _server.Bei(HttpMethod.Get, StandPfad, stand ?? (() => Stand()));
         _server.Bei(HttpMethod.Get, WarnPfad, warnungen ?? (() => Warnungen(0)));
+        _server.Bei(HttpMethod.Get, KettePfad, kette ?? (() => Kette(eingerichtet: true)));
 
         var start = Render<FreizeitStart>(ps => ps.Add(p => p.FreizeitId, Freizeit));
         start.WaitForAssertion(() => Assert.Equal("Zeltlager", start.Find("h1").TextContent));
@@ -344,6 +354,66 @@ public sealed class LeitungsCockpitSeitenTests : BunitContext
         Assert.Contains("2 Freizeitpässe unvollständig", Zeilen(Card(cut, "Warnhinweise")!));
     }
 
+    // ---------- Story 2-8: Sicherheitskette ----------
+
+    [Fact]
+    public void Nicht_eingerichtete_Kette_ist_eine_Zeile_mit_Link_auf_die_Card_in_den_Einstellungen_und_zaehlt_mit()
+    {
+        var cut = Startseite(LeitungMitEinstellungen, stand: () => Stand(StandPerson(Emma, "Emma", "Muster", 8, 5)), kette: () => Kette(eingerichtet: false));
+
+        cut.WaitForAssertion(() => Assert.Equal(2, Zeilen(Card(cut, "Warnhinweise")!).Count));
+        var card = Card(cut, "Warnhinweise")!;
+        Assert.Equal(["1 Freizeitpass unvollständig", "Sicherheitskette ist noch nicht eingerichtet"], Zeilen(card));
+        Assert.Contains("2 Punkte sind offen.", card.QuerySelector(".elkw-alert--warnung")!.TextContent, StringComparison.Ordinal);
+        var link = card.QuerySelectorAll("li a").Single(a => a.TextContent == "Sicherheitskette ist noch nicht eingerichtet");
+        Assert.Equal($"freizeiten/{Freizeit}/einstellungen#sicherheitskette", link.GetAttribute("href"));
+
+        var allein = Startseite(LeitungMitEinstellungen, kette: () => Kette(eingerichtet: false));
+        allein.WaitForAssertion(() => Assert.Single(Zeilen(Card(allein, "Warnhinweise")!)));
+        Assert.Contains("1 Punkt ist offen.", Card(allein, "Warnhinweise")!.QuerySelector(".elkw-alert--warnung")!.TextContent, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Eingerichtete_Kette_ergibt_keine_Zeile_und_Keine_offenen_Punkte()
+    {
+        var cut = Startseite(LeitungMitEinstellungen);
+
+        cut.WaitForAssertion(() => Assert.NotNull(Card(cut, "Warnhinweise")?.QuerySelector(".elkw-alert--erfolg")));
+        Assert.Empty(Zeilen(Card(cut, "Warnhinweise")!));
+        Assert.Contains(_server.Anfragen, a => a.Pfad == KettePfad);
+    }
+
+    [Fact]
+    public void Scheitert_der_Abruf_der_Kette_entfaellt_die_Zeile_und_Keine_offenen_Punkte()
+    {
+        var cut = Startseite(LeitungMitEinstellungen, kette: () => new HttpResponseMessage(HttpStatusCode.InternalServerError));
+
+        cut.WaitForAssertion(() => Assert.NotNull(Card(cut, "Anmeldungen")));
+        cut.WaitForAssertion(() => Assert.NotNull(Card(cut, "Warnhinweise")));
+        var card = Card(cut, "Warnhinweise")!;
+        Assert.Empty(Zeilen(card));
+        Assert.Empty(card.QuerySelectorAll(".elkw-alert"));
+    }
+
+    [Fact]
+    public void Nach_dem_Abschluss_ist_eine_nicht_eingerichtete_Kette_keine_Zeile()
+    {
+        var cut = Startseite(LeitungMitEinstellungen, kette: () => Kette(eingerichtet: false), phase: "Gelaufen");
+
+        cut.WaitForAssertion(() => Assert.NotNull(Card(cut, "Warnhinweise")?.QuerySelector(".elkw-alert--erfolg")));
+        Assert.Empty(Zeilen(Card(cut, "Warnhinweise")!));
+        Assert.DoesNotContain("Sicherheitskette ist noch nicht eingerichtet", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Ohne_freizeit_einstellungen_laedt_das_Cockpit_die_Kette_nicht()
+    {
+        var cut = Startseite(Leitung, kette: () => Kette(eingerichtet: false));
+
+        cut.WaitForAssertion(() => Assert.NotNull(Card(cut, "Warnhinweise")?.QuerySelector(".elkw-alert--erfolg")));
+        Assert.DoesNotContain(_server.Anfragen, a => a.Pfad == KettePfad);
+    }
+
     // ---------- Team ----------
 
     [Fact]
@@ -359,7 +429,7 @@ public sealed class LeitungsCockpitSeitenTests : BunitContext
         Assert.Null(Card(cut, "Warnhinweise"));
         Assert.Null(Card(cut, "Freizeitpässe unvollständig"));
         Assert.Empty(cut.FindAll(".elkw-alert"));
-        Assert.DoesNotContain(_server.Anfragen, a => a.Pfad == StandPfad || a.Pfad == WarnPfad || a.Pfad == AnmeldungenPfad);
+        Assert.DoesNotContain(_server.Anfragen, a => a.Pfad == StandPfad || a.Pfad == WarnPfad || a.Pfad == AnmeldungenPfad || a.Pfad == KettePfad);
     }
 
     // ---------- Texte und Client ----------

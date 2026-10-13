@@ -339,6 +339,21 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal(6L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.dokument"));
         Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.dokument"));
 
+        // Story 2-8: Die Demo-Kette ist eingerichtet; Lea (Team) liest sie, genau eine Zeile auch nach dem zweiten Einspielen.
+        var kette = await AnmeldeHelfer.JsonAsync(await leaClient.GetAsync($"/api/freizeiten/{freizeitId}/sicherheit/sicherheitskette", Abbruch));
+        Assert.True(kette.GetProperty("eingerichtet").GetBoolean());
+        Assert.Equal(string.Join('\n', DemoKatalog.Sicherheitskette.WasTun), kette.GetProperty("wasTun").GetString());
+        Assert.Equal(
+            ("0123 456782", "Petra Heimann (Gemeindebüro)", "0123 456783"),
+            (kette.GetProperty("leitungTelefon").GetString(), kette.GetProperty("heimatName").GetString(), kette.GetProperty("heimatTelefon").GetString()));
+        Assert.Equal(
+            [
+                "Ruhe bewahren und bei der verletzten Person bleiben.", "Bei Lebensgefahr sofort den Notruf 112 wählen.",
+                "Leitung anrufen und Bescheid geben.", "Erste Hilfe leisten.",
+            ],
+            DemoKatalog.Sicherheitskette.WasTun);
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM sicherheit.sicherheitskette"));
+
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,
             "SELECT count(*) FROM konten.konto k LEFT JOIN personen.person p ON p.\"Id\" = k.\"PersonId\" WHERE p.\"Id\" IS NULL OR p.\"Vorname\" IS NULL OR p.\"Nachname\" IS NULL"));

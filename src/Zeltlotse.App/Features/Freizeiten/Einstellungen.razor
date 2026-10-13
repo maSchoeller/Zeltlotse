@@ -1,13 +1,16 @@
 @page "/freizeiten/{FreizeitId:guid}/einstellungen"
 @using Zeltlotse.Api.Contracts.Freizeiten
 @using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Sicherheit
 @using Zeltlotse.Ui.Kontext
 @inject FreizeitKontextDienst Kontext
 @inject FreizeitenApiClient Freizeiten
+@inject SicherheitApiClient SicherheitApi
 @* Einstellungen der Freizeit (EXPERIENCE.md → Fläche „Einstellungen der Freizeit“, nur Leitung; FR-15, FR-16, FR-67): Abschnitt
    „Freizeitseite“ mit Beschreibung (mehrzeilig), Ort, Höchstzahl Teilnehmende und Teilnahmebedingungen (mehrzeilig, FR-19) per
    Autosave (AD-19), Abschnitt „Kontakt für Absagen“ mit Mail-Adresse und Telefon der Leitung (FR-21, Story 2-3) per Autosave, Abschnitt
-   „Freizeitpass“ mit der Fragen-Auswahl je Zielgruppe aus dem festen Katalog (FR-22, Story 2-4) per Autosave und Abschnitt
+   „Freizeitpass“ mit der Fragen-Auswahl je Zielgruppe aus dem festen Katalog (FR-22, Story 2-4) per Autosave, Abschnitt „Sicherheitskette“
+   (FR-29, Story 2-8: was jetzt zu tun ist, Telefon der Leitung, Ansprechperson am Heimatort und ihr Telefon) per Autosave und Abschnitt
    „Anmeldelinks“ mit beiden Links als Text, „Freizeitseite öffnen“ und „Neuen Link erzeugen“ über die Inline-Bestätigung. Ohne
    die erlaubte Aktion „freizeit-einstellungen“ oder bei 403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>Einstellungen – Zeltlotse</PageTitle>
@@ -90,6 +93,25 @@ else
             </Card>
         }
 
+        @if (_kette is not null)
+        {
+            <Card Titel="Sicherheitskette" Id="sicherheitskette">
+                <p>Erscheint im Notfall bei Leitung und Team.</p>
+                <AutosaveFeld Label="Was jetzt zu tun ist" Id="sicherheitskette-was-tun" Feldname="@SicherheitsketteFelder.WasTun" Mehrzeilig="true"
+                              Pfad="@KettePfad" Wert="@_kette.WasTun" Version="@_kette.Version" Hinweis="Ein Schritt je Zeile."
+                              NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+                <AutosaveFeld Label="Telefon der Leitung im Notfall" Id="sicherheitskette-leitung-telefon" Feldname="@SicherheitsketteFelder.LeitungTelefon" Typ="tel"
+                              Pfad="@KettePfad" Wert="@_kette.LeitungTelefon" Version="@_kette.Version"
+                              NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+                <AutosaveFeld Label="Ansprechperson am Heimatort" Id="sicherheitskette-heimat-name" Feldname="@SicherheitsketteFelder.HeimatName"
+                              Pfad="@KettePfad" Wert="@_kette.HeimatName" Version="@_kette.Version"
+                              NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+                <AutosaveFeld Label="Telefon der Ansprechperson am Heimatort" Id="sicherheitskette-heimat-telefon" Feldname="@SicherheitsketteFelder.HeimatTelefon" Typ="tel"
+                              Pfad="@KettePfad" Wert="@_kette.HeimatTelefon" Version="@_kette.Version"
+                              NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+            </Card>
+        }
+
         <Card Titel="Anmeldelinks">
             <p>Jeder Link öffnet die Freizeitseite und lässt sich beliebig oft teilen. Er gilt bis zum Ende der Freizeit.</p>
             @foreach (var art in Enum.GetValues<AnmeldelinkArt>())
@@ -117,6 +139,7 @@ else
 @code {
     private FreizeitseiteEinstellungen? _einstellungen;
     private FragenAuswahl? _fragen;
+    private Zeltlotse.Api.Contracts.Sicherheit.Sicherheitskette? _kette;
     private bool _nichtVerfuegbar;
     private bool _aktionFehler;
     private bool _abgeschlossen;
@@ -125,10 +148,13 @@ else
 
     [Parameter] public Guid FreizeitId { get; set; }
 
+    private string KettePfad => SicherheitApiClient.SicherheitskettePfad(FreizeitId);
+
     protected override async Task OnParametersSetAsync()
     {
         _einstellungen = null;
         _fragen = null;
+        _kette = null;
         _nichtVerfuegbar = false;
         _aktionFehler = false;
         _abgeschlossen = false;
@@ -145,6 +171,7 @@ else
             _abgeschlossen = kontext.Phase == Phase.Gelaufen;
             _einstellungen = await Freizeiten.FreizeitseiteLadenAsync(FreizeitId);
             _fragen = await Freizeiten.FragenLadenAsync(FreizeitId);
+            _kette = await SicherheitApi.SicherheitsketteLadenAsync(FreizeitId);
             _nichtVerfuegbar = _einstellungen is null;
         }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
@@ -162,6 +189,7 @@ else
         {
             _einstellungen = await Freizeiten.FreizeitseiteLadenAsync(FreizeitId);
             _fragen = await Freizeiten.FragenLadenAsync(FreizeitId);
+            _kette = await SicherheitApi.SicherheitsketteLadenAsync(FreizeitId);
             _nichtVerfuegbar = _einstellungen is null;
         }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))

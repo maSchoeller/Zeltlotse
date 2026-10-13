@@ -80,6 +80,8 @@ html.elkw[data-stil="nahbar"] .elkw-app__main :is(.elkw-surface, .elkw-card, .el
 .elkw-app__main :is(.elkw-card, .elkw-alert) + :is(.elkw-card, .elkw-alert, .zl-formular, .elkw-btn, p) { margin-top: var(--elkw-space-m); }
 /* Tabelle, Leer-Zustand, Knopf oder Absatz vor einer Card (z. B. Liste über dem Formular, Knopf über den Organisationen) */
 .elkw-app__main :is(.elkw-table-wrap, .elkw-empty, .elkw-btn, p) + .elkw-card { margin-top: var(--elkw-space-m); }
+/* Suchfeld oder Trefferliste vor einer Card oder Meldung (Schnellsuche, Story 2-8) */
+.elkw-app__main :is(.elkw-field, .elkw-people) + :is(.elkw-card, .elkw-alert) { margin-top: var(--elkw-space-m); }
 
 /* Felder untereinander außerhalb eines Formulars (z. B. Autosave-Felder in einer Card) */
 :not(.zl-formular) > .elkw-field + .elkw-field { margin-top: var(--elkw-space-s); }

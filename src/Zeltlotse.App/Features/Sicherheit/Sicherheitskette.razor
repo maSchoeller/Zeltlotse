@@ -1,0 +1,138 @@
+@page "/freizeiten/{FreizeitId:guid}/notfall"
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Ui.Kontext
+@using ApiKette = Zeltlotse.Api.Contracts.Sicherheit.Sicherheitskette
+@inject FreizeitKontextDienst Kontext
+@inject FreizeitenApiClient Freizeiten
+@inject SicherheitApiClient SicherheitApi
+@* Sicherheitskette (EXPERIENCE.md → Component Patterns „Sicherheitskette“, FR-28, FR-29, Story 2-8), in allen Phasen für Leitung und Team.
+   Reihenfolge: Dachzeile „Notfall“ und Überschrift, ganz oben die Schnellsuche „Betroffene Person suchen“ (ein Treffer öffnet den
+   Freizeitpass), ohne Einrichtung der Hinweis, Card „Was jetzt zu tun ist“ (ein Schritt je Zeile, nummeriert) und Card „Wen anrufen“ mit
+   „Notruf 112“, der Leitung (Namen immer, Telefon, wenn eingerichtet) und der Ansprechperson am Heimatort (mit Telefon).
+   Kontext, Freizeit, Personenliste und Kette laden parallel. Kontext, Freizeit oder Kette nicht verfügbar → „Diese Seite ist nicht
+   verfügbar.“; scheitert nur die Personenliste, entfällt nur die Suche. Vorfall-Protokoll (2-10) und Offline (V6) kommen später. *@
+<PageTitle>Sicherheitskette – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Notfall</Dachzeile>
+    <h1>Sicherheitskette</h1>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+        <p><TelefonLink Nummer="112" Text="Notruf 112" /></p>
+    }
+    else if (_kette is null || _freizeit is null)
+    {
+        <Ladezustand />
+    }
+    else
+    {
+        @if (_personen is not null)
+        {
+            <Schnellsuche FreizeitId="FreizeitId" Label="Betroffene Person suchen" Id="betroffene-person" Personen="_personen" />
+        }
+        @if (!_kette.Eingerichtet)
+        {
+            <Meldung Titel="Hinweis">
+                <p>Die Sicherheitskette ist noch nicht eingerichtet.</p>
+            </Meldung>
+        }
+        @if (Schritte.Count > 0)
+        {
+            <Card Titel="Was jetzt zu tun ist">
+                <ol>
+                    @foreach (var schritt in Schritte)
+                    {
+                        <li>@schritt</li>
+                    }
+                </ol>
+            </Card>
+        }
+        <Card Titel="Wen anrufen">
+            <p><TelefonLink Nummer="112" Text="Notruf 112" /></p>
+            <p>@LeitungZeile</p>
+            @if (_kette.LeitungTelefon is { } leitung)
+            {
+                <p><TelefonLink Nummer="@leitung" Text="@($"Leitung anrufen: {leitung}")" /></p>
+            }
+            @if (_kette.HeimatName is not null || _kette.HeimatTelefon is not null)
+            {
+                <p>@(_kette.HeimatName is { } name ? $"Ansprechperson am Heimatort: {name}" : "Ansprechperson am Heimatort")</p>
+                @if (_kette.HeimatTelefon is { } heimat)
+                {
+                    <p><TelefonLink Nummer="@heimat" Text="@($"Ansprechperson anrufen: {heimat}")" /></p>
+                }
+            }
+        </Card>
+    }
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+}
+
+@code {
+    private FreizeitAntwort? _freizeit;
+    private ApiKette? _kette;
+    private List<PersonenlisteZeile>? _personen;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    /// <summary>Die Schritte aus „Was jetzt zu tun ist“: eine Zeile je Schritt, leere Zeilen fallen weg.</summary>
+    private List<string> Schritte =>
+        [.. (_kette?.WasTun ?? "").Split('\n').Select(z => z.Trim()).Where(z => z.Length > 0)];
+
+    private string LeitungZeile => _freizeit!.Leitung.Count == 0
+        ? "Leitung"
+        : $"Leitung: {string.Join(", ", _freizeit.Leitung.Select(l => Anzeige.Name(l.Vorname, l.Nachname)))}";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _freizeit = null;
+        _kette = null;
+        _personen = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var freizeit = Freizeiten.LadenAsync(FreizeitId);
+            var kette = SicherheitApi.SicherheitsketteLadenAsync(FreizeitId);
+            var personen = PersonenAsync();
+            await Task.WhenAll(kontext, freizeit, kette, personen);
+            if (kontext.Result is null || freizeit.Result is null || kette.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_freizeit, _kette, _personen) = (freizeit.Result, kette.Result, personen.Result);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>Die Personenliste für die Suche; scheitert der Abruf, entfällt nur die Suche.</summary>
+    private async Task<List<PersonenlisteZeile>?> PersonenAsync()
+    {
+        try
+        {
+            return await Freizeiten.PersonenlisteLadenAsync(FreizeitId);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            return null;
+        }
+    }
+}

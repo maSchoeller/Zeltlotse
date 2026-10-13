@@ -35,6 +35,8 @@ else
     }
     else
     {
+        @* Story 2-8: Schnellsuche über den Tabellen; ein Treffer öffnet den Freizeitpass (FR-28). *@
+        <Schnellsuche FreizeitId="FreizeitId" Label="Person suchen" Id="personen-suche" Personen="_liste" />
         <p>Die Leitung sieht einen Freizeitpass ab dem Eingang der Anmeldung, das Team ab der Bestätigung.</p>
         @foreach (var (titel, art) in Abschnitte)
         {

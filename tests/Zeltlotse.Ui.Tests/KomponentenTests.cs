@@ -197,6 +197,43 @@ public sealed class KomponentenTests : BunitContext
         Assert.Empty(cut.FindAll("button, a, img"));
     }
 
+    [Fact]
+    public void Personenliste_mit_Href_zeigt_den_Namen_als_Link()
+    {
+        var cut = Render<PersonenListe>(ps => ps.Add(p => p.Personen, new[]
+        {
+            new PersonenEintrag("EM", "Emma Muster", "Teilnehmende", Href: "freizeiten/x/freizeitpaesse/e"),
+            new PersonenEintrag("LF", "Lea Feuerstein", "Mitarbeitende"),
+        }));
+
+        var link = cut.Find(".elkw-people__who strong a");
+        Assert.Equal(("Emma Muster", "freizeiten/x/freizeitpaesse/e"), (link.TextContent, link.GetAttribute("href")));
+        Assert.Single(cut.FindAll("a"));
+        Assert.Equal("Lea Feuerstein", cut.FindAll(".elkw-people__who strong")[1].TextContent);
+        Assert.Equal("Teilnehmende", cut.Find(".elkw-people__who span").TextContent);
+    }
+
+    // ---------- Telefon-Link ----------
+
+    [Fact]
+    public void Telefon_Link_waehlt_nur_Plus_und_Ziffern_und_ist_mindestens_44_px_hoch()
+    {
+        var cut = Render<TelefonLink>(ps => ps.Add(p => p.Nummer, "+49 (0123) 456-782").Add(p => p.Text, "0123 456782 anrufen"));
+
+        cut.MarkupMatches("""<a class="elkw-link zl-gross" href="tel:+490123456782">0123 456782 anrufen</a>""");
+        Assert.Equal("tel:112", TelefonLink.Href("112"));
+        Assert.Equal("tel:0123456783", TelefonLink.Href(" 0123 / 45 67 83 "));
+    }
+
+    [Fact]
+    public void Telefon_Link_laesst_mit_Laendervorwahl_die_Null_in_Klammern_weg()
+    {
+        Assert.Equal("tel:+4974431234", TelefonLink.Href("+49 (0) 7443 1234"));
+        Assert.Equal("tel:+4974431234", TelefonLink.Href(" +49 ( 0 )7443-1234"));
+        // Ohne „+“ bleibt die Null: Sie gehört zur Vorwahl.
+        Assert.Equal("tel:074431234", TelefonLink.Href("(0)7443 1234"));
+    }
+
     // ---------- Statusliste ----------
 
     [Fact]

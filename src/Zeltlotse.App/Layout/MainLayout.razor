@@ -5,13 +5,16 @@
 @inject IBrowser Browser
 @inject NavigationManager Navigation
 @inject AppSitzung Sitzung
+@inject Zeltlotse.Ui.Kontext.FreizeitKontextDienst Kontext
 @* Layout der Web-App (AD-18, AD-5, AD-22): App-Rahmen mit App-Leiste (angemeldet mit Link zum Konto); offline die Offline-Leiste, die Notfall-Box
    mit 112 und die übrigen Inhalte ausgegraut; bei abweichender Server-Version der Hinweis „Neu laden“; eine
-   Fehlergrenze, die unerwartete Fehler meldet. *@
+   Fehlergrenze, die unerwartete Fehler meldet. Story 2-8: Auf jeder Seite einer Freizeit (Pfad „freizeiten/{Kennung}…“) lädt
+   das Layout beim Wechsel auf eine andere Freizeit deren Kontext; in Phase „läuft“ zeigt die App-Leiste den Eintrag „Notfall“ zur
+   Sicherheitskette. Gemerkt werden nur die zuletzt geladene Kennung und Phase; scheitert das Laden, gibt es keinen Eintrag. *@
 <Sprunglink Ziel="@SprungZiel" />
 <AppRahmen>
     <Leiste>
-        <AppLeiste StartHref="./" KontoHref="@(Sitzung.Angemeldet ? KontoPfad : null)" KontoText="@Sitzung.Vorname" />
+        <AppLeiste StartHref="./" NotfallHref="@NotfallHref" KontoHref="@(Sitzung.Angemeldet ? KontoPfad : null)" KontoText="@Sitzung.Vorname" />
     </Leiste>
     <UnterDerLeiste>
         @if (Verbindung.Offline)
@@ -49,6 +52,8 @@
 
 @code {
     private MeldendeFehlergrenze? _grenze;
+    private Guid? _freizeit;
+    private Zeltlotse.Api.Contracts.Gemeinsam.Phase? _phase;
 
     /// <summary>Satz der Notfall-Box offline vor V6 (EXPERIENCE.md → „Offline vor V6“).</summary>
     public const string NotfallSatzOffline = "Offline gilt der ausgedruckte Notfallordner.";
@@ -66,19 +71,56 @@
         Sitzung.Geaendert += Neuzeichnen;
         Navigation.LocationChanged += Seitenwechsel;
         await Verbindung.StartenAsync();
+        await NotfallLadenAsync();
     }
 
     private void Neuzeichnen() => _ = InvokeAsync(StateHasChanged);
 
     // Nach einem Fehler zeigt die nächste Seite wieder ihren Inhalt.
     private void Seitenwechsel(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>
-        _ = InvokeAsync(() =>
+        _ = InvokeAsync(async () =>
         {
             _grenze?.Recover();
+            StateHasChanged();
+            await NotfallLadenAsync();
             StateHasChanged();
         });
 
     private async Task NeuLadenAsync() => await Browser.NeuLadenAsync();
+
+    /// <summary>Story 2-8: Ziel des Eintrags „Notfall“: nur auf Seiten der zuletzt geladenen Freizeit und nur in Phase „läuft“.</summary>
+    private string? NotfallHref =>
+        AktuelleFreizeit() is { } id && id == _freizeit && _phase == Zeltlotse.Api.Contracts.Gemeinsam.Phase.Laeuft ? $"freizeiten/{id}/notfall" : null;
+
+    /// <summary>Die Freizeit aus dem relativen Pfad „freizeiten/{Kennung}…“ der adressierten Seite (wie AD-6), sonst <c>null</c>.</summary>
+    private Guid? AktuelleFreizeit()
+    {
+        var teile = Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Split('/');
+        return teile.Length >= 2 && teile[0] == "freizeiten" && Guid.TryParse(teile[1], out var id) ? id : null;
+    }
+
+    /// <summary>Lädt den Kontext nur beim Wechsel auf eine andere Freizeit; ein Fehler heißt: kein Eintrag.</summary>
+    private async Task NotfallLadenAsync()
+    {
+        if (AktuelleFreizeit() is not { } id || id == _freizeit)
+        {
+            return;
+        }
+
+        (_freizeit, _phase) = (id, null);
+        try
+        {
+            var kontext = await Kontext.LadenAsync(id);
+            if (_freizeit == id)
+            {
+                _phase = kontext?.Phase;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // Kein Kontext, kein Eintrag; die Seite selbst meldet den Fehler.
+        }
+    }
 
     public void Dispose()
     {

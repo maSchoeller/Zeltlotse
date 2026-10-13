@@ -120,6 +120,49 @@ namespace Zeltlotse.Sicherheit.Migrationen
                     b.ToTable("outbox_zustellung", "sicherheit");
                 });
 
+            modelBuilder.Entity("Zeltlotse.Sicherheit.Sicherheitskette.Sicherheitskette", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("HeimatName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("HeimatTelefon")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("LeitungTelefon")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("WasTun")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FreizeitId")
+                        .IsUnique();
+
+                    b.HasIndex("OrganisationId");
+
+                    b.ToTable("sicherheitskette", "sicherheit");
+                });
+
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.Zustellung", b =>
                 {
                     b.HasOne("Zeltlotse.SharedKernel.Outbox.OutboxNachricht", null)

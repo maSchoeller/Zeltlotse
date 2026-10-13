@@ -180,6 +180,15 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Freizeit anlegen" })).ToBeVisibleAsync();
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await E2EHilfe.AxeAsync(seite);
+        // Story 2-8: Der Notfall-Test desselben Laufs legt in der Demo-Organisation eine eigene, laufende Freizeit an; das Bild zeigt nur
+        // die Demo-Freizeit. Geprüft ist die Seite vorher vollständig.
+        await seite.EvaluateAsync(
+            """
+            () => document.querySelectorAll('table').forEach(t => {
+                if (t.caption && t.caption.textContent.trim() === 'Freizeiten')
+                    t.querySelectorAll('tbody tr').forEach(z => { if (!z.textContent.includes('Zeltlager Sommer 2027')) z.remove(); });
+            })
+            """);
 
         await BildAsync(seite, "organisation", geraet);
     }
@@ -662,7 +671,7 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         var seite = await kontext.NewPageAsync();
 
         await EinstellungenAsync(seite);
-        await Assertions.Expect(seite.GetByLabel("Ort")).ToHaveValueAsync("Zeltplatz am Mühlbach, Musterhausen", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByLabel("Ort", new() { Exact = true })).ToHaveValueAsync("Zeltplatz am Mühlbach, Musterhausen", new() { Timeout = 60_000 });
         await Assertions.Expect(seite.GetByLabel("Höchstzahl Teilnehmende")).ToHaveValueAsync("40");
         await Assertions.Expect(seite.GetByRole(AriaRole.Heading, new() { Name = "Für Teilnehmende" })).ToBeVisibleAsync();
         await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Freizeitseite öffnen" })).ToHaveCountAsync(2);
@@ -1214,6 +1223,91 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await E2EHilfe.AxeAsync(seite);
 
         await BildAsync(seite, "elterninfo", geraet);
+    }
+
+    // ---------- Story 2-8: Sicherheitskette und Schnellsuche ----------
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Sicherheitskette(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await SicherheitsketteAsync(seite);
+        var schritte = seite.Locator(".elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = "Was jetzt zu tun ist" }) }).Locator("ol li");
+        await Assertions.Expect(schritte).ToHaveTextAsync(
+            [
+                "Ruhe bewahren und bei der verletzten Person bleiben.", "Bei Lebensgefahr sofort den Notruf 112 wählen.",
+                "Leitung anrufen und Bescheid geben.", "Erste Hilfe leisten.",
+            ]);
+        await Assertions.Expect(seite.Locator("a[href='tel:112']")).ToHaveTextAsync("Notruf 112");
+        await Assertions.Expect(seite.GetByText("Leitung: Jonas Hüttner, Miriam Zeltner")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.Locator("a[href='tel:0123456782']")).ToHaveTextAsync("Leitung anrufen: 0123 456782");
+        await Assertions.Expect(seite.GetByText("Ansprechperson am Heimatort: Petra Heimann (Gemeindebüro)")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.Locator("a[href='tel:0123456783']")).ToHaveTextAsync("Ansprechperson anrufen: 0123 456783");
+        // Die Demo-Freizeit ist in Vorbereitung: kein Eintrag „Notfall“ in der App-Leiste.
+        await Assertions.Expect(seite.Locator("header a.zl-notfall-eintrag")).ToHaveCountAsync(0);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "sicherheitskette", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Sicherheitskette_Suche(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await SicherheitsketteAsync(seite);
+        await seite.GetByLabel("Betroffene Person suchen").FillAsync("em");
+        var treffer = seite.Locator(".elkw-people li");
+        await Assertions.Expect(treffer).ToHaveCountAsync(1, new() { Timeout = 60_000 });
+        await Assertions.Expect(treffer.GetByRole(AriaRole.Link, new() { Name = "Emma Muster" })).ToHaveAttributeAsync("href", new System.Text.RegularExpressions.Regex("freizeitpaesse/"));
+        await Assertions.Expect(treffer).ToContainTextAsync("Teilnehmende");
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "sicherheitskette-suche", geraet);
+
+        // Der Treffer öffnet den Freizeitpass: zwei Schritte ab der Startseite.
+        await treffer.GetByRole(AriaRole.Link, new() { Name = "Emma Muster" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Emma Muster", new() { Timeout = 60_000 });
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Sicherheitskette_Einrichten(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await EinstellungenAsync(seite);
+        var card = seite.Locator("#sicherheitskette");
+        await Assertions.Expect(card).ToContainTextAsync("Erscheint im Notfall bei Leitung und Team.", new() { Timeout = 60_000 });
+        await Assertions.Expect(card.GetByLabel("Was jetzt zu tun ist")).ToHaveValueAsync(new System.Text.RegularExpressions.Regex("^Ruhe bewahren"));
+        await Assertions.Expect(card.GetByLabel("Telefon der Leitung im Notfall")).ToHaveValueAsync("0123 456782");
+        await Assertions.Expect(card.GetByLabel("Ansprechperson am Heimatort", new() { Exact = true })).ToHaveValueAsync("Petra Heimann (Gemeindebüro)");
+        await Assertions.Expect(card.GetByLabel("Telefon der Ansprechperson am Heimatort")).ToHaveValueAsync("0123 456783");
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        await card.EvaluateAsync("karte => karte.scrollIntoView({ block: 'start' })");
+
+        await BildAsync(seite, "sicherheitskette-einrichten", geraet);
+    }
+
+    /// <summary>Lea (Team) meldet sich an, öffnet die Demo-Freizeit und tippt „Sicherheitskette“.</summary>
+    private async Task SicherheitsketteAsync(IPage seite)
+    {
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, TeamMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Sicherheitskette", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Sicherheitskette", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator(".elkw-kicker")).ToHaveTextAsync("Notfall");
+        await Assertions.Expect(seite.GetByLabel("Betroffene Person suchen")).ToBeVisibleAsync(new() { Timeout = 60_000 });
     }
 
     /// <summary>Lea (Team) meldet sich an und öffnet in der Demo-Freizeit „Dokumente“.</summary>

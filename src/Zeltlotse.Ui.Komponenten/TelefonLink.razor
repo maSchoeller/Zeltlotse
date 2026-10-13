@@ -1,0 +1,21 @@
+@* Telefon-Link (EXPERIENCE.md → Sicherheitskette „wen anrufen“, Notfall-Box): ein Link „tel:“ mit nur „+“ und Ziffern der Nummer,
+   mindestens 44 px hoch, weil er unter Stress und mit einer Hand bedient wird. Statisch tauglich. *@
+<a class="elkw-link zl-gross" href="@Href(Nummer)">@Text</a>
+
+@code {
+    /// <summary>Die Nummer, wie sie geschrieben ist, z. B. „0123 456782“; gewählt werden nur „+“ und Ziffern.</summary>
+    [Parameter, EditorRequired] public string Nummer { get; set; } = "";
+
+    /// <summary>Sichtbarer Text des Links, z. B. „Notruf 112“ oder „Leitung anrufen: 0123 456782“.</summary>
+    [Parameter, EditorRequired] public string Text { get; set; } = "";
+
+    /// <summary>
+    /// Ziel des Links: „tel:“ plus nur „+“ und Ziffern der Nummer. Beginnt sie mit „+“, fällt eine Gruppe „(0)“ weg
+    /// („+49 (0) 7443 1234“ → „tel:+4974431234“).
+    /// </summary>
+    public static string Href(string? nummer) => "tel:" + new string(OhneNullGruppe(nummer ?? "").Where(z => z == '+' || char.IsAsciiDigit(z)).ToArray());
+
+    private static string OhneNullGruppe(string nummer) =>
+        nummer.TrimStart().StartsWith('+') ? System.Text.RegularExpressions.Regex.Replace(nummer, @"\(\s*0\s*\)", "", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1))
+        : nummer;
+}

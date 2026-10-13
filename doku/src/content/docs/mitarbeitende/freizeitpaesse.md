@@ -13,6 +13,8 @@ Auf der Startseite der Freizeit führt der Knopf **Freizeitpässe** zur Liste. L
 
 Die Liste hat zwei Abschnitte, **Teilnehmende** und **Mitarbeitende**, sortiert nach Nachname und Vorname. Darin stehen alle Anmeldungen, die **Eingegangen** oder **Bestätigt** sind; abgesagte Anmeldungen fehlen. Ein Tipp auf den Namen öffnet den Freizeitpass der Person. Gibt es noch keine Anmeldung, steht „Noch keine Anmeldungen.“
 
+Über den Tabellen steht die **Schnellsuche** „Person suchen“. Ab dem ersten Buchstaben zeigt sie die passenden Personen mit Initialen, Name und „Teilnehmende“ oder „Mitarbeitende“; ein Tipp auf den Namen öffnet direkt den Freizeitpass. Darüber steht die Anzahl, etwa „1 Person gefunden.“; passt kein Name, steht „Keine Person gefunden.“ Dieselbe Suche steht auf der Sicherheitskette und während der Freizeit auf der Startseite (siehe [Notfall](/mitarbeitende/notfall/)).
+
 ![Seite „Freizeitpässe“ am Handy mit den Abschnitten „Teilnehmende“ (Emma Muster „Eingegangen“, Mia Probst „Bestätigt“) und „Mitarbeitende“](../../../assets/screenshots/freizeitpaesse-handy.png)
 
 ![Seite „Freizeitpässe“ am Laptop mit den Namen als Links und dem Status jeder Anmeldung](../../../assets/screenshots/freizeitpaesse-laptop.png)

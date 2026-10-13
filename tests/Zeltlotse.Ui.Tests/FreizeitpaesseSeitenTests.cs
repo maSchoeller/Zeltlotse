@@ -174,6 +174,26 @@ public sealed class FreizeitpaesseSeitenTests : BunitContext
     }
 
     [Fact]
+    public void Freizeitpaesse_hat_ueber_den_Tabellen_die_Schnellsuche_Person_suchen()
+    {
+        Kontext(Aktionsschluessel.FreizeitpaesseSehen);
+        Liste(Alle);
+
+        var cut = Render<Freizeitpaesse>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll("tbody tr").Count));
+        var suche = cut.Find("input[type=search]");
+        Assert.Equal("Person suchen", cut.Find($"label[for='{suche.Id}']").TextContent.Trim());
+        Assert.True(cut.Markup.IndexOf("type=\"search\"", StringComparison.Ordinal) < cut.Markup.IndexOf("<table", StringComparison.Ordinal));
+
+        suche.Input("mia");
+
+        var treffer = cut.Find(".elkw-people a");
+        Assert.Equal(("Mia Probst", $"freizeiten/{FreizeitId}/freizeitpaesse/{Mia}"), (treffer.TextContent, treffer.GetAttribute("href")));
+        Assert.Equal(3, cut.FindAll("tbody tr").Count);
+    }
+
+    [Fact]
     public void Freizeitpaesse_ohne_Anmeldungen_zeigt_den_Leer_Zustand()
     {
         Kontext(Aktionsschluessel.FreizeitpaesseSehen);

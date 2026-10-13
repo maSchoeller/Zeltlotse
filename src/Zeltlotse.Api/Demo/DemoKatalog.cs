@@ -89,6 +89,22 @@ internal static class DemoKatalog
     public static (string Mail, string Telefon) KontaktFuerAbsagen { get; } = ("zeltlager@example.org", "0123 456789");
 
     /// <summary>
+    /// Story 2-8: Sicherheitskette der Demo-Freizeit (je Feld nur, wenn es leer ist); Telefone und Ansprechperson sind erfunden. Die Schritte
+    /// stehen im Feld „Was jetzt zu tun ist“ je in einer eigenen Zeile.
+    /// </summary>
+    public static (IReadOnlyList<string> WasTun, string LeitungTelefon, string HeimatName, string HeimatTelefon) Sicherheitskette { get; } =
+    (
+        [
+            "Ruhe bewahren und bei der verletzten Person bleiben.",
+            "Bei Lebensgefahr sofort den Notruf 112 wählen.",
+            "Leitung anrufen und Bescheid geben.",
+            "Erste Hilfe leisten.",
+        ],
+        "0123 456782",
+        "Petra Heimann (Gemeindebüro)",
+        "0123 456783");
+
+    /// <summary>
     /// Jonas' Nachweise (Story 1-5): Art, Ausstellungsdatum und eine kleine erfundene Demo-Datei. Ohne Präventionsschulung, damit
     /// „Nachweis hinzufügen“ in der Doku sichtbar bleibt.
     /// </summary>

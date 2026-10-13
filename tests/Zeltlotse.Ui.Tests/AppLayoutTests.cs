@@ -289,6 +289,61 @@ public sealed class AppLayoutTests : BunitContext
         Assert.Equal(100, MeldendeFehlergrenze.Fehlerart(new FehlerMitSehrLangemNamenDerDieGrenzeDerApiVonHundertZeichenUeberschreitetUndDeshalbGekuerztWerdenMussAmEnde()).Length);
     }
 
+    // ---------- Story 2-8: Eintrag „Notfall“ in der App-Leiste ----------
+
+    private static readonly Guid FreizeitX = Guid.Parse("0199f800-0000-7000-8000-0000000000a1");
+    private static readonly Guid FreizeitY = Guid.Parse("0199f800-0000-7000-8000-0000000000a2");
+
+    private void KontextAntwort(Guid freizeit, string phase) =>
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{freizeit}/kontext", () => NachgebildeterHandler.Json(
+            HttpStatusCode.OK,
+            JsonSerializer.Serialize(new { freizeitId = freizeit, name = "Zeltlager", phase, rollen = new[] { "Team" }, schalter = Array.Empty<string>(), erlaubt = Array.Empty<string>() })));
+
+    private int Kontextabrufe(Guid freizeit) => _server.Anfragen.Count(a => a.Pfad == $"/api/freizeiten/{freizeit}/kontext");
+
+    [Fact]
+    public void Notfall_Eintrag_nur_auf_Seiten_einer_laufenden_Freizeit_und_neu_geladen_nur_beim_Wechsel_der_Freizeit()
+    {
+        KontextAntwort(FreizeitX, "Laeuft");
+        KontextAntwort(FreizeitY, "InVorbereitung");
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        var cut = Layout();
+        Assert.Empty(cut.FindAll("a.zl-notfall-eintrag"));
+        Assert.Equal(0, Kontextabrufe(FreizeitX));
+
+        navigation.NavigateTo($"freizeiten/{FreizeitX}");
+        cut.WaitForAssertion(() => Assert.Equal($"freizeiten/{FreizeitX}/notfall", cut.Find("header a.zl-notfall-eintrag").GetAttribute("href")));
+        Assert.Equal("Notfall", cut.Find("header a.zl-notfall-eintrag").TextContent);
+
+        navigation.NavigateTo($"freizeiten/{FreizeitX}/freizeitpaesse");
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a.zl-notfall-eintrag")));
+        Assert.Equal(1, Kontextabrufe(FreizeitX));
+
+        navigation.NavigateTo($"freizeiten/{FreizeitY}");
+        cut.WaitForAssertion(() => Assert.Equal(1, Kontextabrufe(FreizeitY)));
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("a.zl-notfall-eintrag")));
+
+        navigation.NavigateTo("konto");
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("a.zl-notfall-eintrag")));
+
+        navigation.NavigateTo($"freizeiten/{FreizeitX}/notfall");
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a.zl-notfall-eintrag")));
+        Assert.Equal(2, Kontextabrufe(FreizeitX));
+    }
+
+    [Fact]
+    public void Ohne_Kontext_kein_Notfall_Eintrag()
+    {
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitX}/kontext", () => new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        Services.GetRequiredService<NavigationManager>().NavigateTo($"freizeiten/{FreizeitX}");
+
+        var cut = Layout();
+
+        cut.WaitForAssertion(() => Assert.Equal(1, Kontextabrufe(FreizeitX)));
+        Assert.Empty(cut.FindAll("a.zl-notfall-eintrag"));
+        Assert.Equal("Zeltlotse", cut.Find("main h1").TextContent);
+    }
+
     private sealed class Werfer : ComponentBase
     {
         protected override void OnInitialized() => throw new InvalidOperationException("Erika Muster hat Erdnussallergie");

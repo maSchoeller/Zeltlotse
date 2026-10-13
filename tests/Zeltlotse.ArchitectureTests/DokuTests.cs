@@ -67,6 +67,7 @@ public sealed class DokuTests
                 "Seite mitarbeitende/anmelden.md fehlt.", "Seite leitung/anmeldungen.md fehlt.", "Seite eltern/freizeitpass.md fehlt.",
                 "Seite leitung/freizeitpass-fragen.md fehlt.", "Seite mitarbeitende/freizeitpaesse.md fehlt.", "Seite leitung/cockpit.md fehlt.",
                 "Seite mitarbeitende/dokumente.md fehlt.", "Seite org-admin/org-dokumente.md fehlt.", "Seite eltern/elterninfo.md fehlt.",
+                "Seite mitarbeitende/notfall.md fehlt.", "Seite leitung/sicherheitskette.md fehlt.",
             ],
             fehlend);
     }

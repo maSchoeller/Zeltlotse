@@ -32,14 +32,16 @@ Nach dem Anmelden zeigt die Startseite für jede eigene Freizeit eine Card mit N
 Die Startseite der Freizeit zeigt:
 
 - den **Namen** und die **Phase** der Freizeit,
+- während der Freizeit direkt unter dem Namen die **Notfall-Box** und die **Schnellsuche** (siehe [Notfall](/mitarbeitende/notfall/)),
 - den **Zeitraum** vom ersten bis zum letzten Tag,
 - die eigene **Rolle**,
 - wer die **Leitung** hat,
 - bis wann die Freizeit **Einsicht in Freizeitpässe** hat,
 - für die Leitung das **Leitungs-Cockpit** (siehe [Leitungs-Cockpit](/leitung/cockpit/)):
   - die Card **Anmeldungen** mit dem Balken **Plätze**, den Zahlen je Art und dem Knopf **Anmeldungen** (siehe [Anmeldungen bestätigen und absagen](/leitung/anmeldungen/)),
-  - die Card **Warnhinweise** mit unvollständigen Freizeitpässen und fehlenden Pflicht-Nachweisen im Team und dem Knopf **Nachweise prüfen** (siehe [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/)),
+  - die Card **Warnhinweise** mit unvollständigen Freizeitpässen und fehlenden Pflicht-Nachweisen im Team, dazu der Hinweis, wenn die Sicherheitskette noch nicht eingerichtet ist, und dem Knopf **Nachweise prüfen** (siehe [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/)),
   - die Card **Freizeitpässe unvollständig** mit dem Knopf **Erinnern**,
+- für Leitung und Team den Knopf **Sicherheitskette** (siehe [Notfall](/mitarbeitende/notfall/)),
 - für Leitung und Team den Knopf **Freizeitpässe** (siehe [Freizeitpässe ansehen](/mitarbeitende/freizeitpaesse/)),
 - für die Leitung den Knopf **Einstellungen** mit der Freizeitseite und den Anmeldelinks (siehe [Freizeitseite einrichten](/leitung/freizeitseite-einrichten/)).
 

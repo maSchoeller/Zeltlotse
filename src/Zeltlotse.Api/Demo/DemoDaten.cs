@@ -28,6 +28,9 @@ using Zeltlotse.Personen.Zugriffsprotokoll;
 using Zeltlotse.SharedKernel.Mandanten;
 using Zeltlotse.SharedKernel.Outbox;
 using Zeltlotse.SharedKernel.Rechte;
+using Zeltlotse.Api.Contracts.Sicherheit;
+using Zeltlotse.Sicherheit.Daten;
+using Zeltlotse.Sicherheit.Sicherheitskette;
 using EinsichtStatus = Zeltlotse.Personen.Nachweise.EinsichtStatus;
 using NachweisArt = Zeltlotse.Personen.Contracts.Events.NachweisArt;
 
@@ -69,6 +72,7 @@ namespace Zeltlotse.Api.Demo;
 /// Story 2-5: Die Fragen-Auswahl kommt vor den Anmeldungen, damit die Freigaben die Fragen tragen; Daniel beantwortet für Mia
 /// Allergien, Notfallkontakte und Schwimmen (je nur ohne Antwort); Lea schreibt eine Team-Notiz zu Mia (nur ohne Notiz).
 /// Story 2-7: zwei Org-Dokumente, fünf Dokumente der Freizeit und die eingebundene Hausordnung (je nur, wenn sie fehlen).
+/// Story 2-8: Miriam richtet die Sicherheitskette ein (je Feld nur, wenn es leer ist).
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -119,6 +123,7 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await FreizeitpassAsync(abbruch);
         await TeamNotizAsync(abbruch);
         await DokumenteAsync(abbruch);
+        await SicherheitsketteAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -615,6 +620,38 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
                 abbruch) is not DokumentAenderung.Gespeichert)
         {
             throw new InvalidOperationException("Demo-Dokument: Die Hausordnung ließ sich nicht einbinden.");
+        }
+    }
+
+    /// <summary>
+    /// Story 2-8: Miriam richtet die Sicherheitskette der Demo-Freizeit ein (<see cref="DemoKatalog.Sicherheitskette"/>), über den Command des
+    /// Moduls Sicherheit und je Feld nur, wenn es noch leer ist.
+    /// </summary>
+    private async Task SicherheitsketteAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var freizeitId = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name)
+            .Select(f => f.Id)
+            .SingleAsync(abbruch);
+        var kette = await dienste.GetRequiredService<SicherheitLeseDbContext>().Sicherheitsketten.SingleOrDefaultAsync(k => k.FreizeitId == freizeitId, abbruch);
+        var werte = new (SicherheitsketteFeld Feld, string Wert)[]
+        {
+            (SicherheitsketteFeld.WasTun, string.Join('\n', DemoKatalog.Sicherheitskette.WasTun)),
+            (SicherheitsketteFeld.LeitungTelefon, DemoKatalog.Sicherheitskette.LeitungTelefon),
+            (SicherheitsketteFeld.HeimatName, DemoKatalog.Sicherheitskette.HeimatName),
+            (SicherheitsketteFeld.HeimatTelefon, DemoKatalog.Sicherheitskette.HeimatTelefon),
+        };
+        foreach (var (feld, wert) in werte.Where(w => kette?.Wert(w.Feld) is null))
+        {
+            if (await sender.Send(new SicherheitsketteFeldAendernCommand(freizeitId, feld, kette?.Version ?? 0, null, wert), abbruch)
+                is not SicherheitsketteAenderung.Gespeichert)
+            {
+                throw new InvalidOperationException($"Demo-Sicherheitskette: {feld} ließ sich nicht setzen.");
+            }
         }
     }
 

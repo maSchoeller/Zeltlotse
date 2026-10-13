@@ -8,6 +8,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Zeltlotse.SharedKernel\Zeltlotse.SharedKernel.csproj" />
     <ProjectReference Include="..\Zeltlotse.Sicherheit.Contracts\Zeltlotse.Sicherheit.Contracts.csproj" />
+    <!-- Pfeil aus AD-2: Sicherheit liest Freizeiten (Phase für den Schreibschutz, AD-17). -->
+    <ProjectReference Include="..\..\Freizeiten\Zeltlotse.Freizeiten.Contracts\Zeltlotse.Freizeiten.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

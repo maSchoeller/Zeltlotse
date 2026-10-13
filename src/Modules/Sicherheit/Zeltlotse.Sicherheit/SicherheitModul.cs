@@ -1,7 +1,10 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.SharedKernel.Daten;
+using Zeltlotse.SharedKernel.Rechte;
 using Zeltlotse.Sicherheit.Daten;
+using Zeltlotse.Sicherheit.Sicherheitskette;
 
 namespace Zeltlotse.Sicherheit;
 
@@ -18,6 +21,15 @@ public static class SicherheitModul
         return services;
     }
 
-    /// <summary>Bindet die Endpunkte des Moduls in die <c>/api</c>-Gruppe ein; sie entstehen mit den Fach-Stories.</summary>
-    public static IEndpointRouteBuilder MapSicherheitEndpoints(this IEndpointRouteBuilder api) => api;
+    /// <summary>
+    /// Bindet die Endpunkte des Moduls in die <c>/api</c>-Gruppe ein. Story 2-8: Sicherheitskette unter
+    /// <c>/api/freizeiten/{freizeitId}/sicherheit/sicherheitskette</c>, lesen für Leitung und Team, einrichten (Autosave, AD-19) nur Leitung.
+    /// </summary>
+    public static IEndpointRouteBuilder MapSicherheitEndpoints(this IEndpointRouteBuilder api)
+    {
+        var sicherheit = api.MapGroup($"/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/sicherheit");
+        sicherheit.MapGet("/sicherheitskette", SicherheitsketteLadenEndpunkt.Laden).NurFreizeitRolle(SicherheitRechte.Lesen);
+        sicherheit.MapPatch("/sicherheitskette", SicherheitsketteFeldAendernEndpunkt.Aendern).NurFreizeitRolle(SicherheitRechte.Einrichten);
+        return api;
+    }
 }

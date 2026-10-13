@@ -6,6 +6,7 @@
 @inject FreizeitKontextDienst Kontext
 @inject FreizeitenApiClient Freizeiten
 @inject PersonenApiClient Personen
+@inject SicherheitApiClient SicherheitApi
 @* Startseite der Freizeit (FR-45, AD-29): Name, Phase, Zeitraum, eigene Rolle aus dem Freizeit-Kontext, die Leitung und bis
    wann die Freizeit Einsicht in Freizeitpässe hat (Freigabefenster). Der Client setzt die Ansicht aus dem Kontext-Endpunkt
    und dem Endpunkt der Freizeit zusammen (AD-2).
@@ -19,6 +20,9 @@
    - Card „Freizeitpässe unvollständig“ (nur mit Personen im Stand): Tabelle mit Name, Stand und „Erinnern“ (Inline-Bestätigung, AD-13).
    Das Team sieht davon nichts. Mit „freizeitpaesse-sehen“ (Leitung und Team, Story 2-5) der Weg zu den Freizeitpässen, mit
    „freizeit-einstellungen“ (nur Leitung) der Weg zu den Einstellungen.
+   Story 2-8: Während der Freizeit (Phase „läuft“) steht für alle Rollen direkt unter der Überschrift die Notfall-Box und darunter die
+   Schnellsuche; in jeder Phase führt der Knopf „Sicherheitskette“ zur Sicherheitskette. Mit „freizeit-einstellungen“ lädt das Cockpit
+   die Kette; ist sie nicht eingerichtet, steht unter „Warnhinweise“ die Zeile mit Link auf die Card in den Einstellungen.
    403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>@(_freizeit?.Name ?? "Freizeit") – Zeltlotse</PageTitle>
 
@@ -43,6 +47,14 @@ else if (_freizeit is null || _kontext is null)
 else
 {
     <h1>@_freizeit.Name</h1>
+    @if (_kontext.Phase == Phase.Laeuft)
+    {
+        <NotfallBox Satz="@NotfallSatz" Ziel="@NotfallZiel" />
+        @if (_personen is not null)
+        {
+            <Schnellsuche FreizeitId="FreizeitId" Label="Schnellsuche" Id="schnellsuche" Personen="_personen" />
+        }
+    }
     <p><Status Wort="@Anzeige.Phase(_kontext.Phase)" Art="@Anzeige.PhaseArt(_kontext.Phase)" /></p>
     <p>Zeitraum: @Anzeige.Zeitraum(_freizeit.ErsterTag, _freizeit.LetzterTag)</p>
     <p>Rolle: @Anzeige.Rollen(_kontext.Rollen)</p>
@@ -67,7 +79,7 @@ else
             <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/anmeldungen")" Ansichtswechsel="true">Anmeldungen</Knopf></p>
         }
     }
-    @if ((DarfAnmeldungen || DarfNachweise) && _cockpitGeladen)
+    @if (DarfCockpit && _cockpitGeladen)
     {
         <Card Titel="Warnhinweise">
             @if (AnzahlZeilen > 0)
@@ -83,6 +95,10 @@ else
                     @if (_personenMitWarnung is > 0 and var personen)
                     {
                         <li>Bei @(personen == 1 ? "1 Person" : $"{personen} Personen") im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.</li>
+                    }
+                    @if (KetteFehlt)
+                    {
+                        <li><a href="@($"freizeiten/{FreizeitId}/einstellungen#sicherheitskette")">Sicherheitskette ist noch nicht eingerichtet</a></li>
                     }
                 </ul>
             }
@@ -109,6 +125,8 @@ else
     {
         @ErinnerungsMeldung
     }
+    @* Story 2-8: Die Sicherheitskette ist in jeder Phase für Leitung und Team erreichbar. *@
+    <p><Knopf Art="KnopfArt.Outline" Href="@NotfallZiel" Ansichtswechsel="true">Sicherheitskette</Knopf></p>
     @if (FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.FreizeitpaesseSehen))
     {
         <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/freizeitpaesse")" Ansichtswechsel="true">Freizeitpässe</Knopf></p>
@@ -133,6 +151,8 @@ else
     private AnmeldungenUebersicht? _anmeldungen;
     private List<FreizeitpassStandPerson>? _stand;
     private int? _personenMitWarnung;
+    private Zeltlotse.Api.Contracts.Sicherheit.Sicherheitskette? _kette;
+    private List<PersonenlisteZeile>? _personen;
     private bool _uebertraegt;
     private string? _meldung;
     private bool _meldungFehler;
@@ -143,11 +163,28 @@ else
 
     private bool DarfNachweise => _kontext is not null && FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.NachweisePruefen);
 
+    private bool DarfEinstellungen => _kontext is not null && FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.FreizeitEinstellungen);
+
+    /// <summary>Das Cockpit mit der Card „Warnhinweise“ gehört der Leitung (eine der drei Leitungs-Aktionen).</summary>
+    private bool DarfCockpit => DarfAnmeldungen || DarfNachweise || DarfEinstellungen;
+
+    /// <summary>
+    /// Story 2-8: Die Kette ist geladen und nicht eingerichtet (scheitert der Abruf, entfällt die Zeile). Nach dem Abschluss lässt sie sich
+    /// nicht mehr einrichten; dann gibt es keine Zeile.
+    /// </summary>
+    private bool KetteFehlt => DarfEinstellungen && _kette is { Eingerichtet: false } && _kontext!.Phase != Phase.Gelaufen;
+
+    /// <summary>Story 2-8: Ziel der Notfall-Box und des Knopfs „Sicherheitskette“.</summary>
+    private string NotfallZiel => $"freizeiten/{FreizeitId}/notfall";
+
+    private const string NotfallSatz = "Was jetzt zu tun ist, wen anrufen und die Freizeitpässe – ein Tipp entfernt.";
+
     /// <summary>Zeilen der Card „Warnhinweise“: je vorhandener Warnart eine.</summary>
-    private int AnzahlZeilen => (_stand is { Count: > 0 } ? 1 : 0) + (_personenMitWarnung is > 0 ? 1 : 0);
+    private int AnzahlZeilen => (_stand is { Count: > 0 } ? 1 : 0) + (_personenMitWarnung is > 0 ? 1 : 0) + (KetteFehlt ? 1 : 0);
 
     /// <summary>Alle Abrufe, aus denen Zeilen entstehen können, sind gelungen.</summary>
-    private bool AlleZeilenGeladen => (!DarfAnmeldungen || _stand is not null) && (!DarfNachweise || _personenMitWarnung is not null);
+    private bool AlleZeilenGeladen =>
+        (!DarfAnmeldungen || _stand is not null) && (!DarfNachweise || _personenMitWarnung is not null) && (!DarfEinstellungen || _kette is not null);
 
     private string Anmeldestand(string titel, AnmeldungArt art)
     {
@@ -195,6 +232,8 @@ else
         _anmeldungen = null;
         _stand = null;
         _personenMitWarnung = null;
+        _kette = null;
+        _personen = null;
         _meldung = null;
         try
         {
@@ -211,8 +250,16 @@ else
             return;
         }
 
-        if (_nichtVerfuegbar || (!DarfAnmeldungen && !DarfNachweise))
+        if (_nichtVerfuegbar)
         {
+            return;
+        }
+
+        // Story 2-8: Während der Freizeit lädt die Startseite für alle Rollen die Personenliste der Schnellsuche (scheitert → keine Suche).
+        var personen = _kontext!.Phase == Phase.Laeuft ? SicherAsync(() => Freizeiten.PersonenlisteLadenAsync(FreizeitId)) : Task.FromResult<List<PersonenlisteZeile>?>(null);
+        if (!DarfCockpit)
+        {
+            _personen = await personen;
             return;
         }
 
@@ -220,8 +267,9 @@ else
         var anmeldungen = DarfAnmeldungen ? SicherAsync(() => Freizeiten.AnmeldungenAsync(FreizeitId)) : Task.FromResult<AnmeldungenUebersicht?>(null);
         var stand = DarfAnmeldungen ? StandLadenAsync() : Task.FromResult<List<FreizeitpassStandPerson>?>(null);
         var warnungen = DarfNachweise ? WarnungenLadenAsync() : Task.FromResult<int?>(null);
-        await Task.WhenAll(anmeldungen, stand, warnungen);
-        (_anmeldungen, _stand, _personenMitWarnung) = (anmeldungen.Result, stand.Result, warnungen.Result);
+        var kette = DarfEinstellungen ? SicherAsync(() => SicherheitApi.SicherheitsketteLadenAsync(FreizeitId)) : Task.FromResult<Zeltlotse.Api.Contracts.Sicherheit.Sicherheitskette?>(null);
+        await Task.WhenAll(anmeldungen, stand, warnungen, kette, personen);
+        (_anmeldungen, _stand, _personenMitWarnung, _kette, _personen) = (anmeldungen.Result, stand.Result, warnungen.Result, kette.Result, personen.Result);
         _cockpitGeladen = true;
     }
 

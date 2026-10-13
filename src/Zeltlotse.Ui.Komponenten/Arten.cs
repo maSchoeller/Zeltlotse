@@ -63,7 +63,8 @@ public sealed record Spalte<TZeile>(string Titel, RenderFragment<TZeile> Inhalt)
 public sealed record AuswahlOption(string Wert, string Text);
 
 /// <summary>Ein Eintrag einer <see cref="PersonenListe"/>: Initialen für den Avatar, Name und eine optionale Zeile darunter.</summary>
-public sealed record PersonenEintrag(string Initialen, string Name, string? Zeile);
+/// <param name="Href">Story 2-8: optionales Ziel; dann ist der Name ein Link.</param>
+public sealed record PersonenEintrag(string Initialen, string Name, string? Zeile, string? Href = null);
 
 /// <summary>Ein Eintrag einer <see cref="Fehleruebersicht"/>: Kennung des Feldes (Ziel des Sprunglinks) und der Fehlertext ohne Präfix.</summary>
 public sealed record FeldFehler(string FeldId, string Text);
