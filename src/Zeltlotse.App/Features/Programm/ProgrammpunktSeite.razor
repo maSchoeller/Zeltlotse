@@ -1,0 +1,227 @@
+@page "/freizeiten/{FreizeitId:guid}/programm/{PunktId:guid}"
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Programm
+@using Zeltlotse.Ui.Kontext
+@inject FreizeitKontextDienst Kontext
+@inject FreizeitenApiClient Freizeiten
+@inject ProgrammApiClient ProgrammApi
+@inject NavigationManager Navigation
+@* Programmpunkt (CAP-19, FR-34, FR-35, Story 3-1; EXPERIENCE.md → Fläche „Programmpunkt“) für Leitung und Team, erreicht über den Titel im
+   Wochenraster. Dachzeile „Programm“, Überschrift „Programmpunkt“ und der Tag (Titel und Uhrzeit nur in den Feldern, nach dem Abschluss als Liste); „Übernommen: …“ mit „Ich übernehme“ bzw. „Abgeben“ (ein Tipp, nur
+   für sich selbst). Card „Bearbeiten“ mit Titel und Uhrzeit als Autosave-Felder (AD-19; verschieben heißt Uhrzeit ändern). Löschen per
+   Inline-Bestätigung, nicht bei den festen Mahlzeiten. In der Phase „gelaufen“ nur lesbar. Kontext, Raster oder Punkt nicht verfügbar →
+   „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>Programmpunkt – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Programm</Dachzeile>
+    @if (_punkt is null || _kontext is null)
+    {
+        <h1>Programmpunkt</h1>
+        @if (_aktionFehler)
+        {
+            <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                <p>@AnmeldungAbschluss.FehlerText</p>
+            </Meldung>
+        }
+        else
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @* Titel und Uhrzeit stehen nur in den Feldern (Autosave); Überschrift und Tageszeile wiederholen sie nicht, damit nichts Veraltetes stehen bleibt. *@
+        <h1>Programmpunkt</h1>
+        <p>@Anzeige.TagLang(_punkt.Tag)</p>
+        @if (_punkt.Mahlzeit is not null)
+        {
+            <p>Feste Mahlzeit: Titel und Uhrzeit lassen sich ändern, löschen lässt sie sich nicht.</p>
+        }
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@ProgrammTexte.AbgeschlossenText</p>
+            </Meldung>
+            <DetailsListe Eintraege="@([new DetailsEintrag("Titel", _punkt.Titel), new DetailsEintrag("Uhrzeit", _punkt.Beginn ?? "ohne Uhrzeit")])" />
+        }
+        @if (_meldung is not null)
+        {
+            <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                <p>@_meldung</p>
+            </Meldung>
+        }
+        @if (ProgrammTexte.StatusWort(_punkt, _namen) is { } status)
+        {
+            <p><Status Wort="@status" Art="StatusArt.Erfolg" /></p>
+        }
+        @if (!Abgeschlossen && _punkt.UebernommenVon is null)
+        {
+            <p><Knopf Art="KnopfArt.Outline" Deaktiviert="@_uebertraegt" @onclick="@(() => UebergangAsync(uebernehmen: true))">Ich übernehme</Knopf></p>
+        }
+        else if (!Abgeschlossen && _punkt.Meins)
+        {
+            <p><Knopf Art="KnopfArt.Outline" Deaktiviert="@_uebertraegt" @onclick="@(() => UebergangAsync(uebernehmen: false))">Abgeben</Knopf></p>
+        }
+
+        @if (!Abgeschlossen)
+        {
+            <Card Titel="Bearbeiten">
+                <AutosaveFeld Label="Titel" Id="programmpunkt-titel" Feldname="@ProgrammpunktFelder.Titel" Pfad="@Pfad" Wert="@_punkt.Titel"
+                              Version="@_punkt.Version" Hinweis="@($"Höchstens {ProgrammpunktFelder.TitelMaximaleLaenge} Zeichen")" NeuLaden="NeuLadenAsync" />
+                <AutosaveFeld Label="Uhrzeit" Id="programmpunkt-beginn" Typ="time" Feldname="@ProgrammpunktFelder.Beginn" Pfad="@Pfad"
+                              Wert="@_punkt.Beginn" Version="@_punkt.Version" Hinweis="Ohne Uhrzeit steht der Programmpunkt am Ende des Tages."
+                              NeuLaden="NeuLadenAsync" />
+            </Card>
+            @if (_punkt.Mahlzeit is null)
+            {
+                <InlineBestaetigung AusloeserText="Programmpunkt löschen" AusloeserArt="KnopfArt.Outline" Satz="Diesen Programmpunkt löschen?"
+                                    JaText="Ja, löschen" Bestaetigt="LoeschenAsync" />
+            }
+        }
+        <p><a href="@ProgrammTexte.RasterZiel(FreizeitId, _punkt.Tag)">Zurück zum Programm</a></p>
+    }
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    private Programmpunkt? _punkt;
+    private IReadOnlyDictionary<Guid, string> _namen = new Dictionary<Guid, string>();
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private string? _meldung;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    [Parameter] public Guid PunktId { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    private string Pfad => ProgrammApiClient.PunktPfad(FreizeitId, PunktId);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _punkt = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var raster = ProgrammApi.LadenAsync(FreizeitId);
+            var freizeit = Leise(Freizeiten.LadenAsync(FreizeitId));
+            var personen = Leise(Freizeiten.PersonenlisteLadenAsync(FreizeitId));
+            await Task.WhenAll(kontext, raster, freizeit, personen);
+            _punkt = raster.Result?.Punkte.FirstOrDefault(p => p.Id == PunktId);
+            if (kontext.Result is null || _punkt is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            _kontext = kontext.Result;
+            _namen = ProgrammTexte.Namen(freizeit.Result, personen.Result);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>„Neu laden“ beim Konflikt im Autosave: den Punkt mit Wert und Version neu holen.</summary>
+    private async Task NeuLadenAsync()
+    {
+        try
+        {
+            _punkt = (await ProgrammApi.LadenAsync(FreizeitId))?.Punkte.FirstOrDefault(p => p.Id == PunktId) ?? _punkt;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    private static async Task<T?> Leise<T>(Task<T?> abruf)
+        where T : class
+    {
+        try
+        {
+            return await abruf;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            return null;
+        }
+    }
+
+    private async Task UebergangAsync(bool uebernehmen)
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _meldung = null;
+        try
+        {
+            var aktion = uebernehmen ? await ProgrammApi.UebernehmenAsync(FreizeitId, PunktId) : await ProgrammApi.AbgebenAsync(FreizeitId, PunktId);
+            switch (aktion.Ergebnis)
+            {
+                case ProgrammAktionErgebnis.Erfolg:
+                    _punkt = aktion.Punkt;
+                    break;
+                case ProgrammAktionErgebnis.Konflikt:
+                    _meldung = ProgrammTexte.KonfliktText;
+                    await NeuLadenAsync();
+                    break;
+                case ProgrammAktionErgebnis.Abgeschlossen:
+                    _meldung = ProgrammTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task LoeschenAsync()
+    {
+        _meldung = null;
+        try
+        {
+            switch (await ProgrammApi.LoeschenAsync(FreizeitId, PunktId))
+            {
+                case ProgrammAktionErgebnis.Erfolg:
+                    Navigation.NavigateTo(ProgrammTexte.RasterZiel(FreizeitId, _punkt!.Tag));
+                    break;
+                case ProgrammAktionErgebnis.Abgeschlossen:
+                    _meldung = ProgrammTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+}

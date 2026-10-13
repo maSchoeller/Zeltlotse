@@ -59,7 +59,8 @@ public sealed record FreizeitAntwort(
     IReadOnlyList<LeitungsName> Leitung);
 
 /// <summary>Vor- und Nachname einer Person der Leitung.</summary>
-public sealed record LeitungsName(string? Vorname, string? Nachname);
+/// <param name="PersonId">Story 3-1 (additiv): die Kennung, damit der Client etwa „Übernommen: …“ im Programm benennen kann (AD-2).</param>
+public sealed record LeitungsName(string? Vorname, string? Nachname, Guid PersonId);
 
 /// <summary>Eine Zeile von <c>GET /api/ich/freizeiten</c> (nach erstem Tag absteigend): eine eigene Freizeit mit den eigenen Rollen (AD-26).</summary>
 public sealed record MeineFreizeit(Guid FreizeitId, string Name, DateOnly ErsterTag, DateOnly LetzterTag, Phase Phase, IReadOnlyList<FreizeitRolle> Rollen);

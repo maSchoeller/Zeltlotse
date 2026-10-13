@@ -75,7 +75,8 @@ public sealed class FreizeitKontextTests(PostgresContainer postgres) : IAsyncLif
             json.GetProperty("phase").GetString(),
             json.GetProperty("freigabeBis").GetString()));
         var leitung = Assert.Single(json.GetProperty("leitung").EnumerateArray());
-        Assert.Equal(["nachname", "vorname"], Namen(leitung));
+        // Story 3-1: dazu die Kennung (additiv), damit das Programm „Übernommen: …“ benennen kann.
+        Assert.Equal(["nachname", "personId", "vorname"], Namen(leitung));
         Assert.Equal(("Miriam", "Zeltner"), (leitung.GetProperty("vorname").GetString(), leitung.GetProperty("nachname").GetString()));
     }
 

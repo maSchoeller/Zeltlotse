@@ -49,6 +49,8 @@ public static class FreizeitenModul
         services.AddScoped<IFreizeitPersonenLesen, FreizeitPersonenLesen>();
         services.AddScoped<IFreizeitNamenLesen, FreizeitNamenLesen>();
         services.AddScoped<IFreizeitEndenLesen, FreizeitEndenLesen>();
+        // Story 3-1: die Tage einer Freizeit für Wochenraster und Mahlzeiten (Pfeil Programm → Freizeiten).
+        services.AddScoped<IFreizeitTageLesen, FreizeitTageLesen>();
         services.AddScoped<IBestaetigteTeilnehmende, BestaetigteTeilnehmendeZaehlen>();
         services.VerschicktMail<AnmeldungEntschiedenMail, AnmeldungEntschiedenMailAufbau>();
         services.EmpfaengtEreignis<PersonGeloescht, FreizeitPersonLoeschen>();

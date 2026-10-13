@@ -13,7 +13,7 @@ namespace Zeltlotse.Ablaeufe.Tests;
 /// <summary>
 /// Durchlauf-Test (AD-28, AD-30) für die Zeile <c>PersonGeloescht</c> (Personen → jedes Modul mit Personenbezug) der Tabelle
 /// Ereignis-Fluss: Jonas (Org-Überblick und Leitung) löscht sein Konto; die Outbox wird sofort abgearbeitet. Danach haben Konten,
-/// Organisationen, Freizeiten und Sicherheit (Story 2-9: Schutzkonzept-Bestätigungen) das Ereignis je genau einmal verarbeitet (Inbox),
+/// Organisationen, Freizeiten, Sicherheit (Story 2-9: Schutzkonzept-Bestätigungen) und Programm (Story 3-1: Übernahmen) das Ereignis je genau einmal verarbeitet (Inbox),
 /// und keines hat noch eine Zeile der Person. Ein
 /// zweites Zustellen desselben Ereignisses verwirft die Inbox.
 /// </summary>
@@ -68,10 +68,10 @@ public sealed class PersonGeloeschtTests(PostgresContainer postgres)
         Assert.Equal(0L, await WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.org_rolle WHERE \"PersonId\" = @p", ("p", jonasId)));
         Assert.Equal(0L, await WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.freizeit_rolle WHERE \"PersonId\" = @p", ("p", jonasId)));
         Assert.Equal(0L, await WertAsync<long>(verbindung, "SELECT count(*) FROM sicherheit.schutzkonzept_bestaetigung WHERE \"PersonId\" = @p", ("p", jonasId)));
-        Assert.Equal(4L, await WertAsync<long>(
+        Assert.Equal(5L, await WertAsync<long>(
             verbindung,
             "SELECT count(*) FROM personen.outbox_zustellung z JOIN personen.outbox o ON o.\"Id\" = z.\"EreignisId\" WHERE o.\"Typ\" LIKE '%.PersonGeloescht' AND z.\"ErledigtAm\" IS NOT NULL"));
-        foreach (var schema in new[] { "konten", "organisationen", "freizeiten", "sicherheit" })
+        foreach (var schema in new[] { "konten", "organisationen", "freizeiten", "sicherheit", "programm" })
         {
             Assert.Equal(1L, await WertAsync<long>(verbindung, $"SELECT count(*) FROM {schema}.inbox WHERE \"Empfaenger\" LIKE '%PersonLoeschen' OR \"Empfaenger\" LIKE '%KontoLoeschen'"));
         }
@@ -79,7 +79,7 @@ public sealed class PersonGeloeschtTests(PostgresContainer postgres)
         // Ein zweites Zustellen desselben Ereignisses verwirft die Inbox (Zustellstand zurücksetzen und erneut zustellen).
         await AusfuehrenAsync(verbindung, "UPDATE personen.outbox_zustellung SET \"ErledigtAm\" = NULL");
         await factory.OutboxJetztZustellenAsync(Abbruch);
-        foreach (var schema in new[] { "konten", "organisationen", "freizeiten", "sicherheit" })
+        foreach (var schema in new[] { "konten", "organisationen", "freizeiten", "sicherheit", "programm" })
         {
             Assert.Equal(1L, await WertAsync<long>(verbindung, $"SELECT count(*) FROM {schema}.inbox WHERE \"Empfaenger\" LIKE '%PersonLoeschen' OR \"Empfaenger\" LIKE '%KontoLoeschen'"));
         }

@@ -1,0 +1,306 @@
+@page "/freizeiten/{FreizeitId:guid}/programm"
+@using System.Globalization
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Programm
+@using Zeltlotse.Ui.Kontext
+@using ApiRaster = Zeltlotse.Api.Contracts.Programm.Wochenraster
+@inject FreizeitKontextDienst Kontext
+@inject FreizeitenApiClient Freizeiten
+@inject ProgrammApiClient ProgrammApi
+@inject TimeProvider Uhr
+@inject NavigationManager Navigation
+@* Wochenraster (CAP-19, FR-34, FR-35, Story 3-1; EXPERIENCE.md → Component Patterns „Wochenraster“) für Leitung und Team. Handy: Reiter je Tag,
+   gewählt über ?tag=JJJJ-MM-TT, sonst heute, wenn heute ein Tag der Freizeit ist, sonst der erste Tag. Laptop: alle Tage nebeneinander. Je
+   Programmpunkt ein Termin mit Uhrzeit, Titel (Link zur Detailseite) und „Übernommen: …“; „Ich übernehme“ und „Abgeben“ direkt am Termin,
+   ohne Bestätigung (nur für sich selbst). Namen der übernehmenden Personen setzt der Client zusammen (AD-2: Leitung aus der Freizeit, Team
+   aus der Personenliste; fehlt ein Name, nur „Übernommen“). Darunter „Programmpunkt anlegen“ (Titel, Tag, Uhrzeit). In der Phase „gelaufen“
+   nur lesbar. Kontext oder Raster nicht verfügbar → „Diese Seite ist nicht verfügbar.“; scheitern Freizeit oder Personenliste, fehlen nur
+   die Namen. *@
+<PageTitle>Programm – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Planen</Dachzeile>
+    <h1>Programm</h1>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+
+    @if (_raster is null || _kontext is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@ProgrammTexte.AbgeschlossenText</p>
+            </Meldung>
+        }
+        @if (_meldung is not null)
+        {
+            <Meldung Titel="@(_meldungFehler ? "Fehler" : "Gespeichert")" Art="@(_meldungFehler ? MeldungArt.Fehler : MeldungArt.Erfolg)">
+                <p>@_meldung</p>
+            </Meldung>
+        }
+        <Reiter NurHandy="true" Bezeichnung="Tage" Eintraege="ReiterEintraege">
+            <h2>@Anzeige.TagLang(_tag)</h2>
+            @Termine(_tag)
+        </Reiter>
+        <TagesSpalten Bezeichnung="Wochenraster" Spalten="Spalten" />
+
+        @if (!Abgeschlossen)
+        {
+            <Card Titel="Programmpunkt anlegen" Id="programmpunkt-anlegen">
+                <Formular Absenden="AnlegenAsync">
+                    <Feld Label="Titel *" Id="programmpunkt-titel" Wert="@_titel" Fehler="@_titelFehler" autocomplete="off"
+                          Hinweis="@($"Höchstens {ProgrammpunktFelder.TitelMaximaleLaenge} Zeichen")" @oninput="@(e => _titel = e.Value?.ToString())" />
+                    <Feld Label="Tag *" Id="programmpunkt-tag" Typ="date" Wert="@_tagText" Fehler="@_tagFehler"
+                          min="@Iso(_raster.ErsterTag)" max="@Iso(_raster.LetzterTag)" @oninput="@(e => _tagText = e.Value?.ToString())" />
+                    <Feld Label="Uhrzeit" Id="programmpunkt-beginn" Typ="time" Wert="@_beginn" Fehler="@_beginnFehler"
+                          Hinweis="Ohne Uhrzeit steht der Programmpunkt am Ende des Tages." @oninput="@(e => _beginn = e.Value?.ToString())" />
+                    <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Programmpunkt anlegen</Knopf>
+                </Formular>
+                <p>* Pflichtfeld</p>
+            </Card>
+        }
+    }
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    private ApiRaster? _raster;
+    private IReadOnlyDictionary<Guid, string> _namen = new Dictionary<Guid, string>();
+    private Guid? _geladen;
+    private DateOnly _tag;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private string? _meldung;
+    private bool _meldungFehler;
+    private string? _titel;
+    private string? _tagText;
+    private string? _beginn;
+    private string? _titelFehler;
+    private string? _tagFehler;
+    private string? _beginnFehler;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    /// <summary>Der gewählte Tag im Handy-Aufbau als <c>JJJJ-MM-TT</c>.</summary>
+    [SupplyParameterFromQuery(Name = "tag")] public string? TagWahl { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    private IEnumerable<DateOnly> Tage
+    {
+        get
+        {
+            for (var tag = _raster!.ErsterTag; tag <= _raster.LetzterTag; tag = tag.AddDays(1))
+            {
+                yield return tag;
+            }
+        }
+    }
+
+    private IReadOnlyList<ReiterEintrag> ReiterEintraege =>
+        [.. Tage.Select(t => new ReiterEintrag(Anzeige.TagKurz(t), ProgrammTexte.RasterZiel(FreizeitId, t), t == _tag))];
+
+    private IReadOnlyList<TagesSpalte> Spalten => [.. Tage.Select(t => new TagesSpalte(Anzeige.TagKurz(t), Termine(t)))];
+
+    private static string Iso(DateOnly tag) => tag.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    private RenderFragment Termine(DateOnly tag) => @<text>
+        @foreach (var punkt in _raster!.Punkte.Where(p => p.Tag == tag))
+        {
+            <Termin @key="punkt.Id" Uhrzeit="@punkt.Beginn" Titel="@punkt.Titel" Href="@ProgrammTexte.DetailZiel(FreizeitId, punkt.Id)"
+                    StatusWort="@ProgrammTexte.StatusWort(punkt, _namen)" StatusArt="StatusArt.Erfolg">
+                @if (!Abgeschlossen && punkt.UebernommenVon is null)
+                {
+                    <Knopf Art="KnopfArt.Outline" Deaktiviert="@_uebertraegt" @onclick="@(() => UebergangAsync(punkt, uebernehmen: true))">Ich übernehme</Knopf>
+                }
+                else if (!Abgeschlossen && punkt.Meins)
+                {
+                    <Knopf Art="KnopfArt.Outline" Deaktiviert="@_uebertraegt" @onclick="@(() => UebergangAsync(punkt, uebernehmen: false))">Abgeben</Knopf>
+                }
+            </Termin>
+        }
+    </text>;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Nur der Reiter hat gewechselt: nichts neu laden, nur den Tag wählen (die Wahl steht in der Adresse).
+        if (_geladen == FreizeitId && _raster is not null)
+        {
+            TagWaehlen();
+            _tagText = Iso(_tag);
+            return;
+        }
+
+        _kontext = null;
+        _raster = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var raster = ProgrammApi.LadenAsync(FreizeitId);
+            var freizeit = Leise(Freizeiten.LadenAsync(FreizeitId));
+            var personen = Leise(Freizeiten.PersonenlisteLadenAsync(FreizeitId));
+            await Task.WhenAll(kontext, raster, freizeit, personen);
+            if (kontext.Result is null || raster.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _raster) = (kontext.Result, raster.Result);
+            _namen = ProgrammTexte.Namen(freizeit.Result, personen.Result);
+            _geladen = FreizeitId;
+            TagWaehlen();
+            _tagText = Iso(_tag);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>Der Tag aus der Adresse, sonst heute (wenn er zur Freizeit gehört), sonst der erste Tag.</summary>
+    private void TagWaehlen()
+    {
+        var (erster, letzter) = (_raster!.ErsterTag, _raster.LetzterTag);
+        if (DateOnly.TryParseExact(TagWahl, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var gewaehlt) && gewaehlt >= erster && gewaehlt <= letzter)
+        {
+            _tag = gewaehlt;
+            return;
+        }
+
+        var heute = Anzeige.Tag(Uhr.GetUtcNow());
+        _tag = heute >= erster && heute <= letzter ? heute : erster;
+    }
+
+    /// <summary>Ein Abruf, dessen Scheitern nur die Namen kostet.</summary>
+    private static async Task<T?> Leise<T>(Task<T?> abruf)
+        where T : class
+    {
+        try
+        {
+            return await abruf;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            return null;
+        }
+    }
+
+    /// <summary>„Ich übernehme“ oder „Abgeben“: ein Tipp, ohne Bestätigung; danach steht der neue Stand am Termin.</summary>
+    private async Task UebergangAsync(Programmpunkt punkt, bool uebernehmen)
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _meldung = null;
+        try
+        {
+            var aktion = uebernehmen ? await ProgrammApi.UebernehmenAsync(FreizeitId, punkt.Id) : await ProgrammApi.AbgebenAsync(FreizeitId, punkt.Id);
+            switch (aktion.Ergebnis)
+            {
+                case ProgrammAktionErgebnis.Erfolg:
+                    _raster = _raster! with { Punkte = [.. _raster.Punkte.Select(p => p.Id == aktion.Punkt!.Id ? aktion.Punkt : p)] };
+                    break;
+                case ProgrammAktionErgebnis.Konflikt:
+                    Fehler(ProgrammTexte.KonfliktText);
+                    _raster = await ProgrammApi.LadenAsync(FreizeitId) ?? _raster;
+                    break;
+                case ProgrammAktionErgebnis.Abgeschlossen:
+                    Fehler(ProgrammTexte.AbgeschlossenText);
+                    break;
+                default:
+                    Fehler(AnmeldungAbschluss.FehlerText);
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            Fehler(AnmeldungAbschluss.FehlerText);
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task AnlegenAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        (_titelFehler, _tagFehler, _beginnFehler, _meldung) = (null, null, null, null);
+        DateOnly? tag = DateOnly.TryParseExact(_tagText, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var gelesen) ? gelesen : null;
+        try
+        {
+            var aktion = await ProgrammApi.AnlegenAsync(FreizeitId, new ProgrammpunktNeu(_titel, tag, string.IsNullOrWhiteSpace(_beginn) ? null : _beginn));
+            switch (aktion.Ergebnis)
+            {
+                case ProgrammAktionErgebnis.Erfolg:
+                    _raster = await ProgrammApi.LadenAsync(FreizeitId) ?? _raster;
+                    _meldung = $"Programmpunkt „{aktion.Punkt!.Titel}“ am {Anzeige.TagKurz(aktion.Punkt.Tag)} angelegt.";
+                    _meldungFehler = false;
+                    (_titel, _beginn) = (null, null);
+                    // Am Handy auf den Tag des neuen Punkts wechseln, sonst bliebe er unsichtbar.
+                    if (aktion.Punkt.Tag != _tag)
+                    {
+                        Navigation.NavigateTo(ProgrammTexte.RasterZiel(FreizeitId, aktion.Punkt.Tag));
+                    }
+
+                    break;
+                case ProgrammAktionErgebnis.Abgeschlossen:
+                    Fehler(ProgrammTexte.AbgeschlossenText);
+                    break;
+                default:
+                    _titelFehler = aktion.Feldfehler.GetValueOrDefault(ProgrammpunktFelder.Titel);
+                    _tagFehler = aktion.Feldfehler.GetValueOrDefault(ProgrammpunktFelder.Tag);
+                    _beginnFehler = aktion.Feldfehler.GetValueOrDefault(ProgrammpunktFelder.Beginn);
+                    if (_titelFehler is null && _tagFehler is null && _beginnFehler is null)
+                    {
+                        Fehler(AnmeldungAbschluss.FehlerText);
+                    }
+
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            Fehler(AnmeldungAbschluss.FehlerText);
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private void Fehler(string text) => (_meldung, _meldungFehler) = (text, true);
+}

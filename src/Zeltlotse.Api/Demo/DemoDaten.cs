@@ -25,6 +25,8 @@ using Zeltlotse.Personen.Freizeitpass;
 using Zeltlotse.Personen.Nachweise;
 using Zeltlotse.Personen.Profil;
 using Zeltlotse.Personen.Zugriffsprotokoll;
+using Zeltlotse.Programm.Daten;
+using Zeltlotse.Programm.Programme;
 using Zeltlotse.SharedKernel.Mandanten;
 using Zeltlotse.SharedKernel.Outbox;
 using Zeltlotse.SharedKernel.Rechte;
@@ -78,6 +80,8 @@ namespace Zeltlotse.Api.Demo;
 /// Story 2-8: Miriam richtet die Sicherheitskette ein (je Feld nur, wenn es leer ist).
 /// Story 2-9: Andrea lädt das Org-Dokument „Schutzkonzept Jugendwerk Musterstadt“ hoch, die Freizeit bindet es ein (Sichtbarkeit Team) und
 /// wählt es als Schutzkonzept; Jonas bestätigt es als gelesen (je nur, wenn es fehlt).
+/// Story 3-1: Die festen Mahlzeiten der Demo-Freizeit und die Programmpunkte aus <see cref="DemoKatalog.Programmpunkte"/>; Lea und Jonas
+/// übernehmen je einen selbst (je nur, wenn es den Titel noch nicht gibt).
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -131,6 +135,7 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await SicherheitsketteAsync(abbruch);
         await SchutzkonzeptAsync(abbruch);
         await VorfaelleAsync(abbruch);
+        await ProgrammAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -744,6 +749,48 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             if (await sender.Send(new VorfallAnlegenCommand(freizeitId, id, mia, verfasser, art, text), abbruch) != VorfallAnlegen.Angelegt)
             {
                 throw new InvalidOperationException("Demo-Vorfall-Protokoll: Eintrag ließ sich nicht anlegen.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Story 3-1: Die festen Mahlzeiten der Demo-Freizeit und die Programmpunkte aus <see cref="DemoKatalog.Programmpunkte"/>, über die Commands
+    /// des Moduls Programm. Idempotent nach Titel: Einen Punkt mit diesem Titel in der Freizeit legt das Einspielen nicht noch einmal an. Wer einen
+    /// Punkt übernimmt, tut das selbst (die Leitung teilt nichts zu).
+    /// </summary>
+    private async Task ProgrammAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var freizeitId = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name)
+            .Select(f => f.Id)
+            .SingleAsync(abbruch);
+        await sender.Send(new MahlzeitenSicherstellen(freizeitId), abbruch);
+        var vorhanden = await dienste.GetRequiredService<ProgrammLeseDbContext>().Programmpunkte
+            .Where(p => p.FreizeitId == freizeitId)
+            .Select(p => p.Titel)
+            .ToListAsync(abbruch);
+        foreach (var (titel, tag, beginn, uebernommenVon) in DemoKatalog.Programmpunkte.Where(p => !vorhanden.Contains(p.Titel)))
+        {
+            var beginnText = Api.Contracts.Programm.ProgrammpunktFelder.UhrzeitText(beginn);
+            if (await sender.Send(new ProgrammpunktAnlegenCommand(freizeitId, titel, tag, beginnText), abbruch) is not ProgrammpunktAnlegen.Angelegt angelegt)
+            {
+                throw new InvalidOperationException($"Demo-Programm: {titel} ließ sich nicht anlegen.");
+            }
+
+            if (uebernommenVon is null)
+            {
+                continue;
+            }
+
+            var person = (await sender.Send(new KontoSicherstellen(uebernommenVon), abbruch)).PersonId;
+            if (await sender.Send(new ProgrammpunktUebergangCommand(freizeitId, angelegt.Punkt.Id, person, Uebergang.Uebernehmen), abbruch)
+                is not ProgrammpunktUebergang.Erfolg)
+            {
+                throw new InvalidOperationException($"Demo-Programm: {titel} ließ sich nicht übernehmen.");
             }
         }
     }

@@ -280,6 +280,15 @@ public static class Anzeige
         return name.Length == 0 ? "Name fehlt" : name;
     }
 
+    /// <summary>Story 3-1: Tag im Reiter und im Spaltenkopf des Wochenrasters, z. B. „Mo 02.08.“.</summary>
+    public static string TagKurz(DateOnly tag) => $"{tag.ToString("ddd", Deutsch).TrimEnd('.')} {tag.ToString("dd.MM.", Deutsch)}";
+
+    /// <summary>Story 3-1: Tag in Worten, z. B. „Montag, 2. August 2027“.</summary>
+    public static string TagLang(DateOnly tag) => tag.ToString("dddd, d. MMMM yyyy", Deutsch);
+
+    /// <summary>Story 3-1: Status eines übernommenen Programmpunkts: „Übernommen: Lea Feuerstein“, ohne bekannten Namen nur „Übernommen“.</summary>
+    public static string Uebernommen(string? name) => string.IsNullOrWhiteSpace(name) ? "Übernommen" : $"Übernommen: {name}";
+
     private static TimeZoneInfo Berlin()
     {
         try

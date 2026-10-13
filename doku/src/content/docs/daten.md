@@ -63,6 +63,10 @@ Leitung und Team halten im [Vorfall-Protokoll](/mitarbeitende/vorfall-protokoll/
 - **Archiv nach dem Abschluss:** Wird die Freizeit abgeschlossen, legt Zeltlotse ihre Einträge ins [Archiv der Organisation](/org-admin/vorfall-archiv/); dort sehen Org-Admins sie. Das Abschließen einer Freizeit kommt mit einer späteren Version; bis dahin bleibt das Archiv leer.
 - **Löschen:** Mit der Frist für Freizeit-Daten löscht Zeltlotse die Einträge endgültig. Löscht eine Person ihr Konto, bleiben die Einträge über sie und von ihr stehen, aber ohne Namen („Gelöschte Person“); der Text über sie ist mit ihrem vernichteten Schlüssel nicht mehr lesbar.
 
+## Programm
+
+Im [Wochenraster](/mitarbeitende/programm/) merkt sich Zeltlotse an einem Programmpunkt nur, wer ihn übernommen hat. Die Person sieht ihre Übernahmen in der **Datenauskunft** im Abschnitt „Programm“. Wird ihr Konto gelöscht, ersetzt Zeltlotse ihre Kennung durch einen Platzhalter; der Programmpunkt gilt danach wieder als frei und lässt sich neu übernehmen. Nach Ablauf der Löschfrist der Organisation für Freizeit-Daten löscht Zeltlotse die Programmpunkte der Freizeit.
+
 ## Nachweise: nur eine einmalige Einsicht
 
 Nachweise wie Führungszeugnis, JuLeiCa (Jugendleiter-Card) oder Erste-Hilfe-Bescheinigung liegen nur am eigenen Profil. Eine Organisation bekommt davon keine Kopie:

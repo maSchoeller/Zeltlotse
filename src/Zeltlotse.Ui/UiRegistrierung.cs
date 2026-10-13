@@ -23,6 +23,7 @@ public static class UiRegistrierung
         services.AddScoped(sp => new OrganisationenApiClient(client(sp)));
         services.AddScoped(sp => new PersonenApiClient(client(sp)));
         services.AddScoped(sp => new SicherheitApiClient(client(sp)));
+        services.AddScoped(sp => new ProgrammApiClient(client(sp)));
         services.AddScoped(sp => new AutosaveDienst(client(sp)));
         services.AddScoped<FreizeitKontextDienst>();
         // Story 2-5: „Einsicht bis“ bzw. „Einsicht beendet am“ hängt an der Uhr; Web-App und Host bringen ihre eigene mit.

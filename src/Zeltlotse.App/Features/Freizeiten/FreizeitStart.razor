@@ -23,6 +23,7 @@
    Story 2-8: Während der Freizeit (Phase „läuft“) steht für alle Rollen direkt unter der Überschrift die Notfall-Box und darunter die
    Schnellsuche; in jeder Phase führt der Knopf „Sicherheitskette“ zur Sicherheitskette. Mit „freizeit-einstellungen“ lädt das Cockpit
    die Kette; ist sie nicht eingerichtet, steht unter „Warnhinweise“ die Zeile mit Link auf die Card in den Einstellungen.
+   Story 3-1: in jeder Phase der Knopf „Programm“ zum Wochenraster.
    Story 2-9: Für alle Rollen lädt die Startseite das Schutzkonzept still mit (scheitert → keine Card). Gibt es eines, das die Person noch
    nicht bestätigt hat, und ist die Freizeit nicht abgeschlossen, steht die Card „Schutzkonzept“ da (kein Cockpit-Warnhinweis); der Knopf
    „Schutzkonzept“ steht in jeder Phase.
@@ -144,6 +145,8 @@ else
     {
         @ErinnerungsMeldung
     }
+    @* Story 3-1: Das Programm (Wochenraster) ist in jeder Phase für Leitung und Team erreichbar; eine Navigation gibt es noch nicht. *@
+    <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/programm")" Ansichtswechsel="true">Programm</Knopf></p>
     @* Story 2-8: Die Sicherheitskette ist in jeder Phase für Leitung und Team erreichbar. *@
     <p><Knopf Art="KnopfArt.Outline" Href="@NotfallZiel" Ansichtswechsel="true">Sicherheitskette</Knopf></p>
     @* Story 2-9: Das Schutzkonzept ist in jeder Phase für Leitung und Team erreichbar. *@

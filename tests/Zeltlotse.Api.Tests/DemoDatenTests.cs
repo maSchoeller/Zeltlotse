@@ -397,6 +397,20 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM sicherheit.vorfall_eintrag"));
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM sicherheit.vorfall_eintrag WHERE \"ArchiviertAm\" IS NOT NULL"));
 
+        // Story 3-1: 36 Mahlzeiten (12 Tage) und die drei Programmpunkte aus dem Katalog; Lea hat das Lagerfeuer übernommen, Jonas das
+        // Geländespiel. Nichts doppelt, auch nach dem zweiten Einspielen.
+        var punkte = (await AnmeldeHelfer.JsonAsync(await leaClient.GetAsync($"/api/freizeiten/{freizeitId}/programm", Abbruch))).GetProperty("punkte").EnumerateArray().ToList();
+        Assert.Equal(36, punkte.Count(p => p.GetProperty("mahlzeit").ValueKind != System.Text.Json.JsonValueKind.Null));
+        Assert.Equal(
+            ["2027-08-02 15:00 Anreise und Zeltaufbau offen False", "2027-08-02 20:00 Lagerfeuer Lea True", "2027-08-03 14:30 Geländespiel Jonas False"],
+            punkte.Where(p => p.GetProperty("mahlzeit").ValueKind == System.Text.Json.JsonValueKind.Null).Select(p =>
+            {
+                var von = p.GetProperty("uebernommenVon").ValueKind == System.Text.Json.JsonValueKind.Null ? null : (Guid?)p.GetProperty("uebernommenVon").GetGuid();
+                var wer = von == lea ? "Lea" : von == jonas ? "Jonas" : von is null ? "offen" : "?";
+                return $"{p.GetProperty("tag").GetString()} {p.GetProperty("beginn").GetString()} {p.GetProperty("titel").GetString()} {wer} {p.GetProperty("meins").GetBoolean()}";
+            }));
+        Assert.Equal(39L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.programmpunkt"));
+
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,
             "SELECT count(*) FROM konten.konto k LEFT JOIN personen.person p ON p.\"Id\" = k.\"PersonId\" WHERE p.\"Id\" IS NULL OR p.\"Vorname\" IS NULL OR p.\"Nachname\" IS NULL"));

@@ -145,3 +145,20 @@ internal sealed class FreizeitZeitpunkteLesen(FreizeitenLeseDbContext db, TimePr
         return freizeiten.ToDictionary(f => f.Id, f => f.Zeitpunkte(jetzt));
     }
 }
+
+/// <summary>Story 3-1: <see cref="IFreizeitTageLesen"/> über den Lese-Kontext unter dem Mandantenfilter, eine Abfrage für die ganze Menge.</summary>
+internal sealed class FreizeitTageLesen(FreizeitenLeseDbContext db) : IFreizeitTageLesen
+{
+    public async Task<IReadOnlyDictionary<Guid, FreizeitTage>> TageAsync(IReadOnlyCollection<Guid> freizeitIds, CancellationToken abbruch = default)
+    {
+        if (freizeitIds.Count == 0)
+        {
+            return new Dictionary<Guid, FreizeitTage>();
+        }
+
+        var ids = freizeitIds.Distinct().ToList();
+        return await db.Freizeiten
+            .Where(f => ids.Contains(f.Id))
+            .ToDictionaryAsync(f => f.Id, f => new FreizeitTage(f.ErsterTag, f.LetzterTag), abbruch);
+    }
+}

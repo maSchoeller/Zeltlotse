@@ -22,7 +22,7 @@ internal static partial class DokuRegeln
             .Append("mitarbeitende/notfall").Append("leitung/sicherheitskette")
             .Append("mitarbeitende/schutzkonzept").Append("leitung/schutzkonzept")
             .Append("mitarbeitende/vorfall-protokoll").Append("leitung/vorfall-notizen").Append("org-admin/vorfall-archiv")
-            .Append("mitarbeitende/notfallordner");
+            .Append("mitarbeitende/notfallordner").Append("mitarbeitende/programm");
 
     public static string DokuSeitenOrdner => Path.Combine(Loesung.Wurzel, "doku", "src", "content", "docs");
 

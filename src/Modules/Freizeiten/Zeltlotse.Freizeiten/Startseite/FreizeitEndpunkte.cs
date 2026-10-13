@@ -41,7 +41,7 @@ internal static class LeitungAnnehmenEndpunkt
 
 /// <summary>
 /// <c>GET /api/freizeiten/{freizeitId}</c> (Leitung, Team): Startseite der Freizeit mit Zeitraum, Phase, letztem Tag des
-/// Freigabefensters und der Leitung (nur Namen). Den Mandanten-Kontext hat der Host aus der Freizeit gesetzt.
+/// Freigabefensters und der Leitung (Namen; Story 3-1: dazu die Kennung). Den Mandanten-Kontext hat der Host aus der Freizeit gesetzt.
 /// </summary>
 internal static class FreizeitLadenEndpunkt
 {
@@ -62,7 +62,7 @@ internal static class FreizeitLadenEndpunkt
             freizeit.LetzterTag,
             FreizeitRechte.Api(freizeit.Phase(uhr.GetUtcNow())),
             FreizeitZeiten.FreigabeBis(freizeit.LetzterTag, freizeit.FreigabeIntervallTage),
-            [.. leitung.Select(l => new LeitungsName(l.Name?.Vorname, l.Name?.Nachname))]));
+            [.. leitung.Select(l => new LeitungsName(l.Name?.Vorname, l.Name?.Nachname, l.PersonId))]));
     }
 }
 

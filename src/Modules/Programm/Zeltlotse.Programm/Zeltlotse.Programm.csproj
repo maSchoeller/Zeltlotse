@@ -8,6 +8,11 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Zeltlotse.SharedKernel\Zeltlotse.SharedKernel.csproj" />
     <ProjectReference Include="..\Zeltlotse.Programm.Contracts\Zeltlotse.Programm.Contracts.csproj" />
+    <!-- Pfeil aus AD-2: Programm liest Freizeiten (Tage und Phase für den Schreibschutz, AD-17). -->
+    <ProjectReference Include="..\..\Freizeiten\Zeltlotse.Freizeiten.Contracts\Zeltlotse.Freizeiten.Contracts.csproj" />
+    <!-- Nur das Ereignis PersonGeloescht (AD-16); Leseschnittstellen von Personen ruft Programm nicht auf (AD-2). -->
+    <ProjectReference Include="..\..\Personen\Zeltlotse.Personen.Contracts\Zeltlotse.Personen.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

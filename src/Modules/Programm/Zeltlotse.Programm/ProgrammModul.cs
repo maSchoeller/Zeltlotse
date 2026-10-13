@@ -1,7 +1,14 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Zeltlotse.SharedKernel.Daten;
+using Zeltlotse.Personen.Contracts.Events;
 using Zeltlotse.Programm.Daten;
+using Zeltlotse.Programm.Datenschutz;
+using Zeltlotse.Programm.Programme;
+using Zeltlotse.SharedKernel.Daten;
+using Zeltlotse.SharedKernel.Datenschutz;
+using Zeltlotse.SharedKernel.Ereignisse;
+using Zeltlotse.SharedKernel.Rechte;
 
 namespace Zeltlotse.Programm;
 
@@ -15,9 +22,27 @@ public static class ProgrammModul
     public static IServiceCollection AddProgrammModul(this IServiceCollection services)
     {
         services.AddModul<ProgrammDbContext, ProgrammLeseDbContext>(Name, Schema);
+        // Story 3-1: Die Übernahme eines Programmpunkts ist Arbeitsdaten der Freizeit (AD-16).
+        services.EmpfaengtEreignis<PersonGeloescht, ProgrammPersonLoeschen>();
+        services.AddScoped<IDatenauskunft, ProgrammAuskunft>();
+        services.AddScoped<ILoeschlauf, ProgrammLoeschlauf>();
         return services;
     }
 
-    /// <summary>Bindet die Endpunkte des Moduls in die <c>/api</c>-Gruppe ein; sie entstehen mit den Fach-Stories.</summary>
-    public static IEndpointRouteBuilder MapProgrammEndpoints(this IEndpointRouteBuilder api) => api;
+    /// <summary>
+    /// Bindet die Endpunkte des Moduls in die <c>/api</c>-Gruppe ein. Story 3-1: Wochenraster und Programmpunkte unter
+    /// <c>/api/freizeiten/{freizeitId}/programm</c>, alles für Leitung und Team: lesen, anlegen, bearbeiten (Autosave, AD-19), löschen und
+    /// übernehmen oder abgeben (nur für sich selbst).
+    /// </summary>
+    public static IEndpointRouteBuilder MapProgrammEndpoints(this IEndpointRouteBuilder api)
+    {
+        var programm = api.MapGroup($"/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/programm");
+        programm.MapGet("", WochenrasterLadenEndpunkt.Laden).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+        programm.MapPost("/punkte", ProgrammpunktAnlegenEndpunkt.Anlegen).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+        programm.MapPatch("/punkte/{punktId:guid}", ProgrammpunktFeldAendernEndpunkt.Aendern).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+        programm.MapDelete("/punkte/{punktId:guid}", ProgrammpunktLoeschenEndpunkt.Loeschen).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+        programm.MapPost("/punkte/{punktId:guid}/uebernehmen", ProgrammpunktUebergangEndpunkt.Uebernehmen).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+        programm.MapPost("/punkte/{punktId:guid}/abgeben", ProgrammpunktUebergangEndpunkt.Abgeben).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+        return api;
+    }
 }

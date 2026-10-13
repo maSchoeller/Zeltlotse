@@ -1,0 +1,33 @@
+@* Reiter (EXPERIENCE.md → Component Patterns „Reiter“, DESIGN.md): Ansichten innerhalb eines Bereichs als Links, der aktive trägt
+   aria-current="page"; die Wahl steht in der Adresse und bleibt beim Zurückkehren erhalten. Darunter der Inhalt der gewählten Ansicht.
+   Mit NurHandy nur unter 1024 px sichtbar (z. B. ein Tag des Wochenrasters, am Laptop stehen dort alle Tage nebeneinander). Statisch
+   tauglich: nur Links, keine Ereignis-Handler. *@
+<div class="@Klassen">
+    <nav aria-label="@Bezeichnung">
+        <ul class="elkw-tabs">
+            @foreach (var eintrag in Eintraege)
+            {
+                <li><a href="@eintrag.Href" aria-current="@(eintrag.Aktiv ? "page" : null)">@eintrag.Text</a></li>
+            }
+        </ul>
+    </nav>
+    @if (ChildContent is not null)
+    {
+        <div class="zl-reiter__inhalt">@ChildContent</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ReiterEintrag> Eintraege { get; set; } = [];
+
+    /// <summary>Name der Reiter-Leiste für Screenreader, z. B. „Tage“.</summary>
+    [Parameter, EditorRequired] public string Bezeichnung { get; set; } = "";
+
+    /// <summary>Nur im Handy-Aufbau (unter 1024 px) zeigen.</summary>
+    [Parameter] public bool NurHandy { get; set; }
+
+    /// <summary>Inhalt der gewählten Ansicht unter den Reitern.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string Klassen => NurHandy ? "zl-reiter zl-nur-handy" : "zl-reiter";
+}

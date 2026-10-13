@@ -75,3 +75,9 @@ public sealed record StatusEintrag(string Text, string Wort, StatusArt Art, Rend
 
 /// <summary>Eine Zeile einer <see cref="DetailsListe"/>: Begriff (z. B. eine Frage) und Wert (z. B. die Antwort).</summary>
 public sealed record DetailsEintrag(string Begriff, string Wert);
+
+/// <summary>Story 3-1: Ein Reiter einer <see cref="Reiter"/>-Leiste: Beschriftung, Ziel und ob er die gewählte Ansicht ist (<c>aria-current</c>).</summary>
+public sealed record ReiterEintrag(string Text, string Href, bool Aktiv = false);
+
+/// <summary>Story 3-1: Eine Spalte der <see cref="TagesSpalten"/>: Tageskopf (z. B. „Mo 02.08.“) und Inhalt (z. B. die Termine des Tages).</summary>
+public sealed record TagesSpalte(string Kopf, RenderFragment Inhalt);

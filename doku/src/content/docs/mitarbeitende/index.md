@@ -12,7 +12,7 @@ Mitarbeitende melden sich mit der eigenen Mail-Adresse an, per Login-Link aus de
 
 ## Was das Team in Zeltlotse darf
 
-- **Programm, Material und Aufgaben** – Programmpunkte im Wochenraster planen, Material zuordnen, Aufgaben selbst übernehmen. Die Leitung teilt nichts zu; Mitarbeitende übernehmen selbst.
+- **Programm** – Programmpunkte im Wochenraster planen, die Uhrzeit ändern und Programmpunkte mit „Ich übernehme“ selbst übernehmen. Die Leitung teilt nichts zu; Mitarbeitende übernehmen selbst – siehe [Programm planen und übernehmen](/mitarbeitende/programm/). Material und Aufgaben am Programmpunkt kommen später.
 - **Finanzen und Belege** – Belege erfassen und Beiträge als bezahlt abhaken.
 - **Kanäle** – Nachrichten im Team und an alle.
 - **Notfall** – über die Notfall-Box auf der Startseite (während der Freizeit) oder den Knopf **Sicherheitskette** die Sicherheitskette öffnen: was jetzt zu tun ist und wen anrufen; mit der Schnellsuche den Freizeitpass der betroffenen Person in zwei Schritten – siehe [Notfall](/mitarbeitende/notfall/).

@@ -246,6 +246,13 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 // Story 2-10: Vorfall-Protokoll (Sicherheit): lesen und Einträge anlegen für Leitung und Team.
                 "GET /api/freizeiten/{freizeitId:guid}/sicherheit/vorfaelle",
                 "POST /api/freizeiten/{freizeitId:guid}/sicherheit/vorfaelle",
+                // Story 3-1: Wochenraster und Programmpunkte (Programm), alles für Leitung und Team.
+                "GET /api/freizeiten/{freizeitId:guid}/programm",
+                "POST /api/freizeiten/{freizeitId:guid}/programm/punkte",
+                "PATCH /api/freizeiten/{freizeitId:guid}/programm/punkte/{punktId:guid}",
+                "DELETE /api/freizeiten/{freizeitId:guid}/programm/punkte/{punktId:guid}",
+                "POST /api/freizeiten/{freizeitId:guid}/programm/punkte/{punktId:guid}/uebernehmen",
+                "POST /api/freizeiten/{freizeitId:guid}/programm/punkte/{punktId:guid}/abgeben",
             }.Order(StringComparer.Ordinal),
             freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
         Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));

@@ -23,6 +23,55 @@ namespace Zeltlotse.Programm.Migrationen
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Zeltlotse.Programm.Programme.Programmpunkt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeOnly?>("Beginn")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<short?>("Mahlzeit")
+                        .HasColumnType("smallint");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Tag")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Titel")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("FreizeitId", "Tag");
+
+                    b.HasIndex("FreizeitId", "Tag", "Mahlzeit")
+                        .IsUnique()
+                        .HasFilter("\"Mahlzeit\" IS NOT NULL");
+
+                    b.ToTable("programmpunkt", "programm");
+                });
+
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.InboxEintrag", b =>
                 {
                     b.Property<Guid>("EreignisId")

@@ -1541,6 +1541,92 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         Assert.Equal(2, PdfSeiten(await seite.PdfAsync(new() { Format = "A4" })));
     }
 
+    // ---------- Story 3-1: Wochenraster und Programmpunkte ----------
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Wochenraster(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await ProgrammAsync(seite);
+        if (geraet == "handy")
+        {
+            // Handy: Reiter je Tag; die Demo-Freizeit liegt in der Zukunft, also ist der erste Tag gewählt.
+            var reiter = seite.Locator(".zl-reiter nav a");
+            await Assertions.Expect(reiter).ToHaveCountAsync(12);
+            await Assertions.Expect(reiter.First).ToHaveTextAsync("Mo 02.08.");
+            await Assertions.Expect(reiter.First).ToHaveAttributeAsync("aria-current", "page");
+            var tag = seite.Locator(".zl-reiter__inhalt");
+            await Assertions.Expect(tag.Locator("h2")).ToHaveTextAsync("Montag, 2. August 2027");
+            await Assertions.Expect(tag.Locator(".zl-termin h3")).ToHaveTextAsync(["Frühstück", "Mittagessen", "Anreise und Zeltaufbau", "Abendessen", "Lagerfeuer"]);
+            await Assertions.Expect(TerminIn(tag, "Lagerfeuer").Locator(".elkw-status")).ToHaveTextAsync("Übernommen: Lea Feuerstein");
+            await Assertions.Expect(TerminIn(tag, "Anreise und Zeltaufbau").GetByRole(AriaRole.Button, new() { Name = "Ich übernehme" })).ToBeVisibleAsync();
+            await Assertions.Expect(seite.Locator(".zl-tagesspalten")).ToBeHiddenAsync();
+        }
+        else
+        {
+            // Laptop: alle zwölf Tage nebeneinander, der Bereich scrollt in sich.
+            var spalten = seite.Locator(".zl-tagesspalte");
+            await Assertions.Expect(spalten).ToHaveCountAsync(12);
+            await Assertions.Expect(spalten.Locator("h2").First).ToHaveTextAsync("Mo 02.08.");
+            var dienstag = spalten.Nth(1);
+            await Assertions.Expect(dienstag.Locator("h2")).ToHaveTextAsync("Di 03.08.");
+            await Assertions.Expect(TerminIn(dienstag, "Geländespiel").Locator(".elkw-kicker")).ToHaveTextAsync("14:30");
+            await Assertions.Expect(TerminIn(dienstag, "Geländespiel").Locator(".elkw-status")).ToHaveTextAsync("Übernommen: Jonas Hüttner");
+            await Assertions.Expect(TerminIn(dienstag, "Geländespiel").GetByRole(AriaRole.Button, new() { Name = "Abgeben" })).ToBeVisibleAsync();
+            await Assertions.Expect(TerminIn(spalten.First, "Lagerfeuer").Locator(".elkw-status")).ToHaveTextAsync("Übernommen: Lea Feuerstein");
+            await Assertions.Expect(seite.Locator(".zl-reiter")).ToBeHiddenAsync();
+        }
+
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Programmpunkt anlegen" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "wochenraster", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Programmpunkt(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await ProgrammAsync(seite);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Lagerfeuer", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Programmpunkt", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator(".elkw-kicker")).ToHaveTextAsync("Programm");
+        await Assertions.Expect(seite.GetByText("Montag, 2. August 2027", new() { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.Locator(".elkw-status")).ToHaveTextAsync("Übernommen: Lea Feuerstein");
+        await Assertions.Expect(seite.GetByLabel("Titel", new() { Exact = true })).ToHaveValueAsync("Lagerfeuer");
+        await Assertions.Expect(seite.GetByLabel("Uhrzeit", new() { Exact = true })).ToHaveValueAsync("20:00");
+        // Nur lesend: Jonas löscht nicht, damit der Demo-Stand für die anderen Bilder bleibt.
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Programmpunkt löschen" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Zurück zum Programm" })).ToHaveAttributeAsync(
+            "href", new System.Text.RegularExpressions.Regex(@"programm\?tag=2027-08-02$"));
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "programmpunkt", geraet);
+    }
+
+    /// <summary>Der Termin mit diesem Titel innerhalb eines Bereichs (ein Tag am Handy oder eine Spalte am Laptop).</summary>
+    private static ILocator TerminIn(ILocator bereich, string titel) =>
+        bereich.Locator(".zl-termin").Filter(new() { Has = bereich.Page.GetByRole(AriaRole.Heading, new() { Name = titel, Exact = true }) });
+
+    /// <summary>Jonas (Leitung) meldet sich an, öffnet die Demo-Freizeit und tippt „Programm“.</summary>
+    private async Task ProgrammAsync(IPage seite)
+    {
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, DemoMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Programm", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Programm", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator(".zl-termin").First).ToBeAttachedAsync(new() { Timeout = 60_000 });
+    }
+
     /// <summary>Zählt die Seiten eines PDF an den Seitenobjekten (<c>/Type /Page</c>, nicht <c>/Pages</c>).</summary>
     private static int PdfSeiten(byte[] pdf) =>
         System.Text.RegularExpressions.Regex.Matches(System.Text.Encoding.Latin1.GetString(pdf), @"/Type\s*/Page(?![a-zA-Z])").Count;

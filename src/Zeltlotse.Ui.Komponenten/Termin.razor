@@ -1,0 +1,47 @@
+@* Termin (EXPERIENCE.md → Component Patterns „Terminliste“, „Wochenraster“): Uhrzeit als Dachzeile, Titel (mit Href ein Link zur
+   Detailseite), ein Status (Wort und Quadrat) und darunter Platz für Aktionen an Ort und Stelle (z. B. „Ich übernehme“). Ohne Uhrzeit keine
+   Dachzeile. Statisch tauglich. *@
+<article class="zl-termin" aria-labelledby="@_titelId">
+    @if (Uhrzeit is not null)
+    {
+        <p class="elkw-kicker zl-termin__zeit">@Uhrzeit</p>
+    }
+    <h3 class="zl-termin__titel" id="@_titelId">
+        @if (Href is not null)
+        {
+            <a href="@Href">@Titel</a>
+        }
+        else
+        {
+            @Titel
+        }
+    </h3>
+    @if (StatusWort is not null)
+    {
+        <p class="zl-termin__status"><Status Wort="@StatusWort" Art="@StatusArt" /></p>
+    }
+    @if (ChildContent is not null)
+    {
+        <div class="zl-termin__inhalt">@ChildContent</div>
+    }
+</article>
+
+@code {
+    private readonly string _titelId = Kennungen.Neu("termin");
+
+    /// <summary>Uhrzeit, z. B. „14:30“; ohne Angabe keine Dachzeile.</summary>
+    [Parameter] public string? Uhrzeit { get; set; }
+
+    [Parameter, EditorRequired] public string Titel { get; set; } = "";
+
+    /// <summary>Ziel des Titels, z. B. die Detailseite; ohne Angabe ist der Titel nur Text.</summary>
+    [Parameter] public string? Href { get; set; }
+
+    /// <summary>Optionales Status-Wort, z. B. „Übernommen: Lea Feuerstein“.</summary>
+    [Parameter] public string? StatusWort { get; set; }
+
+    [Parameter] public StatusArt StatusArt { get; set; } = StatusArt.Offen;
+
+    /// <summary>Aktionen unter dem Termin.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

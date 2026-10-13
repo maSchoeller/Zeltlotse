@@ -857,4 +857,86 @@ public sealed class KomponentenTests : BunitContext
             ],
             cut.FindAll("link[rel=stylesheet]").Select(l => l.GetAttribute("href")));
     }
+
+    // ---------- Story 3-1: Reiter, Termin, Tagesspalten ----------
+
+    [Fact]
+    public void Reiter_sind_Links_der_aktive_traegt_aria_current_und_der_Inhalt_steht_darunter()
+    {
+        ReiterEintrag[] eintraege = [new("Mo 02.08.", "programm?tag=2027-08-02"), new("Di 03.08.", "programm?tag=2027-08-03", Aktiv: true)];
+
+        var cut = Render<Reiter>(ps => ps.Add(p => p.Eintraege, eintraege).Add(p => p.Bezeichnung, "Tage").AddChildContent("<h2>Dienstag</h2>"));
+
+        Assert.Equal("Tage", cut.Find("nav").GetAttribute("aria-label"));
+        var links = cut.FindAll("ul.elkw-tabs li a");
+        Assert.Equal(["Mo 02.08.", "Di 03.08."], links.Select(l => l.TextContent));
+        Assert.Equal(["programm?tag=2027-08-02", "programm?tag=2027-08-03"], links.Select(l => l.GetAttribute("href")));
+        Assert.False(links[0].HasAttribute("aria-current"));
+        Assert.Equal("page", links[1].GetAttribute("aria-current"));
+        Assert.Equal("Dienstag", cut.Find(".zl-reiter__inhalt h2").TextContent);
+        Assert.Empty(cut.FindAll("button"));
+        Assert.DoesNotContain("zl-nur-handy", cut.Find(".zl-reiter").ClassList);
+    }
+
+    [Fact]
+    public void Reiter_nur_im_Handy_Aufbau_tragen_die_Klasse_und_ohne_Inhalt_keinen_Inhaltsbereich()
+    {
+        var cut = Render<Reiter>(ps => ps.Add(p => p.Eintraege, [new ReiterEintrag("Mo 02.08.", "x", true)]).Add(p => p.Bezeichnung, "Tage").Add(p => p.NurHandy, true));
+
+        Assert.Contains("zl-nur-handy", cut.Find(".zl-reiter").ClassList);
+        Assert.Empty(cut.FindAll(".zl-reiter__inhalt"));
+    }
+
+    [Fact]
+    public void Termin_zeigt_Uhrzeit_als_Dachzeile_Titel_als_Link_Status_und_Inhalt()
+    {
+        var cut = Render<Termin>(ps => ps
+            .Add(p => p.Uhrzeit, "20:00")
+            .Add(p => p.Titel, "Lagerfeuer")
+            .Add(p => p.Href, "programm/1")
+            .Add(p => p.StatusWort, "Übernommen: Lea Feuerstein")
+            .Add(p => p.StatusArt, StatusArt.Erfolg)
+            .AddChildContent("<button>Abgeben</button>"));
+
+        var termin = cut.Find("article.zl-termin");
+        Assert.Equal("20:00", termin.QuerySelector(".elkw-kicker")!.TextContent);
+        var titel = termin.QuerySelector("h3")!;
+        Assert.Equal(titel.Id, termin.GetAttribute("aria-labelledby"));
+        Assert.Equal(("Lagerfeuer", "programm/1"), (titel.QuerySelector("a")!.TextContent, titel.QuerySelector("a")!.GetAttribute("href")));
+        var status = termin.QuerySelector(".elkw-status")!;
+        Assert.Equal("Übernommen: Lea Feuerstein", status.TextContent);
+        Assert.Contains("elkw-status--erfolg", status.ClassList);
+        Assert.Equal("Abgeben", termin.QuerySelector(".zl-termin__inhalt button")!.TextContent);
+    }
+
+    [Fact]
+    public void Termin_ohne_Uhrzeit_Link_und_Status_ist_nur_ein_Titel()
+    {
+        var cut = Render<Termin>(ps => ps.Add(p => p.Titel, "Abbau"));
+
+        Assert.Empty(cut.FindAll(".elkw-kicker"));
+        Assert.Empty(cut.FindAll("a"));
+        Assert.Empty(cut.FindAll(".elkw-status"));
+        Assert.Empty(cut.FindAll(".zl-termin__inhalt"));
+        Assert.Equal("Abbau", cut.Find("h3").TextContent.Trim());
+    }
+
+    [Fact]
+    public void TagesSpalten_haben_je_Tag_eine_Spalte_mit_Tageskopf_und_sind_als_Bereich_per_Tastatur_erreichbar()
+    {
+        TagesSpalte[] spalten =
+        [
+            new("Mo 02.08.", b => b.AddMarkupContent(0, "<p>Frühstück</p>")),
+            new("Di 03.08.", b => b.AddMarkupContent(0, "<p>Geländespiel</p>")),
+        ];
+
+        var cut = Render<TagesSpalten>(ps => ps.Add(p => p.Spalten, spalten).Add(p => p.Bezeichnung, "Wochenraster"));
+
+        var bereich = cut.Find(".zl-tagesspalten");
+        Assert.Equal(("region", "Wochenraster", "0"), (bereich.GetAttribute("role"), bereich.GetAttribute("aria-label"), bereich.GetAttribute("tabindex")));
+        var abschnitte = cut.FindAll("section.zl-tagesspalte");
+        Assert.Equal(["Mo 02.08.", "Di 03.08."], abschnitte.Select(a => a.QuerySelector("h2")!.TextContent));
+        Assert.All(abschnitte, a => Assert.Equal(a.QuerySelector("h2")!.Id, a.GetAttribute("aria-labelledby")));
+        Assert.Equal(["Frühstück", "Geländespiel"], abschnitte.Select(a => a.QuerySelector("p")!.TextContent));
+    }
 }

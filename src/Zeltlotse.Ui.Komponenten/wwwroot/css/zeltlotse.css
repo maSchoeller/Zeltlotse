@@ -170,6 +170,32 @@ a.zl-gross:not(.elkw-btn) { display: inline-flex; align-items: center; }
 .zl-infokasten__titel { margin: 0 0 var(--elkw-space-xs); font-size: var(--elkw-fs-h3); }
 .zl-infokasten > :last-child { margin-bottom: 0; }
 
+/* Reiter als Links (Story 3-1): der aktive Reiter über aria-current, fett und hell wie [aria-selected] der Bibliothek */
+.zl-reiter .elkw-tabs a[aria-current] { color: var(--elkw-text); background: var(--elkw-white); font-weight: 600; }
+.zl-reiter__inhalt { padding-top: var(--elkw-space-m); }
+.zl-reiter + * { margin-top: var(--elkw-space-m); }
+/* Nur im Handy-Aufbau (unter 1024 px) sichtbar, z. B. die Reiter je Tag im Wochenraster */
+@media (min-width: 1024px) { .zl-nur-handy { display: none; } }
+
+/* Termin (Story 3-1): Uhrzeit als Dachzeile, Titel, Status, Aktionen; Termine untereinander mit Trennlinie */
+.zl-termin { padding: var(--elkw-space-s) 0; border-bottom: 1px solid var(--elkw-light); }
+.zl-termin:first-of-type { padding-top: 0; }
+.zl-termin:last-of-type { border-bottom: 0; }
+.zl-termin__zeit { margin: 0 0 0.15rem; }
+.zl-termin__titel { margin: 0; font-size: var(--elkw-fs-h3); line-height: 1.3; }
+.zl-termin__status { margin: 0.35rem 0 0; }
+/* Lange Namen brechen in schmalen Spalten um (Quadrat bleibt oben links) */
+.zl-termin__status .elkw-status { white-space: normal; align-items: flex-start; }
+.zl-termin__status .elkw-status::before { margin-top: 0.45em; }
+.zl-termin__inhalt { margin-top: var(--elkw-space-xs); }
+.zl-termin__inhalt .elkw-btn { margin: 0; }
+
+/* Tagesspalten (Story 3-1): am Laptop je Tag eine Spalte, der Bereich scrollt in sich seitlich; am Handy ausgeblendet */
+.zl-tagesspalten { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(13rem, 1fr); gap: var(--elkw-space-s); overflow-x: auto; padding-bottom: var(--elkw-space-xs); }
+.zl-tagesspalte { min-width: 0; padding: var(--elkw-space-s); background: var(--elkw-white); border: 1px solid var(--elkw-light); border-radius: var(--elkw-radius); overflow-wrap: anywhere; }
+.zl-tagesspalte__kopf { margin: 0 0 var(--elkw-space-s); font-size: var(--elkw-fs-h3); line-height: 1.3; }
+@media (max-width: 1023px) { .zl-tagesspalten { display: none; } }
+
 /* ---------- 5. Druck ---------- */
 /* Der Browser druckt nur den Inhalt (z. B. die Datenauskunft „Als PDF speichern“): ohne App-Leiste, Navigation, Knöpfe und
    Offline-Leiste, hell und in voller Breite. */

@@ -1,0 +1,21 @@
+@* Tagesspalten (EXPERIENCE.md → Component Patterns „Wochenraster“): im Laptop-Aufbau je Tag eine Spalte mit Tageskopf, alle Tage
+   nebeneinander; reichen die Spalten über die Breite, scrollt der Bereich in sich seitlich (nicht die Seite) und ist dafür per Tastatur
+   erreichbar. Im Handy-Aufbau (unter 1024 px) ausgeblendet; dort zeigen Reiter einen Tag. Statisch tauglich. *@
+<div class="zl-tagesspalten" role="region" aria-label="@Bezeichnung" tabindex="0">
+    @foreach (var (spalte, index) in Spalten.Select((s, i) => (s, i)))
+    {
+        <section class="zl-tagesspalte" aria-labelledby="@($"{_id}-{index}")">
+            <h2 class="zl-tagesspalte__kopf" id="@($"{_id}-{index}")">@spalte.Kopf</h2>
+            @spalte.Inhalt
+        </section>
+    }
+</div>
+
+@code {
+    private readonly string _id = Kennungen.Neu("tag");
+
+    [Parameter, EditorRequired] public IReadOnlyList<TagesSpalte> Spalten { get; set; } = [];
+
+    /// <summary>Name des Bereichs für Screenreader, z. B. „Wochenraster“.</summary>
+    [Parameter, EditorRequired] public string Bezeichnung { get; set; } = "";
+}
