@@ -234,6 +234,59 @@ public sealed class KomponentenTests : BunitContext
         Assert.Equal("tel:074431234", TelefonLink.Href("(0)7443 1234"));
     }
 
+    // ---------- Druck (Story 2-11) ----------
+
+    [Fact]
+    public void Druck_Seite_ist_ein_Abschnitt_mit_Dachzeile_und_Titel_als_h2()
+    {
+        var cut = Render<DruckSeite>(ps => ps.Add(p => p.Dachzeile, "Zeltlager Sommer 2027").Add(p => p.Titel, "Mia Probst").AddChildContent("<p>Inhalt</p>"));
+
+        cut.MarkupMatches("""
+            <section class="zl-druck-seite">
+              <p class="elkw-kicker">Zeltlager Sommer 2027</p>
+              <h2 class="zl-druck-seite__titel">Mia Probst</h2>
+              <p>Inhalt</p>
+            </section>
+            """);
+    }
+
+    [Fact]
+    public void Infokasten_ist_umrandet_mit_Titel_als_h3_und_traegt_die_Information_im_Text()
+    {
+        var cut = Render<Infokasten>(ps => ps.Add(p => p.Titel, "Notfallkontakte").AddChildContent("<p>Daniel Probst (Vater), 0123 456781</p>"));
+
+        cut.MarkupMatches("""
+            <div class="zl-infokasten">
+              <h3 class="zl-infokasten__titel">Notfallkontakte</h3>
+              <p>Daniel Probst (Vater), 0123 456781</p>
+            </div>
+            """);
+    }
+
+    [Fact]
+    public void Nur_Bildschirm_umschliesst_den_Inhalt_der_beim_Drucken_wegfaellt()
+    {
+        var cut = Render<NurBildschirm>(ps => ps.AddChildContent("<h1>Notfallordner</h1>"));
+
+        cut.MarkupMatches("""<div class="zl-nur-bildschirm"><h1>Notfallordner</h1></div>""");
+    }
+
+    [Fact]
+    public void Druck_CSS_setzt_A4_blendet_Bildschirm_Teile_aus_und_bricht_ab_der_zweiten_Druckseite_um()
+    {
+        var css = File.ReadAllText(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "Zeltlotse.Ui.Komponenten", "wwwroot", "css", "zeltlotse.css"));
+        var druck = css[css.IndexOf("/* ---------- 5. Druck", StringComparison.Ordinal)..];
+
+        Assert.Contains("@page { size: A4; margin: 15mm; }", druck, StringComparison.Ordinal);
+        Assert.Contains(".zl-nur-bildschirm", druck, StringComparison.Ordinal);
+        Assert.Contains(".zl-druck-seite ~ .zl-druck-seite { break-before: page; }", druck, StringComparison.Ordinal);
+        Assert.Contains("break-inside: avoid", druck, StringComparison.Ordinal);
+        Assert.Contains("font-size: 10.5pt", druck, StringComparison.Ordinal);
+        Assert.Contains("font-size: 26pt", druck, StringComparison.Ordinal);
+        Assert.Contains("font-size: 15pt", druck, StringComparison.Ordinal);
+    }
+
     // ---------- Statusliste ----------
 
     [Fact]

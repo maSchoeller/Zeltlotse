@@ -97,6 +97,9 @@ public static class PersonenModul
         // Story 2-5: Freizeitpass einer Person im Kontext der Freizeit (Leitung und Team, FR-24, AD-8).
         api.MapGet($"/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/personen/freizeitpass/{{personId:guid}}", FreizeitpassEinsichtEndpunkt.Laden)
             .NurFreizeitRolle(FreizeitpassRechte.Einsicht);
+        // Story 2-11: Notfallordner, die Pässe bestätigter Personen gebündelt (Leitung und Team, FR-33, AD-8).
+        api.MapGet($"/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/personen/notfallordner", NotfallordnerEndpunkt.Laden)
+            .NurFreizeitRolle(FreizeitpassRechte.Einsicht);
         // Story 2-6: Freizeitpass-Stand und Erinnern zum Freizeitpass (nur Leitung, FR-25, FR-27).
         api.MapGet($"/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/personen/freizeitpass-stand", FreizeitpassStandEndpunkt.Laden)
             .NurFreizeitRolle(FreizeitpassRechte.Erinnern);

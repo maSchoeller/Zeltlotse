@@ -15,6 +15,8 @@ Die Liste hat zwei Abschnitte, **Teilnehmende** und **Mitarbeitende**, sortiert 
 
 Über den Tabellen steht die **Schnellsuche** „Person suchen“. Ab dem ersten Buchstaben zeigt sie die passenden Personen mit Initialen, Name und „Teilnehmende“ oder „Mitarbeitende“; ein Tipp auf den Namen öffnet direkt den Freizeitpass. Darüber steht die Anzahl, etwa „1 Person gefunden.“; passt kein Name, steht „Keine Person gefunden.“ Dieselbe Suche steht auf der Sicherheitskette und während der Freizeit auf der Startseite (siehe [Notfall](/mitarbeitende/notfall/)).
 
+Unter „Zurück zur Freizeit“ steht der Knopf **Notfallordner drucken**. Er öffnet die Druckansicht mit je einer A4-Seite für jedes bestätigte Kind, die Rückfallebene ohne Netz – siehe [Notfallordner drucken](/mitarbeitende/notfallordner/).
+
 ![Seite „Freizeitpässe“ am Handy mit den Abschnitten „Teilnehmende“ (Emma Muster „Eingegangen“, Mia Probst „Bestätigt“) und „Mitarbeitende“](../../../assets/screenshots/freizeitpaesse-handy.png)
 
 ![Seite „Freizeitpässe“ am Laptop mit den Namen als Links und dem Status jeder Anmeldung](../../../assets/screenshots/freizeitpaesse-laptop.png)

@@ -73,6 +73,7 @@ namespace Zeltlotse.Api.Demo;
 /// Emma Allergien, Notfallkontakte und Schwimmen (je nur, wenn es noch keine Antwort gibt).
 /// Story 2-5: Die Fragen-Auswahl kommt vor den Anmeldungen, damit die Freigaben die Fragen tragen; Daniel beantwortet für Mia
 /// Allergien, Notfallkontakte und Schwimmen (je nur ohne Antwort); Lea schreibt eine Team-Notiz zu Mia (nur ohne Notiz).
+/// Story 2-11: Daniel trägt für Mia zusätzlich Medikamente ein (nur ohne Antwort), damit der Notfallordner sie zeigt.
 /// Story 2-7: zwei Org-Dokumente, fünf Dokumente der Freizeit und die eingebundene Hausordnung (je nur, wenn sie fehlen).
 /// Story 2-8: Miriam richtet die Sicherheitskette ein (je Feld nur, wenn es leer ist).
 /// Story 2-9: Andrea lädt das Org-Dokument „Schutzkonzept Jugendwerk Musterstadt“ hoch, die Freizeit bindet es ein (Sichtbarkeit Team) und
@@ -525,7 +526,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
 
     /// <summary>
     /// Story 2-4: Emmas Antworten (<see cref="DemoKatalog.EmmasFreizeitpass"/>), von Katrin gespeichert; Story 2-5: Mias Antworten
-    /// (<see cref="DemoKatalog.MiasFreizeitpass"/>), von Daniel gespeichert. Je Frage nur, wenn es noch keine Antwort gibt.
+    /// (<see cref="DemoKatalog.MiasFreizeitpass"/>, seit Story 2-11 mit Medikamenten), von Daniel gespeichert. Je Frage nur, wenn es noch
+    /// keine Antwort gibt.
     /// </summary>
     private async Task FreizeitpassAsync(CancellationToken abbruch)
     {

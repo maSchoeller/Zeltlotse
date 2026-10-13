@@ -12,7 +12,8 @@
    „Notruf 112“, der Leitung (Namen immer, Telefon, wenn eingerichtet) und der Ansprechperson am Heimatort (mit Telefon).
    Kontext, Freizeit, Personenliste und Kette laden parallel. Kontext, Freizeit oder Kette nicht verfügbar → „Diese Seite ist nicht
    verfügbar.“; scheitert nur die Personenliste, entfällt nur die Suche. Story 2-10: Vor „Wen anrufen“ zeigt die Card „Vorfall-Protokoll“
-   den Weg dorthin (betroffene Person suchen, im Freizeitpass „Vorfall-Protokoll“). Offline (V6) kommt später. *@
+   den Weg dorthin (betroffene Person suchen, im Freizeitpass „Vorfall-Protokoll“). Story 2-11: unter „Wen anrufen“ der Knopf
+   „Notfallordner drucken“, nur mit „freizeitpaesse-sehen“. Offline (V6) kommt später. *@
 <PageTitle>Sicherheitskette – Zeltlotse</PageTitle>
 
 @if (_nichtVerfuegbar)
@@ -77,6 +78,11 @@ else
                 }
             }
         </Card>
+        @* Story 2-11: Druckansicht des Notfallordners, die Rückfallebene ohne Netz (NFR-11). *@
+        @if (_darfPaesse)
+        {
+            <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/notfallordner")" Ansichtswechsel="true">Notfallordner drucken</Knopf></p>
+        }
     }
     <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
 }
@@ -87,6 +93,7 @@ else
     private List<PersonenlisteZeile>? _personen;
     private bool _nichtVerfuegbar;
     private bool _aktionFehler;
+    private bool _darfPaesse;
 
     [Parameter] public Guid FreizeitId { get; set; }
 
@@ -105,6 +112,7 @@ else
         _personen = null;
         _nichtVerfuegbar = false;
         _aktionFehler = false;
+        _darfPaesse = false;
         try
         {
             var kontext = Kontext.LadenAsync(FreizeitId);
@@ -119,6 +127,7 @@ else
             }
 
             (_freizeit, _kette, _personen) = (freizeit.Result, kette.Result, personen.Result);
+            _darfPaesse = FreizeitKontextDienst.Darf(kontext.Result, Aktionsschluessel.FreizeitpaesseSehen);
         }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
         {

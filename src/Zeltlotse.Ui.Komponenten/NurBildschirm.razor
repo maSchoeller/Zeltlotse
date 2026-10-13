@@ -1,0 +1,7 @@
+@* Nur am Bildschirm (Story 2-11): umschließt Teile einer Druckansicht, die beim Drucken wegfallen, z. B. Überschrift, Erklärung und
+   Knöpfe über den Druckseiten. Statisch tauglich. *@
+<div class="zl-nur-bildschirm">@ChildContent</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

@@ -226,6 +226,8 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 // Story 2-6: Freizeitpass-Stand und Erinnern zum Freizeitpass (Personen, Leitung).
                 "GET /api/freizeiten/{freizeitId:guid}/personen/freizeitpass-stand",
                 "POST /api/freizeiten/{freizeitId:guid}/personen/freizeitpass/erinnerungen",
+                // Story 2-11: Notfallordner, die Pässe bestätigter Personen gebündelt (Personen, Leitung und Team).
+                "GET /api/freizeiten/{freizeitId:guid}/personen/notfallordner",
                 // Story 2-7: Dokumente der Freizeit und Einbinden von Org-Dokumenten (Leitung und Team).
                 "GET /api/freizeiten/{freizeitId:guid}/dokumente",
                 "POST /api/freizeiten/{freizeitId:guid}/dokumente",

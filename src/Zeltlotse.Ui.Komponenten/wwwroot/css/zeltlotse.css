@@ -163,11 +163,29 @@ a.zl-gross:not(.elkw-btn) { display: inline-flex; align-items: center; }
 /* Auswahlgruppe (Story 2-4): viele Optionen, z. B. die 14 Allergene, am Laptop in Spalten, am Handy untereinander. */
 .zl-auswahlgruppe__optionen { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0.25rem var(--elkw-space-m); }
 
+/* Druckansicht (Story 2-11, Notfallordner): am Bildschirm je Druckseite eine umrandete Fläche, der Infokasten mit kräftiger Kante */
+.zl-druck-seite { margin-top: var(--elkw-space-m); padding: var(--elkw-space-m); background: var(--elkw-white); border: 1px solid var(--elkw-border); }
+.zl-druck-seite__titel { margin: 0 0 var(--elkw-space-s); }
+.zl-infokasten { margin: 0 0 var(--elkw-space-m); padding: var(--elkw-space-s) var(--elkw-space-m); border: 2px solid var(--elkw-text); }
+.zl-infokasten__titel { margin: 0 0 var(--elkw-space-xs); font-size: var(--elkw-fs-h3); }
+.zl-infokasten > :last-child { margin-bottom: 0; }
+
 /* ---------- 5. Druck ---------- */
 /* Der Browser druckt nur den Inhalt (z. B. die Datenauskunft „Als PDF speichern“): ohne App-Leiste, Navigation, Knöpfe und
    Offline-Leiste, hell und in voller Breite. */
+/* Notfallordner (Story 2-11, DESIGN.md print-*): A4, je Druckseite eine Seite, schwarz auf weiß, Umrandung schwarz. */
+@page { size: A4; margin: 15mm; }
 @media print {
   html.elkw[data-farbwelt][data-stil] { color-scheme: light; }
+  .zl-nur-bildschirm { display: none !important; }
+  .zl-druck-seite { margin: 0; padding: 0; border: 0; background: #FFFFFF; color: #000000; font-size: 10.5pt; line-height: 1.4; break-inside: avoid; }
+  .zl-druck-seite ~ .zl-druck-seite { break-before: page; }
+  html.elkw[data-stil] .zl-druck-seite :is(.elkw-kicker, .zl-druck-seite__titel, .zl-infokasten__titel, dt, dd, p) { color: #000000; }
+  .zl-druck-seite .elkw-kicker { font-size: 10.5pt; }
+  .zl-druck-seite__titel { margin: 0 0 6mm; font-size: 26pt; font-weight: 700; line-height: 1.2; }
+  .zl-infokasten { margin: 0 0 6mm; padding: 3mm 4mm; border: 1.5pt solid #000000; background: #FFFFFF; break-inside: avoid; }
+  .zl-infokasten__titel { margin: 0 0 2mm; font-size: 15pt; line-height: 1.3; }
+  .zl-druck-seite .elkw-details { grid-template-columns: minmax(45mm, auto) 1fr; }
   .elkw-app__bar, .elkw-app__nav, .zl-app__unten, .zl-offline-leiste, .elkw-btn, .zl-bestaetigung, .elkw-skiplink { display: none !important; }
   .elkw-app, .zl-app { display: block; height: auto; min-height: 0; }
   .elkw-app__main { overflow: visible; padding: 0; }

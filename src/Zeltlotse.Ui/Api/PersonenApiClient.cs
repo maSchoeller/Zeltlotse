@@ -548,6 +548,15 @@ public sealed class PersonenApiClient(HttpClient http)
     public Task<FreizeitpassEinsicht?> FreizeitpassEinsichtLadenAsync(Guid freizeitId, Guid personId, CancellationToken abbruch = default) =>
         LadenOderNullAsync<FreizeitpassEinsicht>($"/api/freizeiten/{freizeitId}/personen/freizeitpass/{personId}", abbruch);
 
+    /// <summary>
+    /// <c>GET /api/freizeiten/{freizeitId}/personen/notfallordner?person=…</c> (Leitung und Team, Story 2-11): die Pässe der genannten
+    /// Personen, soweit bestätigt und im Freigabefenster, sortiert nach Nachname (höchstens 150 Kennungen je Abruf); <c>null</c> bei <c>403</c>/<c>404</c>.
+    /// </summary>
+    public Task<List<NotfallordnerPerson>?> NotfallordnerLadenAsync(Guid freizeitId, IEnumerable<Guid> personIds, CancellationToken abbruch = default) =>
+        LadenOderNullAsync<List<NotfallordnerPerson>>(
+            $"/api/freizeiten/{freizeitId}/personen/notfallordner?{string.Join("&", personIds.Select(p => $"{NotfallordnerAbfrage.Parameter}={p}"))}",
+            abbruch);
+
     /// <summary>Pfad des Freizeitpasses eines Kindes über den Gast-Link (anonym, Story 2-4).</summary>
     public static string GastFreizeitpassPfad(string gastToken, Guid personId) =>
         $"/api/personen/oeffentlich/gaeste/{Uri.EscapeDataString(gastToken)}/freizeitpass/{personId}";

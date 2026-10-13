@@ -1,0 +1,128 @@
+@page "/freizeiten/{FreizeitId:guid}/notfallordner"
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Personen
+@using Zeltlotse.App.Browser
+@using Zeltlotse.Ui.Kontext
+@inject FreizeitKontextDienst Kontext
+@inject FreizeitenApiClient Freizeiten
+@inject PersonenApiClient Personen
+@inject IBrowser Browser
+@* Notfallordner (EXPERIENCE.md → „Notfallordner (Druck)“, DESIGN.md → Druckbausteine A4, FR-33, NFR-11, Story 2-11): Druckansicht im
+   Browser, je bestätigtem Kind eine A4-Seite. Kontext, Freizeit (Name) und Personenliste laden parallel; die Seite ruft den Ordner nur für
+   die bestätigten Teilnehmenden ab, Personen prüft Bestätigung und Freigabefenster selbst (AD-8). Kopf, Erklärung, „Drucken“ und der
+   Zurück-Link stehen nur am Bildschirm. Je Person: Dachzeile Name der Freizeit, Titel Name der Person, Kasten „Notfallkontakte“ (fehlt
+   ohne die Frage), darunter alle übrigen Angaben. Ohne die erlaubte Aktion „freizeitpaesse-sehen“ oder bei 403/404 → „Diese Seite ist
+   nicht verfügbar.“ Kein Datum auf dem Ausdruck. *@
+<PageTitle>Notfallordner – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <NurBildschirm>
+        <Dachzeile>Notfall</Dachzeile>
+        <h1>Notfallordner</h1>
+        <p>Je Kind eine Seite mit Notfallkontakten und den Angaben aus dem Freizeitpass. Ausdrucke nach der Freizeit vernichten.</p>
+        @if (_aktionFehler)
+        {
+            <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                <p>@AnmeldungAbschluss.FehlerText</p>
+            </Meldung>
+        }
+        else if (_ordner is null)
+        {
+            <Ladezustand />
+        }
+        else if (_ordner.Count == 0)
+        {
+            <LeerZustand Satz="Noch keine bestätigten Teilnehmenden mit sichtbarem Freizeitpass." />
+        }
+        else
+        {
+            <p><Knopf @onclick="DruckenAsync">Drucken</Knopf></p>
+        }
+        <p><a href="@($"freizeiten/{FreizeitId}/notfall")">Zurück zur Sicherheitskette</a></p>
+    </NurBildschirm>
+
+    @if (_ordner is not null && _freizeit is not null)
+    {
+        @foreach (var person in _ordner)
+        {
+            <DruckSeite Dachzeile="@_freizeit.Name" Titel="@Anzeige.Name(person.Vorname, person.Nachname)">
+                @if (person.Fragen.FirstOrDefault(f => f.Kennung == NotfallkontakteKennung) is { } kontakte)
+                {
+                    <Infokasten Titel="Notfallkontakte">
+                        <p>@Anzeige.Antwort(kontakte)</p>
+                    </Infokasten>
+                }
+                <DetailsListe Eintraege="@Angaben(person)" />
+            </DruckSeite>
+        }
+    }
+}
+
+@code {
+    /// <summary>Kennung der Katalogfrage, die als Kasten oben steht.</summary>
+    private const string NotfallkontakteKennung = "notfallkontakte";
+
+    private FreizeitAntwort? _freizeit;
+    private List<NotfallordnerPerson>? _ordner;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    private static IReadOnlyList<DetailsEintrag> Angaben(NotfallordnerPerson person) =>
+        [.. person.Fragen.Where(f => f.Kennung != NotfallkontakteKennung).Select(f => new DetailsEintrag(f.Frage, Anzeige.Antwort(f)))];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _freizeit = null;
+        _ordner = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var freizeit = Freizeiten.LadenAsync(FreizeitId);
+            var liste = Freizeiten.PersonenlisteLadenAsync(FreizeitId);
+            await Task.WhenAll(kontext, freizeit, liste);
+            if (kontext.Result is null || !FreizeitKontextDienst.Darf(kontext.Result, Aktionsschluessel.FreizeitpaesseSehen)
+                || freizeit.Result is null || liste.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            var bestaetigt = liste.Result
+                .Where(z => z.Art == AnmeldungArt.Teilnehmende && z.Status == AnmeldungStatus.Bestaetigt)
+                .Select(z => z.PersonId)
+                .Distinct()
+                .ToList();
+            if (bestaetigt.Count == 0)
+            {
+                (_freizeit, _ordner) = (freizeit.Result, []);
+                return;
+            }
+
+            var ordner = await Personen.NotfallordnerLadenAsync(FreizeitId, bestaetigt);
+            if (ordner is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_freizeit, _ordner) = (freizeit.Result, ordner);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    private async Task DruckenAsync() => await Browser.DruckenAsync();
+}

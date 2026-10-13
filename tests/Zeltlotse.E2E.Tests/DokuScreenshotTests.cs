@@ -306,7 +306,8 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
                  {
                      ("Lea Feuerstein", "Freizeitpass fehlt noch"),
                      ("Emma Muster", "5 von 8 Angaben offen"),
-                     ("Mia Probst", "5 von 8 Angaben offen"),
+                     // Story 2-11: Mia hat zusätzlich Medikamente angegeben.
+                     ("Mia Probst", "4 von 8 Angaben offen"),
                      ("Tobias Wanderer", "Freizeitpass fehlt noch"),
                  })
         {
@@ -1487,6 +1488,62 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
             "(elemente, zeiten) => elemente.forEach((e, i) => { e.textContent = zeiten[i] + e.textContent.slice(16); })",
             VorfallZeiten);
     }
+
+    // ---------- Story 2-11: Notfallordner drucken ----------
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Notfallordner(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        // Zwei Schritte ab der Startseite: „Freizeitpässe“, dann „Notfallordner drucken“.
+        await FreizeitpaesseAsync(seite);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Notfallordner drucken" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Notfallordner", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByText("Je Kind eine Seite mit Notfallkontakten und den Angaben aus dem Freizeitpass. Ausdrucke nach der Freizeit vernichten.")).ToBeVisibleAsync();
+        var drucken = seite.GetByRole(AriaRole.Button, new() { Name = "Drucken", Exact = true });
+        await Assertions.Expect(drucken).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Zurück zur Sicherheitskette" })).ToBeVisibleAsync();
+
+        // Nur Mia ist bestätigt: genau eine Druckseite.
+        var druckseiten = seite.Locator(".zl-druck-seite");
+        await Assertions.Expect(druckseiten).ToHaveCountAsync(1);
+        await Assertions.Expect(druckseiten.Locator(".elkw-kicker")).ToHaveTextAsync("Zeltlager Sommer 2027");
+        await Assertions.Expect(druckseiten.Locator("h2")).ToHaveTextAsync("Mia Probst");
+        var kasten = druckseiten.Locator(".zl-infokasten");
+        await Assertions.Expect(kasten.Locator("h3")).ToHaveTextAsync("Notfallkontakte");
+        await Assertions.Expect(kasten).ToContainTextAsync("Daniel Probst (Vater), 0123 456781");
+        var angaben = druckseiten.Locator("dl");
+        await Assertions.Expect(angaben.Locator("dt").First).ToHaveTextAsync("Allergien und Unverträglichkeiten");
+        await Assertions.Expect(angaben.Locator("dd").First).ToHaveTextAsync("Glutenhaltiges Getreide");
+        await Assertions.Expect(angaben).ToContainTextAsync("Medikamente (Name, Dosierung, wann)");
+        await Assertions.Expect(angaben).ToContainTextAsync("Asthmaspray bei Bedarf, liegt im Kulturbeutel");
+        await Assertions.Expect(angaben.Locator("dt").Filter(new() { HasText = "Notfallkontakte" })).ToHaveCountAsync(0);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "notfallordner", geraet);
+
+        // Im Druckmedium fallen App-Leiste, Kopf und Knöpfe weg; der Ausdruck (A4) hat je Kind genau eine Seite.
+        await seite.EmulateMediaAsync(new() { Media = Media.Print });
+        await Assertions.Expect(seite.Locator("header")).ToBeHiddenAsync();
+        await Assertions.Expect(drucken).ToBeHiddenAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToBeHiddenAsync();
+        await Assertions.Expect(druckseiten.Locator("h2")).ToBeVisibleAsync();
+        var pdf = await seite.PdfAsync(new() { Format = "A4" });
+        Assert.Equal(1, PdfSeiten(pdf));
+
+        // Ab dem zweiten Kind beginnt jede Druckseite auf einem neuen Blatt: eine Kopie der Seite im DOM ergibt genau zwei A4-Seiten.
+        await druckseiten.First.EvaluateAsync("seite => seite.after(seite.cloneNode(true))");
+        await Assertions.Expect(druckseiten).ToHaveCountAsync(2);
+        Assert.Equal(2, PdfSeiten(await seite.PdfAsync(new() { Format = "A4" })));
+    }
+
+    /// <summary>Zählt die Seiten eines PDF an den Seitenobjekten (<c>/Type /Page</c>, nicht <c>/Pages</c>).</summary>
+    private static int PdfSeiten(byte[] pdf) =>
+        System.Text.RegularExpressions.Regex.Matches(System.Text.Encoding.Latin1.GetString(pdf), @"/Type\s*/Page(?![a-zA-Z])").Count;
 
     /// <summary>Lea (Team) meldet sich an und öffnet die Startseite der Demo-Freizeit.</summary>
     private async Task LeaStartseiteAsync(IPage seite)

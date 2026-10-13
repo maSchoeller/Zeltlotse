@@ -194,6 +194,20 @@ public sealed class FreizeitpaesseSeitenTests : BunitContext
     }
 
     [Fact]
+    public void Freizeitpaesse_hat_den_Knopf_Notfallordner_drucken()
+    {
+        Kontext(Aktionsschluessel.FreizeitpaesseSehen);
+        Liste(Alle);
+
+        var cut = Render<Freizeitpaesse>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll("tbody tr").Count));
+        var knopf = cut.FindAll("a.elkw-btn").Single(a => a.TextContent == "Notfallordner drucken");
+        Assert.Equal($"freizeiten/{FreizeitId}/notfallordner", knopf.GetAttribute("href"));
+        Assert.DoesNotContain("elkw-btn--noarrow", knopf.ClassName, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Freizeitpaesse_ohne_Anmeldungen_zeigt_den_Leer_Zustand()
     {
         Kontext(Aktionsschluessel.FreizeitpaesseSehen);

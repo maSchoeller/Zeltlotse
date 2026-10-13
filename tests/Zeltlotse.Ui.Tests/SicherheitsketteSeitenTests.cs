@@ -259,6 +259,25 @@ public sealed class SicherheitsketteSeitenTests : BunitContext
         Assert.Equal(["tel:112"], anrufen.QuerySelectorAll("a").Select(a => a.GetAttribute("href")));
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Unter_Wen_anrufen_steht_der_Knopf_Notfallordner_drucken_nur_mit_freizeitpaesse_sehen(bool erlaubt)
+    {
+        Antworten(erlaubt: erlaubt ? [Aktionsschluessel.FreizeitpaesseSehen] : []);
+
+        var cut = Seite();
+
+        var knopf = cut.FindAll("a.elkw-btn").Where(a => a.TextContent == "Notfallordner drucken").ToList();
+        Assert.Equal(erlaubt ? 1 : 0, knopf.Count);
+        if (erlaubt)
+        {
+            Assert.Equal($"freizeiten/{Freizeit}/notfallordner", knopf[0].GetAttribute("href"));
+            Assert.DoesNotContain("elkw-btn--noarrow", knopf[0].ClassName, StringComparison.Ordinal);
+            Assert.True(cut.Markup.IndexOf("Wen anrufen", StringComparison.Ordinal) < cut.Markup.IndexOf("Notfallordner drucken", StringComparison.Ordinal));
+        }
+    }
+
     // ---------- Startseite der Freizeit ----------
 
     private IRenderedComponent<FreizeitStart> Startseite()

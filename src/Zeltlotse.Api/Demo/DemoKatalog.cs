@@ -52,12 +52,16 @@ internal static class DemoKatalog
         ("schwimmen", "ja"),
     ];
 
-    /// <summary>Story 2-5: Daniels Antworten für Mia im Freizeitpass (je Frage nur, wenn es noch keine Antwort gibt).</summary>
+    /// <summary>
+    /// Story 2-5: Daniels Antworten für Mia im Freizeitpass (je Frage nur, wenn es noch keine Antwort gibt); Story 2-11: dazu die
+    /// Medikamente für den Notfallordner.
+    /// </summary>
     public static IReadOnlyList<(string Kennung, string Wert)> MiasFreizeitpass { get; } =
     [
         ("allergien", "gluten"),
         ("notfallkontakte", "Daniel Probst (Vater), 0123 456781"),
         ("schwimmen", "nein"),
+        ("medikamente", "Asthmaspray bei Bedarf, liegt im Kulturbeutel"),
     ];
 
     /// <summary>Story 2-5: Leas Team-Notiz zu Mia (nur, wenn es an Mias Anmeldung noch keine Notiz gibt).</summary>

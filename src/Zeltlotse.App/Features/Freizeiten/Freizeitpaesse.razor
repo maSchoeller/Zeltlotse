@@ -18,6 +18,8 @@ else
 {
     <h1>Freizeitpässe</h1>
     <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+    @* Story 2-11: Druckansicht des Notfallordners (die Seite selbst verlangt schon „freizeitpaesse-sehen“). *@
+    <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/notfallordner")" Ansichtswechsel="true">Notfallordner drucken</Knopf></p>
 
     @if (_aktionFehler)
     {

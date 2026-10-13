@@ -1,0 +1,17 @@
+@* Druckseite (DESIGN.md → Druckbausteine A4, Story 2-11): ein Abschnitt, der im Druck eine eigene A4-Seite bekommt (ab der zweiten mit
+   Seitenumbruch davor) und nicht mitten im Inhalt umbricht. Dachzeile (wie der Baustein Dachzeile), Titel als h2, darunter der Inhalt. Statisch tauglich. *@
+<section class="zl-druck-seite">
+    <p class="elkw-kicker">@Dachzeile</p>
+    <h2 class="zl-druck-seite__titel">@Titel</h2>
+    @ChildContent
+</section>
+
+@code {
+    /// <summary>Kurze Zeile über dem Titel, z. B. der Name der Freizeit.</summary>
+    [Parameter, EditorRequired] public string Dachzeile { get; set; } = "";
+
+    /// <summary>z. B. der Name des Kindes.</summary>
+    [Parameter, EditorRequired] public string Titel { get; set; } = "";
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

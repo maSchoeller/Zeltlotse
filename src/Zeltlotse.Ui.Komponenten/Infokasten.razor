@@ -1,0 +1,12 @@
+@* Infokasten (DESIGN.md → Druckbausteine, Notfallordner, Story 2-11): umrandeter Kasten mit Titel als h3. Schwarz-weiß-tauglich: Die
+   Information steht im Text und in der Umrandung, nie nur in einer Farbe. Statisch tauglich. *@
+<div class="zl-infokasten">
+    <h3 class="zl-infokasten__titel">@Titel</h3>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Titel { get; set; } = "";
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

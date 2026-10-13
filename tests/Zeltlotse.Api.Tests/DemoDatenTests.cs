@@ -273,7 +273,7 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         var fragen = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/fragen", Abbruch));
         Assert.Equal((DemoKatalog.Fragen.Teilnehmende, DemoKatalog.Fragen.Mitarbeitende), (fragen.GetProperty("teilnehmende").GetString(), fragen.GetProperty("mitarbeitende").GetString()));
         Assert.Equal(DemoKatalog.Fragen.Teilnehmende, string.Join(',', anmeldungen[0].GetProperty("fragen").EnumerateArray().Select(f => f.GetString())));
-        Assert.Equal(6L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort"));
+        Assert.Equal(7L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort"));
         Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort WHERE \"PersonId\" = @e", ("e", emma)));
 
         // Story 2-5: Die Fragen-Auswahl kam vor den Anmeldungen: Emmas Freigabe (eingegangen) und Mias (bestätigt) tragen die Fragen für
@@ -288,7 +288,9 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
 
         Assert.Equal(
             DemoKatalog.Fragen.Mitarbeitende.Split(','), await AnmeldeHelfer.WertAsync<string[]>(verbindung, "SELECT \"Fragen\" FROM personen.freigabe WHERE \"PersonId\" = @p", ("p", lea)));
-        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort WHERE \"PersonId\" = @m", ("m", mia)));
+        // Story 2-11: dazu Mias Medikamente für den Notfallordner, also vier Antworten.
+        Assert.Equal(4L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort WHERE \"PersonId\" = @m", ("m", mia)));
+        Assert.Contains(("medikamente", "Asthmaspray bei Bedarf, liegt im Kulturbeutel"), DemoKatalog.MiasFreizeitpass);
         Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.team_notiz"));
         Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(
             verbindung, "SELECT count(*) FROM freizeiten.team_notiz WHERE \"PersonId\" = @m AND \"VerfasstVon\" = @l AND position(convert_to('Heimweh', 'UTF8') in \"Text\") = 0",
@@ -307,7 +309,7 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
             [
                 $"Lea Feuerstein {gefragtMitarbeitende}/{gefragtMitarbeitende}",
                 $"Emma Muster {gefragtTeilnehmende}/{gefragtTeilnehmende - 3}",
-                $"Mia Probst {gefragtTeilnehmende}/{gefragtTeilnehmende - 3}",
+                $"Mia Probst {gefragtTeilnehmende}/{gefragtTeilnehmende - 4}",
                 $"Tobias Wanderer {gefragtMitarbeitende}/{gefragtMitarbeitende}",
             ],
             stand.GetProperty("personen").EnumerateArray().Select(p =>
@@ -315,6 +317,14 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal((8, 5), (gefragtTeilnehmende, gefragtTeilnehmende - 3));
         Assert.All(stand.GetProperty("personen").EnumerateArray(), p => Assert.Equal(System.Text.Json.JsonValueKind.Null, p.GetProperty("erinnertAm").ValueKind));
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_erinnerung"));
+
+        // Story 2-11: Im Notfallordner steht Mia (bestätigt) mit Notfallkontakt und Medikamenten; Emma (eingegangen) fehlt.
+        var ordner = (await AnmeldeHelfer.JsonAsync(await jonasClient.GetAsync(
+            $"/api/freizeiten/{freizeitId}/personen/notfallordner?person={mia}&person={emma}", Abbruch))).EnumerateArray().ToList();
+        var miaImOrdner = Assert.Single(ordner);
+        Assert.Equal("Probst", miaImOrdner.GetProperty("nachname").GetString());
+        var miaWerte = miaImOrdner.GetProperty("fragen").EnumerateArray().ToDictionary(f => f.GetProperty("kennung").GetString()!, f => f.GetProperty("wert").GetString());
+        Assert.Equal(("Daniel Probst (Vater), 0123 456781", "Asthmaspray bei Bedarf, liegt im Kulturbeutel"), (miaWerte["notfallkontakte"], miaWerte["medikamente"]));
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.outbox_zustellung WHERE \"Empfaenger\" = 'Zeltlotse.Mail'"));
 
         // Story 2-7: Lea (Team) sieht sechs Dokumente, darunter die eingebundene Hausordnung; einbindbar ist noch der Leitfaden. Katrin
