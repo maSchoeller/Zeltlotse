@@ -51,6 +51,17 @@ internal static class DemoKatalog
         ("schwimmen", "ja"),
     ];
 
+    /// <summary>Story 2-5: Daniels Antworten für Mia im Freizeitpass (je Frage nur, wenn es noch keine Antwort gibt).</summary>
+    public static IReadOnlyList<(string Kennung, string Wert)> MiasFreizeitpass { get; } =
+    [
+        ("allergien", "gluten"),
+        ("notfallkontakte", "Daniel Probst (Vater), 0123 456781"),
+        ("schwimmen", "nein"),
+    ];
+
+    /// <summary>Story 2-5: Leas Team-Notiz zu Mia (nur, wenn es an Mias Anmeldung noch keine Notiz gibt).</summary>
+    public const string TeamNotizZuMia = "Hatte letztes Jahr am ersten Abend Heimweh; ein Gespräch am Lagerfeuer hat geholfen.";
+
     /// <summary>Story 2-3: Kontakt der Leitung für Absagen auf der Demo-Freizeit (erfunden, Mail-Adresse unter example.org).</summary>
     public static (string Mail, string Telefon) KontaktFuerAbsagen { get; } = ("zeltlager@example.org", "0123 456789");
 

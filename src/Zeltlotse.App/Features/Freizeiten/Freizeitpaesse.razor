@@ -1,0 +1,94 @@
+@page "/freizeiten/{FreizeitId:guid}/freizeitpaesse"
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Ui.Kontext
+@inject FreizeitKontextDienst Kontext
+@inject FreizeitenApiClient Freizeiten
+@* Freizeitpässe (EXPERIENCE.md → Fläche „Freizeitpässe / Personen“, FR-24, FR-26, Story 2-5): je Art ein Abschnitt „Teilnehmende“ und
+   „Mitarbeitende“ als Datentabelle mit dem Namen als Link auf den Freizeitpass und dem Status der Anmeldung; abgesagte Anmeldungen fehlen.
+   Leitung und Team sehen die Liste; was im Pass sichtbar ist, entscheidet die Freigabe (Leitung ab Eingang, Team ab Bestätigung).
+   Ohne die erlaubte Aktion „freizeitpaesse-sehen“ oder bei 403/404 → „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>Freizeitpässe – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <h1>Freizeitpässe</h1>
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+
+    @if (_liste is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        <p>Die Leitung sieht einen Freizeitpass ab dem Eingang der Anmeldung, das Team ab der Bestätigung.</p>
+        @foreach (var (titel, art) in Abschnitte)
+        {
+            var zeilen = _liste.Where(z => z.Art == art).ToList();
+            <h2>@titel</h2>
+            @if (zeilen.Count == 0)
+            {
+                <LeerZustand Satz="Noch keine Anmeldungen." />
+            }
+            else
+            {
+                <Datentabelle TZeile="PersonenlisteZeile" Beschriftung="@titel" Spalten="Spalten" Zeilen="zeilen" />
+            }
+        }
+    }
+}
+
+@code {
+    private static readonly (string Titel, AnmeldungArt Art)[] Abschnitte =
+        [("Teilnehmende", AnmeldungArt.Teilnehmende), ("Mitarbeitende", AnmeldungArt.Mitarbeitende)];
+
+    private List<PersonenlisteZeile>? _liste;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    private IReadOnlyList<Spalte<PersonenlisteZeile>> Spalten =>
+    [
+        new("Name", z => @<a href="@($"freizeiten/{FreizeitId}/freizeitpaesse/{z.PersonId}")">@Anzeige.Name(z.Vorname, z.Nachname)</a>),
+        new("Status", z => @<Status Wort="@Anzeige.Status(z.Status)" Art="@Anzeige.AnmeldungStatusArt(z.Status)" />),
+    ];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _liste = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        try
+        {
+            var kontext = await Kontext.LadenAsync(FreizeitId);
+            if (kontext is null || !FreizeitKontextDienst.Darf(kontext, Aktionsschluessel.FreizeitpaesseSehen))
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            _liste = await Freizeiten.PersonenlisteLadenAsync(FreizeitId);
+            _nichtVerfuegbar = _liste is null;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+}

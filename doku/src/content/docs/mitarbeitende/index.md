@@ -16,7 +16,7 @@ Mitarbeitende melden sich mit der eigenen Mail-Adresse an, per Login-Link aus de
 - **Finanzen und Belege** – Belege erfassen und Beiträge als bezahlt abhaken.
 - **Kanäle** – Nachrichten im Team und an alle.
 - **Vorfall-Protokoll** – festhalten, was passiert ist, welches Medikament wann gegeben wurde und was aus dem Erste-Hilfe-Kasten entnommen wurde.
-- **Freizeitpässe** – die vollständigen Freizeitpässe aller Personen der Freizeit, aber nur im Freigabefenster.
+- **Freizeitpässe** – die Freizeitpässe aller Personen der Freizeit ab der Bestätigung ihrer Anmeldung, nur mit den abgefragten Fragen und nur im Freigabefenster, dazu **Team-Notizen**, die in der Freizeit bleiben – siehe [Freizeitpässe ansehen](/mitarbeitende/freizeitpaesse/).
 
 ## Aufgaben im Team
 

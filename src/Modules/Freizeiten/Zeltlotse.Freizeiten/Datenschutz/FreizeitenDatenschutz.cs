@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
 using Zeltlotse.Freizeiten.Daten;
 using Zeltlotse.Freizeiten.Domaene;
+using Zeltlotse.Freizeiten.TeamNotizen;
 using Zeltlotse.Personen.Contracts.Anmeldung;
 using Zeltlotse.Personen.Contracts.Events;
 using Zeltlotse.Personen.Contracts.Namen;
@@ -34,6 +35,11 @@ internal sealed class FreizeitPersonLoeschenHandler(FreizeitenDbContext db) : IC
             .ExecuteUpdateAsync(s => s.SetProperty(f => f.AngelegtVon, GeloeschtePerson.Id), cancellationToken);
         await db.Einladungen.IgnoreQueryFilters().Where(e => e.EingeladenVon == personId)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.EingeladenVon, GeloeschtePerson.Id), cancellationToken);
+        // Story 2-5: Team-Notizen über die Person verschwinden (lesbar wären sie ohne ihren Schlüssel ohnehin nicht mehr); wer selbst
+        // Notizen geschrieben hat, wird dort zum Platzhalter.
+        await db.TeamNotizen.IgnoreQueryFilters().Where(n => n.PersonId == personId).ExecuteDeleteAsync(cancellationToken);
+        await db.TeamNotizen.IgnoreQueryFilters().Where(n => n.VerfasstVon == personId)
+            .ExecuteUpdateAsync(s => s.SetProperty(n => n.VerfasstVon, GeloeschtePerson.Id), cancellationToken);
         // Anmeldungen sind Arbeitsdaten der Freizeit (AD-16): Die Person wird zum Platzhalter, die Anmeldung bleibt bis zur Frist.
         await db.Anmeldungen.IgnoreQueryFilters().Where(a => a.PersonId == personId)
             .ExecuteUpdateAsync(s => s.SetProperty(a => a.PersonId, GeloeschtePerson.Id), cancellationToken);
@@ -42,10 +48,11 @@ internal sealed class FreizeitPersonLoeschenHandler(FreizeitenDbContext db) : IC
 }
 
 /// <summary>
-/// Datenauskunft von Freizeiten (AD-16): die Mitarbeit der Person mit Name der Freizeit und Rolle und die Anmeldungen der Person und
-/// der Kinder ihrer Familie (<see cref="IVertretung"/>); ohne Mandantenfilter, nur diese Zeilen.
+/// Datenauskunft von Freizeiten (AD-16): die Mitarbeit der Person mit Name der Freizeit und Rolle, die Anmeldungen und (Story 2-5) die
+/// Team-Notizen über die Person und die Kinder ihrer Familie (<see cref="IVertretung"/>); ohne Mandantenfilter, nur diese Zeilen.
 /// </summary>
-internal sealed class FreizeitenAuskunft(FreizeitenLeseDbContext db, IVertretung vertretung, IPersonenNamen namen) : IDatenauskunft
+internal sealed class FreizeitenAuskunft(FreizeitenLeseDbContext db, IVertretung vertretung, IPersonenNamen namen, IVerschluesselung verschluesselung)
+    : IDatenauskunft
 {
     public async Task<IReadOnlyList<AuskunftAbschnitt>> AuskunftAsync(Guid personId, CancellationToken abbruch)
     {
@@ -61,7 +68,34 @@ internal sealed class FreizeitenAuskunft(FreizeitenLeseDbContext db, IVertretung
                         .Select(r => new AuskunftZeile(freizeitNamen.GetValueOrDefault(r.FreizeitId) ?? "", Rolle(r.Rolle))),
                 ]),
             new AuskunftAbschnitt("Anmeldungen", await AnmeldungenAsync(personId, abbruch)),
+            new AuskunftAbschnitt("Team-Notizen", await TeamNotizenAsync(personId, abbruch)),
         ];
+    }
+
+    /// <summary>
+    /// Story 2-5 (FR-26, Art. 15 DSGVO): die Team-Notizen über die Person und die Kinder ihrer Familie (Umfang wie „Anmeldungen“) mit
+    /// Freizeit, Datum und Text. Nur hier erscheinen sie außerhalb der Freizeit.
+    /// </summary>
+    private async Task<List<AuskunftZeile>> TeamNotizenAsync(Guid personId, CancellationToken abbruch)
+    {
+        List<Guid> ids = [.. await vertretung.PersonenAsync(personId, abbruch)];
+        var notizen = await db.TeamNotizen.IgnoreQueryFilters()
+            .Where(n => ids.Contains(n.PersonId))
+            .OrderBy(n => n.AngelegtAm)
+            .ThenBy(n => n.Id)
+            .ToListAsync(abbruch);
+        var freizeitIds = notizen.Select(n => n.FreizeitId).Distinct().ToList();
+        var freizeitNamen = await db.Freizeiten.IgnoreQueryFilters().Where(f => freizeitIds.Contains(f.Id)).ToDictionaryAsync(f => f.Id, f => f.Name, abbruch);
+        var zeilen = new List<AuskunftZeile>();
+        foreach (var notiz in notizen)
+        {
+            if (await TeamNotizEndpunkte.TextAsync(verschluesselung, notiz.Text, abbruch) is { } text)
+            {
+                zeilen.Add(new AuskunftZeile(freizeitNamen.GetValueOrDefault(notiz.FreizeitId) ?? "", $"{AuskunftFormat.Datum(notiz.AngelegtAm)}: {text}"));
+            }
+        }
+
+        return zeilen;
     }
 
     private async Task<List<AuskunftZeile>> AnmeldungenAsync(Guid personId, CancellationToken abbruch)
@@ -139,6 +173,8 @@ internal sealed class AnmeldungenLoeschenHandler(FreizeitenDbContext db) : IComm
     public async ValueTask<Unit> Handle(AnmeldungenLoeschen command, CancellationToken cancellationToken)
     {
         var freizeiten = command.FreizeitIds.ToList();
+        // Story 2-5: die Team-Notizen mit ihren Anmeldungen.
+        await db.TeamNotizen.IgnoreQueryFilters().Where(n => freizeiten.Contains(n.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
         await db.Anmeldungen.IgnoreQueryFilters().Where(a => freizeiten.Contains(a.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
         return Unit.Value;
     }

@@ -273,8 +273,27 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         var fragen = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/fragen", Abbruch));
         Assert.Equal((DemoKatalog.Fragen.Teilnehmende, DemoKatalog.Fragen.Mitarbeitende), (fragen.GetProperty("teilnehmende").GetString(), fragen.GetProperty("mitarbeitende").GetString()));
         Assert.Equal(DemoKatalog.Fragen.Teilnehmende, string.Join(',', anmeldungen[0].GetProperty("fragen").EnumerateArray().Select(f => f.GetString())));
-        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort"));
+        Assert.Equal(6L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort"));
         Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort WHERE \"PersonId\" = @e", ("e", emma)));
+
+        // Story 2-5: Die Fragen-Auswahl kam vor den Anmeldungen: Emmas Freigabe (eingegangen) und Mias (bestätigt) tragen die Fragen für
+        // Teilnehmende, Leas die für Mitarbeitende. Daniel hat für Mia drei Antworten gespeichert, Lea eine Team-Notiz zu Mia geschrieben
+        // (genau eine, auch nach dem zweiten Einspielen, nur verschlüsselt). Emmas Anmeldung nennt „Einsicht bis“.
+        var mia = await AnmeldeHelfer.WertAsync<Guid>(verbindung, "SELECT \"Id\" FROM personen.person WHERE \"Vorname\" = 'Mia'");
+        var teilnehmende = DemoKatalog.Fragen.Teilnehmende.Split(',');
+        foreach (var person in new[] { emma, mia })
+        {
+            Assert.Equal(teilnehmende, await AnmeldeHelfer.WertAsync<string[]>(verbindung, "SELECT \"Fragen\" FROM personen.freigabe WHERE \"PersonId\" = @p", ("p", person)));
+        }
+
+        Assert.Equal(
+            DemoKatalog.Fragen.Mitarbeitende.Split(','), await AnmeldeHelfer.WertAsync<string[]>(verbindung, "SELECT \"Fragen\" FROM personen.freigabe WHERE \"PersonId\" = @p", ("p", lea)));
+        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort WHERE \"PersonId\" = @m", ("m", mia)));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.team_notiz"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(
+            verbindung, "SELECT count(*) FROM freizeiten.team_notiz WHERE \"PersonId\" = @m AND \"VerfasstVon\" = @l AND position(convert_to('Heimweh', 'UTF8') in \"Text\") = 0",
+            ("m", mia), ("l", lea)));
+        Assert.Equal(new DateTimeOffset(2027, 9, 12, 22, 0, 0, TimeSpan.Zero), anmeldungen[0].GetProperty("einsichtBis").GetDateTimeOffset());
         var pass = (await AnmeldeHelfer.JsonAsync(await katrinClient.GetAsync($"/api/ich/freizeitpass/{emma}", Abbruch))).GetProperty("fragen").EnumerateArray()
             .Where(f => f.GetProperty("wert").ValueKind == System.Text.Json.JsonValueKind.String)
             .Select(f => (f.GetProperty("kennung").GetString()!, f.GetProperty("wert").GetString()!));

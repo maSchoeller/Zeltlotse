@@ -92,9 +92,11 @@ public sealed class FreizeitKontextTests(PostgresContainer postgres) : IAsyncLif
         Assert.Equal("InVorbereitung", json.GetProperty("phase").GetString());
         Assert.Equal(["Leitung"], json.GetProperty("rollen").EnumerateArray().Select(r => r.GetString()));
         Assert.Empty(json.GetProperty("schalter").EnumerateArray());
-        // Story 1-5: die Leitung prüft Nachweise (dieselbe Rollenliste wie die Prüf-Endpunkte); Story 2-1: und pflegt die Einstellungen.
+        // Story 1-5: die Leitung prüft Nachweise (dieselbe Rollenliste wie die Prüf-Endpunkte); Story 2-1: und pflegt die Einstellungen;
+        // Story 2-5: und sieht Freizeitpässe.
         Assert.Equal(
-            [Zeltlotse.Api.Contracts.Gemeinsam.Aktionsschluessel.NachweisePruefen, Zeltlotse.Api.Contracts.Gemeinsam.Aktionsschluessel.FreizeitEinstellungen, Zeltlotse.Api.Contracts.Gemeinsam.Aktionsschluessel.AnmeldungenBearbeiten],
+            [Zeltlotse.Api.Contracts.Gemeinsam.Aktionsschluessel.NachweisePruefen, Zeltlotse.Api.Contracts.Gemeinsam.Aktionsschluessel.FreizeitEinstellungen, Zeltlotse.Api.Contracts.Gemeinsam.Aktionsschluessel.AnmeldungenBearbeiten,
+             Zeltlotse.Api.Contracts.Gemeinsam.Aktionsschluessel.FreizeitpaesseSehen],
             json.GetProperty("erlaubt").EnumerateArray().Select(r => r.GetString()));
     }
 

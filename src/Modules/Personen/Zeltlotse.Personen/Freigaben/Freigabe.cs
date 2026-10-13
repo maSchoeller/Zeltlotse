@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Zeltlotse.Freizeiten.Contracts.Events;
+using Zeltlotse.Personen.Contracts.Freizeitpass;
 using Zeltlotse.Personen.Daten;
 using Zeltlotse.SharedKernel;
 using Zeltlotse.SharedKernel.Commands;
@@ -20,7 +21,7 @@ internal enum FreigabeStufe : short
 /// Freigabe einer Person für eine Freizeit (AD-8): entsteht mit dem Eingang der Anmeldung in der Stufe Leitung, wird mit der
 /// Bestätigung zur Stufe Team und gilt bis zum Ende des Freigabefensters; eine Absage beendet sie sofort (die Zeile bleibt für
 /// Auskunft und Idempotenz). Organisationseigen (Mandantenfilter), gehört aber der Person (personeneigen, AD-16). Je Anmeldung
-/// höchstens eine. Fragen-Kennungen und Sichtregeln folgen mit den Stories 2-4 und 2-5.
+/// höchstens eine. Story 2-5: <see cref="Fragen"/> hält die Kennungen der abgefragten Fragen; nur sie sieht die Freizeit.
 /// </summary>
 internal sealed class Freigabe : IOrganisationsEigen
 {
@@ -44,9 +45,17 @@ internal sealed class Freigabe : IOrganisationsEigen
 
     public DateTimeOffset AngelegtAm { get; private init; }
 
+    /// <summary>
+    /// Story 2-5: die Katalog-Kennungen der Fragen, die die Freizeit beim Eingang abgefragt hat, mit der Bestätigung ersetzt; danach fest.
+    /// Freigaben von vor Story 2-5 haben keine.
+    /// </summary>
+    public string[] Fragen { get; private set; } = [];
+
     public static Freigabe Leitung(
-        Guid id, Guid organisationId, Guid personId, Guid freizeitId, Guid anmeldungId, DateTimeOffset gueltigBis, DateTimeOffset jetzt) => new()
+        Guid id, Guid organisationId, Guid personId, Guid freizeitId, Guid anmeldungId, DateTimeOffset gueltigBis, DateTimeOffset jetzt,
+        IReadOnlyList<string> fragen) => new()
     {
+        Fragen = [.. fragen],
         Id = id,
         OrganisationId = organisationId,
         PersonId = personId,
@@ -57,8 +66,18 @@ internal sealed class Freigabe : IOrganisationsEigen
         AngelegtAm = jetzt,
     };
 
-    /// <summary>Mit der Bestätigung sieht auch das Team den Freizeitpass (AD-8); „gültig bis“ bleibt.</summary>
-    public void ZuTeam() => Stufe = FreigabeStufe.Team;
+    /// <summary>
+    /// Mit der Bestätigung sieht auch das Team den Freizeitpass (AD-8); „gültig bis“ bleibt. Die Fragen werden durch die der Bestätigung
+    /// ersetzt (Story 2-5); ohne Angabe (Ereignis von vor Story 2-5) bleiben die bisherigen.
+    /// </summary>
+    public void ZuTeam(IReadOnlyList<string>? fragen)
+    {
+        Stufe = FreigabeStufe.Team;
+        if (fragen is not null)
+        {
+            Fragen = [.. fragen];
+        }
+    }
 
     /// <summary>Eine Absage beendet die Freigabe sofort: „gültig bis“ wird <paramref name="jetzt"/>, ein früheres Ende bleibt.</summary>
     public void Beenden(DateTimeOffset jetzt)
@@ -75,11 +94,12 @@ internal sealed class Freigabe : IOrganisationsEigen
 /// gültig bis zum Ende des Freigabefensters der Freizeit. Idempotent je Anmeldung; ist die Person inzwischen gelöscht, entsteht
 /// nichts. Der Mandant kommt aus dem Umschlag (AD-6); kein Benutzer-Command.
 /// </summary>
-internal sealed record FreigabeAnlegen(Umschlag Umschlag, Guid AnmeldungId, Guid FreizeitId, Guid PersonId, DateTimeOffset GueltigBis)
+internal sealed record FreigabeAnlegen(
+    Umschlag Umschlag, Guid AnmeldungId, Guid FreizeitId, Guid PersonId, DateTimeOffset GueltigBis, IReadOnlyList<FreizeitpassFrage>? Fragen = null)
     : ICommand, IModulCommand<PersonenDbContext>, IEreignisEmpfaenger<FreigabeAnlegen, AnmeldungEingegangen>
 {
     public static FreigabeAnlegen Aus(Umschlag umschlag, AnmeldungEingegangen ereignis) =>
-        new(umschlag, ereignis.AnmeldungId, ereignis.FreizeitId, ereignis.PersonId, ereignis.FreigabeGueltigBis);
+        new(umschlag, ereignis.AnmeldungId, ereignis.FreizeitId, ereignis.PersonId, ereignis.FreigabeGueltigBis, ereignis.Fragen);
 }
 
 internal sealed class FreigabeAnlegenHandler(PersonenDbContext db, TimeProvider uhr) : ICommandHandler<FreigabeAnlegen>
@@ -95,7 +115,8 @@ internal sealed class FreigabeAnlegenHandler(PersonenDbContext db, TimeProvider 
         }
 
         db.Freigaben.Add(Freigabe.Leitung(
-            Kennung.Neu(uhr), organisationId, command.PersonId, command.FreizeitId, command.AnmeldungId, command.GueltigBis, uhr.GetUtcNow()));
+            Kennung.Neu(uhr), organisationId, command.PersonId, command.FreizeitId, command.AnmeldungId, command.GueltigBis, uhr.GetUtcNow(),
+            FreigabeFragen.Kennungen(command.Fragen) ?? []));
         return Unit.Value;
     }
 }
@@ -105,10 +126,10 @@ internal sealed class FreigabeAnlegenHandler(PersonenDbContext db, TimeProvider 
 /// Team. Ohne Freigabe-Zeile (Person gelöscht) tut er nichts; eine wiederholte Zustellung verwirft die Inbox. Mandant aus dem
 /// Umschlag; kein Benutzer-Command.
 /// </summary>
-internal sealed record FreigabeTeamSetzen(Umschlag Umschlag, Guid AnmeldungId)
+internal sealed record FreigabeTeamSetzen(Umschlag Umschlag, Guid AnmeldungId, IReadOnlyList<FreizeitpassFrage>? Fragen = null)
     : ICommand, IModulCommand<PersonenDbContext>, IEreignisEmpfaenger<FreigabeTeamSetzen, AnmeldungBestaetigt>
 {
-    public static FreigabeTeamSetzen Aus(Umschlag umschlag, AnmeldungBestaetigt ereignis) => new(umschlag, ereignis.AnmeldungId);
+    public static FreigabeTeamSetzen Aus(Umschlag umschlag, AnmeldungBestaetigt ereignis) => new(umschlag, ereignis.AnmeldungId, ereignis.Fragen);
 }
 
 internal sealed class FreigabeTeamSetzenHandler(PersonenDbContext db) : ICommandHandler<FreigabeTeamSetzen>
@@ -116,7 +137,7 @@ internal sealed class FreigabeTeamSetzenHandler(PersonenDbContext db) : ICommand
     public async ValueTask<Unit> Handle(FreigabeTeamSetzen command, CancellationToken cancellationToken)
     {
         var freigabe = await db.Freigaben.SingleOrDefaultAsync(f => f.AnmeldungId == command.AnmeldungId, cancellationToken);
-        freigabe?.ZuTeam();
+        freigabe?.ZuTeam(FreigabeFragen.Kennungen(command.Fragen));
         return Unit.Value;
     }
 }
@@ -139,4 +160,18 @@ internal sealed class FreigabeBeendenHandler(PersonenDbContext db, TimeProvider 
         freigabe?.Beenden(uhr.GetUtcNow());
         return Unit.Value;
     }
+}
+
+/// <summary>
+/// Story 2-5, AD-4: Ereignisse tragen die Fragen als <see cref="FreizeitpassFrage"/>; die Freigabe speichert die Katalog-Kennungen
+/// (<see cref="Fragenkatalog.KennungAusPascalName"/>), in Katalogreihenfolge ohne Doppelte.
+/// </summary>
+internal static class FreigabeFragen
+{
+    /// <summary>Die Kennungen der Fragen; <c>null</c> bleibt <c>null</c> (Ereignis von vor Story 2-5).</summary>
+    public static IReadOnlyList<string>? Kennungen(IEnumerable<FreizeitpassFrage>? fragen) =>
+        fragen is null
+            ? null
+            : Fragenkatalog.Ordnen(fragen.Select(f => Fragenkatalog.KennungAusPascalName(f.ToString())
+                                                      ?? throw new InvalidOperationException($"{nameof(FreizeitpassFrage)}.{f} hat keine Frage im Katalog.")));
 }

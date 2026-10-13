@@ -44,6 +44,12 @@ internal static class FreizeitRechte
     /// </summary>
     public static readonly RolleArt[] Anmeldungen = [RolleArt.Leitung];
 
+    /// <summary>
+    /// Story 2-5: Freizeitpässe sehen (Personenliste, Team-Notizen; FR-24, FR-26). Den Pass selbst liefert Personen mit derselben Liste
+    /// (<c>FreizeitpassRechte.Einsicht</c>); ein Test hält beide gleich. Was das Team vor der Bestätigung sieht, entscheidet die Freigabe.
+    /// </summary>
+    public static readonly RolleArt[] Freizeitpaesse = [RolleArt.Leitung, RolleArt.Team];
+
     /// <summary>Erlaubte Aktionen im Freizeit-Kontext (AD-29) aus den eigenen Freizeit-Rollen.</summary>
     public static IReadOnlyList<string> Erlaubt(IReadOnlyCollection<RolleArt> rollen)
     {
@@ -61,6 +67,11 @@ internal static class FreizeitRechte
         if (rollen.Any(Anmeldungen.Contains))
         {
             erlaubt.Add(Aktionsschluessel.AnmeldungenBearbeiten);
+        }
+
+        if (rollen.Any(Freizeitpaesse.Contains))
+        {
+            erlaubt.Add(Aktionsschluessel.FreizeitpaesseSehen);
         }
 
         return erlaubt;

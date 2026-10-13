@@ -215,6 +215,30 @@ public sealed class KomponentenTests : BunitContext
         Assert.Empty(cut.FindAll("ul"));
     }
 
+    // ---------- Details-Liste (Story 2-5) ----------
+
+    [Fact]
+    public void Details_Liste_zeigt_Begriff_und_Wert_nur_lesend()
+    {
+        var cut = Render<DetailsListe>(ps => ps.Add(p => p.Eintraege, new[]
+        {
+            new DetailsEintrag("Allergien und Unverträglichkeiten", "Glutenhaltiges Getreide"),
+            new DetailsEintrag("Kann schwimmen", "Nein"),
+        }));
+
+        Assert.Equal(["Allergien und Unverträglichkeiten", "Kann schwimmen"], cut.FindAll("dl.elkw-details dt").Select(e => e.TextContent));
+        Assert.Equal(["Glutenhaltiges Getreide", "Nein"], cut.FindAll("dl.elkw-details dd").Select(e => e.TextContent));
+        Assert.Empty(cut.FindAll("button, a, input"));
+    }
+
+    [Fact]
+    public void Details_Liste_ohne_Eintraege_zeigt_nichts()
+    {
+        var cut = Render<DetailsListe>(ps => ps.Add(p => p.Eintraege, Array.Empty<DetailsEintrag>()));
+
+        Assert.Empty(cut.FindAll("dl"));
+    }
+
     // ---------- Fehlerübersicht ----------
 
     [Fact]

@@ -1,0 +1,231 @@
+@page "/freizeiten/{FreizeitId:guid}/freizeitpaesse/{PersonId:guid}"
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Personen
+@using Zeltlotse.Ui.Kontext
+@using Einsicht = Zeltlotse.Api.Contracts.Personen.FreizeitpassEinsicht
+@inject FreizeitKontextDienst Kontext
+@inject FreizeitenApiClient Freizeiten
+@inject PersonenApiClient Personen
+@inject TimeProvider Uhr
+@* Freizeitpass einer Person für Leitung und Team (FR-24, FR-26, EXPERIENCE.md → „Freizeitpass vor Bestätigung“, „Freigabefenster läuft /
+   abgelaufen“, Story 2-5). Die Seite setzt zwei Endpunkte zusammen (AD-2): den Pass liefert Personen (nur die Fragen der Freigabe), die
+   Anmeldung und die Team-Notizen Freizeiten. Kopf mit Name und „Einsicht bis TT.MM.JJJJ“; danach je nach Zustand die Card „Angaben“
+   (Frage → Antwort, nur lesend), „Freizeitpass sichtbar ab Bestätigung der Anmeldung.“ oder „Einsicht beendet am TT.MM.JJJJ.“. Darunter
+   die Card „Team-Notizen“ (neueste zuerst, Löschen mit Inline-Bestätigung, Formular „Neue Notiz“); sie hängt an der Anmeldung, die die
+   Seite über die Personenliste findet, und fehlt ohne Anmeldung (abgesagt). Ohne die erlaubte Aktion „freizeitpaesse-sehen“ oder bei
+   403/404 → „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>Freizeitpass – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <h1>@(_pass is null ? "Freizeitpass" : Anzeige.Name(_pass.Vorname, _pass.Nachname))</h1>
+    <p><a href="@($"freizeiten/{FreizeitId}/freizeitpaesse")">Zurück zu den Freizeitpässen</a></p>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+
+    @if (_pass is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @switch (_pass.Zustand)
+        {
+            case FreizeitpassEinsichtZustand.Beendet:
+                <p>@(Anzeige.Einsicht(_pass.BeendetAm ?? _pass.EinsichtBis, Uhr.GetUtcNow())).</p>
+                break;
+            case FreizeitpassEinsichtZustand.AbBestaetigung:
+                <p>@Anzeige.Einsicht(_pass.EinsichtBis, Uhr.GetUtcNow())</p>
+                <p>Freizeitpass sichtbar ab Bestätigung der Anmeldung.</p>
+                break;
+            default:
+                <p>@Anzeige.Einsicht(_pass.EinsichtBis, Uhr.GetUtcNow())</p>
+                <Card Titel="Angaben">
+                    @if (_pass.Fragen.Count == 0)
+                    {
+                        <p>Diese Freizeit fragt keine Angaben ab.</p>
+                    }
+                    else
+                    {
+                        <DetailsListe Eintraege="@Angaben" />
+                    }
+                </Card>
+                break;
+        }
+
+        @if (_anmeldung is not null && _notizen is not null)
+        {
+            <Card Titel="Team-Notizen">
+                <p>Bleiben in der Freizeit und erscheinen nicht im Freizeitpass.</p>
+                @if (_meldung is not null)
+                {
+                    <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+                        <p>@_meldung</p>
+                    </Meldung>
+                }
+                @if (_notizen.Count == 0)
+                {
+                    <p>Noch keine Team-Notizen.</p>
+                }
+                @foreach (var notiz in _notizen)
+                {
+                    <div id="@($"notiz-{notiz.Id}")">
+                        <p>@notiz.Text</p>
+                        <p>@Anzeige.Name(notiz.VerfasserVorname, notiz.VerfasserNachname) · @Anzeige.Datum(notiz.AngelegtAm)</p>
+                        <InlineBestaetigung AusloeserText="Löschen" AusloeserArt="KnopfArt.Outline" Satz="Diese Notiz löschen?" JaText="Ja, löschen"
+                                            Bestaetigt="@(() => LoeschenAsync(notiz))" />
+                    </div>
+                }
+                <Formular id="team-notiz" Absenden="SpeichernAsync">
+                    <Feld Label="Neue Notiz" Id="team-notiz-text" Mehrzeilig="true" Zeilen="4" Wert="@_text" Fehler="@_textFehler"
+                          Hinweis="@($"Höchstens {TeamNotizFelder.TextMaximaleLaenge} Zeichen")" @oninput="@(e => _text = e.Value?.ToString())" />
+                    <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Notiz speichern</Knopf>
+                </Formular>
+            </Card>
+        }
+    }
+}
+
+@code {
+    private Einsicht? _pass;
+    private PersonenlisteZeile? _anmeldung;
+    private List<TeamNotiz>? _notizen;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private string? _text;
+    private string? _textFehler;
+    private string? _meldung;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    [Parameter] public Guid PersonId { get; set; }
+
+    private IReadOnlyList<DetailsEintrag> Angaben => [.. _pass!.Fragen.Select(f => new DetailsEintrag(f.Frage, Anzeige.Antwort(f)))];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _pass = null;
+        _anmeldung = null;
+        _notizen = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _meldung = null;
+        try
+        {
+            var kontext = await Kontext.LadenAsync(FreizeitId);
+            if (kontext is null || !FreizeitKontextDienst.Darf(kontext, Aktionsschluessel.FreizeitpaesseSehen))
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            var pass = Personen.FreizeitpassEinsichtLadenAsync(FreizeitId, PersonId);
+            var liste = Freizeiten.PersonenlisteLadenAsync(FreizeitId);
+            await Task.WhenAll(pass, liste);
+            _pass = pass.Result;
+            if (_pass is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            _anmeldung = liste.Result?.FirstOrDefault(z => z.PersonId == PersonId);
+            await NotizenLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    private async Task NotizenLadenAsync()
+    {
+        _notizen = _anmeldung is null ? null : await Freizeiten.TeamNotizenLadenAsync(FreizeitId, _anmeldung.AnmeldungId);
+    }
+
+    private async Task SpeichernAsync()
+    {
+        if (_uebertraegt || _anmeldung is null)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _aktionFehler = false;
+        _meldung = null;
+        try
+        {
+            var ergebnis = await Freizeiten.TeamNotizAnlegenAsync(FreizeitId, _anmeldung.AnmeldungId, _text);
+            if (ergebnis.NichtVerfuegbar)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            _textFehler = ergebnis.TextFehler;
+            if (ergebnis.Id is not null)
+            {
+                _text = null;
+                _meldung = "Notiz gespeichert.";
+                await NotizenLadenAsync();
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task LoeschenAsync(TeamNotiz notiz)
+    {
+        if (_uebertraegt || _anmeldung is null)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _aktionFehler = false;
+        _meldung = null;
+        try
+        {
+            var geloescht = await Freizeiten.TeamNotizLoeschenAsync(FreizeitId, _anmeldung.AnmeldungId, notiz.Id);
+            await NotizenLadenAsync();
+            if (geloescht)
+            {
+                _meldung = "Notiz gelöscht.";
+            }
+            else if (_notizen is null)
+            {
+                // 403/404 und die Notizen sind nicht mehr ladbar: kein Zugriff mehr.
+                _nichtVerfuegbar = true;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

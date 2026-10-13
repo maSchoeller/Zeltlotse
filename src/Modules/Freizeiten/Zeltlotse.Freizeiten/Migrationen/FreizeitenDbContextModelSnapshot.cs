@@ -257,6 +257,48 @@ namespace Zeltlotse.Freizeiten.Migrationen
                     b.ToTable("leitungs_einladung", "freizeiten");
                 });
 
+            modelBuilder.Entity("Zeltlotse.Freizeiten.TeamNotizen.TeamNotiz", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AngelegtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("AnmeldungId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("Text")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<Guid>("VerfasstVon")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnmeldungId");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("VerfasstVon");
+
+                    b.HasIndex("FreizeitId", "AnmeldungId");
+
+                    b.ToTable("team_notiz", "freizeiten");
+                });
+
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.InboxEintrag", b =>
                 {
                     b.Property<Guid>("EreignisId")
@@ -377,6 +419,15 @@ namespace Zeltlotse.Freizeiten.Migrationen
                     b.HasOne("Zeltlotse.Freizeiten.Domaene.Freizeit", null)
                         .WithMany("Rollen")
                         .HasForeignKey("FreizeitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zeltlotse.Freizeiten.TeamNotizen.TeamNotiz", b =>
+                {
+                    b.HasOne("Zeltlotse.Freizeiten.Domaene.Anmeldung", null)
+                        .WithMany()
+                        .HasForeignKey("AnmeldungId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

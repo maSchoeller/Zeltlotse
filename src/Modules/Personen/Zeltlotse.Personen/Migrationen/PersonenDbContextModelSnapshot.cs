@@ -162,6 +162,10 @@ namespace Zeltlotse.Personen.Migrationen
                     b.Property<Guid>("AnmeldungId")
                         .HasColumnType("uuid");
 
+                    b.PrimitiveCollection<string[]>("Fragen")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
                     b.Property<Guid>("FreizeitId")
                         .HasColumnType("uuid");
 

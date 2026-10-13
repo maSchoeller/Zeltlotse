@@ -16,6 +16,8 @@ public sealed class AnmeldungBestaetigtTests(PostgresContainer postgres)
     public async Task Bestaetigen_Outbox_zustellen_ergibt_Freigabe_Team_Mitgliedschaft_nur_fuer_Mitarbeitende_und_die_Team_Rolle()
     {
         await using var ablauf = await AnmeldeAblauf.AufbauenAsync(postgres);
+        // Story 2-5: Bis zur Bestätigung wirken Änderungen der Auswahl; die Bestätigung trägt die Fragen von jetzt.
+        await ablauf.FragenWaehlenAsync(Zeltlotse.Api.Contracts.Freizeiten.FragenFeld.Teilnehmende, "schwimmen,allergien");
 
         await ablauf.EntscheidenAsync(ablauf.AnmeldungEmma, "bestaetigen");
         await ablauf.EntscheidenAsync(ablauf.AnmeldungJonas, "bestaetigen");
@@ -31,6 +33,13 @@ public sealed class AnmeldungBestaetigtTests(PostgresContainer postgres)
         Assert.Equal(1L, await ablauf.WertAsync<long>(
             "SELECT count(*) FROM personen.freizeit_rolle WHERE \"FreizeitId\" = @f AND \"PersonId\" = @p AND \"Rolle\" = 2", ("f", ablauf.FreizeitId), ("p", ablauf.JonasPerson)));
         Assert.Equal(0L, await ablauf.WertAsync<long>("SELECT count(*) FROM personen.freizeit_rolle WHERE \"PersonId\" = @p", ("p", ablauf.Emma)));
+        Assert.Equal(["allergien", "schwimmen"], await ablauf.FreigabeFragenAsync(ablauf.AnmeldungEmma));
+        Assert.Equal(["notfallkontakte"], await ablauf.FreigabeFragenAsync(ablauf.AnmeldungJonas));
+
+        // Danach fest: Eine spätere Änderung der Auswahl erweitert keine bestehende Freigabe.
+        await ablauf.FragenWaehlenAsync(Zeltlotse.Api.Contracts.Freizeiten.FragenFeld.Teilnehmende, "allergien,krankheiten,schwimmen");
+        await ablauf.ZustellenMitWiederholungAsync();
+        Assert.Equal(["allergien", "schwimmen"], await ablauf.FreigabeFragenAsync(ablauf.AnmeldungEmma));
 
         // Je Empfänger genau eine Inbox-Zeile je Ereignis, die Wiederholung hat nichts verdoppelt.
         Assert.Equal(2L, await ablauf.WertAsync<long>("SELECT count(*) FROM personen.inbox WHERE \"Empfaenger\" = 'Zeltlotse.Personen.Freigaben.FreigabeTeamSetzen'"));

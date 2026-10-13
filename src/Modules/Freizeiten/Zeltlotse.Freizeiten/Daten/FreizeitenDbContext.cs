@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using FreizeitseiteFelder = Zeltlotse.Api.Contracts.Freizeiten.FreizeitseiteFelder;
 using Zeltlotse.Freizeiten.Domaene;
+using Zeltlotse.Freizeiten.TeamNotizen;
 using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Datenschutz;
 using Zeltlotse.SharedKernel.Mandanten;
@@ -23,6 +24,8 @@ internal sealed class FreizeitenDbContext(DbContextOptions<FreizeitenDbContext> 
 
     public DbSet<Anmeldung> Anmeldungen => Set<Anmeldung>();
 
+    public DbSet<TeamNotiz> TeamNotizen => Set<TeamNotiz>();
+
     protected override string Schema => FreizeitenModul.Schema;
 
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => FreizeitenModell.Konfigurieren(modelBuilder);
@@ -41,6 +44,8 @@ internal sealed class FreizeitenLeseDbContext(DbContextOptions<FreizeitenLeseDbC
     public DbSet<Anmeldelink> Anmeldelinks => Set<Anmeldelink>();
 
     public DbSet<Anmeldung> Anmeldungen => Set<Anmeldung>();
+
+    public DbSet<TeamNotiz> TeamNotizen => Set<TeamNotiz>();
 
     protected override string Schema => FreizeitenModul.Schema;
 
@@ -117,6 +122,19 @@ internal static class FreizeitenModell
             e.HasIndex(a => a.PersonId);
             e.HasIndex(a => a.OrganisationId);
             e.HasOne<Freizeit>().WithMany().HasForeignKey(a => a.FreizeitId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Story 2-5, FR-26: Team-Notizen je Anmeldung; der Text nur verschlüsselt (bytea über Geschuetzt, AD-14). Mit der Anmeldung verschwinden
+        // auch ihre Notizen (Löschlauf, AD-16).
+        modelBuilder.Entity<TeamNotiz>(e =>
+        {
+            e.ToTable("team_notiz");
+            e.Property(n => n.Id).ValueGeneratedNever();
+            e.HasIndex(n => new { n.FreizeitId, n.AnmeldungId });
+            e.HasIndex(n => n.PersonId);
+            e.HasIndex(n => n.VerfasstVon);
+            e.HasIndex(n => n.OrganisationId);
+            e.HasOne<Anmeldung>().WithMany().HasForeignKey(n => n.AnmeldungId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

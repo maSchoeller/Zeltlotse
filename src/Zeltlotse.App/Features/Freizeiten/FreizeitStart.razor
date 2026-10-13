@@ -9,7 +9,8 @@
    und dem Endpunkt der Freizeit zusammen (AD-2). Mit der erlaubten Aktion „nachweise-pruefen“ der Weg zur Prüfliste und,
    wenn im Team Pflicht-Nachweise fehlen oder vor dem Ende ablaufen, eine Warnung darüber (FR-11); scheitert der Abruf der
    Warnhinweise, entfällt sie. Mit der erlaubten Aktion „anmeldungen-bearbeiten“ (nur Leitung, Story 2-3) der Weg zu den
-   Anmeldungen, mit „freizeit-einstellungen“ (nur Leitung) der Weg zu den Einstellungen.
+   Anmeldungen, mit „freizeitpaesse-sehen“ (Leitung und Team, Story 2-5) der Weg zu den Freizeitpässen, mit „freizeit-einstellungen“
+   (nur Leitung) der Weg zu den Einstellungen.
    403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>@(_freizeit?.Name ?? "Freizeit") – Zeltlotse</PageTitle>
 
@@ -45,6 +46,10 @@ else
     @if (FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.AnmeldungenBearbeiten))
     {
         <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/anmeldungen")" Ansichtswechsel="true">Anmeldungen</Knopf></p>
+    }
+    @if (FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.FreizeitpaesseSehen))
+    {
+        <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/freizeitpaesse")" Ansichtswechsel="true">Freizeitpässe</Knopf></p>
     }
     @if (FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.NachweisePruefen))
     {

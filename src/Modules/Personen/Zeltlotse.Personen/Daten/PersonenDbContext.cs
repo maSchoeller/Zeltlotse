@@ -249,6 +249,8 @@ internal static class PersonenModell
             e.ToTable("freigabe");
             e.Property(t => t.Id).ValueGeneratedNever();
             e.Property(t => t.Stufe).HasConversion<short>();
+            // Story 2-5: Kennungen der abgefragten Fragen; Freigaben von vor dieser Story haben keine.
+            e.Property(t => t.Fragen).HasColumnType("text[]");
             e.HasIndex(t => t.AnmeldungId).IsUnique();
             e.HasIndex(t => t.PersonId);
             e.HasIndex(t => new { t.OrganisationId, t.FreizeitId });

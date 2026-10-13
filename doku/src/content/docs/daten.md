@@ -17,7 +17,9 @@ Der Freizeitpass enthält Angaben wie Allergien, Medikamente und Notfallkontakte
 - **Team ab Bestätigung.** Erst wenn die Leitung die Anmeldung bestätigt hat, sieht auch das Team den Freizeitpass.
 - **Absage beendet die Freigabe sofort.** Die Freizeit sieht den Freizeitpass ab dem Moment der Absage nicht mehr; vermerkt bleibt nur, dass es die Freigabe gab und bis wann sie lief.
 
-Die Freizeit sieht immer nur die Antworten auf die Fragen, die sie für den Freizeitpass ausgewählt hat. Andere Angaben bleiben verborgen. Erhoben wird nur, was die Leitung auswählt: Der Freizeitpass zeigt beim Ausfüllen nur die Fragen dieser Freizeit, und die Vertrauensseite nennt sie (siehe [Freizeitpass zusammenstellen](/leitung/freizeitpass-fragen/)).
+Die Freizeit sieht immer nur die Antworten auf die Fragen, die sie für den Freizeitpass ausgewählt hat. Andere Angaben bleiben verborgen, auch wenn die Person sie für eine andere Freizeit beantwortet hat. Erhoben wird nur, was die Leitung auswählt: Der Freizeitpass zeigt beim Ausfüllen nur die Fragen dieser Freizeit, und die Vertrauensseite nennt sie (siehe [Freizeitpass zusammenstellen](/leitung/freizeitpass-fragen/)).
+
+Welche Fragen zur Freigabe gehören, hält Zeltlotse an der Freigabe fest: die Fragen, die die Freizeit **beim Eingang der Anmeldung** abfragt, und mit der **Bestätigung** die Fragen, die sie dann abfragt. Danach bleibt die Auswahl der Freigabe fest. Ergänzt die Leitung später eine Frage, sieht sie für schon bestätigte Anmeldungen keine Antwort darauf; sie fragt dann wie früher auf Papier selbst nach. Umgekehrt verkleinert das Streichen einer Frage nach der Bestätigung eine bestehende Freigabe nicht: Die Freizeit sieht weiter, was freigegeben wurde, bis das Freigabefenster endet. Wie Leitung und Team die Freizeitpässe sehen, steht unter [Freizeitpässe ansehen](/mitarbeitende/freizeitpaesse/).
 
 Die Antworten **gehören der Person**, nicht der Freizeit: Es gibt je Person und Frage genau eine Antwort. Bei der nächsten Freizeit steht sie deshalb schon da; eine Angabe, die seit mehr als 12 Monaten weder geändert noch bestätigt wurde, trägt „Stimmt das noch?“ (siehe [Freizeitpass ausfüllen](/eltern/freizeitpass/)). Die Antworten sind mit dem Schlüssel der Person verschlüsselt gespeichert. Wird das Konto gelöscht oder läuft eine Gast-Anmeldung ab, verschwinden sie mit der Person; die Datenauskunft nennt sie im Abschnitt „Freizeitpass“.
 
@@ -27,13 +29,13 @@ Org-Admin und Org-Überblick sehen keine Freizeitpässe, außer in Freizeiten, i
 
 Die Einsicht ist befristet. Das **Freigabefenster** endet nach einem festen Zeitraum, den die Organisation festlegt. Dieser Zeitraum beginnt am **Ende des letzten Freizeittages** (24:00 Uhr deutscher Zeit). Er wird beim Anlegen der Freizeit festgeschrieben und lässt sich danach nicht mehr ändern. Solange eine Organisation keinen eigenen Zeitraum festgelegt hat, gilt die Vorgabe von **30 Tagen**. Beispiel: Endet eine Freizeit am 13.08.2027, hat sie Einsicht bis einschließlich 12.09.2027.
 
-Eltern und Teilnehmende sehen, bis wann die Freizeit Einsicht hat. Nach dem Ende des Freigabefensters sieht die Freizeit den Freizeitpass nicht mehr. Der Freizeitpass selbst bleibt bei der Person und wird bei der nächsten Freizeit vorausgefüllt.
+Eltern und Teilnehmende sehen, bis wann die Freizeit Einsicht hat: In der Familienübersicht, im Freizeitpass und auf dem Gast-Link steht bei jeder Anmeldung „Einsicht bis TT.MM.JJJJ“, nach dem Ende oder nach einer Absage „Einsicht beendet am TT.MM.JJJJ“. Nach dem Ende des Freigabefensters sieht die Freizeit den Freizeitpass nicht mehr; dort steht dann „Einsicht beendet am …“. Der Freizeitpass selbst bleibt bei der Person und wird bei der nächsten Freizeit vorausgefüllt.
 
 Der Freizeitpass ist für eine Freizeit nötig und lässt sich daher nicht widerrufen, nur ändern. Freiwillige Einwilligungen, etwa für Fotos, werden einzeln erteilt und lassen sich jederzeit widerrufen.
 
 ## Einsicht und Zugriffsprotokoll
 
-Jede Einsicht in persönliche Daten wird festgehalten: **wer** wann **wessen** Angaben angesehen hat, für welche Organisation und Freizeit und wofür, höchstens einmal am Tag je Person. Heute betrifft das die Prüfung von Nachweisen; mit dem Freizeitpass kommen die Blicke in Freizeitpässe dazu. Im **Zugriffsprotokoll** auf der Seite „Zugriffsprotokoll und Meine Daten“ sieht jede Person, wer wann Einsicht in ihre Daten hatte, Eltern auch für ihre Kinder. Das Zugriffsprotokoll gehört der Person; die Organisation sieht es nicht.
+Jede Einsicht in persönliche Daten wird festgehalten: **wer** wann **wessen** Angaben angesehen hat, für welche Organisation und Freizeit und wofür, höchstens einmal am Tag je Person und Zweck. Das betrifft die Prüfung von Nachweisen („Nachweise eingesehen“) und jeden Blick von Leitung oder Team auf die Angaben eines Freizeitpasses („Freizeitpass eingesehen“). Wer nur den Hinweis „Freizeitpass sichtbar ab Bestätigung der Anmeldung.“ oder „Einsicht beendet am …“ sieht, hat keine Angaben gesehen; das steht nicht im Protokoll. Im **Zugriffsprotokoll** auf der Seite „Zugriffsprotokoll und Meine Daten“ sieht jede Person, wer wann Einsicht in ihre Daten hatte, Eltern auch für ihre Kinder. Das Zugriffsprotokoll gehört der Person; die Organisation sieht es nicht.
 
 Auf derselben Seite gibt es per Klick:
 
@@ -41,6 +43,14 @@ Auf derselben Seite gibt es per Klick:
 - einen **Export** der Auskunft als PDF (über den Druckdialog des Browsers) oder als CSV-Datei.
 
 Für Auskunft und Export muss die letzte Anmeldung höchstens 10 Minuten zurückliegen. Wie das geht, steht unter [Zugriffsprotokoll und Meine Daten](/erste-schritte/meine-daten/).
+
+## Team-Notizen
+
+Leitung und Team können zu jeder Anmeldung **Team-Notizen** schreiben (siehe [Freizeitpässe ansehen](/mitarbeitende/freizeitpaesse/#team-notizen)). Sie gehören der Freizeit, nicht der Person:
+
+- **Sie bleiben in der Freizeit.** Team-Notizen erscheinen nie im Freizeitpass, nicht in der Familienübersicht und nicht auf dem Gast-Link. Die betroffene Person (oder ihre Eltern) bekommt sie nur in ihrer **Datenauskunft** im Abschnitt „Team-Notizen“, mit Freizeit, Datum und Text.
+- **Verschlüsselt mit dem Schlüssel der betroffenen Person.** Der Text steht nur verschlüsselt in der Datenbank.
+- **Löschen:** Jedes Mitglied von Leitung und Team kann eine Notiz löschen. Löscht die betroffene Person ihr Konto, verschwinden alle Notizen über sie. Löscht jemand sein Konto, der Notizen geschrieben hat, bleiben sie stehen, aber ohne Namen („Gelöschte Person“). Mit den Anmeldungen einer Freizeit löscht Zeltlotse nach der Frist der Organisation auch ihre Team-Notizen.
 
 ## Nachweise: nur eine einmalige Einsicht
 
@@ -57,7 +67,7 @@ Nachweise wie Führungszeugnis, JuLeiCa (Jugendleiter-Card) oder Erste-Hilfe-Bes
 - **Eigenes Konto löschen:** Jede Person kann ihr Konto auf der Seite „Zugriffsprotokoll und Meine Daten“ löschen, nach einer Bestätigung und mit einer Anmeldung, die höchstens 10 Minuten zurückliegt. Konto, Profil, Nachweise mit Dateien, Einsicht-Anfragen, Erinnerungen und das Zugriffsprotokoll über die Person werden sofort endgültig gelöscht, ebenso ihre Rollen in Organisationen und Freizeiten, ihre Mitgliedschaften in Organisationen und die Nachweis-Bestätigungen über sie. Ist sie der einzige Elternteil im Familienkonto, werden die Profile der Kinder mitgelöscht; mit zweitem Elternteil bleiben die Kinder bei ihm.
 - **Was ohne Namen bleibt:** Wo die gelöschte Person bei anderen etwas getan hat – eine Bestätigung geprüft, Nachweise eingesehen, an Nachweise erinnert, jemanden eingeladen –, bleibt dieser Eintrag bei den anderen stehen, aber ohne Namen („Gelöschte Person“). Ebenso bleiben ihre Anmeldungen als Arbeitsdaten der Freizeit ohne Namen stehen; der Gast-Link und die Freigaben werden mit der Person gelöscht. Das Sicherheitsprotokoll bleibt bis zu seiner festen Frist; es enthält nur Kennungen.
 - **Gast-Anmeldung ohne Konto:** Bei einer Gast-Anmeldung entstehen Profile für den Elternteil und das Kind, aber kein Konto. Der **Gast-Link** aus der Eingangsmail gilt, solange für eine Person dieser Gast-Familie ein Freigabefenster läuft; ist noch keine Anmeldung bei der Leitung angekommen, gilt er einen Tag. Hat ein Konto die Angaben übernommen, gilt er nicht mehr. Ist der Gast-Link abgelaufen und hat nie ein Konto die Angaben übernommen, löscht Zeltlotse beim täglichen Lauf die Profile von Elternteil und Kindern, den Gast-Link und die Freigaben endgültig. Die Anmeldungen bleiben als Arbeitsdaten der Freizeit stehen, aber ohne Namen („Gelöschte Person“), bis die Frist der Organisation abläuft.
-- **Fristen der Organisation:** Daten, die eine Organisation eine Zeit lang braucht, löscht Zeltlotse einmal am Tag automatisch nach den [Löschfristen](/org-admin/loeschfristen/) der Organisation. Vorgabe sind **12 Monate**: die Arbeitsdaten einer Freizeit (die Anmeldungen und die Erinnerungen an Nachweise) 12 Monate nach Freizeitende, abgelaufene Nachweis-Bestätigungen 12 Monate nach „gültig bis“. Der Org-Admin kann die Fristen zwischen 1 und 120 Monaten festlegen.
+- **Fristen der Organisation:** Daten, die eine Organisation eine Zeit lang braucht, löscht Zeltlotse einmal am Tag automatisch nach den [Löschfristen](/org-admin/loeschfristen/) der Organisation. Vorgabe sind **12 Monate**: die Arbeitsdaten einer Freizeit (die Anmeldungen mit ihren Team-Notizen und die Erinnerungen an Nachweise) 12 Monate nach Freizeitende, abgelaufene Nachweis-Bestätigungen 12 Monate nach „gültig bis“. Der Org-Admin kann die Fristen zwischen 1 und 120 Monaten festlegen.
 - **Feste Fristen:** Login-Links und Login-Codes werden **einen Tag** nach ihrem Ablauf gelöscht, Einladungen und Profil-Übergaben **30 Tage** nach ihrem Ablauf, das Sicherheitsprotokoll nach **365 Tagen**.
 - **Keine Frist für persönliche Daten:** Profil, Nachweise und das Zugriffsprotokoll gehören der Person und bleiben, bis sie ihr Konto löscht.
 - **Endgültig, auch in Sicherungen:** Gelöschte Daten sind nicht nur ausgeblendet, sondern gelöscht; mit dem Schlüssel der Person verschlüsselte Daten sind danach auch in Sicherungskopien unlesbar.

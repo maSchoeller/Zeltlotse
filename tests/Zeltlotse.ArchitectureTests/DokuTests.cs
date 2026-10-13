@@ -65,7 +65,7 @@ public sealed class DokuTests
                 "Seite erste-schritte/anmelden.md fehlt.", "Seite erste-schritte/meine-daten.md fehlt.", "Seite org-admin/loeschfristen.md fehlt.",
                 "Seite eltern/freizeitseite.md fehlt.", "Seite leitung/freizeitseite-einrichten.md fehlt.", "Seite eltern/kind-anmelden.md fehlt.",
                 "Seite mitarbeitende/anmelden.md fehlt.", "Seite leitung/anmeldungen.md fehlt.", "Seite eltern/freizeitpass.md fehlt.",
-                "Seite leitung/freizeitpass-fragen.md fehlt.",
+                "Seite leitung/freizeitpass-fragen.md fehlt.", "Seite mitarbeitende/freizeitpaesse.md fehlt.",
             ],
             fehlend);
     }

@@ -13,8 +13,9 @@ namespace Zeltlotse.Ablaeufe.Tests;
 
 /// <summary>
 /// Gemeinsamer Aufbau der Durchlauf-Tests zu Story 2-3 über die echten Endpunkte: Organisation (Andrea) mit Freizeit „Zeltlager“,
-/// Miriam als Leitung, Katrin meldet Emma als Teilnehmende an, Jonas sich selbst als Mitarbeitender. Die Outbox ist danach einmal
-/// zugestellt (Freigaben der Stufe Leitung bestehen).
+/// Miriam als Leitung, Katrin meldet Emma als Teilnehmende an, Jonas sich selbst als Mitarbeitender. Story 2-5: Vorher wählt Miriam die
+/// Fragen (Teilnehmende Allergien und Notfallkontakte, Mitarbeitende Notfallkontakte). Die Outbox ist danach einmal zugestellt
+/// (Freigaben der Stufe Leitung mit diesen Fragen bestehen).
 /// </summary>
 internal sealed class AnmeldeAblauf : IAsyncDisposable
 {
@@ -83,6 +84,9 @@ internal sealed class AnmeldeAblauf : IAsyncDisposable
             return adresse[(adresse.LastIndexOf('/') + 1)..];
         }
 
+        await FragenWaehlenAsync(FragenFeld.Teilnehmende, "allergien,notfallkontakte");
+        await FragenWaehlenAsync(FragenFeld.Mitarbeitende, "notfallkontakte");
+
         var katrin = await AngemeldetAsync(Katrin);
         Emma = (await AntwortAsync<KindHinzugefuegt>(await SendenAsync(katrin, "/api/ich/familie/kinder", new KindHinzufuegen("Emma", "Muster", new DateOnly(2017, 9, 2))), HttpStatusCode.Created)).PersonId;
         AnmeldungEmma = (await AntwortAsync<AnmeldungAngelegt>(
@@ -93,7 +97,24 @@ internal sealed class AnmeldeAblauf : IAsyncDisposable
             await SendenAsync(JonasClient, "/api/ich/anmeldungen", new AnmeldungAbsenden(Link(AnmeldelinkArt.Mitarbeitende), null, true)), HttpStatusCode.Created)).AnmeldungId;
         await Factory.OutboxJetztZustellenAsync(Abbruch);
         Assert.Equal(2L, await WertAsync<long>("SELECT count(*) FROM personen.freigabe WHERE \"Stufe\" = 1"));
+        // Story 2-5: Die Freigaben tragen die Fragen der jeweiligen Zielgruppe zum Zeitpunkt des Eingangs.
+        Assert.Equal(["allergien", "notfallkontakte"], await FreigabeFragenAsync(AnmeldungEmma));
+        Assert.Equal(["notfallkontakte"], await FreigabeFragenAsync(AnmeldungJonas));
     }
+
+    /// <summary>Story 2-5: Miriam setzt die Fragen-Auswahl einer Zielgruppe (Autosave-PATCH mit dem aktuellen Wert als altem Wert).</summary>
+    public async Task FragenWaehlenAsync(FragenFeld feld, string kennungen)
+    {
+        var auswahl = await MiriamClient.GetFromJsonAsync<FragenAuswahl>($"/api/freizeiten/{FreizeitId}/fragen", Abbruch);
+        var alt = feld == FragenFeld.Teilnehmende ? auswahl!.Teilnehmende : auswahl!.Mitarbeitende;
+        var koerper = new Dictionary<string, object?> { ["version"] = auswahl.Version, ["alterWert"] = alt, [FragenFelder.JsonName(feld)] = kennungen };
+        using var antwort = await SendenAsync(MiriamClient, $"/api/freizeiten/{FreizeitId}/fragen", koerper, HttpMethod.Patch);
+        Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
+    }
+
+    /// <summary>Story 2-5: die Fragen der Freigabe einer Anmeldung (<c>personen.freigabe."Fragen"</c>).</summary>
+    public Task<string[]> FreigabeFragenAsync(Guid anmeldung) =>
+        WertAsync<string[]>("SELECT \"Fragen\" FROM personen.freigabe WHERE \"AnmeldungId\" = @a", ("a", anmeldung));
 
     /// <summary>Miriam bestätigt oder sagt ab (<c>204</c>).</summary>
     public async Task EntscheidenAsync(Guid anmeldung, string uebergang)
@@ -173,10 +194,10 @@ internal sealed class AnmeldeAblauf : IAsyncDisposable
 
     private string TokenAus(string mail, string betreff) => Factory.Mails.An(mail).Last(m => m.Betreff == betreff).Token;
 
-    private static async Task<HttpResponseMessage> SendenAsync(HttpClient client, string pfad, object? koerper)
+    private static async Task<HttpResponseMessage> SendenAsync(HttpClient client, string pfad, object? koerper, HttpMethod? methode = null)
     {
         var token = (await client.GetFromJsonAsync<AntiforgeryAntwort>("/api/betrieb/antiforgery", Abbruch))!.Token;
-        using var anfrage = new HttpRequestMessage(HttpMethod.Post, pfad) { Content = koerper is null ? null : JsonContent.Create(koerper, koerper.GetType()) };
+        using var anfrage = new HttpRequestMessage(methode ?? HttpMethod.Post, pfad) { Content = koerper is null ? null : JsonContent.Create(koerper, koerper.GetType()) };
         anfrage.Headers.Add(Kopfzeilen.Antiforgery, token);
         return await client.SendAsync(anfrage, Abbruch);
     }

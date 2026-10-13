@@ -113,6 +113,49 @@ public static class Anzeige
     /// </summary>
     public static string BisEinschliesslich(DateTimeOffset ende) => Datum(Tag(ende.AddTicks(-1)));
 
+    /// <summary>
+    /// Story 2-5: Bis wann die Freizeit Einsicht in den Freizeitpass hat: „Einsicht bis TT.MM.JJJJ“ (letzter Tag, an dem sie noch gilt) bzw.
+    /// „Einsicht beendet am TT.MM.JJJJ“, wenn <paramref name="bis"/> vorbei ist. Beide nennen denselben Tag: den letzten, an dem die
+    /// Einsicht noch galt (ein Ende um 00:00 Uhr gehört zum Vortag).
+    /// </summary>
+    public static string Einsicht(DateTimeOffset bis, DateTimeOffset jetzt) =>
+        bis <= jetzt ? $"Einsicht beendet am {BisEinschliesslich(bis)}" : $"Einsicht bis {BisEinschliesslich(bis)}";
+
+    /// <summary>
+    /// Story 2-5: eine Antwort im Freizeitpass zum Lesen: Auswahl als Texte der Optionen (mit Komma, „Sonstiges“ dahinter), Ja/Nein als
+    /// „Ja“/„Nein“, ein Datum als TT.MM.JJJJ, Freitext wie eingegeben; ohne Angabe „keine Angabe“.
+    /// </summary>
+    public static string Antwort(Zeltlotse.Api.Contracts.Personen.FreizeitpassFrage frage)
+    {
+        ArgumentNullException.ThrowIfNull(frage);
+        var wert = string.IsNullOrWhiteSpace(frage.Wert) ? null : frage.Wert.Trim();
+        var teile = new List<string>();
+        if (wert is not null)
+        {
+            switch (frage.Art)
+            {
+                case Zeltlotse.Api.Contracts.Personen.FrageArt.Auswahl:
+                case Zeltlotse.Api.Contracts.Personen.FrageArt.JaNein:
+                    var schluessel = wert.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                    teile.AddRange(schluessel.Select(s => frage.Optionen.FirstOrDefault(o => o.Wert == s)?.Text ?? s));
+                    break;
+                case Zeltlotse.Api.Contracts.Personen.FrageArt.Datum:
+                    teile.Add(DateOnly.TryParseExact(wert, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var tag) ? Datum(tag) : wert);
+                    break;
+                default:
+                    teile.Add(wert);
+                    break;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(frage.Sonstiges))
+        {
+            teile.Add(frage.Sonstiges.Trim());
+        }
+
+        return teile.Count == 0 ? "keine Angabe" : string.Join(", ", teile);
+    }
+
     /// <summary>Status einer Anmeldung als Wort (EXPERIENCE.md → State Patterns): „Eingegangen“, „Bestätigt“, „Abgesagt“.</summary>
     public static string Status(Zeltlotse.Api.Contracts.Freizeiten.AnmeldungStatus status) => status switch
     {
@@ -131,10 +174,11 @@ public static class Anzeige
         _ => StatusArt.Aktiv,
     };
 
-    /// <summary>Wofür jemand Einsicht hatte (Zugriffsprotokoll): „Nachweise eingesehen“.</summary>
+    /// <summary>Wofür jemand Einsicht hatte (Zugriffsprotokoll): „Nachweise eingesehen“, „Freizeitpass eingesehen“.</summary>
     public static string Zweck(Zeltlotse.Api.Contracts.Personen.ZugriffZweck zweck) => zweck switch
     {
         Zeltlotse.Api.Contracts.Personen.ZugriffZweck.NachweiseEingesehen => "Nachweise eingesehen",
+        Zeltlotse.Api.Contracts.Personen.ZugriffZweck.FreizeitpassEingesehen => "Freizeitpass eingesehen",
         _ => zweck.ToString(),
     };
 

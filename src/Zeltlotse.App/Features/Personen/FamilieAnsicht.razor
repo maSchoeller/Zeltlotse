@@ -4,6 +4,8 @@
 @using Zeltlotse.Api.Contracts.Freizeiten
 @inject PersonenApiClient Personen
 @inject FreizeitenApiClient Freizeiten
+@inject TimeProvider Uhr
+@* Story 2-5: unter jeder Anmeldung „Einsicht bis TT.MM.JJJJ“ bzw. „Einsicht beendet am TT.MM.JJJJ“ (auch nach einer Absage). *@
 @* Familie (FR-3, FR-4, FR-20, EXPERIENCE.md → Familienübersicht, NS-1, NS-11): je Kind eine Card mit Geburtsdatum, seinen
    Freizeiten mit Anmeldestatus (Status-Wort mit Quadrat), darunter der Link „Freizeitpass“ mit dem Hinweis „Freizeitpass prüfen“, wenn
    eine abgefragte Frage unbeantwortet oder veraltet ist (Story 2-4), und der Kontakt der Leitung für Absagen (Story 2-3), und „Angaben ändern“; nur bei einem volljährigen Kind (der Server rechnet,
@@ -257,7 +259,7 @@ else
                 $"{a.FreizeitName}, {Anzeige.Zeitraum(a.ErsterTag, a.LetzterTag)}",
                 Anzeige.Status(a.Status),
                 Anzeige.AnmeldungStatusArt(a.Status),
-                a.Status == AnmeldungStatus.Abgesagt ? null : Darunter(a))),
+                a.Status == AnmeldungStatus.Abgesagt ? (a.EinsichtBis is null ? null : EinsichtZeile(a)) : Darunter(a))),
         ];
         return @<StatusListe Eintraege="@eintraege" />;
     }
@@ -278,7 +280,17 @@ else
                     }
                 </p>
             }
+            @EinsichtZeile(anmeldung)
             <AbsageKontakt Mail="@anmeldung.KontaktMail" Telefon="@anmeldung.KontaktTelefon" />
+        </text>;
+
+    /// <summary>Story 2-5: „Einsicht bis TT.MM.JJJJ“ bzw. „Einsicht beendet am TT.MM.JJJJ“, nur wenn der Server es liefert.</summary>
+    private RenderFragment EinsichtZeile(AnmeldungZeile anmeldung) =>
+        @<text>
+            @if (anmeldung.EinsichtBis is { } bis)
+            {
+                <p>@Anzeige.Einsicht(bis, Uhr.GetUtcNow())</p>
+            }
         </text>;
 
     /// <summary>Wert eines Datumsfelds (<c>yyyy-MM-dd</c>); alles andere gilt als fehlend, den Fehler meldet der Server am Feld.</summary>

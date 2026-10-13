@@ -71,7 +71,7 @@ internal static class AnmeldeSchritte
         var jetzt = uhr.GetUtcNow();
         var freigabeBis = freizeit.Zeitpunkte(jetzt).FreigabeGueltigBis;
         var anmeldung = DomaeneAnmeldung.Eingehen(
-            Kennung.Neu(uhr), freizeit.OrganisationId, freizeit.Id, personId, Art(art), jetzt, freigabeBis);
+            Kennung.Neu(uhr), freizeit.OrganisationId, freizeit.Id, personId, Art(art), jetzt, freigabeBis, freizeit.FragenFuer(Art(art)));
         anmeldungen.Add(anmeldung);
         return new AnmeldungErgebnis.Angelegt(
             anmeldung.Id, personId, freizeit.Name, gastGueltigBis > freigabeBis ? gastGueltigBis : freigabeBis, mail);

@@ -67,6 +67,9 @@ public sealed record AnmeldungAngelegt(Guid AnmeldungId);
 /// Kennungen der Fragen, die der Freizeitpass dieser Freizeit für die Art der Anmeldung abfragt (Story 2-4, FR-22), in
 /// Katalogreihenfolge; leer heißt: keine Fragen.
 /// </param>
+/// <param name="EinsichtBis">
+/// Story 2-5: bis wann die Freizeit Einsicht in den Freizeitpass hat: Ende des Freigabefensters, nach einer Absage deren Zeitpunkt.
+/// </param>
 public sealed record AnmeldungZeile(
     Guid AnmeldungId,
     Guid PersonId,
@@ -77,7 +80,8 @@ public sealed record AnmeldungZeile(
     AnmeldungStatus Status,
     string? KontaktMail = null,
     string? KontaktTelefon = null,
-    IReadOnlyList<string>? Fragen = null);
+    IReadOnlyList<string>? Fragen = null,
+    DateTimeOffset? EinsichtBis = null);
 
 /// <summary>
 /// Antwort von <c>GET /api/freizeiten/gast/{gastToken}</c> (anonym, Gast-Link, AD-11): die Anmeldungen der Gast-Familie mit
@@ -93,6 +97,7 @@ public sealed record GastLinkAnsicht(DateTimeOffset GueltigBis, IReadOnlyList<Ga
 /// <param name="AnmeldungId">Kennung der Anmeldung (Story 2-4), für den Weg zum Freizeitpass.</param>
 /// <param name="PersonId">Kennung der angemeldeten Person (Story 2-4), für den Freizeitpass bei Personen.</param>
 /// <param name="Fragen">Kennungen der Fragen, die der Freizeitpass dieser Freizeit abfragt (Story 2-4); leer heißt: keine Fragen.</param>
+/// <param name="EinsichtBis">Story 2-5: bis wann die Freizeit Einsicht in den Freizeitpass hat (wie <see cref="AnmeldungZeile.EinsichtBis"/>).</param>
 public sealed record GastLinkAnmeldung(
     string Vorname,
     string FreizeitName,
@@ -103,7 +108,8 @@ public sealed record GastLinkAnmeldung(
     string? KontaktTelefon = null,
     Guid AnmeldungId = default,
     Guid PersonId = default,
-    IReadOnlyList<string>? Fragen = null);
+    IReadOnlyList<string>? Fragen = null,
+    DateTimeOffset? EinsichtBis = null);
 
 /// <summary>
 /// Antwort von <c>GET /api/freizeiten/{freizeitId}/anmeldungen</c> (Leitung, FR-20, FR-21, FR-67): die Höchstzahl, die bestätigten

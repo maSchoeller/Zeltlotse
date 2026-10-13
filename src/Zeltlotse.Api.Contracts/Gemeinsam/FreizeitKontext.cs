@@ -88,4 +88,10 @@ public static class Aktionsschluessel
     /// Anmeldungen der Freizeit sehen, bestätigen und Absagen eintragen (Leitung im Freizeit-Kontext, FR-20, FR-21, Story 2-3).
     /// </summary>
     public const string AnmeldungenBearbeiten = "anmeldungen-bearbeiten";
+
+    /// <summary>
+    /// Freizeitpässe der Personen der Freizeit sehen und Team-Notizen führen (Leitung und Team im Freizeit-Kontext, FR-24, FR-26,
+    /// Story 2-5).
+    /// </summary>
+    public const string FreizeitpaesseSehen = "freizeitpaesse-sehen";
 }

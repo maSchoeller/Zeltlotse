@@ -195,7 +195,7 @@ public sealed class AnmeldungEntscheidenTests(PostgresContainer postgres) : IAsy
 
         // Die Familienübersicht liest Status und Kontakt der Leitung.
         var zeile = Assert.Single(await MeineAnmeldungenAsync(_katrin));
-        Assert.Equal(["anmeldungId", "art", "ersterTag", "fragen", "freizeitName", "kontaktMail", "kontaktTelefon", "letzterTag", "personId", "status"], Namen(zeile));
+        Assert.Equal(["anmeldungId", "art", "einsichtBis", "ersterTag", "fragen", "freizeitName", "kontaktMail", "kontaktTelefon", "letzterTag", "personId", "status"], Namen(zeile));
         Assert.Equal(("Bestaetigt", KontaktMail, KontaktTelefon), (
             zeile.GetProperty("status").GetString(), zeile.GetProperty("kontaktMail").GetString(), zeile.GetProperty("kontaktTelefon").GetString()));
         var liste = await JsonAsync(await _miriam.GetAsync(ListePfad(_x), Abbruch));
@@ -404,7 +404,7 @@ public sealed class AnmeldungEntscheidenTests(PostgresContainer postgres) : IAsy
         using var ansicht = await _anonym.GetAsync(GastPfad(token), Abbruch);
         Assert.Equal(HttpStatusCode.OK, ansicht.StatusCode);
         var zeile = Assert.Single((await JsonAsync(ansicht)).GetProperty("anmeldungen").EnumerateArray());
-        Assert.Equal(["anmeldungId", "ersterTag", "fragen", "freizeitName", "kontaktMail", "kontaktTelefon", "letzterTag", "personId", "status", "vorname"], Namen(zeile));
+        Assert.Equal(["anmeldungId", "einsichtBis", "ersterTag", "fragen", "freizeitName", "kontaktMail", "kontaktTelefon", "letzterTag", "personId", "status", "vorname"], Namen(zeile));
         Assert.Equal(("Bestaetigt", KontaktMail, KontaktTelefon), (
             zeile.GetProperty("status").GetString(), zeile.GetProperty("kontaktMail").GetString(), zeile.GetProperty("kontaktTelefon").GetString()));
     }
@@ -516,6 +516,35 @@ public sealed class AnmeldungEntscheidenTests(PostgresContainer postgres) : IAsy
     }
 
     // ---------- Hilfen ----------
+
+    // ---------- Story 2-5: Einsicht bis ----------
+
+    [Fact]
+    public async Task Eigene_Anmeldungen_und_Gast_Link_nennen_Einsicht_bis_Ende_des_Freigabefensters_nach_Absage_den_Zeitpunkt_der_Absage()
+    {
+        var freigabeEnde = new DateTimeOffset(2027, 9, 12, 22, 0, 0, TimeSpan.Zero);
+        var emma = await EmmaAnmeldenAsync();
+        var (gastToken, kind) = await GastAsync();
+        await GastAnmeldenAsync(_tnX, gastToken, kind);
+
+        Assert.Equal(freigabeEnde, Assert.Single(await MeineAnmeldungenAsync(_katrin)).GetProperty("einsichtBis").GetDateTimeOffset());
+        var gast = await JsonAsync(await _anonym.GetAsync(GastPfad(gastToken), Abbruch));
+        Assert.Equal(freigabeEnde, gast.GetProperty("anmeldungen")[0].GetProperty("einsichtBis").GetDateTimeOffset());
+
+        var absage = await ZustellzeitAsync();
+        Assert.Equal(HttpStatusCode.NoContent, (await AbsagenAsync(emma)).StatusCode);
+
+        Assert.Equal(absage, Assert.Single(await MeineAnmeldungenAsync(_katrin)).GetProperty("einsichtBis").GetDateTimeOffset());
+
+        // Eine Absage nach dem Ende des Freigabefensters verlängert nichts: es bleibt beim früheren Ende (wie beim Beenden der Freigabe).
+        var jonas = await MitarbeitAsync(_jonas);
+        _factory.Uhr.SetUtcNow(freigabeEnde.AddDays(1));
+        await AnmeldeHelfer.AnmeldenAsync(_factory, _miriam, Miriam);
+        await AnmeldeHelfer.AnmeldenAsync(_factory, _jonas, Jonas);
+        Assert.Equal(HttpStatusCode.NoContent, (await AbsagenAsync(jonas)).StatusCode);
+
+        Assert.Equal(freigabeEnde, Assert.Single(await MeineAnmeldungenAsync(_jonas)).GetProperty("einsichtBis").GetDateTimeOffset());
+    }
 
     private string ListePfad(Guid freizeit) => $"/api/freizeiten/{freizeit}/anmeldungen";
 

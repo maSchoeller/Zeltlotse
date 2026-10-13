@@ -182,6 +182,29 @@ public sealed class ZugriffsprotokollTests(PostgresContainer postgres, S3Contain
     }
 
     [Fact]
+    public async Task Freizeitpass_eingesehen_steht_mit_eigenem_Zweck_neben_Nachweise_eingesehen()
+    {
+        // Story 2-5: Zweck 2 = „freizeitpassEingesehen“; beide Zwecke am selben Tag ergeben zwei Einträge.
+        await using var s = await FreizeitpassSzenario.AufbauenAsync(postgres);
+        await s.KindAnmeldenAsync(s.Emma);
+        (await s.Miriam.GetAsync(FreizeitpassSzenario.PassPfad(s.X, s.Emma), Abbruch)).Dispose();
+        await AusfuehrenAsync(
+            s.Verbindung,
+            "INSERT INTO personen.einsicht_protokoll (\"Id\", \"BetroffenePersonId\", \"LesendePersonId\", \"OrganisationId\", \"FreizeitId\", \"Zweck\", \"Am\", \"Tag\") " +
+            "VALUES (@id, @emma, @miriam, NULL, NULL, 1, now() - interval '1 minute', current_date)",
+            ("id", Guid.CreateVersion7()), ("emma", s.Emma), ("miriam", s.MiriamId));
+
+        var eintraege = (await s.Katrin.GetFromJsonAsync<List<ZugriffsprotokollEintrag>>(Pfad, Abbruch))!;
+
+        Assert.Equal(
+            [ZugriffZweck.FreizeitpassEingesehen, ZugriffZweck.NachweiseEingesehen],
+            eintraege.Where(e => e.BetroffenePersonId == s.Emma).OrderBy(e => (int)e.Zweck).Reverse().Select(e => e.Zweck));
+        var json = (await JsonAsync(await s.Katrin.GetAsync(Pfad, Abbruch))).EnumerateArray().Select(e => e.GetProperty("zweck").GetString());
+        Assert.Contains("freizeitpassEingesehen", json);
+        Assert.Equal(2, (int)ZugriffZweck.FreizeitpassEingesehen);
+    }
+
+    [Fact]
     public async Task Ohne_Sitzung_401()
     {
         await using var factory = Factory(await postgres.NeueDatenbankAsync());

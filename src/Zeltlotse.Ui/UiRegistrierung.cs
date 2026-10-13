@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Zeltlotse.Ui.Api;
 using Zeltlotse.Ui.Autosave;
 using Zeltlotse.Ui.Kontext;
@@ -23,6 +24,8 @@ public static class UiRegistrierung
         services.AddScoped(sp => new PersonenApiClient(client(sp)));
         services.AddScoped(sp => new AutosaveDienst(client(sp)));
         services.AddScoped<FreizeitKontextDienst>();
+        // Story 2-5: „Einsicht bis“ bzw. „Einsicht beendet am“ hängt an der Uhr; Web-App und Host bringen ihre eigene mit.
+        services.TryAddSingleton(TimeProvider.System);
         return services;
     }
 }

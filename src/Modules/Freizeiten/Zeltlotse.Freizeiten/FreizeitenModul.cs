@@ -10,6 +10,8 @@ using Zeltlotse.Freizeiten.Datenschutz;
 using Zeltlotse.Freizeiten.Fragen;
 using Zeltlotse.Freizeiten.Freizeitseite;
 using Zeltlotse.Freizeiten.Nachweise;
+using Zeltlotse.Freizeiten.Personenliste;
+using Zeltlotse.Freizeiten.TeamNotizen;
 using Zeltlotse.Freizeiten.Rechte;
 using Zeltlotse.Freizeiten.Startseite;
 using Zeltlotse.Freizeiten.Verwaltung;
@@ -89,6 +91,11 @@ public static class FreizeitenModul
         freizeit.MapGet("/anmeldungen", AnmeldungenListeEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Anmeldungen);
         freizeit.MapPost("/anmeldungen/{anmeldungId:guid}/bestaetigen", AnmeldungEntscheidenEndpunkt.Bestaetigen).NurFreizeitRolle(FreizeitRechte.Anmeldungen);
         freizeit.MapPost("/anmeldungen/{anmeldungId:guid}/absagen", AnmeldungEntscheidenEndpunkt.Absagen).NurFreizeitRolle(FreizeitRechte.Anmeldungen);
+        // Story 2-5: Personenliste und Team-Notizen für Leitung und Team (FR-24, FR-26); den Freizeitpass selbst liefert Personen.
+        freizeit.MapGet("/personenliste", PersonenlisteEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Freizeitpaesse);
+        freizeit.MapGet("/anmeldungen/{anmeldungId:guid}/notizen", TeamNotizEndpunkte.Laden).NurFreizeitRolle(FreizeitRechte.Freizeitpaesse);
+        freizeit.MapPost("/anmeldungen/{anmeldungId:guid}/notizen", TeamNotizEndpunkte.Anlegen).NurFreizeitRolle(FreizeitRechte.Freizeitpaesse);
+        freizeit.MapDelete("/anmeldungen/{anmeldungId:guid}/notizen/{notizId:guid}", TeamNotizEndpunkte.Loeschen).NurFreizeitRolle(FreizeitRechte.Freizeitpaesse);
 
         api.MapGet("/ich/freizeiten", MeineFreizeitenEndpunkt.Laden).Organisationsuebergreifend();
         var anmeldungen = api.MapGroup("/ich/anmeldungen").Organisationsuebergreifend();

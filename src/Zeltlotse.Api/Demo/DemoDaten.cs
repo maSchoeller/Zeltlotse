@@ -10,6 +10,7 @@ using Zeltlotse.Freizeiten.Domaene;
 using Zeltlotse.Freizeiten.Fragen;
 using Zeltlotse.Freizeiten.Freizeitseite;
 using Zeltlotse.Freizeiten.Leitung;
+using Zeltlotse.Freizeiten.TeamNotizen;
 using Zeltlotse.Freizeiten.Verwaltung;
 using Zeltlotse.Konten.Anmelden;
 using Zeltlotse.Organisationen.Daten;
@@ -63,6 +64,8 @@ namespace Zeltlotse.Api.Demo;
 /// Organisation; Bestätigungs-Mails gehen an Daniel und Lea.
 /// Story 2-4: Miriam wählt die Fragen des Freizeitpasses je Zielgruppe (nur, wenn noch keine gewählt sind); Katrin beantwortet für
 /// Emma Allergien, Notfallkontakte und Schwimmen (je nur, wenn es noch keine Antwort gibt).
+/// Story 2-5: Die Fragen-Auswahl kommt vor den Anmeldungen, damit die Freigaben die Fragen tragen; Daniel beantwortet für Mia
+/// Allergien, Notfallkontakte und Schwimmen (je nur ohne Antwort); Lea schreibt eine Team-Notiz zu Mia (nur ohne Notiz).
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -107,8 +110,11 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await ZugriffsprotokollAsync(abbruch);
         await HerkunftAsync(abbruch);
         await FreizeitseiteAsync(abbruch);
+        // Story 2-5: Die Fragen-Auswahl kommt vor den Anmeldungen, damit die Freigaben die Fragen tragen.
+        await FragenAuswahlAsync(abbruch);
         await AnmeldungAsync(abbruch);
         await FreizeitpassAsync(abbruch);
+        await TeamNotizAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -482,19 +488,15 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
     }
 
     /// <summary>
-    /// Story 2-4: die Fragen-Auswahl der Demo-Freizeit (<see cref="DemoKatalog.Fragen"/>, je Zielgruppe nur, wenn leer) und Emmas
-    /// Antworten (<see cref="DemoKatalog.EmmasFreizeitpass"/>, je Frage nur, wenn es noch keine Antwort gibt), von Katrin gespeichert.
+    /// Story 2-4: die Fragen-Auswahl der Demo-Freizeit (<see cref="DemoKatalog.Fragen"/>, je Zielgruppe nur, wenn leer). Story 2-5: vor den
+    /// Anmeldungen, damit Eingang und Bestätigung die Fragen tragen.
     /// </summary>
-    private async Task FreizeitpassAsync(CancellationToken abbruch)
+    private async Task FragenAuswahlAsync(CancellationToken abbruch)
     {
         await using var scope = scopes.CreateAsyncScope();
         var dienste = scope.ServiceProvider;
         var sender = dienste.GetRequiredService<ISender>();
-        var organisationId = await dienste.GetRequiredService<OrganisationenLeseDbContext>().Organisationen
-            .Where(o => o.Name == DemoKatalog.Organisation.Name)
-            .Select(o => o.Id)
-            .SingleAsync(abbruch);
-        dienste.GetRequiredService<MandantenKontext>().Setzen(organisationId);
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
         var freizeit = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten.SingleAsync(f => f.Name == DemoKatalog.Freizeit.Name, abbruch);
         foreach (var (feld, wert) in new[] { (FragenFeld.Teilnehmende, DemoKatalog.Fragen.Teilnehmende), (FragenFeld.Mitarbeitende, DemoKatalog.Fragen.Mitarbeitende) })
         {
@@ -504,22 +506,74 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
                 throw new InvalidOperationException($"Demo-Freizeit: Die Fragen für {feld} ließen sich nicht setzen.");
             }
         }
+    }
 
+    /// <summary>
+    /// Story 2-4: Emmas Antworten (<see cref="DemoKatalog.EmmasFreizeitpass"/>), von Katrin gespeichert; Story 2-5: Mias Antworten
+    /// (<see cref="DemoKatalog.MiasFreizeitpass"/>), von Daniel gespeichert. Je Frage nur, wenn es noch keine Antwort gibt.
+    /// </summary>
+    private async Task FreizeitpassAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
         var personen = dienste.GetRequiredService<PersonenLeseDbContext>();
-        var katrin = (await sender.Send(new KontoSicherstellen("katrin.muster@example.org"), abbruch)).PersonId;
-        var emma = await personen.Personen
-            .Where(p => p.Vorname == "Emma" && personen.Elternteile.Any(e => e.PersonId == katrin && e.FamilieId == p.FamilieId))
-            .Select(p => p.Id)
-            .SingleAsync(abbruch);
-        var vorhanden = await personen.FreizeitpassAntworten.Where(a => a.PersonId == emma).Select(a => a.Kennung).ToListAsync(abbruch);
-        foreach (var (kennung, wert) in DemoKatalog.EmmasFreizeitpass.Where(a => !vorhanden.Contains(a.Kennung)))
+        foreach (var (mail, kindName, antworten) in new[]
+                 {
+                     ("katrin.muster@example.org", "Emma", DemoKatalog.EmmasFreizeitpass), ("daniel.probst@example.org", "Mia", DemoKatalog.MiasFreizeitpass),
+                 })
         {
-            if (await sender.Send(new FreizeitpassAntwortAendern(katrin, emma, kennung, FreizeitpassFeld.Wert, null, wert), abbruch) is not AntwortAenderung.Gespeichert)
+            var eltern = (await sender.Send(new KontoSicherstellen(mail), abbruch)).PersonId;
+            var kind = await KindAsync(personen, eltern, kindName, abbruch);
+            var vorhanden = await personen.FreizeitpassAntworten.Where(a => a.PersonId == kind).Select(a => a.Kennung).ToListAsync(abbruch);
+            foreach (var (kennung, wert) in antworten.Where(a => !vorhanden.Contains(a.Kennung)))
             {
-                throw new InvalidOperationException($"Demo-Freizeitpass: {kennung} ließ sich nicht speichern.");
+                if (await sender.Send(new FreizeitpassAntwortAendern(eltern, kind, kennung, FreizeitpassFeld.Wert, null, wert), abbruch) is not AntwortAenderung.Gespeichert)
+                {
+                    throw new InvalidOperationException($"Demo-Freizeitpass: {kennung} ließ sich nicht speichern.");
+                }
             }
         }
     }
+
+    /// <summary>
+    /// Story 2-5: Lea (Team) schreibt eine Team-Notiz zu Mias Anmeldung (<see cref="DemoKatalog.TeamNotizZuMia"/>), nur wenn es dort noch
+    /// keine gibt. Ohne Anmeldung (nach dem Ende der Demo-Freizeit) bleibt es ohne Notiz.
+    /// </summary>
+    private async Task TeamNotizAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var lesen = dienste.GetRequiredService<FreizeitenLeseDbContext>();
+        var freizeitId = await lesen.Freizeiten.Where(f => f.Name == DemoKatalog.Freizeit.Name).Select(f => f.Id).SingleAsync(abbruch);
+        var daniel = (await sender.Send(new KontoSicherstellen("daniel.probst@example.org"), abbruch)).PersonId;
+        var mia = await KindAsync(dienste.GetRequiredService<PersonenLeseDbContext>(), daniel, "Mia", abbruch);
+        var anmeldungId = await lesen.Anmeldungen.Where(a => a.FreizeitId == freizeitId && a.PersonId == mia).Select(a => (Guid?)a.Id).SingleOrDefaultAsync(abbruch);
+        if (anmeldungId is not { } anmeldung || await lesen.TeamNotizen.AnyAsync(n => n.AnmeldungId == anmeldung, abbruch))
+        {
+            return;
+        }
+
+        var lea = (await sender.Send(new KontoSicherstellen("lea.feuerstein@example.org"), abbruch)).PersonId;
+        if (await sender.Send(new TeamNotizAnlegenCommand(freizeitId, anmeldung, lea, DemoKatalog.TeamNotizZuMia), abbruch) is not TeamNotizAenderung.Angelegt)
+        {
+            throw new InvalidOperationException("Demo-Team-Notiz: ließ sich nicht anlegen.");
+        }
+    }
+
+    private static Task<Guid> OrganisationIdAsync(IServiceProvider dienste, CancellationToken abbruch) =>
+        dienste.GetRequiredService<OrganisationenLeseDbContext>().Organisationen
+            .Where(o => o.Name == DemoKatalog.Organisation.Name)
+            .Select(o => o.Id)
+            .SingleAsync(abbruch);
+
+    private static Task<Guid> KindAsync(PersonenLeseDbContext personen, Guid eltern, string vorname, CancellationToken abbruch) =>
+        personen.Personen
+            .Where(p => p.Vorname == vorname && personen.Elternteile.Any(e => e.PersonId == eltern && e.FamilieId == p.FamilieId))
+            .Select(p => p.Id)
+            .SingleAsync(abbruch);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Demo-Daten eingespielt ({AnzahlPersonen} Personen im Katalog, {NeueKonten} neue Konten).")]
     private partial void Eingespielt(int anzahlPersonen, int neueKonten);

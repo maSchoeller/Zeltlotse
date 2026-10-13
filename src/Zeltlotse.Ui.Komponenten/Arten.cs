@@ -71,3 +71,6 @@ public sealed record FeldFehler(string FeldId, string Text);
 /// <summary>Eine Zeile einer <see cref="StatusListe"/>: Text, Status-Wort und seine Art.</summary>
 /// <param name="Darunter">Optional eine Zeile unter dem Eintrag, z. B. der Kontakt für Absagen (statisch tauglich).</param>
 public sealed record StatusEintrag(string Text, string Wort, StatusArt Art, RenderFragment? Darunter = null);
+
+/// <summary>Eine Zeile einer <see cref="DetailsListe"/>: Begriff (z. B. eine Frage) und Wert (z. B. die Antwort).</summary>
+public sealed record DetailsEintrag(string Begriff, string Wert);

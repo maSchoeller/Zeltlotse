@@ -95,17 +95,22 @@ public sealed class AnmeldeKontaktTests(PostgresContainer postgres) : IAsyncLife
     public void Beenden_setzt_gueltig_bis_auf_jetzt_ein_spaeteres_Beenden_und_ein_abgelaufenes_Ende_bleiben()
     {
         var jetzt = new DateTimeOffset(2026, 7, 1, 8, 0, 0, TimeSpan.Zero);
-        var freigabe = Freigabe.Leitung(Guid.CreateVersion7(), OrgA, Guid.CreateVersion7(), Freizeit, Guid.CreateVersion7(), jetzt.AddDays(60), jetzt);
+        var freigabe = Freigabe.Leitung(Guid.CreateVersion7(), OrgA, Guid.CreateVersion7(), Freizeit, Guid.CreateVersion7(), jetzt.AddDays(60), jetzt, ["allergien"]);
+        Assert.Equal(["allergien"], freigabe.Fragen);
 
-        freigabe.ZuTeam();
+        // Story 2-5: ohne Fragen im Ereignis (vor Story 2-5) bleiben die bisherigen; sonst ersetzt die Bestätigung sie.
+        freigabe.ZuTeam(null);
         Assert.Equal(FreigabeStufe.Team, freigabe.Stufe);
+        Assert.Equal(["allergien"], freigabe.Fragen);
+        freigabe.ZuTeam(["notfallkontakte", "schwimmen"]);
+        Assert.Equal(["notfallkontakte", "schwimmen"], freigabe.Fragen);
 
         freigabe.Beenden(jetzt.AddDays(1));
         Assert.Equal(jetzt.AddDays(1), freigabe.GueltigBis);
         freigabe.Beenden(jetzt.AddDays(2));
         Assert.Equal(jetzt.AddDays(1), freigabe.GueltigBis);
 
-        var abgelaufen = Freigabe.Leitung(Guid.CreateVersion7(), OrgA, Guid.CreateVersion7(), Freizeit, Guid.CreateVersion7(), jetzt, jetzt.AddDays(-30));
+        var abgelaufen = Freigabe.Leitung(Guid.CreateVersion7(), OrgA, Guid.CreateVersion7(), Freizeit, Guid.CreateVersion7(), jetzt, jetzt.AddDays(-30), []);
         abgelaufen.Beenden(jetzt.AddDays(5));
         Assert.Equal(jetzt, abgelaufen.GueltigBis);
     }
@@ -116,11 +121,16 @@ public sealed class AnmeldeKontaktTests(PostgresContainer postgres) : IAsyncLife
         var kind = await SendenAsync(new KindAnlegen(await ProfilAsync(), "Emma", null, new DateOnly(2017, 9, 2)));
         var anmeldung = Guid.CreateVersion7();
         var bis = _factory.Uhr.GetUtcNow().AddDays(60);
-        await ZustellenAsync(FreigabeAnlegen.Aus(Umschlag(), new AnmeldungEingegangen(anmeldung, Freizeit, kind, AnmeldungArt.Teilnehmende, bis)));
+        await ZustellenAsync(FreigabeAnlegen.Aus(
+            Umschlag(), new AnmeldungEingegangen(anmeldung, Freizeit, kind, AnmeldungArt.Teilnehmende, bis, [FreizeitpassFrage.Schwimmen, FreizeitpassFrage.Allergien])));
+        // Story 2-5: die Kennungen in Katalogreihenfolge.
+        Assert.Equal(["allergien", "schwimmen"], (await FreigabeAsync()).Fragen);
 
-        await ZustellenAsync(FreigabeTeamSetzen.Aus(Umschlag(), new AnmeldungBestaetigt(anmeldung, Freizeit, kind, AnmeldungArt.Teilnehmende)));
+        await ZustellenAsync(FreigabeTeamSetzen.Aus(
+            Umschlag(), new AnmeldungBestaetigt(anmeldung, Freizeit, kind, AnmeldungArt.Teilnehmende, [FreizeitpassFrage.ZeckenEntfernen, FreizeitpassFrage.Notfallkontakte])));
         var team = await FreigabeAsync();
         Assert.Equal((FreigabeStufe.Team, bis), (team.Stufe, team.GueltigBis));
+        Assert.Equal(["notfallkontakte", "zecken-entfernen"], team.Fragen);
 
         _factory.Uhr.Advance(TimeSpan.FromDays(3));
         var ende = _factory.Uhr.GetUtcNow();
@@ -151,10 +161,10 @@ public sealed class AnmeldeKontaktTests(PostgresContainer postgres) : IAsyncLife
     private async Task<FreigabeLesen> FreigabeAsync()
     {
         var freigabe = Assert.Single(await LesenAsync(db => db.Freigaben.ToListAsync(Abbruch)));
-        return new FreigabeLesen(freigabe.Stufe, freigabe.GueltigBis);
+        return new FreigabeLesen(freigabe.Stufe, freigabe.GueltigBis, freigabe.Fragen);
     }
 
-    private sealed record FreigabeLesen(FreigabeStufe Stufe, DateTimeOffset GueltigBis);
+    private sealed record FreigabeLesen(FreigabeStufe Stufe, DateTimeOffset GueltigBis, string[] Fragen);
 
     private Umschlag Umschlag() => new(Guid.CreateVersion7(), _factory.Uhr.GetUtcNow(), OrgA, Guid.CreateVersion7(), 1);
 

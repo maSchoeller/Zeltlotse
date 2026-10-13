@@ -31,6 +31,12 @@ public enum EntscheidungErgebnis
     NichtVerfuegbar,
 }
 
+/// <summary>
+/// Ergebnis von <see cref="FreizeitenApiClient.TeamNotizAnlegenAsync"/> (Story 2-5): die Kennung der Notiz, der Fehler am Feld <c>text</c>
+/// oder nicht (mehr) verfügbar (<c>403</c>/<c>404</c>).
+/// </summary>
+public sealed record TeamNotizErgebnis(Guid? Id, string? TextFehler, bool NichtVerfuegbar);
+
 /// <summary>Ergebnis von <see cref="FreizeitenApiClient.LeitungEinladenAsync"/>: die Kennung der Einladung oder der Fehler an der Mail-Adresse.</summary>
 public sealed record LeitungEinladenErgebnis(Guid? Id, string? MailFehler);
 
@@ -241,6 +247,56 @@ public sealed class FreizeitenApiClient(HttpClient http)
     /// <summary><c>POST /api/freizeiten/{freizeitId}/anmeldungen/{anmeldungId}/absagen</c> (Leitung, FR-21).</summary>
     public Task<EntscheidungErgebnis> AbsagenAsync(Guid freizeitId, Guid anmeldungId, CancellationToken abbruch = default) =>
         EntscheidenAsync($"/api/freizeiten/{freizeitId}/anmeldungen/{anmeldungId}/absagen", abbruch);
+
+    /// <summary>
+    /// <c>GET /api/freizeiten/{freizeitId}/personenliste</c> (Leitung und Team, Story 2-5): eingegangene und bestätigte Anmeldungen mit
+    /// Namen oder <c>null</c> bei <c>403</c>/<c>404</c>.
+    /// </summary>
+    public Task<List<PersonenlisteZeile>?> PersonenlisteLadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
+        LadenAsync<List<PersonenlisteZeile>>($"/api/freizeiten/{freizeitId}/personenliste", abbruch);
+
+    /// <summary>Pfad der Team-Notizen einer Anmeldung (Story 2-5).</summary>
+    public static string TeamNotizenPfad(Guid freizeitId, Guid anmeldungId) => $"/api/freizeiten/{freizeitId}/anmeldungen/{anmeldungId}/notizen";
+
+    /// <summary><c>GET …/anmeldungen/{anmeldungId}/notizen</c> (Story 2-5): neueste zuerst oder <c>null</c> bei <c>403</c>/<c>404</c>.</summary>
+    public Task<List<TeamNotiz>?> TeamNotizenLadenAsync(Guid freizeitId, Guid anmeldungId, CancellationToken abbruch = default) =>
+        LadenAsync<List<TeamNotiz>>(TeamNotizenPfad(freizeitId, anmeldungId), abbruch);
+
+    /// <summary>
+    /// <c>POST …/anmeldungen/{anmeldungId}/notizen</c> (Story 2-5): die Kennung bei <c>201</c>, der Fehler am Feld <c>text</c> bei <c>400</c>
+    /// oder „nicht verfügbar“ bei <c>403</c>/<c>404</c>.
+    /// </summary>
+    public async Task<TeamNotizErgebnis> TeamNotizAnlegenAsync(Guid freizeitId, Guid anmeldungId, string? text, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync(TeamNotizenPfad(freizeitId, anmeldungId), new TeamNotizAnlegen(text), ApiJson.Optionen, abbruch);
+        if (antwort.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+        {
+            return new TeamNotizErgebnis(null, null, NichtVerfuegbar: true);
+        }
+
+        if (antwort.StatusCode == HttpStatusCode.BadRequest && await ApiFehler.FeldFehlerAsync(antwort, TeamNotizFelder.Text, abbruch) is { } fehler)
+        {
+            return new TeamNotizErgebnis(null, fehler, NichtVerfuegbar: false);
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        var inhalt = await antwort.Content.ReadFromJsonAsync<TeamNotizAngelegt>(ApiJson.Optionen, abbruch)
+                     ?? throw new HttpRequestException("Leere Antwort beim Anlegen der Team-Notiz.");
+        return new TeamNotizErgebnis(inhalt.Id, null, NichtVerfuegbar: false);
+    }
+
+    /// <summary><c>DELETE …/notizen/{notizId}</c> (Story 2-5): <c>true</c> bei <c>204</c>, <c>false</c> bei <c>403</c>/<c>404</c>.</summary>
+    public async Task<bool> TeamNotizLoeschenAsync(Guid freizeitId, Guid anmeldungId, Guid notizId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.DeleteAsync($"{TeamNotizenPfad(freizeitId, anmeldungId)}/{notizId}", abbruch);
+        if (antwort.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return true;
+    }
 
     private async Task<EntscheidungErgebnis> EntscheidenAsync(string pfad, CancellationToken abbruch)
     {

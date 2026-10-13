@@ -209,6 +209,12 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 // Story 2-4: Fragen-Auswahl des Freizeitpasses (Leitung).
                 "GET /api/freizeiten/{freizeitId:guid}/fragen",
                 "PATCH /api/freizeiten/{freizeitId:guid}/fragen",
+                // Story 2-5: Freizeitpass im Freizeit-Kontext (Personen), Personenliste und Team-Notizen (Freizeiten), Leitung und Team.
+                "GET /api/freizeiten/{freizeitId:guid}/personen/freizeitpass/{personId:guid}",
+                "GET /api/freizeiten/{freizeitId:guid}/personenliste",
+                "GET /api/freizeiten/{freizeitId:guid}/anmeldungen/{anmeldungId:guid}/notizen",
+                "POST /api/freizeiten/{freizeitId:guid}/anmeldungen/{anmeldungId:guid}/notizen",
+                "DELETE /api/freizeiten/{freizeitId:guid}/anmeldungen/{anmeldungId:guid}/notizen/{notizId:guid}",
             }.Order(StringComparer.Ordinal),
             freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
         Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));

@@ -8,6 +8,10 @@ public enum ZugriffZweck
 {
     [JsonStringEnumMemberName("nachweiseEingesehen")]
     NachweiseEingesehen = 1,
+
+    /// <summary>Story 2-5: Leitung oder Team hat den Freizeitpass im Freizeit-Kontext gesehen (AD-8).</summary>
+    [JsonStringEnumMemberName("freizeitpassEingesehen")]
+    FreizeitpassEingesehen = 2,
 }
 
 /// <summary>

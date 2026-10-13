@@ -3,6 +3,8 @@
 @using Zeltlotse.Api.Contracts.Personen
 @inject FreizeitenApiClient Freizeiten
 @inject PersonenApiClient Personen
+@inject TimeProvider Uhr
+@* Story 2-5: unter dem Kopf „Einsicht bis TT.MM.JJJJ“ bzw. „Einsicht beendet am TT.MM.JJJJ“ (bis wann die Freizeit den Pass sieht). *@
 @* Freizeitpass ausfüllen (FR-22, FR-23, EXPERIENCE.md → Fläche „Freizeitpass ausfüllen“, NS-2, Story 2-4): Die Seite setzt zwei
    Endpunkte zusammen (AD-2): Freizeiten liefert an der eigenen Anmeldung die Fragen der Freizeit, Personen den Pass der Person mit
    allen Antworten. Gezeigt werden nur die abgefragten Fragen in Katalogreihenfolge (Allergien, Medikamente und Notfallkontakte
@@ -38,6 +40,10 @@ else
     else
     {
         <p>@_anmeldung.FreizeitName · @Anzeige.Zeitraum(_anmeldung.ErsterTag, _anmeldung.LetzterTag)</p>
+        @if (_anmeldung.EinsichtBis is { } einsichtBis)
+        {
+            <p>@Anzeige.Einsicht(einsichtBis, Uhr.GetUtcNow())</p>
+        }
         @if (Fragen.Count == 0)
         {
             <LeerZustand Satz="Diese Freizeit fragt keine Angaben ab." KnopfText="Zur Familienübersicht" KnopfHref="familie" />

@@ -9,6 +9,8 @@
 @inject FreizeitenApiClient Freizeiten
 @inject PersonenApiClient Personen
 @inject NavigationManager Navigation
+@inject TimeProvider Uhr
+@* Story 2-5: unter der Überschrift „Einsicht bis TT.MM.JJJJ“ bzw. „Einsicht beendet am TT.MM.JJJJ“. *@
 @* Freizeitpass über den Gast-Link (FR-17, FR-23, AD-11, AD-29, Story 2-4): ein klassisches Formular ohne Skript mit allen Fragen, die
    die Freizeit für diese Anmeldung abfragt (in Katalogreihenfolge), vorausgefüllt mit den Antworten der Person. Veraltete Angaben
    tragen „Stimmt das noch?“ mit dem Haken „Stimmt noch“. „Speichern“ schickt alle Antworten der Seite (zwei API-Aufrufe zum Laden: die
@@ -33,6 +35,10 @@ else if (_anmeldung is not null && _pass is not null)
     <OeffentlicherRahmen>
         <Dachzeile>@_anmeldung.FreizeitName · @Anzeige.ZeitraumLang(_anmeldung.ErsterTag, _anmeldung.LetzterTag)</Dachzeile>
         <h1>Freizeitpass für @_anmeldung.Vorname</h1>
+        @if (_anmeldung.EinsichtBis is { } einsichtBis)
+        {
+            <p>@Anzeige.Einsicht(einsichtBis, Uhr.GetUtcNow())</p>
+        }
         @if (_gespeichert)
         {
             <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">

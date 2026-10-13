@@ -199,6 +199,20 @@ public static class Fragenkatalog
         return [.. Fragen.Where(f => menge.Contains(f.Kennung)).Select(f => f.Kennung)];
     }
 
+    /// <summary>
+    /// Story 2-5: die PascalCase-Form einer Kennung (<c>zecken-entfernen</c> → <c>ZeckenEntfernen</c>), der Name des Enum-Mitglieds, unter
+    /// dem Ereignisse die Frage tragen (AD-4).
+    /// </summary>
+    public static string PascalName(string kennung)
+    {
+        ArgumentNullException.ThrowIfNull(kennung);
+        return string.Concat(kennung.Split('-', StringSplitOptions.RemoveEmptyEntries).Select(t => char.ToUpperInvariant(t[0]) + t[1..]));
+    }
+
+    /// <summary>Story 2-5: die Kennung zur PascalCase-Form (<c>ZeckenEntfernen</c> → <c>zecken-entfernen</c>); unbekannt <c>null</c>.</summary>
+    public static string? KennungAusPascalName(string name) =>
+        Fragen.Select(f => f.Kennung).FirstOrDefault(k => string.Equals(PascalName(k), name, StringComparison.Ordinal));
+
     private static string? Leer(string? wert) => string.IsNullOrWhiteSpace(wert) ? null : wert.Trim();
 
     private static List<string> Liste(string text) =>

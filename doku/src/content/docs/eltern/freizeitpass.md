@@ -16,6 +16,8 @@ Die Antworten **gehören der Person**, nicht der Freizeit. Bei der nächsten Fre
 
 Fehlt eine abgefragte Angabe oder ist sie älter als 12 Monate, steht neben dem Link **Freizeitpass prüfen**.
 
+Unter jeder Anmeldung steht außerdem **Einsicht bis TT.MM.JJJJ**: bis zu diesem Tag sieht die Freizeit den Freizeitpass. Ist der Tag vorbei oder hat die Leitung eine Absage eingetragen, steht dort **Einsicht beendet am TT.MM.JJJJ**. Dieselbe Zeile steht oben im Freizeitpass und auf dem Gast-Link.
+
 Direkt nach einer Anmeldung mit Konto führt auch der Knopf **Freizeitpass für … ausfüllen** auf der Seite „Anmeldung eingegangen“ dorthin (siehe [Kind anmelden](/eltern/kind-anmelden/#mit-konto-anmelden)).
 
 ![Seite „Freizeitpass für Emma“ am Handy: oben „Allergien und Unverträglichkeiten“ mit angekreuzter Milch, darunter „Sonstiges“, „Medikamente“ und „Notfallkontakte“](../../../assets/screenshots/freizeitpass-handy.png)
@@ -64,4 +66,4 @@ Wird aus der Gast-Anmeldung später ein Konto (**Konto aus diesen Daten erstelle
 
 ## Wer die Angaben sieht
 
-Die Angaben sind verschlüsselt gespeichert und gehören der Person. Für die Freizeit gilt die **Freigabe**: Einsicht bekommt sie nur befristet und nur in die Fragen, die sie abgefragt hat – die Leitung ab dem Eingang der Anmeldung, das Team ab der Bestätigung, bis zum Ende des Freigabefensters. Einzelheiten stehen unter [Was passiert mit meinen Daten](/daten/).
+Die Angaben sind verschlüsselt gespeichert und gehören der Person. Für die Freizeit gilt die **Freigabe**: Einsicht bekommt sie nur befristet und nur in die Fragen, die sie abgefragt hat – die Leitung ab dem Eingang der Anmeldung, das Team ab der Bestätigung, bis zum Tag hinter „Einsicht bis“. Jeder Blick von Leitung oder Team auf die Angaben steht als „Freizeitpass eingesehen“ im Zugriffsprotokoll (siehe [Zugriffsprotokoll und Meine Daten](/erste-schritte/meine-daten/)). Notizen, die das Team auf der Freizeit schreibt, erscheinen nicht im Freizeitpass; sie stehen nur in der Datenauskunft. Einzelheiten stehen unter [Was passiert mit meinen Daten](/daten/).

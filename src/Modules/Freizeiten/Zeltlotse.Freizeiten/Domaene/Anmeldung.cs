@@ -54,9 +54,13 @@ internal sealed class Anmeldung : Aggregat, IOrganisationsEigen
     /// <summary>Wann die Leitung bestätigt oder abgesagt hat; bei „eingegangen“ leer.</summary>
     public DateTimeOffset? EntschiedenAm { get; private set; }
 
-    /// <summary>Eine neue Anmeldung „eingegangen“; legt das Ereignis mit dem Ende des Freigabefensters ab.</summary>
+    /// <summary>
+    /// Eine neue Anmeldung „eingegangen“; legt das Ereignis mit dem Ende des Freigabefensters und den Fragen ab, die die Freizeit für die
+    /// Art der Anmeldung jetzt abfragt (Story 2-5).
+    /// </summary>
     public static Anmeldung Eingehen(
-        Guid id, Guid organisationId, Guid freizeitId, Guid personId, AnmeldeArt art, DateTimeOffset jetzt, DateTimeOffset freigabeGueltigBis)
+        Guid id, Guid organisationId, Guid freizeitId, Guid personId, AnmeldeArt art, DateTimeOffset jetzt, DateTimeOffset freigabeGueltigBis,
+        IReadOnlyList<string> fragen)
     {
         var anmeldung = new Anmeldung
         {
@@ -69,15 +73,16 @@ internal sealed class Anmeldung : Aggregat, IOrganisationsEigen
             EingegangenAm = jetzt,
             TeilnahmebedingungenBestaetigtAm = jetzt,
         };
-        anmeldung.EreignisAblegen(new AnmeldungEingegangen(id, freizeitId, personId, Ereignis(art), freigabeGueltigBis));
+        anmeldung.EreignisAblegen(new AnmeldungEingegangen(id, freizeitId, personId, Ereignis(art), freigabeGueltigBis, FragenImEreignis.Aus(fragen)));
         return anmeldung;
     }
 
     /// <summary>
     /// Eingegangen → bestätigt (FR-20): legt <see cref="AnmeldungBestaetigt"/> und die Bestätigungs-Mail ab. Jeder andere Status
-    /// bleibt, wie er ist, und das Ergebnis ist <c>false</c> (kein Ereignis, keine Mail).
+    /// bleibt, wie er ist, und das Ergebnis ist <c>false</c> (kein Ereignis, keine Mail). Das Ereignis trägt die Fragen, die die Freizeit für die
+    /// Art der Anmeldung jetzt abfragt (Story 2-5).
     /// </summary>
-    public bool Bestaetigen(DateTimeOffset jetzt)
+    public bool Bestaetigen(DateTimeOffset jetzt, IReadOnlyList<string> fragen)
     {
         if (Status != AnmeldeStatus.Eingegangen)
         {
@@ -86,7 +91,7 @@ internal sealed class Anmeldung : Aggregat, IOrganisationsEigen
 
         Status = AnmeldeStatus.Bestaetigt;
         EntschiedenAm = jetzt;
-        EreignisAblegen(new AnmeldungBestaetigt(Id, FreizeitId, PersonId, Ereignis(Art)));
+        EreignisAblegen(new AnmeldungBestaetigt(Id, FreizeitId, PersonId, Ereignis(Art), FragenImEreignis.Aus(fragen)));
         MailVormerken(new AnmeldungEntschiedenMail(Id, Entscheidung.Bestaetigt));
         return true;
     }

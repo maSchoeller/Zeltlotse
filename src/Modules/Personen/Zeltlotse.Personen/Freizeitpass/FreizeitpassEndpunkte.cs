@@ -24,9 +24,17 @@ internal static class FreizeitpassAbfrage
         PersonenLeseDbContext db, IVerschluesselung verschluesselung, Guid personId, DateTimeOffset jetzt, CancellationToken abbruch)
     {
         var vorname = await db.Personen.Where(p => p.Id == personId).Select(p => p.Vorname).SingleOrDefaultAsync(abbruch);
+        return new FreizeitpassAnsicht(personId, vorname, await FragenAsync(db, verschluesselung, personId, Fragenkatalog.Fragen, jetzt, abbruch));
+    }
+
+    /// <summary>Die übergebenen Katalogfragen in ihrer Reihenfolge mit den entschlüsselten Antworten der Person (Story 2-5: auch gefiltert).</summary>
+    public static async Task<List<FreizeitpassFrage>> FragenAsync(
+        PersonenLeseDbContext db, IVerschluesselung verschluesselung, Guid personId, IEnumerable<Katalogfrage> katalogfragen, DateTimeOffset jetzt,
+        CancellationToken abbruch)
+    {
         var antworten = await db.FreizeitpassAntworten.Where(a => a.PersonId == personId).ToDictionaryAsync(a => a.Kennung, StringComparer.Ordinal, abbruch);
         var fragen = new List<FreizeitpassFrage>();
-        foreach (var frage in Fragenkatalog.Fragen)
+        foreach (var frage in katalogfragen)
         {
             var antwort = antworten.GetValueOrDefault(frage.Kennung);
             fragen.Add(new FreizeitpassFrage(
@@ -41,7 +49,7 @@ internal static class FreizeitpassAbfrage
                 antwort is not null && FreizeitpassAntwort.IstVeraltet(antwort.Beantwortet, antwort.BestaetigtAm, jetzt)));
         }
 
-        return new FreizeitpassAnsicht(personId, vorname, fragen);
+        return fragen;
     }
 
     public static FrageArt Art(Antworttyp typ) => typ switch

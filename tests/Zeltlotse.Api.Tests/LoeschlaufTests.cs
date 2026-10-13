@@ -86,10 +86,17 @@ public sealed class LoeschlaufTests(PostgresContainer postgres)
                 "INSERT INTO personen.nachweis_erinnerung (\"Id\", \"OrganisationId\", \"FreizeitId\", \"PersonId\", \"ErinnertVon\", \"ErinnertAm\", \"Folgenummer\") VALUES (@id, @org, @fz, @p, @v, now(), 1)",
                 ("id", Guid.CreateVersion7()), ("org", org), ("fz", freizeit), ("p", Guid.CreateVersion7()), ("v", Guid.CreateVersion7()));
             // Anmeldungen sind Arbeitsdaten der Freizeit (Story 2-2) und fallen mit derselben Frist.
+            var anmeldung = Guid.CreateVersion7();
+            var person = Guid.CreateVersion7();
             await AusfuehrenAsync(
                 verbindung,
                 "INSERT INTO freizeiten.anmeldung (\"Id\", \"OrganisationId\", \"FreizeitId\", \"PersonId\", \"Art\", \"Status\", \"EingegangenAm\", \"TeilnahmebedingungenBestaetigtAm\", \"Folgenummer\") VALUES (@id, @org, @fz, @p, 1, 1, now(), now(), 0)",
-                ("id", Guid.CreateVersion7()), ("org", org), ("fz", freizeit), ("p", Guid.CreateVersion7()));
+                ("id", anmeldung), ("org", org), ("fz", freizeit), ("p", person));
+            // Story 2-5: Team-Notizen fallen mit ihren Anmeldungen.
+            await AusfuehrenAsync(
+                verbindung,
+                "INSERT INTO freizeiten.team_notiz (\"Id\", \"OrganisationId\", \"FreizeitId\", \"AnmeldungId\", \"PersonId\", \"VerfasstVon\", \"Text\", \"AngelegtAm\") VALUES (@id, @org, @fz, @a, @p, @v, '\\x00'::bytea, now())",
+                ("id", Guid.CreateVersion7()), ("org", org), ("fz", freizeit), ("a", anmeldung), ("p", person), ("v", Guid.CreateVersion7()));
         }
 
         var auftrag = await factory.Services.GetRequiredService<Loeschlauf>().LaufAsync(Abbruch);
@@ -97,6 +104,7 @@ public sealed class LoeschlaufTests(PostgresContainer postgres)
         Assert.Equal(new[] { a13, b2 }.Order(), auftrag.FreizeitenMitAbgelaufenenDaten.Order());
         Assert.Equal([a11], await KennungenAsync(verbindung, "SELECT \"FreizeitId\" FROM personen.nachweis_erinnerung"));
         Assert.Equal([a11], await KennungenAsync(verbindung, "SELECT \"FreizeitId\" FROM freizeiten.anmeldung"));
+        Assert.Equal([a11], await KennungenAsync(verbindung, "SELECT \"FreizeitId\" FROM freizeiten.team_notiz"));
         // Freizeit-Rollen und Freizeiten selbst löscht keine Frist.
         Assert.Equal(3L, await WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.freizeit"));
     }

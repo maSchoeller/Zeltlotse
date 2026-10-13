@@ -514,6 +514,13 @@ public sealed class PersonenApiClient(HttpClient http)
         return true;
     }
 
+    /// <summary>
+    /// <c>GET /api/freizeiten/{freizeitId}/personen/freizeitpass/{personId}</c> (Leitung und Team, Story 2-5): Zustand und, wenn sichtbar,
+    /// die Fragen der Freigabe mit Antworten; <c>null</c> bei <c>403</c>/<c>404</c>.
+    /// </summary>
+    public Task<FreizeitpassEinsicht?> FreizeitpassEinsichtLadenAsync(Guid freizeitId, Guid personId, CancellationToken abbruch = default) =>
+        LadenOderNullAsync<FreizeitpassEinsicht>($"/api/freizeiten/{freizeitId}/personen/freizeitpass/{personId}", abbruch);
+
     /// <summary>Pfad des Freizeitpasses eines Kindes über den Gast-Link (anonym, Story 2-4).</summary>
     public static string GastFreizeitpassPfad(string gastToken, Guid personId) =>
         $"/api/personen/oeffentlich/gaeste/{Uri.EscapeDataString(gastToken)}/freizeitpass/{personId}";

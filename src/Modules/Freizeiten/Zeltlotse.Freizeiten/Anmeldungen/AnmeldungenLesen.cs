@@ -33,6 +33,10 @@ internal static class AnmeldungWerte
 
 /// <summary>Eine Anmeldung einer Person mit den Übersichtsfeldern ihrer Freizeit und dem Kontakt der Leitung für Absagen (FR-21).</summary>
 /// <param name="Fragen">Die Fragen des Freizeitpasses, die die Freizeit für die Art der Anmeldung abfragt (Story 2-4, FR-22).</param>
+/// <param name="EinsichtBis">
+/// Story 2-5: bis wann die Freizeit Einsicht in den Freizeitpass hat: nach einer Absage deren Zeitpunkt (wie beim Beenden der Freigabe),
+/// sonst das Ende des Freigabefensters (AD-17, dieselbe Rechnung wie <c>IFreizeitZeitpunkte</c>).
+/// </param>
 internal sealed record AnmeldungDerPerson(
     Guid AnmeldungId,
     Guid PersonId,
@@ -43,7 +47,8 @@ internal sealed record AnmeldungDerPerson(
     AnmeldeStatus Status,
     string? KontaktMail,
     string? KontaktTelefon,
-    IReadOnlyList<string> Fragen);
+    IReadOnlyList<string> Fragen,
+    DateTimeOffset EinsichtBis);
 
 /// <summary>
 /// Liest Anmeldungen einer Menge von Personen über Organisationen hinweg (personenbezogener Lesepfad, AD-26): ohne Mandantenfilter,
@@ -51,29 +56,40 @@ internal sealed record AnmeldungDerPerson(
 /// </summary>
 internal static class AnmeldungenDerPersonen
 {
+    /// <summary>
+    /// Ende der Einsicht wie beim Beenden der Freigabe: nach einer Absage der frühere Zeitpunkt aus Absage und Ende des Freigabefensters,
+    /// sonst das Ende des Freigabefensters.
+    /// </summary>
+    public static DateTimeOffset EinsichtBis(AnmeldeStatus status, DateTimeOffset? entschiedenAm, DateTimeOffset freigabeGueltigBis) =>
+        status == AnmeldeStatus.Abgesagt && entschiedenAm is { } abgesagt && abgesagt < freigabeGueltigBis ? abgesagt : freigabeGueltigBis;
+
     public static async Task<IReadOnlyList<AnmeldungDerPerson>> LesenAsync(
         FreizeitenLeseDbContext db, IReadOnlyCollection<Guid> personIds, CancellationToken abbruch)
     {
         var ids = personIds.ToList();
         var anmeldungen = await db.Anmeldungen.IgnoreQueryFilters()
             .Where(a => ids.Contains(a.PersonId))
-            .Select(a => new { a.Id, a.PersonId, a.FreizeitId, a.Art, a.Status })
+            .Select(a => new { a.Id, a.PersonId, a.FreizeitId, a.Art, a.Status, a.EntschiedenAm })
             .ToListAsync(abbruch);
         var freizeitIds = anmeldungen.Select(a => a.FreizeitId).Distinct().ToList();
         var freizeiten = await db.Freizeiten.IgnoreQueryFilters()
             .Where(f => freizeitIds.Contains(f.Id))
-            .Select(f => new { f.Id, f.Name, f.ErsterTag, f.LetzterTag, f.KontaktMail, f.KontaktTelefon, f.FragenTeilnehmende, f.FragenMitarbeitende })
+            .Select(f => new
+            {
+                f.Id, f.Name, f.ErsterTag, f.LetzterTag, f.KontaktMail, f.KontaktTelefon, f.FragenTeilnehmende, f.FragenMitarbeitende, f.FreigabeIntervallTage,
+            })
             .ToDictionaryAsync(f => f.Id, abbruch);
         return
         [
             .. anmeldungen
-                .Select(a => (a.Id, a.PersonId, Freizeit: freizeiten[a.FreizeitId], a.Art, a.Status))
+                .Select(a => (a.Id, a.PersonId, Freizeit: freizeiten[a.FreizeitId], a.Art, a.Status, a.EntschiedenAm))
                 .OrderByDescending(a => a.Freizeit.ErsterTag)
                 .ThenBy(a => a.Freizeit.Name, StringComparer.CurrentCulture)
                 .ThenBy(a => a.Id)
                 .Select(a => new AnmeldungDerPerson(
                     a.Id, a.PersonId, a.Freizeit.Name, a.Freizeit.ErsterTag, a.Freizeit.LetzterTag, a.Art, a.Status, a.Freizeit.KontaktMail, a.Freizeit.KontaktTelefon,
-                    a.Art == AnmeldeArt.Mitarbeitende ? a.Freizeit.FragenMitarbeitende : a.Freizeit.FragenTeilnehmende)),
+                    a.Art == AnmeldeArt.Mitarbeitende ? a.Freizeit.FragenMitarbeitende : a.Freizeit.FragenTeilnehmende,
+                    EinsichtBis(a.Status, a.EntschiedenAm, FreizeitZeiten.FreigabeGueltigBis(a.Freizeit.LetzterTag, a.Freizeit.FreigabeIntervallTage)))),
         ];
     }
 }
@@ -91,7 +107,7 @@ internal static class MeineAnmeldungenEndpunkt
         return TypedResults.Ok(zeilen
             .Select(z => new AnmeldungZeile(
                 z.AnmeldungId, z.PersonId, z.FreizeitName, z.ErsterTag, z.LetzterTag, AnmeldungWerte.Art(z.Art), AnmeldungWerte.Status(z.Status), z.KontaktMail, z.KontaktTelefon,
-                z.Fragen))
+                z.Fragen, z.EinsichtBis))
             .ToList());
     }
 }
@@ -118,7 +134,7 @@ internal static class GastLinkEndpunkt
             [
                 .. zeilen.Select(z => new GastLinkAnmeldung(
                     vornamen.GetValueOrDefault(z.PersonId)?.Vorname ?? "", z.FreizeitName, z.ErsterTag, z.LetzterTag, AnmeldungWerte.Status(z.Status),
-                    z.KontaktMail, z.KontaktTelefon, z.AnmeldungId, z.PersonId, z.Fragen)),
+                    z.KontaktMail, z.KontaktTelefon, z.AnmeldungId, z.PersonId, z.Fragen, z.EinsichtBis)),
             ]));
     }
 }

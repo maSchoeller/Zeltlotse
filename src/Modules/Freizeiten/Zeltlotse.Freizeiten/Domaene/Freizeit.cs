@@ -245,6 +245,14 @@ internal sealed class Freizeit : Aggregat, IOrganisationsEigen
         return true;
     }
 
+    /// <summary>Story 2-5: die gewählten Kennungen der Zielgruppe einer Anmeldung, in Katalogreihenfolge.</summary>
+    public IReadOnlyList<string> FragenFuer(AnmeldeArt art) => art switch
+    {
+        AnmeldeArt.Teilnehmende => FragenTeilnehmende,
+        AnmeldeArt.Mitarbeitende => FragenMitarbeitende,
+        _ => throw new ArgumentOutOfRangeException(nameof(art), art, null),
+    };
+
     public FreizeitPhase Phase(DateTimeOffset jetzt) => FreizeitZeiten.Phase(ErsterTag, LetzterTag, AbgeschlossenAm, jetzt);
 
     public FreizeitZeitpunkte Zeitpunkte(DateTimeOffset jetzt) => new(

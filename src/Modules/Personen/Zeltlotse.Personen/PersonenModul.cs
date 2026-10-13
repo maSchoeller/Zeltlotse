@@ -93,6 +93,9 @@ public static class PersonenModul
 
         FreizeitPruefEndpunkt.Abbilden(api.MapGroup($"/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/personen/nachweise")
             .NurFreizeitRolle(NachweisRechte.FreizeitPruefen));
+        // Story 2-5: Freizeitpass einer Person im Kontext der Freizeit (Leitung und Team, FR-24, AD-8).
+        api.MapGet($"/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/personen/freizeitpass/{{personId:guid}}", FreizeitpassEinsichtEndpunkt.Laden)
+            .NurFreizeitRolle(FreizeitpassRechte.Einsicht);
         OrgPruefEndpunkt.Abbilden(api.MapGroup($"/organisationen/{{{Rechtemerkmale.OrgRouteWert}:guid}}/personen/nachweise")
             .NurOrgRolle(NachweisRechte.OrgPruefen));
 

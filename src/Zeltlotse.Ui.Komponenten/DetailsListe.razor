@@ -1,0 +1,17 @@
+@* Details-Liste der Bibliothek (DESIGN.md → Components „Details-Liste“): Begriff und Wert untereinander bzw. nebeneinander, nur
+   lesend; auf dem Handy stehen Begriff und Wert untereinander. Statisch tauglich, ohne Ereignis-Handler; ohne Einträge erscheint
+   nichts. *@
+@if (Eintraege.Count > 0)
+{
+    <dl class="elkw-details">
+        @foreach (var eintrag in Eintraege)
+        {
+            <dt>@eintrag.Begriff</dt>
+            <dd>@eintrag.Wert</dd>
+        }
+    </dl>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<DetailsEintrag> Eintraege { get; set; } = [];
+}

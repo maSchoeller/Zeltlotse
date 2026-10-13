@@ -58,7 +58,18 @@ internal sealed class AnmeldungEntscheidenHandler(FreizeitenDbContext db, TimePr
         }
 
         var jetzt = uhr.GetUtcNow();
-        var entschieden = command.Entscheidung == Entscheidung.Bestaetigt ? anmeldung.Bestaetigen(jetzt) : anmeldung.Absagen(jetzt);
+        bool entschieden;
+        if (command.Entscheidung == Entscheidung.Bestaetigt)
+        {
+            // Story 2-5: Die Bestätigung trägt die Fragen, die die Freizeit jetzt für die Art der Anmeldung abfragt (Freizeit.FragenFuer).
+            var freizeit = await db.Freizeiten.AsNoTracking().SingleAsync(f => f.Id == anmeldung.FreizeitId, cancellationToken);
+            entschieden = anmeldung.Bestaetigen(jetzt, freizeit.FragenFuer(anmeldung.Art));
+        }
+        else
+        {
+            entschieden = anmeldung.Absagen(jetzt);
+        }
+
         if (!entschieden)
         {
             return EntscheidungErgebnis.SchonEntschieden;

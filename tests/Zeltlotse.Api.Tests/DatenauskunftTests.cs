@@ -152,6 +152,24 @@ public sealed class DatenauskunftTests(PostgresContainer postgres, S3Container s
     }
 
     [Fact]
+    public async Task Auskunft_nennt_Team_Notizen_ueber_die_Kinder_mit_Freizeit_Datum_und_Text_dem_Verfasser_nicht()
+    {
+        // Story 2-5 (FR-26): Team-Notizen erscheinen außerhalb der Freizeit nur in der Auskunft der betroffenen Person bzw. ihrer Familie.
+        await using var s = await FreizeitpassSzenario.AufbauenAsync(postgres);
+        var emma = await s.KindAnmeldenAsync(s.Emma);
+        var heute = FreizeitHelfer.Heute(s.Factory);
+        Assert.Equal(HttpStatusCode.Created, (await PostAsync(s.Miriam, FreizeitpassSzenario.NotizenPfad(s.X, emma), new Zeltlotse.Api.Contracts.Freizeiten.TeamNotizAnlegen("Braucht abends Licht im Zelt."))).StatusCode);
+
+        var auskunft = (await s.Katrin.GetFromJsonAsync<DatenauskunftAntwort>(Pfad, Abbruch))!;
+        var miriam = (await s.Miriam.GetFromJsonAsync<DatenauskunftAntwort>(Pfad, Abbruch))!;
+
+        Assert.Equal(
+            [new DatenauskunftZeile(FreizeitpassSzenario.Kapf, $"{heute:dd.MM.yyyy}: Braucht abends Licht im Zelt.")],
+            Abschnitt(auskunft, "Team-Notizen"));
+        Assert.DoesNotContain(miriam.Abschnitte, a => a.Titel == "Team-Notizen");
+    }
+
+    [Fact]
     public async Task Ohne_Sitzung_401()
     {
         await using var factory = Factory(await postgres.NeueDatenbankAsync());

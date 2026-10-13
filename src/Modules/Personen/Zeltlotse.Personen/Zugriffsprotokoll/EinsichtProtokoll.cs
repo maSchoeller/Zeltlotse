@@ -7,10 +7,13 @@ using Zeltlotse.SharedKernel.Commands;
 
 namespace Zeltlotse.Personen.Zugriffsprotokoll;
 
-/// <summary>Wofür jemand Einsicht hatte (AD-8); gespeichert als Zahl, nur anhängen (Freizeitpass-Zwecke folgen in V2).</summary>
+/// <summary>Wofür jemand Einsicht hatte (AD-8); gespeichert als Zahl, nur anhängen. Gleiche Werte wie <c>ZugriffZweck</c> der API.</summary>
 internal enum EinsichtZweck : short
 {
     NachweiseEingesehen = 1,
+
+    /// <summary>Story 2-5: Leitung oder Team hat den Freizeitpass im Freizeit-Kontext gesehen.</summary>
+    FreizeitpassEingesehen = 2,
 }
 
 /// <summary>

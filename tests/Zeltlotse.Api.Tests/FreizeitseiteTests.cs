@@ -107,7 +107,8 @@ public sealed class FreizeitseiteTests(PostgresContainer postgres) : IAsyncLifet
 
         Assert.Contains(Aktionsschluessel.FreizeitEinstellungen, leitung.GetProperty("erlaubt").EnumerateArray().Select(e => e.GetString()));
         Assert.Equal(["Team"], team.GetProperty("rollen").EnumerateArray().Select(r => r.GetString()));
-        Assert.Empty(team.GetProperty("erlaubt").EnumerateArray());
+        // Story 2-5: Das Team sieht Freizeitpässe, sonst nichts davon.
+        Assert.Equal([Aktionsschluessel.FreizeitpaesseSehen], team.GetProperty("erlaubt").EnumerateArray().Select(e => e.GetString()));
     }
 
     [Fact]

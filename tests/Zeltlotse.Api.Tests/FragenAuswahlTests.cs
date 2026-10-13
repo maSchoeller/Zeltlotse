@@ -176,7 +176,7 @@ public sealed class FragenAuswahlTests(PostgresContainer postgres) : IAsyncLifet
 
         var katrin = Assert.Single((await JsonAsync(await _katrin.GetAsync("/api/ich/anmeldungen", Abbruch))).EnumerateArray());
         Assert.Equal(
-            ["anmeldungId", "art", "ersterTag", "fragen", "freizeitName", "kontaktMail", "kontaktTelefon", "letzterTag", "personId", "status"],
+            ["anmeldungId", "art", "einsichtBis", "ersterTag", "fragen", "freizeitName", "kontaktMail", "kontaktTelefon", "letzterTag", "personId", "status"],
             Namen(katrin));
         Assert.Equal((emma, "allergien,notfallkontakte,schwimmen"), (katrin.GetProperty("anmeldungId").GetGuid(), Fragen(katrin)));
         var eigene = Assert.Single((await JsonAsync(await _jonas.GetAsync("/api/ich/anmeldungen", Abbruch))).EnumerateArray());
@@ -184,7 +184,7 @@ public sealed class FragenAuswahlTests(PostgresContainer postgres) : IAsyncLifet
 
         var gastLink = Assert.Single((await JsonAsync(await _anonym.GetAsync($"/api/freizeiten/gast/{gastToken}", Abbruch))).GetProperty("anmeldungen").EnumerateArray());
         Assert.Equal(
-            ["anmeldungId", "ersterTag", "fragen", "freizeitName", "kontaktMail", "kontaktTelefon", "letzterTag", "personId", "status", "vorname"],
+            ["anmeldungId", "einsichtBis", "ersterTag", "fragen", "freizeitName", "kontaktMail", "kontaktTelefon", "letzterTag", "personId", "status", "vorname"],
             Namen(gastLink));
         Assert.Equal((linaAnmeldung, lina, "allergien,notfallkontakte,schwimmen"), (
             gastLink.GetProperty("anmeldungId").GetGuid(), gastLink.GetProperty("personId").GetGuid(), Fragen(gastLink)));
