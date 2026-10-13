@@ -27,6 +27,7 @@ Test-Tempo ab 2-3 (Vorgabe von Marvin, 2026-10-12): Story-Sitzungen testen währ
 | 2026-10-13 06:40 | 2-3 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 354/354 / – | fccd1ad | Story um 22:57 fertig, Fertig-Meldung erreichte den Orchestrator nicht (Pipe von Kindprozessen offen gehalten) → ~7 h Leerlauf. Start jetzt entkoppelt mit Warten auf ERGEBNIS-Zeile im Log |
 | 2026-10-13 08:12 | 2-4 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 368/368 / – | 3f8ed3d | Dauer 1 h 36 min |
 | 2026-10-13 10:15 | 2-5 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 388/388 / – (Sitzung: 1589 grün) | 4b90ddf | Offen: Fragenliste einer Freigabe nach Bestätigung fest; neue Fragen der Leitung erreichen die Freizeit nicht (dokumentiert). Screenshot freizeitpass-einsicht mit wechselndem Notiz-Datum |
+| 2026-10-13 11:35 | 2-6 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 405/405 / – (Sitzung: alles grün, Doku 32 Seiten) | 274b89e | Offen: Cockpit-Warnungen zu unbesetzten Aufgaben/Sicherheitskette folgen in 2-8 und Epic 3; Erinnerungsmail nennt die Freizeit nicht (Modulgrenze) |
 
 ## Entscheidungen im Lauf
 
