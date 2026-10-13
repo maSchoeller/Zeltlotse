@@ -29,6 +29,7 @@ Test-Tempo ab 2-3 (Vorgabe von Marvin, 2026-10-12): Story-Sitzungen testen währ
 | 2026-10-13 10:15 | 2-5 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 388/388 / – (Sitzung: 1589 grün) | 4b90ddf | Offen: Fragenliste einer Freigabe nach Bestätigung fest; neue Fragen der Leitung erreichen die Freizeit nicht (dokumentiert). Screenshot freizeitpass-einsicht mit wechselndem Notiz-Datum |
 | 2026-10-13 11:35 | 2-6 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 405/405 / – (Sitzung: alles grün, Doku 32 Seiten) | 274b89e | Offen: Cockpit-Warnungen zu unbesetzten Aufgaben/Sicherheitskette folgen in 2-8 und Epic 3; Erinnerungsmail nennt die Freizeit nicht (Modulgrenze) |
 | 2026-10-13 13:25 | 2-7 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 433/433 / – | 5c5c950 | GastAnmeldungTests einmal wacklig (CSP-Meldung), danach grün; Dachzeile global dunkler (Kontrast), 9 Screenshots neu |
+| 2026-10-13 14:58 | 2-8 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 460/460 / – | cc90cc1 | Menüeintrag Notfall erscheint bei Phasenwechsel erst nach Neuladen; Fehler beim Laden der Sicherheitskette sperrt die ganze Einstellungsseite |
 
 ## Entscheidungen im Lauf
 
