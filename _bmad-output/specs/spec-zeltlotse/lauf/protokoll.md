@@ -32,6 +32,7 @@ Test-Tempo ab 2-3 (Vorgabe von Marvin, 2026-10-12): Story-Sitzungen testen währ
 | 2026-10-13 14:58 | 2-8 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 460/460 / – | cc90cc1 | Menüeintrag Notfall erscheint bei Phasenwechsel erst nach Neuladen; Fehler beim Laden der Sicherheitskette sperrt die ganze Einstellungsseite |
 | 2026-10-13 16:25 | 2-9 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 481/481 / – | 5ab06ec | Bestätigen nicht im Browser durchgeklickt (nur API/Komponente); Datenauskunft zeigt je Bestätigung nur den Zeitpunkt |
 | 2026-10-13 18:14 | 2-10 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 506/506 / – | c743460 | Archiv der Vorfall-Notizen hängt am Ereignis „Freizeit abgeschlossen“ – Auslösen und Ablauftest gehören zu 3-8 |
+| 2026-10-13 20:25 | 2-11 | done | nein (nicht empfohlen) | voll grün (Ende Epic 2): 1935/1935 in 34 min / grün (43 Seiten) | 9a00f99 | Bei Abnahme prüfen: API liefert Pässe bestätigter Mitarbeitender, wenn man sie direkt mit deren Kennungen aufruft (protokolliert; nur die Web-App filtert auf Teilnehmende). Limit 150 Kinder je Notfallordner. Team darf drucken (CAP-18 nennt nur Leitung). 26 Screenshots mit Rendering-Rauschen zurückgesetzt |
 
 ## Entscheidungen im Lauf
 
