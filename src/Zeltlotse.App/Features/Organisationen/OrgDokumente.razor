@@ -1,0 +1,236 @@
+@page "/organisationen/{OrgId:guid}/dokumente"
+@using Microsoft.AspNetCore.Components.Forms
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Organisationen
+@inject OrganisationenApiClient Organisationen
+@* Org-Dokumente (EXPERIENCE.md → Fläche „Organisation verwalten“, FR-43, Story 2-7; nur Org-Admin): Tabelle mit dem Titel als Link auf
+   die Datei (Download), „Hochgeladen am“ und „Entfernen“ mit Inline-Bestätigung; darunter das Hochladen wie bei den Dokumenten der
+   Freizeit, ohne Sichtbarkeit. Freizeiten binden die Dokumente ein, ohne sie zu kopieren; Entfernen wirkt in allen Freizeiten. Ohne die
+   erlaubte Aktion „org-dokumente-verwalten“ oder bei 403/404 → „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>Org-Dokumente – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <h1>Org-Dokumente</h1>
+    <p><a href="@($"organisationen/{OrgId}")">Zurück zur Organisation</a></p>
+    <p>Freizeiten der Organisation binden diese Dokumente ein, ohne sie zu kopieren.</p>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="@_meldung.Value.Titel" Art="MeldungArt.Erfolg">
+            <p>@_meldung.Value.Text</p>
+        </Meldung>
+    }
+    @if (_fehler is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_fehler</p>
+        </Meldung>
+    }
+
+    @if (_dokumente is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        <Card Titel="Dokumente der Organisation">
+            @if (_dokumente.Count == 0)
+            {
+                <LeerZustand Satz="Noch keine Org-Dokumente." />
+            }
+            else
+            {
+                <Datentabelle TZeile="OrgDokument" Beschriftung="Org-Dokumente" Spalten="Spalten" Zeilen="_dokumente" />
+            }
+        </Card>
+
+        <Card Titel="Dokument hochladen">
+            <p>Erlaubt sind Fotos (JPEG, PNG, WebP) und PDF bis 10 MB. Den Titel nimmt Zeltlotse aus dem Dateinamen.</p>
+            @if (_uploadGescheitert)
+            {
+                <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                    <p>Datei nicht hochgeladen.</p>
+                    <Knopf Deaktiviert="@_uebertraegt" @onclick="HochladenAsync">Erneut versuchen</Knopf>
+                </Meldung>
+            }
+            <DateiFeld Id="org-dokument-datei" Fehler="@_dateiFehler" Deaktiviert="@_uebertraegt" DateiGewaehlt="DateiGewaehltAsync" />
+        </Card>
+    }
+}
+
+@code {
+    /// <summary>Höchstgröße beim Lesen im Browser: eine größere Datei lehnt der Server ab, ohne dass alles gelesen wird.</summary>
+    private const long Hoechstgroesse = (10 * 1024 * 1024) + 1;
+
+    private List<OrgDokument>? _dokumente;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private bool _uploadGescheitert;
+    private string? _dateiFehler;
+    private IBrowserFile? _datei;
+    private (string Titel, string Text)? _meldung;
+    private string? _fehler;
+
+    [Parameter] public Guid OrgId { get; set; }
+
+    private IReadOnlyList<Spalte<OrgDokument>> Spalten =>
+    [
+        new("Titel", d => @<a href="@OrganisationenApiClient.OrgDokumentDateiPfad(OrgId, d.Id)" target="_blank" rel="noopener">@d.Titel</a>),
+        new("Hochgeladen am", d => @<text>@Anzeige.Datum(d.HochgeladenAm)</text>),
+        new("Entfernen", d => @<InlineBestaetigung AusloeserText="Entfernen" AusloeserArt="KnopfArt.Outline"
+                                                   Satz="@($"Org-Dokument {d.Titel} entfernen? Es verschwindet auch aus allen Freizeiten.")"
+                                                   JaText="Ja, entfernen" Bestaetigt="@(() => EntfernenAsync(d))" />),
+    ];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _dokumente = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _meldung = null;
+        _fehler = null;
+        try
+        {
+            var organisation = await Organisationen.LadenAsync(OrgId);
+            if (organisation is null || !organisation.Erlaubt.Contains(Aktionsschluessel.OrgDokumenteVerwalten))
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            await ListeLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    private async Task ListeLadenAsync()
+    {
+        var dokumente = await Organisationen.OrgDokumenteLadenAsync(OrgId);
+        _nichtVerfuegbar = dokumente is null;
+        _dokumente = dokumente is null ? null : [.. dokumente.Dokumente];
+    }
+
+    /// <summary>Die Liste nach erfolgreichem Hochladen neu laden; scheitert das, bleibt die Meldung und die Liste wie sie war.</summary>
+    private async Task NachHochladenNeuLadenAsync()
+    {
+        try
+        {
+            await ListeLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // Hochgeladen ist die Datei; die Liste zeigt den Stand vor dem Hochladen bis zum nächsten Laden.
+        }
+    }
+
+    private Task DateiGewaehltAsync(IBrowserFile? datei)
+    {
+        _datei = datei;
+        return datei is null ? Task.CompletedTask : HochladenAsync();
+    }
+
+    /// <summary>Lädt die gewählte Datei hoch; ein Netzfehler zeigt „Datei nicht hochgeladen.“ mit „Erneut versuchen“.</summary>
+    private async Task HochladenAsync()
+    {
+        if (_datei is not { } datei || _uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _uploadGescheitert = false;
+        _dateiFehler = null;
+        _meldung = null;
+        _fehler = null;
+        _aktionFehler = false;
+        try
+        {
+            OrgDokumentHochladenErgebnis ergebnis;
+            if (datei.Size >= Hoechstgroesse)
+            {
+                ergebnis = new OrgDokumentHochladenErgebnis(null, "Die Datei ist größer als 10 MB.", NichtVerfuegbar: false);
+            }
+            else
+            {
+                try
+                {
+                    await using var strom = datei.OpenReadStream(Hoechstgroesse);
+                    ergebnis = await Organisationen.OrgDokumentHochladenAsync(OrgId, strom, datei.Name, datei.ContentType);
+                }
+                catch (IOException)
+                {
+                    ergebnis = new OrgDokumentHochladenErgebnis(null, "Die Datei ist größer als 10 MB.", NichtVerfuegbar: false);
+                }
+            }
+
+            _dateiFehler = ergebnis.DateiFehler;
+            _nichtVerfuegbar = ergebnis.NichtVerfuegbar;
+            if (ergebnis.Dokument is { } dokument)
+            {
+                _datei = null;
+                _meldung = ("Hochgeladen", $"{dokument.Titel}.");
+                await NachHochladenNeuLadenAsync();
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _uploadGescheitert = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task EntfernenAsync(OrgDokument dokument)
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _meldung = null;
+        _fehler = null;
+        _aktionFehler = false;
+        try
+        {
+            if (await Organisationen.OrgDokumentEntfernenAsync(OrgId, dokument.Id))
+            {
+                _meldung = ("Entfernt", $"{dokument.Titel}.");
+            }
+            else
+            {
+                _fehler = "Das Org-Dokument ließ sich nicht entfernen.";
+            }
+
+            await ListeLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

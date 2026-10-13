@@ -23,6 +23,10 @@ Die Leitung darf alles, was das [Team](/mitarbeitende/) darf. **Nur die Leitung*
 - den Teilnehmer-Zugang per QR-Code an- und abschalten,
 - die Freizeit abschließen.
 
+## Dokumente
+
+Infobrief, Packliste, Notfallnummern und Anfahrt legen Leitung und Team gemeinsam an der Freizeit ab; das ist keine Aufgabe nur für die Leitung. Der Weg dorthin ist der Knopf **Dokumente** auf der Startseite der Freizeit. Für jedes Dokument entscheidet die Sichtbarkeit, ob nur das Team, auch die Eltern in der Elterninfo oder alle auf der Freizeitseite es sehen. Wie das geht, steht unter [Dokumente ablegen](/mitarbeitende/dokumente/).
+
 ## Einsicht in Freizeitpässe
 
 Die Leitung sieht den Freizeitpass einer Person schon **ab dem Eingang der Anmeldung**, das Team erst ab der Bestätigung. Beide sehen nur die Antworten auf die Fragen, die die Freizeit abgefragt hat, und nur bis zum Ende des Freigabefensters. Der Weg dorthin ist der Knopf **Freizeitpässe** auf der Startseite der Freizeit; wie die Seite aussieht und wie Team-Notizen funktionieren, steht unter [Freizeitpässe ansehen](/mitarbeitende/freizeitpaesse/). Einzelheiten zur Freigabe stehen unter [Was passiert mit meinen Daten](/daten/). Jeder Blick auf die Angaben steht als „Freizeitpass eingesehen“ im Zugriffsprotokoll der Person. Öffnet die Leitung die Nachweise einer Person, steht das im Zugriffsprotokoll dieser Person (siehe [Zugriffsprotokoll und Meine Daten](/erste-schritte/meine-daten/)).

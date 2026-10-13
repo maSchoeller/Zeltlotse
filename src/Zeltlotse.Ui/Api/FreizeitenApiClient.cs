@@ -37,6 +37,23 @@ public enum EntscheidungErgebnis
 /// </summary>
 public sealed record TeamNotizErgebnis(Guid? Id, string? TextFehler, bool NichtVerfuegbar);
 
+/// <summary>
+/// Ergebnis von <see cref="FreizeitenApiClient.DokumentHochladenAsync"/> (Story 2-7): das Dokument, der Fehler am Feld (<c>400</c>), die
+/// Freizeit ist abgeschlossen (<c>409</c>) oder nicht (mehr) verfügbar (<c>403</c>/<c>404</c>).
+/// </summary>
+public sealed record DokumentHochladenErgebnis(FreizeitDokument? Dokument, string? DateiFehler, bool Abgeschlossen = false, bool NichtVerfuegbar = false);
+
+/// <summary>
+/// Ergebnis von <see cref="FreizeitenApiClient.DokumentEntfernenAsync"/> und <see cref="FreizeitenApiClient.DokumentEinbindenAsync"/>
+/// (Story 2-7): erledigt, <c>409</c> (abgeschlossen oder schon eingebunden) oder nicht (mehr) verfügbar (<c>403</c>/<c>404</c>).
+/// </summary>
+public enum DokumentErgebnis
+{
+    Erledigt,
+    Konflikt,
+    NichtVerfuegbar,
+}
+
 /// <summary>Ergebnis von <see cref="FreizeitenApiClient.LeitungEinladenAsync"/>: die Kennung der Einladung oder der Fehler an der Mail-Adresse.</summary>
 public sealed record LeitungEinladenErgebnis(Guid? Id, string? MailFehler);
 
@@ -296,6 +313,110 @@ public sealed class FreizeitenApiClient(HttpClient http)
 
         antwort.EnsureSuccessStatusCode();
         return true;
+    }
+
+    // ---------- Story 2-7: Dokumente und Elterninfo ----------
+
+    /// <summary>Pfad der Dokumente einer Freizeit.</summary>
+    public static string DokumentePfad(Guid freizeitId) => $"/api/freizeiten/{freizeitId}/dokumente";
+
+    /// <summary>Pfad eines Dokuments, auch für den Autosave-Baustein (<c>PATCH</c>, AD-19).</summary>
+    public static string DokumentPfad(Guid freizeitId, Guid dokumentId) => $"{DokumentePfad(freizeitId)}/{dokumentId}";
+
+    /// <summary>Pfad der Datei eines Dokuments (Leitung und Team), für einen Link; die API liefert sie als Anhang.</summary>
+    public static string DokumentDateiPfad(Guid freizeitId, Guid dokumentId) => $"{DokumentPfad(freizeitId, dokumentId)}/datei";
+
+    /// <summary>Pfad der Datei eines öffentlichen Dokuments über den Anmeldelink (anonym).</summary>
+    public static string OeffentlichesDokumentPfad(string token, Guid dokumentId) => $"/api/freizeiten/oeffentlich/{Uri.EscapeDataString(token)}/dokumente/{dokumentId}";
+
+    /// <summary>Pfad der Elterninfo einer Anmeldung über den Gast-Link (anonym).</summary>
+    public static string GastElterninfoPfad(string gastToken, Guid anmeldungId) =>
+        $"/api/freizeiten/gast/{Uri.EscapeDataString(gastToken)}/anmeldungen/{anmeldungId}/elterninfo";
+
+    /// <summary>Pfad der Elterninfo einer eigenen Anmeldung oder der eines Kindes (Konto).</summary>
+    public static string ElterninfoPfad(Guid anmeldungId) => $"/api/ich/anmeldungen/{anmeldungId}/elterninfo";
+
+    /// <summary><c>GET …/dokumente</c> (Leitung und Team): alle Dokumente der Freizeit nach Titel oder <c>null</c> bei <c>403</c>/<c>404</c>.</summary>
+    public Task<FreizeitDokumente?> DokumenteLadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
+        LadenAsync<FreizeitDokumente>(DokumentePfad(freizeitId), abbruch);
+
+    /// <summary>
+    /// <c>POST …/dokumente</c> (Multipart <c>datei</c> und <c>sichtbarkeit</c>): das Dokument bei <c>201</c>, der Fehler am Feld bei
+    /// <c>400</c>, abgeschlossen (<c>409</c>) oder nicht verfügbar (<c>403</c>/<c>404</c>). Netzfehler und andere Antworten enden in einer
+    /// <see cref="HttpRequestException"/>.
+    /// </summary>
+    public async Task<DokumentHochladenErgebnis> DokumentHochladenAsync(
+        Guid freizeitId, Stream inhalt, string dateiname, string? contentType, DokumentSichtbarkeit sichtbarkeit, CancellationToken abbruch = default)
+    {
+        ArgumentNullException.ThrowIfNull(inhalt);
+        using var datei = new StreamContent(inhalt);
+        datei.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(string.IsNullOrWhiteSpace(contentType) ? "application/octet-stream" : contentType);
+        using var formular = new MultipartFormDataContent
+        {
+            { datei, DokumentFelder.Datei, string.IsNullOrWhiteSpace(dateiname) ? "datei" : dateiname },
+            { new StringContent(sichtbarkeit.ToString()), DokumentFelder.Sichtbarkeit },
+        };
+        using var antwort = await http.PostAsync(DokumentePfad(freizeitId), formular, abbruch);
+        if (antwort.StatusCode == HttpStatusCode.BadRequest && await ApiFehler.AlleFeldFehlerAsync(antwort, abbruch) is { Count: > 0 } fehler)
+        {
+            return new DokumentHochladenErgebnis(null, fehler.GetValueOrDefault(DokumentFelder.Datei) ?? fehler.Values.First());
+        }
+
+        switch (antwort.StatusCode)
+        {
+            case HttpStatusCode.Conflict:
+                return new DokumentHochladenErgebnis(null, null, Abgeschlossen: true);
+            case HttpStatusCode.Forbidden or HttpStatusCode.NotFound:
+                return new DokumentHochladenErgebnis(null, null, NichtVerfuegbar: true);
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        var dokument = await antwort.Content.ReadFromJsonAsync<FreizeitDokument>(ApiJson.Optionen, abbruch)
+                       ?? throw new HttpRequestException("Leere Antwort beim Hochladen des Dokuments.");
+        return new DokumentHochladenErgebnis(dokument, null);
+    }
+
+    /// <summary><c>DELETE …/dokumente/{dokumentId}</c>: entfernt, abgeschlossen (<c>409</c>) oder nicht verfügbar (<c>403</c>/<c>404</c>).</summary>
+    public async Task<DokumentErgebnis> DokumentEntfernenAsync(Guid freizeitId, Guid dokumentId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.DeleteAsync(DokumentPfad(freizeitId, dokumentId), abbruch);
+        return Dokumentergebnis(antwort);
+    }
+
+    /// <summary><c>GET …/dokumente/org</c>: die noch nicht eingebundenen Org-Dokumente oder <c>null</c> bei <c>403</c>/<c>404</c>.</summary>
+    public Task<OrgDokumenteAuswahl?> OrgDokumenteAuswahlLadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
+        LadenAsync<OrgDokumenteAuswahl>($"{DokumentePfad(freizeitId)}/org", abbruch);
+
+    /// <summary>
+    /// <c>POST …/dokumente/einbindungen {orgDokumentId}</c>: eingebunden (mit Sichtbarkeit Team), abgeschlossen oder schon eingebunden
+    /// (<c>409</c>) oder nicht verfügbar (<c>403</c>/<c>404</c>).
+    /// </summary>
+    public async Task<DokumentErgebnis> DokumentEinbindenAsync(Guid freizeitId, Guid orgDokumentId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync($"{DokumentePfad(freizeitId)}/einbindungen", new DokumentEinbinden(orgDokumentId), ApiJson.Optionen, abbruch);
+        return Dokumentergebnis(antwort);
+    }
+
+    /// <summary><c>GET /api/ich/anmeldungen/{anmeldungId}/elterninfo</c>: die Elterninfo oder <c>null</c>, wenn sie nicht verfügbar ist.</summary>
+    public Task<Elterninfo?> ElterninfoLadenAsync(Guid anmeldungId, CancellationToken abbruch = default) =>
+        LadenAsync<Elterninfo>(ElterninfoPfad(anmeldungId), abbruch);
+
+    /// <summary><c>GET /api/freizeiten/gast/{gastToken}/anmeldungen/{anmeldungId}/elterninfo</c> (anonym): die Elterninfo oder <c>null</c>.</summary>
+    public Task<Elterninfo?> GastElterninfoLadenAsync(string gastToken, Guid anmeldungId, CancellationToken abbruch = default) =>
+        LadenAsync<Elterninfo>(GastElterninfoPfad(gastToken, anmeldungId), abbruch);
+
+    private static DokumentErgebnis Dokumentergebnis(HttpResponseMessage antwort)
+    {
+        switch (antwort.StatusCode)
+        {
+            case HttpStatusCode.Conflict:
+                return DokumentErgebnis.Konflikt;
+            case HttpStatusCode.Forbidden or HttpStatusCode.NotFound:
+                return DokumentErgebnis.NichtVerfuegbar;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return DokumentErgebnis.Erledigt;
     }
 
     private async Task<EntscheidungErgebnis> EntscheidenAsync(string pfad, CancellationToken abbruch)

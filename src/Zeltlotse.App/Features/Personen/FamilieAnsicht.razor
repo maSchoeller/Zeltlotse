@@ -280,6 +280,8 @@ else
                     }
                 </p>
             }
+            @* Story 2-7: Infobrief, Packliste und Notfallnummern der Freizeit (FR-68). *@
+            <p><a href="@($"familie/elterninfo/{anmeldung.AnmeldungId}")">Elterninfo</a></p>
             @EinsichtZeile(anmeldung)
             <AbsageKontakt Mail="@anmeldung.KontaktMail" Telefon="@anmeldung.KontaktTelefon" />
         </text>;

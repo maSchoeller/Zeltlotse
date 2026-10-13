@@ -14,6 +14,7 @@ Jede Freizeit hat eine öffentliche **Freizeitseite**. Sie öffnet sich über de
 - den **Namen** der Freizeit, den **Ort** und die **Beschreibung**,
 - **Das Team:** je Person einen Kreis mit den Initialen von Vor- und Nachname, den Vornamen, die Rolle und, wenn die Person sie in ihrem Profil eingetragen hat, die Herkunft, zum Beispiel „Leitung · aus Musterstadt“. Der volle Nachname, Mail-Adressen und Fotos stehen dort nicht.
 - den Knopf **Anmelden** und darunter den Link **Mit Konto anmelden** (beim Anmeldelink für Mitarbeitende nur **Anmelden**, mit Konto),
+- **Dokumente:** die Dokumente, die die Leitung als „Öffentlich“ freigegeben hat, etwa die Anfahrt, jeweils mit der Art der Datei, zum Beispiel „Anfahrt zum Zeltplatz (PDF)“. Ein Tipp lädt die Datei herunter. Ohne öffentliche Dokumente fehlt die Card. Infobrief, Packliste und Notfallnummern stehen nach der Anmeldung in der [Elterninfo](/eltern/elterninfo/).
 - den Link zur **Vertrauensseite**.
 
 ![Freizeitseite „Zeltlager Sommer 2027“ am Handy: oben „Jugendwerk Musterstadt“, darunter „Freizeit · 2. bis 13. August 2027“, Ort, Beschreibung und die Card „Das Team“ mit Jonas und Miriam als „Leitung · aus Musterstadt“ und Lea als „Team“](../../../assets/screenshots/freizeitseite-handy.png)

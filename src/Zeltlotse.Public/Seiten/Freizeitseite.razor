@@ -56,6 +56,19 @@ else if (_seite is not null)
             </Card>
         }
 
+        @if (_seite.Dokumente is { Count: > 0 } dokumente)
+        {
+            @* Story 2-7: die öffentlichen Dokumente der Freizeit (FR-43), als Download über den Anmeldelink. *@
+            <Card Titel="Dokumente">
+                <ul>
+                    @foreach (var dokument in dokumente)
+                    {
+                        <li><a href="@FreizeitenApiClient.OeffentlichesDokumentPfad(Token, dokument.Id)">@Anzeige.Dokument(dokument.Titel, dokument.Dateiart)</a></li>
+                    }
+                </ul>
+            </Card>
+        }
+
         <Card Titel="Daten bei der Anmeldung">
             <p>Welche Angaben erhoben werden, wer sie sieht und wann sie gelöscht werden: <a href="@($"/freizeit/{Token}/vertrauensseite")">Vertrauensseite</a></p>
         </Card>

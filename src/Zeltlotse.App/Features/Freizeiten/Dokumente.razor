@@ -1,0 +1,319 @@
+@page "/freizeiten/{FreizeitId:guid}/dokumente"
+@using Microsoft.AspNetCore.Components.Forms
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Ui.Kontext
+@inject FreizeitKontextDienst Kontext
+@inject FreizeitenApiClient Freizeiten
+@* Dokumente der Freizeit (EXPERIENCE.md → Fläche „Dokumente“, CAP-25, FR-43, Story 2-7; Leitung und Team): oben die Suche, die beim
+   Tippen beide Listen nach Titel filtert (enthält, ohne Groß- und Kleinschreibung, nur im Client). Card „Dokumente der Freizeit“ als
+   Tabelle mit Titel (Link auf die Datei, die als Download kommt), Sichtbarkeit, Herkunft und „Bearbeiten“. Card „Dokument hochladen“:
+   Sichtbarkeit (Vorgabe Team) und Datei-Feld; die Wahl lädt sofort hoch, scheitert das, gibt es „Erneut versuchen“. Card „Aus der
+   Organisation einbinden“ nur, wenn es noch einbindbare Org-Dokumente gibt; eingebunden wird mit Sichtbarkeit Team. Abgeschlossen:
+   nur lesbar, ohne Hochladen und Einbinden. Ohne Rolle in der Freizeit oder bei 403/404 → „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>Dokumente – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <h1>Dokumente</h1>
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+    @if (_abgeschlossen)
+    {
+        <Meldung Titel="Hinweis">
+            <p>@AbgeschlossenText</p>
+        </Meldung>
+    }
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="@_meldung.Value.Titel" Art="MeldungArt.Erfolg">
+            <p>@_meldung.Value.Text</p>
+        </Meldung>
+    }
+    @if (_fehler is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_fehler</p>
+        </Meldung>
+    }
+
+    @if (_dokumente is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        <Feld Label="Dokumente suchen" Id="dokumente-suche" Typ="search" Wert="@_suche" autocomplete="off" @oninput="@(e => _suche = e.Value?.ToString())" />
+
+        <Card Titel="Dokumente der Freizeit">
+            @if (_dokumente.Count == 0)
+            {
+                <LeerZustand Satz="Noch keine Dokumente." />
+            }
+            else if (Treffer.Count == 0)
+            {
+                <LeerZustand Satz="Keine Dokumente gefunden." />
+            }
+            else
+            {
+                <Datentabelle TZeile="FreizeitDokument" Beschriftung="Dokumente der Freizeit" Spalten="Spalten" Zeilen="Treffer" />
+            }
+        </Card>
+
+        @if (!_abgeschlossen)
+        {
+            <Card Titel="Dokument hochladen">
+                <p>Erlaubt sind Fotos (JPEG, PNG, WebP) und PDF bis 10 MB. Den Titel nimmt Zeltlotse aus dem Dateinamen.</p>
+                <Auswahl Legende="Sichtbarkeit" Gruppe="dokument-sichtbarkeit" Optionen="SichtbarkeitOptionen" Wert="@_sichtbarkeit.ToString()"
+                         WertGeaendert="@(w => _sichtbarkeit = Enum.Parse<DokumentSichtbarkeit>(w))" />
+                @if (_uploadGescheitert)
+                {
+                    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                        <p>Datei nicht hochgeladen.</p>
+                        <Knopf Deaktiviert="@_uebertraegt" @onclick="HochladenAsync">Erneut versuchen</Knopf>
+                    </Meldung>
+                }
+                <DateiFeld Id="dokument-datei" Fehler="@_dateiFehler" Deaktiviert="@_uebertraegt" DateiGewaehlt="DateiGewaehltAsync" />
+            </Card>
+
+            @if (_auswahl is { Count: > 0 })
+            {
+                <Card Titel="Aus der Organisation einbinden">
+                    <p>Eingebundene Dokumente pflegt die Organisation. Sie sind zuerst nur für das Team sichtbar.</p>
+                    @if (AuswahlTreffer.Count == 0)
+                    {
+                        <LeerZustand Satz="Keine Dokumente gefunden." />
+                    }
+                    else
+                    {
+                        <Datentabelle TZeile="OrgDokumentAuswahl" Beschriftung="Org-Dokumente zum Einbinden" Spalten="AuswahlSpalten" Zeilen="AuswahlTreffer" />
+                    }
+                </Card>
+            }
+        }
+    }
+}
+
+@code {
+    private const string AbgeschlossenText = "Diese Freizeit ist abgeschlossen und nur lesbar.";
+
+    /// <summary>Höchstgröße beim Lesen im Browser: eine größere Datei lehnt der Server ab, ohne dass alles gelesen wird.</summary>
+    private const long Hoechstgroesse = (10 * 1024 * 1024) + 1;
+
+    private static readonly IReadOnlyList<AuswahlOption> SichtbarkeitOptionen =
+    [
+        .. Enum.GetValues<DokumentSichtbarkeit>().Select(s => new AuswahlOption(s.ToString(), Anzeige.Sichtbarkeit(s))),
+    ];
+
+    private List<FreizeitDokument>? _dokumente;
+    private List<OrgDokumentAuswahl>? _auswahl;
+    private string? _suche;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _abgeschlossen;
+    private bool _uebertraegt;
+    private bool _uploadGescheitert;
+    private string? _dateiFehler;
+    private IBrowserFile? _datei;
+    private DokumentSichtbarkeit _sichtbarkeit = DokumentSichtbarkeit.Team;
+    private (string Titel, string Text)? _meldung;
+    private string? _fehler;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    private List<FreizeitDokument> Treffer => [.. (_dokumente ?? []).Where(d => Anzeige.TitelTrifft(d.Titel, _suche))];
+
+    private List<OrgDokumentAuswahl> AuswahlTreffer => [.. (_auswahl ?? []).Where(d => Anzeige.TitelTrifft(d.Titel, _suche))];
+
+    private IReadOnlyList<Spalte<FreizeitDokument>> Spalten =>
+    [
+        new("Titel", d => @<a href="@FreizeitenApiClient.DokumentDateiPfad(FreizeitId, d.Id)" target="_blank" rel="noopener">@d.Titel</a>),
+        new("Sichtbarkeit", d => @<text>@Anzeige.Sichtbarkeit(d.Sichtbarkeit)</text>),
+        new("Herkunft", d => @<text>@Anzeige.Herkunft(d.AusOrganisation)</text>),
+        new("Bearbeiten", d => @<a href="@($"freizeiten/{FreizeitId}/dokumente/{d.Id}")" aria-label="@($"Bearbeiten: {d.Titel}")">Bearbeiten</a>),
+    ];
+
+    private IReadOnlyList<Spalte<OrgDokumentAuswahl>> AuswahlSpalten =>
+    [
+        new("Titel", d => @<text>@d.Titel</text>),
+        new("Einbinden", d => @<Knopf Art="KnopfArt.Outline" Deaktiviert="@_uebertraegt" aria-label="@($"Einbinden: {d.Titel}")" @onclick="() => EinbindenAsync(d)">Einbinden</Knopf>),
+    ];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _dokumente = null;
+        _auswahl = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _abgeschlossen = false;
+        _meldung = null;
+        _fehler = null;
+        _uploadGescheitert = false;
+        _dateiFehler = null;
+        try
+        {
+            var kontext = await Kontext.LadenAsync(FreizeitId);
+            if (kontext is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            _abgeschlossen = kontext.Phase == Phase.Gelaufen;
+            await ListenLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>Lädt beide Listen; ohne Antwort (403/404) ist die Seite nicht verfügbar.</summary>
+    private async Task ListenLadenAsync()
+    {
+        var dokumente = await Freizeiten.DokumenteLadenAsync(FreizeitId);
+        if (dokumente is null)
+        {
+            _nichtVerfuegbar = true;
+            return;
+        }
+
+        _dokumente = [.. dokumente.Dokumente];
+        _auswahl = _abgeschlossen ? [] : [.. (await Freizeiten.OrgDokumenteAuswahlLadenAsync(FreizeitId))?.Dokumente ?? []];
+    }
+
+    /// <summary>Die Liste nach erfolgreichem Hochladen neu laden; scheitert das, bleibt die Meldung und die Liste wie sie war.</summary>
+    private async Task NachHochladenNeuLadenAsync()
+    {
+        try
+        {
+            await ListenLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // Hochgeladen ist die Datei; die Liste zeigt den Stand vor dem Hochladen bis zum nächsten Laden.
+        }
+    }
+
+    private Task DateiGewaehltAsync(IBrowserFile? datei)
+    {
+        _datei = datei;
+        return datei is null ? Task.CompletedTask : HochladenAsync();
+    }
+
+    /// <summary>Lädt die gewählte Datei hoch; ein Netzfehler zeigt „Datei nicht hochgeladen.“ mit „Erneut versuchen“.</summary>
+    private async Task HochladenAsync()
+    {
+        if (_datei is not { } datei || _uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _uploadGescheitert = false;
+        _dateiFehler = null;
+        _meldung = null;
+        _fehler = null;
+        _aktionFehler = false;
+        try
+        {
+            DokumentHochladenErgebnis ergebnis;
+            if (datei.Size >= Hoechstgroesse)
+            {
+                ergebnis = new DokumentHochladenErgebnis(null, "Die Datei ist größer als 10 MB.");
+            }
+            else
+            {
+                try
+                {
+                    await using var strom = datei.OpenReadStream(Hoechstgroesse);
+                    ergebnis = await Freizeiten.DokumentHochladenAsync(FreizeitId, strom, datei.Name, datei.ContentType, _sichtbarkeit);
+                }
+                catch (IOException)
+                {
+                    // Größer als erlaubt: der Browser liest nicht weiter.
+                    ergebnis = new DokumentHochladenErgebnis(null, "Die Datei ist größer als 10 MB.");
+                }
+            }
+
+            _dateiFehler = ergebnis.DateiFehler;
+            if (ergebnis.Abgeschlossen)
+            {
+                _abgeschlossen = true;
+            }
+            else if (ergebnis.NichtVerfuegbar)
+            {
+                _nichtVerfuegbar = true;
+            }
+            else if (ergebnis.Dokument is { } dokument)
+            {
+                _datei = null;
+                _meldung = ("Hochgeladen", $"{dokument.Titel}.");
+                await NachHochladenNeuLadenAsync();
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _uploadGescheitert = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task EinbindenAsync(OrgDokumentAuswahl auswahl)
+    {
+        // Doppelt getippt, während die erste Anfrage noch läuft: nur einmal einbinden.
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _meldung = null;
+        _fehler = null;
+        _aktionFehler = false;
+        try
+        {
+            switch (await Freizeiten.DokumentEinbindenAsync(FreizeitId, auswahl.Id))
+            {
+                case DokumentErgebnis.Erledigt:
+                    _meldung = ("Eingebunden", $"{auswahl.Titel}. Sichtbar für das Team.");
+                    break;
+                case DokumentErgebnis.Konflikt:
+                    // Schon eingebunden oder die Freizeit wurde inzwischen abgeschlossen: Kontext und Listen neu laden.
+                    _fehler = "Das Org-Dokument ließ sich nicht einbinden.";
+                    _abgeschlossen = (await Kontext.LadenAsync(FreizeitId))?.Phase == Phase.Gelaufen;
+                    break;
+                case DokumentErgebnis.NichtVerfuegbar:
+                    _aktionFehler = true;
+                    break;
+            }
+
+            await ListenLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

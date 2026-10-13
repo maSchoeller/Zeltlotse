@@ -317,6 +317,28 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_erinnerung"));
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.outbox_zustellung WHERE \"Empfaenger\" = 'Zeltlotse.Mail'"));
 
+        // Story 2-7: Lea (Team) sieht sechs Dokumente, darunter die eingebundene Hausordnung; einbindbar ist noch der Leitfaden. Katrin
+        // sieht in der Elterninfo zu Emma die vier Dokumente für Eltern. Nichts doppelt nach dem zweiten Einspielen.
+        using var leaClient = await AnmeldeHelfer.AngemeldeterClientAsync(zweiter, "lea.feuerstein@example.org");
+        var dokumente = (await AnmeldeHelfer.JsonAsync(await leaClient.GetAsync($"/api/freizeiten/{freizeitId}/dokumente", Abbruch))).GetProperty("dokumente")
+            .EnumerateArray().Select(d => $"{d.GetProperty("titel").GetString()} | {d.GetProperty("sichtbarkeit").GetString()} | {d.GetProperty("ausOrganisation").GetBoolean()}");
+        Assert.Equal(
+            [
+                "Anfahrt zum Zeltplatz | Oeffentlich | False", "Hausordnung Zeltplatz | ElternUndTeilnehmende | True",
+                "Infobrief Zeltlager Sommer 2027 | ElternUndTeilnehmende | False", "Notfallnummern | ElternUndTeilnehmende | False",
+                "Packliste | ElternUndTeilnehmende | False", "Programmideen | Team | False",
+            ],
+            dokumente);
+        var einbindbar = (await AnmeldeHelfer.JsonAsync(await leaClient.GetAsync($"/api/freizeiten/{freizeitId}/dokumente/org", Abbruch))).GetProperty("dokumente");
+        Assert.Equal(["Leitfaden Aufsichtspflicht"], einbindbar.EnumerateArray().Select(d => d.GetProperty("titel").GetString()));
+        var elterninfo = await AnmeldeHelfer.JsonAsync(
+            await katrinClient.GetAsync($"/api/ich/anmeldungen/{anmeldungen[0].GetProperty("anmeldungId").GetGuid()}/elterninfo", Abbruch));
+        Assert.Equal(
+            ["Hausordnung Zeltplatz", "Infobrief Zeltlager Sommer 2027", "Notfallnummern", "Packliste"],
+            elterninfo.GetProperty("dokumente").EnumerateArray().Select(d => d.GetProperty("titel").GetString()));
+        Assert.Equal(6L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.dokument"));
+        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.dokument"));
+
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,
             "SELECT count(*) FROM konten.konto k LEFT JOIN personen.person p ON p.\"Id\" = k.\"PersonId\" WHERE p.\"Id\" IS NULL OR p.\"Vorname\" IS NULL OR p.\"Nachname\" IS NULL"));

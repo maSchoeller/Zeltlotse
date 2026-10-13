@@ -15,8 +15,9 @@ html.elkw { --elkw-arrow: url("pfeil.svg"); }
 /* Feldrahmen in action (4,59:1) statt akzent-40 (1,69:1) */
 html.elkw[data-stil="nahbar"] :is(input:not([type=checkbox]):not([type=radio]), select, textarea) { border-color: var(--elkw-action); }
 /* Blaugrüne Schrift nur auf Weiß: auf dem Grundton schwarz */
-html.elkw[data-stil="nahbar"] .elkw-app__main > .elkw-kicker,
+html.elkw[data-stil="nahbar"] .elkw-app__main .elkw-kicker,
 html.elkw[data-stil="nahbar"] .elkw-ground .elkw-kicker { color: var(--elkw-text); }
+html.elkw[data-stil="nahbar"] .elkw-app__main :is(.elkw-surface, .elkw-card) .elkw-kicker { color: var(--elkw-action); }
 html.elkw[data-stil="nahbar"] .elkw-app__main a:not([class]) { color: var(--elkw-text); }
 html.elkw[data-stil="nahbar"] .elkw-app__main :is(.elkw-surface, .elkw-card, .elkw-alert, .elkw-empty) a:not([class]) { color: var(--elkw-action); }
 

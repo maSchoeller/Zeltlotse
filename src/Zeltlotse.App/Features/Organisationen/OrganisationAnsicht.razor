@@ -46,6 +46,14 @@ else
 
     <FreizeitenKarten OrgId="OrgId" />
 
+    @if (Darf(Aktionsschluessel.OrgDokumenteVerwalten))
+    {
+        <Card Titel="Org-Dokumente">
+            <p>Dokumente der Organisation, etwa eine Hausordnung, binden Freizeiten ein, ohne sie zu kopieren.</p>
+            <p><Knopf Art="KnopfArt.Outline" Href="@($"organisationen/{OrgId}/dokumente")" Ansichtswechsel="true">Org-Dokumente öffnen</Knopf></p>
+        </Card>
+    }
+
     @if (Darf(Aktionsschluessel.NachweisRichtlinieVerwalten))
     {
         <Card Titel="Richtlinie für Nachweise">

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using FreizeitseiteFelder = Zeltlotse.Api.Contracts.Freizeiten.FreizeitseiteFelder;
+using Zeltlotse.Freizeiten.Dokumente;
 using Zeltlotse.Freizeiten.Domaene;
 using Zeltlotse.Freizeiten.TeamNotizen;
 using Zeltlotse.SharedKernel.Daten;
@@ -26,6 +27,8 @@ internal sealed class FreizeitenDbContext(DbContextOptions<FreizeitenDbContext> 
 
     public DbSet<TeamNotiz> TeamNotizen => Set<TeamNotiz>();
 
+    public DbSet<Dokument> Dokumente => Set<Dokument>();
+
     protected override string Schema => FreizeitenModul.Schema;
 
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => FreizeitenModell.Konfigurieren(modelBuilder);
@@ -46,6 +49,8 @@ internal sealed class FreizeitenLeseDbContext(DbContextOptions<FreizeitenLeseDbC
     public DbSet<Anmeldung> Anmeldungen => Set<Anmeldung>();
 
     public DbSet<TeamNotiz> TeamNotizen => Set<TeamNotiz>();
+
+    public DbSet<Dokument> Dokumente => Set<Dokument>();
 
     protected override string Schema => FreizeitenModul.Schema;
 
@@ -135,6 +140,26 @@ internal static class FreizeitenModell
             e.HasIndex(n => n.VerfasstVon);
             e.HasIndex(n => n.OrganisationId);
             e.HasOne<Anmeldung>().WithMany().HasForeignKey(n => n.AnmeldungId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Story 2-7, FR-43: Dokumente der Freizeit; eine eigene Datei liegt im Dateispeicher unter freizeiten/<Id>, eine Einbindung trägt nur die
+        // Kennung des Org-Dokuments (kein Titel, keine Kopie). Je Freizeit wird ein Org-Dokument höchstens einmal eingebunden.
+        modelBuilder.Entity<Dokument>(e =>
+        {
+            e.ToTable("dokument");
+            e.Property(d => d.Id).ValueGeneratedNever();
+            e.Property(d => d.Titel).HasMaxLength(Zeltlotse.Api.Contracts.Freizeiten.DokumentFelder.TitelMaximaleLaenge);
+            e.Property(d => d.Sichtbarkeit).HasConversion<short>();
+            e.Property(d => d.Dateiart).HasConversion<short?>();
+            e.Property(d => d.Version).IsRowVersion();
+            e.Ignore(d => d.AusOrganisation);
+            e.HasIndex(d => d.FreizeitId);
+            e.HasIndex(d => d.OrganisationId);
+            e.HasIndex(d => new { d.FreizeitId, d.OrgDokumentId })
+                .IsUnique()
+                .HasFilter("\"OrgDokumentId\" IS NOT NULL")
+                .HasDatabaseName("IX_dokument_einbindung");
+            e.HasOne<Freizeit>().WithMany().HasForeignKey(d => d.FreizeitId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

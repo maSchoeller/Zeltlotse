@@ -1,3 +1,4 @@
+using Zeltlotse.Api.Contracts.Freizeiten;
 using NachweisArt = Zeltlotse.Personen.Contracts.Events.NachweisArt;
 
 namespace Zeltlotse.Api.Demo;
@@ -61,6 +62,28 @@ internal static class DemoKatalog
 
     /// <summary>Story 2-5: Leas Team-Notiz zu Mia (nur, wenn es an Mias Anmeldung noch keine Notiz gibt).</summary>
     public const string TeamNotizZuMia = "Hatte letztes Jahr am ersten Abend Heimweh; ein Gespräch am Lagerfeuer hat geholfen.";
+
+    /// <summary>
+    /// Story 2-7: Org-Dokumente der Demo-Organisation (Andrea lädt sie hoch, je nur, wenn es den Titel noch nicht gibt), als Dateiname;
+    /// der Titel ist der Name ohne Endung. Die Hausordnung bindet die Freizeit ein, der Leitfaden bleibt einbindbar.
+    /// </summary>
+    public static IReadOnlyList<string> OrgDokumente { get; } = ["Hausordnung Zeltplatz.pdf", "Leitfaden Aufsichtspflicht.pdf"];
+
+    /// <summary>Story 2-7: das Org-Dokument, das die Demo-Freizeit mit Sichtbarkeit „Eltern und Teilnehmende“ einbindet.</summary>
+    public const string EingebundenesOrgDokument = "Hausordnung Zeltplatz";
+
+    /// <summary>
+    /// Story 2-7: Dokumente der Demo-Freizeit (Dateiname und Sichtbarkeit), je nur, wenn es den Titel noch nicht gibt. Die Suche „pack“
+    /// trifft in der Doku nur die Packliste.
+    /// </summary>
+    public static IReadOnlyList<(string Dateiname, DokumentSichtbarkeit Sichtbarkeit)> Dokumente { get; } =
+    [
+        ("Infobrief Zeltlager Sommer 2027.pdf", DokumentSichtbarkeit.ElternUndTeilnehmende),
+        ("Packliste.pdf", DokumentSichtbarkeit.ElternUndTeilnehmende),
+        ("Notfallnummern.pdf", DokumentSichtbarkeit.ElternUndTeilnehmende),
+        ("Anfahrt zum Zeltplatz.pdf", DokumentSichtbarkeit.Oeffentlich),
+        ("Programmideen.pdf", DokumentSichtbarkeit.Team),
+    ];
 
     /// <summary>Story 2-3: Kontakt der Leitung für Absagen auf der Demo-Freizeit (erfunden, Mail-Adresse unter example.org).</summary>
     public static (string Mail, string Telefon) KontaktFuerAbsagen { get; } = ("zeltlager@example.org", "0123 456789");

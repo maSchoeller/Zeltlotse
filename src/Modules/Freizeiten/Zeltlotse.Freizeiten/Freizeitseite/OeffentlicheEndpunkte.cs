@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Zeltlotse.Api.Contracts.Freizeiten;
 using Zeltlotse.Freizeiten.Daten;
+using Zeltlotse.Freizeiten.Dokumente;
 using Zeltlotse.Freizeiten.Domaene;
 using Zeltlotse.Freizeiten.Rechte;
+using Zeltlotse.Organisationen.Contracts.Dokumente;
 using Zeltlotse.Organisationen.Contracts.Vertrauensseite;
 using Zeltlotse.Personen.Contracts.Freizeitpass;
 using Zeltlotse.Personen.Contracts.Namen;
@@ -38,6 +40,7 @@ internal static class FreizeitseiteOeffentlichEndpunkt
         IVertrauensAngabenLesen organisation,
         IPersonenSteckbriefe steckbriefe,
         IBestaetigteTeilnehmende bestaetigte,
+        IOrgDokumenteLesen orgDokumente,
         TimeProvider uhr,
         CancellationToken abbruch)
     {
@@ -76,7 +79,8 @@ internal static class FreizeitseiteOeffentlichEndpunkt
             AnmeldelinkErzeugen.Api(link.Art),
             ausgebucht,
             team,
-            freizeit.Teilnahmebedingungen));
+            freizeit.Teilnahmebedingungen,
+            await OeffentlichesDokumentEndpunkt.VerweiseAsync(db, freizeit, orgDokumente, abbruch)));
     }
 
     /// <summary>

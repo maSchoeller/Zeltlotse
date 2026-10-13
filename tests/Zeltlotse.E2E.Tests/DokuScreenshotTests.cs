@@ -691,6 +691,9 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(team.Locator("li").Filter(new() { HasText = "Jonas" })).ToContainTextAsync("Leitung · aus Musterstadt");
         await Assertions.Expect(team.Locator("li").Filter(new() { HasText = "Miriam" })).ToContainTextAsync("Leitung · aus Musterstadt");
         await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Vertrauensseite" })).ToBeVisibleAsync();
+        // Story 2-7: nur das öffentliche Dokument der Demo-Freizeit.
+        var dokumente = seite.Locator(".elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = "Dokumente", Exact = true }) });
+        await Assertions.Expect(dokumente.Locator("li a")).ToHaveTextAsync(["Anfahrt zum Zeltplatz (PDF)"]);
         await E2EHilfe.AxeAsync(seite);
 
         await BildAsync(seite, "freizeitseite", geraet);
@@ -791,6 +794,16 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await E2EHilfe.AxeAsync(seite);
 
         await BildAsync(seite, "gast-link", geraet);
+
+        // Story 2-7: Über den Gast-Link stehen dieselben Dokumente für Eltern bereit wie im Konto.
+        await karte.GetByRole(AriaRole.Link, new() { Name = "Elterninfo" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Elterninfo", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator(".elkw-kicker")).ToHaveTextAsync("Zeltlager Sommer 2027");
+        await Assertions.Expect(seite.Locator("main li a")).ToHaveTextAsync(DemoElterninfo);
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Zurück zu den Anmeldungen" })).ToBeVisibleAsync();
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "gast-elterninfo", geraet);
     }
 
     [Theory]
@@ -1059,6 +1072,159 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await E2EHilfe.AxeAsync(seite);
 
         await BildAsync(seite, "freizeitpass-vor-bestaetigung", geraet);
+    }
+
+    // ---------- Story 2-7: Dokumente und Elterninfo ----------
+
+    /// <summary>Die Dokumente der Demo-Freizeit nach Titel, mit Sichtbarkeit und Herkunft.</summary>
+    private static readonly (string Titel, string Sichtbarkeit, string Herkunft)[] DemoDokumente =
+    [
+        ("Anfahrt zum Zeltplatz", "Öffentlich", "Freizeit"),
+        ("Hausordnung Zeltplatz", "Eltern und Teilnehmende", "Organisation"),
+        ("Infobrief Zeltlager Sommer 2027", "Eltern und Teilnehmende", "Freizeit"),
+        ("Notfallnummern", "Eltern und Teilnehmende", "Freizeit"),
+        ("Packliste", "Eltern und Teilnehmende", "Freizeit"),
+        ("Programmideen", "Team", "Freizeit"),
+    ];
+
+    /// <summary>Die Elterninfo der Demo-Freizeit: die vier Dokumente für Eltern und Teilnehmende.</summary>
+    private static readonly string[] DemoElterninfo =
+        ["Hausordnung Zeltplatz (PDF)", "Infobrief Zeltlager Sommer 2027 (PDF)", "Notfallnummern (PDF)", "Packliste (PDF)"];
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Dokumente(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await DokumenteAsync(seite);
+        var zeilen = seite.Locator(".elkw-card").Filter(new() { HasText = "Dokumente der Freizeit" }).Locator("tbody tr");
+        await Assertions.Expect(zeilen).ToHaveCountAsync(DemoDokumente.Length);
+        for (var i = 0; i < DemoDokumente.Length; i++)
+        {
+            var (titel, sichtbarkeit, herkunft) = DemoDokumente[i];
+            await Assertions.Expect(zeilen.Nth(i).GetByRole(AriaRole.Link, new() { Name = titel, Exact = true })).ToBeVisibleAsync();
+            await Assertions.Expect(zeilen.Nth(i)).ToContainTextAsync(sichtbarkeit);
+            await Assertions.Expect(zeilen.Nth(i)).ToContainTextAsync(herkunft);
+        }
+
+        var einbinden = seite.Locator(".elkw-card").Filter(new() { HasText = "Aus der Organisation einbinden" });
+        await Assertions.Expect(einbinden.Locator("tbody tr")).ToHaveCountAsync(1);
+        await Assertions.Expect(einbinden).ToContainTextAsync("Leitfaden Aufsichtspflicht");
+        await Assertions.Expect(seite.GetByRole(AriaRole.Heading, new() { Name = "Dokument hochladen" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "dokumente", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Dokumente_Suche(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await DokumenteAsync(seite);
+        await seite.GetByLabel("Dokumente suchen").FillAsync("pack");
+
+        var zeilen = seite.Locator(".elkw-card").Filter(new() { HasText = "Dokumente der Freizeit" }).Locator("tbody tr");
+        await Assertions.Expect(zeilen).ToHaveCountAsync(1);
+        var packliste = zeilen.GetByRole(AriaRole.Link, new() { Name = "Packliste", Exact = true });
+        await Assertions.Expect(packliste).ToBeVisibleAsync();
+        await Assertions.Expect(seite.Locator(".elkw-card").Filter(new() { HasText = "Aus der Organisation einbinden" })).ToContainTextAsync("Keine Dokumente gefunden.");
+        // Der Titel öffnet die PDF-Datei als Download (mit der Sitzung des Browsers).
+        var href = await packliste.GetAttributeAsync("href");
+        Assert.NotNull(href);
+        var datei = await seite.Context.APIRequest.GetAsync(new Uri(new Uri(seite.Url), href).ToString());
+        Assert.Equal(200, datei.Status);
+        Assert.Equal("application/pdf", datei.Headers["content-type"]);
+        Assert.StartsWith("attachment", datei.Headers["content-disposition"], StringComparison.Ordinal);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "dokumente-suche", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Dokument_Bearbeiten(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await DokumenteAsync(seite);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Bearbeiten: Packliste" }).ClickAsync();
+
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Packliste", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByLabel("Titel", new() { Exact = true })).ToHaveValueAsync("Packliste");
+        await Assertions.Expect(seite.GetByLabel("Eltern und Teilnehmende")).ToBeCheckedAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Datei öffnen" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Entfernen" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Zurück zu den Dokumenten" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "dokument-bearbeiten", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Org_Dokumente(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, OrgAdminMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Organisation öffnen" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Jugendwerk Musterstadt", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Org-Dokumente öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Org-Dokumente", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByText("Freizeiten der Organisation binden diese Dokumente ein, ohne sie zu kopieren.")).ToBeVisibleAsync();
+        var zeilen = seite.Locator("tbody tr");
+        await Assertions.Expect(zeilen).ToHaveCountAsync(2, new() { Timeout = 60_000 });
+        await Assertions.Expect(zeilen.Nth(0).GetByRole(AriaRole.Link, new() { Name = "Hausordnung Zeltplatz" })).ToBeVisibleAsync();
+        await Assertions.Expect(zeilen.Nth(1).GetByRole(AriaRole.Link, new() { Name = "Leitfaden Aufsichtspflicht" })).ToBeVisibleAsync();
+        await Assertions.Expect(zeilen.Nth(0).GetByRole(AriaRole.Button, new() { Name = "Entfernen" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Heading, new() { Name = "Dokument hochladen" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "org-dokumente", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Elterninfo(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, ElternMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Familie öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        var emma = seite.Locator(".elkw-card").Filter(new() { HasText = "Emma Muster" });
+        await emma.GetByRole(AriaRole.Link, new() { Name = "Elterninfo" }).ClickAsync(new() { Timeout = 60_000 });
+
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Elterninfo", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("main")).ToContainTextAsync("Zeltlager Sommer 2027");
+        await Assertions.Expect(seite.Locator("main li a")).ToHaveTextAsync(DemoElterninfo, new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Zurück zur Familienübersicht" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "elterninfo", geraet);
+    }
+
+    /// <summary>Lea (Team) meldet sich an und öffnet in der Demo-Freizeit „Dokumente“.</summary>
+    private async Task DokumenteAsync(IPage seite)
+    {
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, TeamMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Dokumente", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Dokumente", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("tbody tr").Filter(new() { HasText = "Packliste" })).ToBeVisibleAsync(new() { Timeout = 60_000 });
     }
 
     /// <summary>Lea (Team) meldet sich an und öffnet in der Demo-Freizeit „Freizeitpässe“.</summary>

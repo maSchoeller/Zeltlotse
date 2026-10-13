@@ -1,0 +1,169 @@
+@page "/freizeiten/{FreizeitId:guid}/dokumente/{DokumentId:guid}"
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Ui.Kontext
+@inject FreizeitKontextDienst Kontext
+@inject FreizeitenApiClient Freizeiten
+@inject NavigationManager Navigation
+@* Dokument bearbeiten (Story 2-7, FR-43; Leitung und Team): Die Seite lädt die Liste der Freizeit und wählt das Dokument daraus. Titel
+   und Sichtbarkeit speichern per Autosave (AD-19); bei einer Einbindung steht der Titel als Text mit dem Hinweis, dass die Organisation
+   Titel und Datei pflegt. „Datei öffnen“ lädt die Datei herunter; „Entfernen“ klappt die Inline-Bestätigung auf und führt danach zur
+   Liste zurück. Abgeschlossen: alles nur lesbar. Fehlt das Dokument oder die Rolle → „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>@(_dokument?.Titel ?? "Dokument") – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <h1>@(_dokument?.Titel ?? "Dokument")</h1>
+    <p><a href="@ListePfad">Zurück zu den Dokumenten</a></p>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+    @if (_abgeschlossen)
+    {
+        <Meldung Titel="Hinweis">
+            <p>@AbgeschlossenText</p>
+        </Meldung>
+    }
+
+    @if (_dokument is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        <Card Titel="Angaben">
+            @if (_dokument.AusOrganisation || _abgeschlossen)
+            {
+                <DetailsListe Eintraege="Details" />
+                @if (_dokument.AusOrganisation)
+                {
+                    <p>Titel und Datei pflegt die Organisation.</p>
+                }
+            }
+            else
+            {
+                <AutosaveFeld Label="Titel" Id="dokument-titel" Feldname="@DokumentFelder.Titel" Pfad="@FreizeitenApiClient.DokumentPfad(FreizeitId, DokumentId)"
+                              Wert="@_dokument.Titel" Version="@_dokument.Version" Hinweis="@($"Höchstens {DokumentFelder.TitelMaximaleLaenge} Zeichen")" NeuLaden="NeuLadenAsync" />
+            }
+            @if (_abgeschlossen)
+            {
+                <p>Sichtbarkeit: @Anzeige.Sichtbarkeit(_dokument.Sichtbarkeit)</p>
+            }
+            else
+            {
+                <AutosaveAuswahlgruppe Legende="Sichtbarkeit" Id="dokument-sichtbarkeit" Feldname="@DokumentFelder.Sichtbarkeit" Mehrfach="false"
+                                       Pfad="@FreizeitenApiClient.DokumentPfad(FreizeitId, DokumentId)" Optionen="SichtbarkeitOptionen"
+                                       Wert="@_dokument.Sichtbarkeit.ToString()" Version="@_dokument.Version" NeuLaden="NeuLadenAsync"
+                                       Hinweis="Team: nur Leitung und Team. Eltern und Teilnehmende: auch in der Elterninfo. Öffentlich: auch auf der Freizeitseite." />
+            }
+            <p>@_dokument.Dateiart · hochgeladen am @Anzeige.Datum(_dokument.HochgeladenAm)</p>
+            <p><a href="@FreizeitenApiClient.DokumentDateiPfad(FreizeitId, DokumentId)" target="_blank" rel="noopener">Datei öffnen</a></p>
+        </Card>
+
+        @if (!_abgeschlossen)
+        {
+            <InlineBestaetigung AusloeserText="Entfernen" AusloeserArt="KnopfArt.Outline" Satz="@($"Dokument {_dokument.Titel} aus der Freizeit entfernen?")"
+                                JaText="Ja, entfernen" Bestaetigt="EntfernenAsync" />
+        }
+    }
+}
+
+@code {
+    private const string AbgeschlossenText = "Diese Freizeit ist abgeschlossen und nur lesbar.";
+
+    private static readonly IReadOnlyList<AuswahlOption> SichtbarkeitOptionen =
+    [
+        .. Enum.GetValues<DokumentSichtbarkeit>().Select(s => new AuswahlOption(s.ToString(), Anzeige.Sichtbarkeit(s))),
+    ];
+
+    private FreizeitDokument? _dokument;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _abgeschlossen;
+    private bool _uebertraegt;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    [Parameter] public Guid DokumentId { get; set; }
+
+    private string ListePfad => $"freizeiten/{FreizeitId}/dokumente";
+
+    private IReadOnlyList<DetailsEintrag> Details => [new("Titel", _dokument!.Titel)];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _dokument = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _abgeschlossen = false;
+        try
+        {
+            var kontext = await Kontext.LadenAsync(FreizeitId);
+            if (kontext is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            _abgeschlossen = kontext.Phase == Phase.Gelaufen;
+            await NeuLadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>Lädt die Liste und wählt das Dokument; auch „Neu laden“ nach einem Konflikt beim Autosave.</summary>
+    private async Task NeuLadenAsync()
+    {
+        var liste = await Freizeiten.DokumenteLadenAsync(FreizeitId);
+        _dokument = liste?.Dokumente.FirstOrDefault(d => d.Id == DokumentId);
+        _nichtVerfuegbar = _dokument is null;
+    }
+
+    private async Task EntfernenAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _aktionFehler = false;
+        try
+        {
+            switch (await Freizeiten.DokumentEntfernenAsync(FreizeitId, DokumentId))
+            {
+                case DokumentErgebnis.Erledigt:
+                    Navigation.NavigateTo(ListePfad);
+                    break;
+                case DokumentErgebnis.Konflikt:
+                    _abgeschlossen = true;
+                    break;
+                default:
+                    _nichtVerfuegbar = true;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

@@ -27,6 +27,10 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         "GET /api/freizeiten/gast/{gastToken}",
         "GET /api/freizeiten/oeffentlich/{token}",
         "GET /api/freizeiten/oeffentlich/{token}/vertrauensseite",
+        // Story 2-7: öffentliche Dokumente über den Anmeldelink und die Elterninfo über den Gast-Link.
+        "GET /api/freizeiten/oeffentlich/{token}/dokumente/{dokumentId:guid}",
+        "GET /api/freizeiten/gast/{gastToken}/anmeldungen/{anmeldungId:guid}/elterninfo",
+        "GET /api/freizeiten/gast/{gastToken}/anmeldungen/{anmeldungId:guid}/elterninfo/{dokumentId:guid}",
         "POST /api/betrieb/fehler",
         "POST /api/freizeiten/oeffentlich/{token}/anmeldungen",
         "POST /api/personen/oeffentlich/gaeste",
@@ -43,6 +47,9 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
     private static readonly string[] Organisationsuebergreifend =
     [
         "GET /api/ich/anmeldungen",
+        // Story 2-7: Elterninfo je Anmeldung (die Person selbst oder Eltern ihrer Familie).
+        "GET /api/ich/anmeldungen/{anmeldungId:guid}/elterninfo",
+        "GET /api/ich/anmeldungen/{anmeldungId:guid}/elterninfo/{dokumentId:guid}",
         "GET /api/ich/daten",
         "GET /api/ich/familie",
         "GET /api/ich/freizeiten",
@@ -107,7 +114,8 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         var oeffentlich = endpunkte.Where(e => e.Pfad.StartsWith("/api/freizeiten/oeffentlich/", StringComparison.Ordinal)
                                                || e.Pfad.StartsWith("/api/freizeiten/gast/", StringComparison.Ordinal)
                                                || e.Pfad.StartsWith("/api/personen/oeffentlich/", StringComparison.Ordinal)).ToList();
-        Assert.Equal(8, oeffentlich.Count);
+        // Story 2-7: dazu die öffentliche Datei eines Dokuments und die zwei Endpunkte der Elterninfo über den Gast-Link.
+        Assert.Equal(11, oeffentlich.Count);
         Assert.All(oeffentlich, e =>
         {
             Assert.Contains(e.Name, Anonym);
@@ -218,6 +226,14 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 // Story 2-6: Freizeitpass-Stand und Erinnern zum Freizeitpass (Personen, Leitung).
                 "GET /api/freizeiten/{freizeitId:guid}/personen/freizeitpass-stand",
                 "POST /api/freizeiten/{freizeitId:guid}/personen/freizeitpass/erinnerungen",
+                // Story 2-7: Dokumente der Freizeit und Einbinden von Org-Dokumenten (Leitung und Team).
+                "GET /api/freizeiten/{freizeitId:guid}/dokumente",
+                "POST /api/freizeiten/{freizeitId:guid}/dokumente",
+                "PATCH /api/freizeiten/{freizeitId:guid}/dokumente/{dokumentId:guid}",
+                "DELETE /api/freizeiten/{freizeitId:guid}/dokumente/{dokumentId:guid}",
+                "GET /api/freizeiten/{freizeitId:guid}/dokumente/{dokumentId:guid}/datei",
+                "GET /api/freizeiten/{freizeitId:guid}/dokumente/org",
+                "POST /api/freizeiten/{freizeitId:guid}/dokumente/einbindungen",
             }.Order(StringComparer.Ordinal),
             freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
         Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));
@@ -237,7 +253,8 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
 
         var mitOrg = endpunkte.Where(e => e.Endpunkt.RoutePattern.Parameters.Any(p => p.Name == Rechtemerkmale.OrgRouteWert)).ToList();
         // Story 1-5: dazu die sieben Prüf-Endpunkte des Org-Admins und die zwei der Nachweis-Richtlinie; Story 1-7: die zwei der Löschfristen.
-        Assert.Equal(18, mitOrg.Count);
+        // Story 2-7: die vier Endpunkte der Org-Dokumente.
+        Assert.Equal(22, mitOrg.Count);
         Assert.All(mitOrg, e =>
         {
             Assert.NotNull(e.Endpunkt.Metadata.GetMetadata<NurOrgRolleMetadaten>());

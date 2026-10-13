@@ -38,6 +38,12 @@ internal sealed class FreizeitpassSzenario : IAsyncDisposable
 
     public Guid A { get; private set; }
 
+    /// <summary>Story 2-7: Organisation B (Lea Org-Admin) mit Freizeit Z.</summary>
+    public Guid B { get; private set; }
+
+    /// <summary>Story 2-7: Bucket des S3-Containers, wenn das Szenario mit Dateispeicher aufgebaut ist.</summary>
+    public string? Bucket { get; private set; }
+
     public Guid X { get; private set; }
 
     public Guid Z { get; private set; }
@@ -72,9 +78,19 @@ internal sealed class FreizeitpassSzenario : IAsyncDisposable
 
     public string TeilnehmendeZ { get; private set; } = null!;
 
-    public static async Task<FreizeitpassSzenario> AufbauenAsync(PostgresContainer postgres)
+    public static async Task<FreizeitpassSzenario> AufbauenAsync(PostgresContainer postgres, S3Container? s3 = null)
     {
         var szenario = new FreizeitpassSzenario(await postgres.NeueDatenbankAsync());
+        if (s3 is not null)
+        {
+            // Story 2-7: Dokumente brauchen den Dateispeicher (S3-Container mit eigenem Bucket).
+            szenario.Bucket = S3Container.NeuerBucket();
+            foreach (var (schluessel, wert) in s3.Einstellungen(szenario.Bucket))
+            {
+                szenario.Factory.Einstellungen[schluessel] = wert;
+            }
+        }
+
         await szenario.InitAsync();
         return szenario;
     }
@@ -86,6 +102,7 @@ internal sealed class FreizeitpassSzenario : IAsyncDisposable
         Merken(Andrea);
         Guid b;
         (b, Lea) = await OrganisationMitOrgAdminAsync(Factory, Gerd, "EJW Beispielhausen", OrgHelfer.Lea);
+        B = b;
         Merken(Lea);
         X = await AnlegenAsync(Andrea, A, Kapf);
         Z = await AnlegenAsync(Lea, b, "Z", new DateOnly(2027, 9, 1), new DateOnly(2027, 9, 3));
@@ -143,6 +160,23 @@ internal sealed class FreizeitpassSzenario : IAsyncDisposable
         var anmeldung = await AnmeldenAsync(Katrin, anmeldelink ?? TeilnehmendeX, kind);
         await ZustellenAsync();
         return anmeldung;
+    }
+
+    /// <summary>
+    /// Story 2-7: Eine Gast-Familie meldet ein Kind über den Anmeldelink an (ohne Konto, die Outbox ist danach zugestellt); liefert
+    /// Gast-Token, Kind und Anmeldung.
+    /// </summary>
+    public async Task<(string Token, Guid Kind, Guid Anmeldung)> GastAnmeldenAsync(string mail, string kind, string? anmeldelink = null)
+    {
+        using var gast = await PostAsync(Anonym, "/api/personen/oeffentlich/gaeste", new Zeltlotse.Api.Contracts.Personen.GastAnlegen("Sabine", "Beispiel", mail, kind, "Beispiel", new DateOnly(2016, 4, 1)));
+        Assert.Equal(HttpStatusCode.Created, gast.StatusCode);
+        var json = await JsonAsync(gast);
+        var (token, kindId) = (json.GetProperty("gastToken").GetString()!, json.GetProperty("kindPersonId").GetGuid());
+        using var anmeldung = await PostAsync(Anonym, $"/api/freizeiten/oeffentlich/{anmeldelink ?? TeilnehmendeX}/anmeldungen", new GastAnmeldungAbsenden(token, kindId, true));
+        Assert.Equal(HttpStatusCode.Created, anmeldung.StatusCode);
+        var anmeldungId = (await JsonAsync(anmeldung)).GetProperty("anmeldungId").GetGuid();
+        await ZustellenAsync();
+        return (token, kindId, anmeldungId);
     }
 
     public async Task BestaetigenAsync(Guid anmeldung, Guid? freizeit = null)

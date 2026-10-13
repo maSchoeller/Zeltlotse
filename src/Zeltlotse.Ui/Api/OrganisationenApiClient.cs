@@ -12,6 +12,12 @@ public sealed record AnlegenErgebnis(Guid? Id, string? NameFehler, string? MailF
 public sealed record EinladenErgebnis(Guid? Id, string? MailFehler, string? RolleFehler);
 
 /// <summary>
+/// Ergebnis von <see cref="OrganisationenApiClient.OrgDokumentHochladenAsync"/> (Story 2-7): das Org-Dokument, der Fehler am Feld
+/// <c>datei</c> oder nicht verfügbar (<c>403</c>/<c>404</c>).
+/// </summary>
+public sealed record OrgDokumentHochladenErgebnis(OrgDokument? Dokument, string? DateiFehler, bool NichtVerfuegbar);
+
+/// <summary>
 /// Typisierter Client des Moduls Organisationen (AD-29, handgeschrieben): Organisationen (Global Admin), eine Organisation
 /// mit Rollen und Einladungen (Org-Admin), Einladung annehmen und die eigenen Organisationen.
 /// <c>403</c> und <c>404</c> beim Laden heißen „nicht verfügbar“ (<c>null</c>); andere Fehler enden in einer
@@ -142,6 +148,58 @@ public sealed class OrganisationenApiClient(HttpClient http)
         }
 
         return namen;
+    }
+
+    // ---------- Story 2-7: Org-Dokumente ----------
+
+    /// <summary>Pfad der Org-Dokumente einer Organisation.</summary>
+    public static string OrgDokumentePfad(Guid orgId) => $"/api/organisationen/{orgId}/dokumente";
+
+    /// <summary>Pfad der Datei eines Org-Dokuments, für einen Link; die API liefert sie als Anhang.</summary>
+    public static string OrgDokumentDateiPfad(Guid orgId, Guid dokumentId) => $"{OrgDokumentePfad(orgId)}/{dokumentId}/datei";
+
+    /// <summary><c>GET /api/organisationen/{orgId}/dokumente</c> (Org-Admin): die Org-Dokumente nach Titel oder <c>null</c> bei <c>403</c>/<c>404</c>.</summary>
+    public Task<OrgDokumente?> OrgDokumenteLadenAsync(Guid orgId, CancellationToken abbruch = default) =>
+        LadenAsync<OrgDokumente>(OrgDokumentePfad(orgId), abbruch);
+
+    /// <summary>
+    /// <c>POST /api/organisationen/{orgId}/dokumente</c> (Multipart <c>datei</c>): das Org-Dokument bei <c>201</c>, der Fehler am Feld bei
+    /// <c>400</c> oder nicht verfügbar (<c>403</c>/<c>404</c>). Netzfehler enden in einer <see cref="HttpRequestException"/>.
+    /// </summary>
+    public async Task<OrgDokumentHochladenErgebnis> OrgDokumentHochladenAsync(Guid orgId, Stream inhalt, string dateiname, string? contentType, CancellationToken abbruch = default)
+    {
+        ArgumentNullException.ThrowIfNull(inhalt);
+        using var datei = new StreamContent(inhalt);
+        datei.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(string.IsNullOrWhiteSpace(contentType) ? "application/octet-stream" : contentType);
+        using var formular = new MultipartFormDataContent { { datei, "datei", string.IsNullOrWhiteSpace(dateiname) ? "datei" : dateiname } };
+        using var antwort = await http.PostAsync(OrgDokumentePfad(orgId), formular, abbruch);
+        if (antwort.StatusCode == HttpStatusCode.BadRequest && await ApiFehler.FeldFehlerAsync(antwort, "datei", abbruch) is { } fehler)
+        {
+            return new OrgDokumentHochladenErgebnis(null, fehler, NichtVerfuegbar: false);
+        }
+
+        if (antwort.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+        {
+            return new OrgDokumentHochladenErgebnis(null, null, NichtVerfuegbar: true);
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        var dokument = await antwort.Content.ReadFromJsonAsync<OrgDokument>(ApiJson.Optionen, abbruch)
+                       ?? throw new HttpRequestException("Leere Antwort beim Hochladen des Org-Dokuments.");
+        return new OrgDokumentHochladenErgebnis(dokument, null, NichtVerfuegbar: false);
+    }
+
+    /// <summary><c>DELETE /api/organisationen/{orgId}/dokumente/{dokumentId}</c>: <c>true</c> bei <c>204</c>, <c>false</c> bei <c>403</c>/<c>404</c>.</summary>
+    public async Task<bool> OrgDokumentEntfernenAsync(Guid orgId, Guid dokumentId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.DeleteAsync($"{OrgDokumentePfad(orgId)}/{dokumentId}", abbruch);
+        if (antwort.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return true;
     }
 
     private async Task<T?> LadenAsync<T>(string pfad, CancellationToken abbruch)

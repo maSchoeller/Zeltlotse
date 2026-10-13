@@ -1,0 +1,76 @@
+@page "/familie/elterninfo/{AnmeldungId:guid}"
+@using Zeltlotse.Api.Contracts.Freizeiten
+@inject FreizeitenApiClient Freizeiten
+@* Elterninfo (EXPERIENCE.md → Fläche „Familienübersicht“, CAP-10, FR-68, Story 2-7): zu einer Anmeldung der Familie die Dokumente der
+   Freizeit mit Sichtbarkeit „Eltern und Teilnehmende“ (Infobrief, Packliste, Notfallnummern), je als Link auf die Datei (Download).
+   Dachzeile mit dem Namen der Freizeit, Zurück-Link zur Familienübersicht. Ohne Dokumente „Noch keine Elterninfo.“; eine fremde,
+   abgesagte oder unbekannte Anmeldung → „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>Elterninfo – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    @if (_info is not null)
+    {
+        <Dachzeile>@_info.FreizeitName</Dachzeile>
+    }
+    <h1>Elterninfo</h1>
+    <p><a href="familie">Zurück zur Familienübersicht</a></p>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+
+    @if (_info is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else if (_info.Dokumente.Count == 0)
+    {
+        <LeerZustand Satz="Noch keine Elterninfo." />
+    }
+    else
+    {
+        <Card Titel="Dokumente der Freizeit">
+            <ul>
+                @foreach (var dokument in _info.Dokumente)
+                {
+                    <li><a href="@($"{FreizeitenApiClient.ElterninfoPfad(AnmeldungId)}/{dokument.Id}")" target="_blank" rel="noopener">@Anzeige.Dokument(dokument.Titel, dokument.Dateiart)</a></li>
+                }
+            </ul>
+        </Card>
+    }
+}
+
+@code {
+    private Elterninfo? _info;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+
+    [Parameter] public Guid AnmeldungId { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _info = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        try
+        {
+            _info = await Freizeiten.ElterninfoLadenAsync(AnmeldungId);
+            _nichtVerfuegbar = _info is null;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+}

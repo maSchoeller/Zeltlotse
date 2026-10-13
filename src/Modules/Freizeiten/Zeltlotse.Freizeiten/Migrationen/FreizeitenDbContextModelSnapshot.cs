@@ -23,6 +23,56 @@ namespace Zeltlotse.Freizeiten.Migrationen
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Zeltlotse.Freizeiten.Dokumente.Dokument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<short?>("Dateiart")
+                        .HasColumnType("smallint");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long?>("Groesse")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("HochgeladenAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("OrgDokumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Sichtbarkeit")
+                        .HasColumnType("smallint");
+
+                    b.Property<string>("Titel")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FreizeitId");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("FreizeitId", "OrgDokumentId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_dokument_einbindung")
+                        .HasFilter("\"OrgDokumentId\" IS NOT NULL");
+
+                    b.ToTable("dokument", "freizeiten");
+                });
+
             modelBuilder.Entity("Zeltlotse.Freizeiten.Domaene.Anmeldelink", b =>
                 {
                     b.Property<Guid>("Id")
@@ -394,6 +444,15 @@ namespace Zeltlotse.Freizeiten.Migrationen
                     b.HasIndex("ErledigtAm", "NaechsterVersuch");
 
                     b.ToTable("outbox_zustellung", "freizeiten");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Freizeiten.Dokumente.Dokument", b =>
+                {
+                    b.HasOne("Zeltlotse.Freizeiten.Domaene.Freizeit", null)
+                        .WithMany()
+                        .HasForeignKey("FreizeitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Zeltlotse.Freizeiten.Domaene.Anmeldelink", b =>

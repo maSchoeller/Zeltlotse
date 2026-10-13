@@ -94,4 +94,10 @@ public static class Aktionsschluessel
     /// Story 2-5).
     /// </summary>
     public const string FreizeitpaesseSehen = "freizeitpaesse-sehen";
+
+    /// <summary>
+    /// Org-Dokumente hochladen und entfernen, die Freizeiten der Organisation einbinden (Org-Admin, in
+    /// <c>GET /api/organisationen/{orgId}</c>, Story 2-7, FR-43).
+    /// </summary>
+    public const string OrgDokumenteVerwalten = "org-dokumente-verwalten";
 }

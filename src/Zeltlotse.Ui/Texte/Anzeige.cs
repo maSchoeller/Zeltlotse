@@ -231,6 +231,25 @@ public static class Anzeige
     public static string Anmeldestand(string art, int eingegangen, int bestaetigt) =>
         $"{art}: {eingegangen.ToString(Deutsch)} eingegangen, {bestaetigt.ToString(Deutsch)} bestätigt";
 
+    /// <summary>Story 2-7: „Team“, „Eltern und Teilnehmende“ bzw. „Öffentlich“.</summary>
+    public static string Sichtbarkeit(Zeltlotse.Api.Contracts.Freizeiten.DokumentSichtbarkeit sichtbarkeit) => sichtbarkeit switch
+    {
+        Zeltlotse.Api.Contracts.Freizeiten.DokumentSichtbarkeit.Team => "Team",
+        Zeltlotse.Api.Contracts.Freizeiten.DokumentSichtbarkeit.ElternUndTeilnehmende => "Eltern und Teilnehmende",
+        Zeltlotse.Api.Contracts.Freizeiten.DokumentSichtbarkeit.Oeffentlich => "Öffentlich",
+        _ => sichtbarkeit.ToString(),
+    };
+
+    /// <summary>Story 2-7: Herkunft eines Dokuments der Freizeit: „Organisation“ (eingebunden) oder „Freizeit“.</summary>
+    public static string Herkunft(bool ausOrganisation) => ausOrganisation ? "Organisation" : "Freizeit";
+
+    /// <summary>Story 2-7: ein Dokument als Link-Text der Elterninfo, z. B. „Packliste (PDF)“.</summary>
+    public static string Dokument(string titel, string dateiart) => $"{titel} ({dateiart})";
+
+    /// <summary>Story 2-7: Trifft der Titel die Suche? Enthält, ohne Groß- und Kleinschreibung; eine leere Suche trifft alles.</summary>
+    public static bool TitelTrifft(string titel, string? suche) =>
+        string.IsNullOrWhiteSpace(suche) || Deutsch.CompareInfo.IndexOf(titel, suche.Trim(), CompareOptions.IgnoreCase) >= 0;
+
     /// <summary>„Vorname Nachname“; ohne beide „Name fehlt“.</summary>
     public static string Name(string? vorname, string? nachname)
     {

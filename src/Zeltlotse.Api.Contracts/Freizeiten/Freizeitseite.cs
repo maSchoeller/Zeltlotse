@@ -120,6 +120,7 @@ public static class FreizeitseiteFelder
 /// <param name="Ausgebucht">Nur beim Link für Teilnehmende: bestätigte Teilnehmende erreichen die Höchstzahl.</param>
 /// <param name="Team">Leitung vor Team; nur Vorname, Initialen, Rolle und Herkunft.</param>
 /// <param name="Teilnahmebedingungen">Text der Teilnahmebedingungen für das Anmeldeformular; leer, wenn keine hinterlegt sind.</param>
+/// <param name="Dokumente">Story 2-7: die Dokumente der Freizeit mit Sichtbarkeit „öffentlich“, nach Titel (FR-43).</param>
 public sealed record Freizeitseite(
     string Organisation,
     string Name,
@@ -130,7 +131,8 @@ public sealed record Freizeitseite(
     AnmeldelinkArt Art,
     bool Ausgebucht,
     IReadOnlyList<TeamPerson> Team,
-    string? Teilnahmebedingungen = null);
+    string? Teilnahmebedingungen = null,
+    IReadOnlyList<DokumentVerweis>? Dokumente = null);
 
 /// <summary>Eine Person des Teams auf der Freizeitseite: kein Nachname, keine Mail-Adresse, keine Kennung.</summary>
 public sealed record TeamPerson(string Vorname, string Initialen, FreizeitRolle Rolle, string? Herkunft);

@@ -50,7 +50,7 @@ Die Elternangaben werden nur innerhalb dieser Seite weitergereicht, auf dem Ger�
 
 ## Der Gast-Link
 
-Der Gast-Link aus der Mail öffnet die Seite **Anmeldungen**: je angemeldetem Kind Vorname, Freizeit, Zeitraum, Status und, solange nicht abgesagt, der Knopf **Freizeitpass für …** (siehe [Freizeitpass ausfüllen](/eltern/freizeitpass/#als-gast-über-den-gast-link)) und der Kontakt der Leitung für Absagen (siehe [Absagen](#absagen)). Darunter steht, bis wann der Gast-Link gilt.
+Der Gast-Link aus der Mail öffnet die Seite **Anmeldungen**: je angemeldetem Kind Vorname, Freizeit, Zeitraum, Status und, solange nicht abgesagt, der Knopf **Freizeitpass für …** (siehe [Freizeitpass ausfüllen](/eltern/freizeitpass/#als-gast-über-den-gast-link)), der Link **Elterninfo** mit Infobrief, Packliste und Notfallnummern (siehe [Elterninfo](/eltern/elterninfo/#über-den-gast-link)) und der Kontakt der Leitung für Absagen (siehe [Absagen](#absagen)). Darunter steht, bis wann der Gast-Link gilt.
 
 - Er gilt bis zum Ende des **Freigabefensters** der Freizeit, also so lange, wie die Freizeit die Angaben sehen darf. Ist bei der Leitung noch keine Anmeldung angekommen, gilt er **einen Tag**.
 - Hat ein Konto die Angaben übernommen, gilt der Gast-Link nicht mehr.

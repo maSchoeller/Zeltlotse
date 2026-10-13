@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Zeltlotse.Organisationen.Contracts.Dokumente;
 using Zeltlotse.Organisationen.Contracts.Loeschfristen;
 using Zeltlotse.Organisationen.Contracts.Nachweise;
 using Zeltlotse.Organisationen.Contracts.Rollen;
@@ -9,6 +10,7 @@ using Zeltlotse.Freizeiten.Contracts.Events;
 using Zeltlotse.Organisationen.Daten;
 using Zeltlotse.Organisationen.Mitglieder;
 using Zeltlotse.Organisationen.Datenschutz;
+using Zeltlotse.Organisationen.Dokumente;
 using Zeltlotse.Organisationen.Nachweise;
 using Zeltlotse.Organisationen.Rollen;
 using Zeltlotse.Organisationen.Verwaltung;
@@ -39,6 +41,7 @@ public static class OrganisationenModul
         services.EmpfaengtEreignis<AnmeldungBestaetigt, MitgliedschaftAnlegen>();
         services.AddScoped<ILoeschfristenLesen, LoeschfristenLesen>();
         services.AddScoped<IVertrauensAngabenLesen, VertrauensAngabenLesen>();
+        services.AddScoped<IOrgDokumenteLesen, OrgDokumenteLesen>();
         services.AddScoped<IDatenauskunft, OrganisationenAuskunft>();
         services.AddScoped<ILoeschlauf, OrganisationenLoeschlauf>();
         return services;
@@ -64,6 +67,11 @@ public static class OrganisationenModul
         organisation.MapPatch("/nachweis-richtlinie/{art}", RichtlinieFeldAendernEndpunkt.Aendern).NurOrgRolle(OrgRechte.RichtlinieVerwalten);
         organisation.MapGet("/loeschfristen", LoeschfristenLadenEndpunkt.Laden).NurOrgRolle(OrgRechte.LoeschfristenVerwalten);
         organisation.MapPatch("/loeschfristen", LoeschfristFeldAendernEndpunkt.Aendern).NurOrgRolle(OrgRechte.LoeschfristenVerwalten);
+        // Story 2-7: Org-Dokumente (FR-43), nur Org-Admin; Freizeiten bindet sie über IOrgDokumenteLesen ein.
+        organisation.MapGet("/dokumente", OrgDokumentEndpunkte.Laden).NurOrgRolle(OrgRechte.Dokumente);
+        organisation.MapPost("/dokumente", OrgDokumentEndpunkte.Hochladen).NurOrgRolle(OrgRechte.Dokumente);
+        organisation.MapDelete("/dokumente/{dokumentId:guid}", OrgDokumentEndpunkte.Entfernen).NurOrgRolle(OrgRechte.Dokumente);
+        organisation.MapGet("/dokumente/{dokumentId:guid}/datei", OrgDokumentEndpunkte.Datei).NurOrgRolle(OrgRechte.Dokumente);
 
         api.MapGet("/ich/organisationen", MeineOrganisationenEndpunkt.Laden).Organisationsuebergreifend();
         api.MapGet("/ich/organisationen/nachweis-bestaetigungen", MeineBestaetigungenEndpunkt.Laden).Organisationsuebergreifend();

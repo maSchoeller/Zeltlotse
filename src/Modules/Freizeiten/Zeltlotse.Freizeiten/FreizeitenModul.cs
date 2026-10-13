@@ -7,6 +7,7 @@ using Zeltlotse.Freizeiten.Contracts.Rollen;
 using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
 using Zeltlotse.Freizeiten.Daten;
 using Zeltlotse.Freizeiten.Datenschutz;
+using Zeltlotse.Freizeiten.Dokumente;
 using Zeltlotse.Freizeiten.Fragen;
 using Zeltlotse.Freizeiten.Freizeitseite;
 using Zeltlotse.Freizeiten.Nachweise;
@@ -74,8 +75,14 @@ public static class FreizeitenModul
         // Story 2-2: Gast-Anmeldung über den Anmeldelink (Antiforgery über die Dienst-Kennung der öffentlichen Seiten, AD-25).
         oeffentlich.MapPost("/anmeldungen", GastAnmeldenEndpunkt.Absenden);
 
-        // Gast-Link (AD-11): anonym, zugriffsbegrenzt; nur die Anmeldungen der Gast-Familie.
-        freizeiten.MapGet("/gast/{gastToken}", GastLinkEndpunkt.Laden).AllowAnonymous().Zugriffsbegrenzt();
+        // Story 2-7: die Datei eines öffentlichen Dokuments der Freizeit des Anmeldelinks.
+        oeffentlich.MapGet("/dokumente/{dokumentId:guid}", OeffentlichesDokumentEndpunkt.Datei);
+
+        // Gast-Link (AD-11): anonym, zugriffsbegrenzt; nur die Anmeldungen der Gast-Familie und (Story 2-7) ihre Elterninfo.
+        var gast = freizeiten.MapGroup("/gast/{gastToken}").AllowAnonymous().Zugriffsbegrenzt();
+        gast.MapGet("", GastLinkEndpunkt.Laden);
+        gast.MapGet("/anmeldungen/{anmeldungId:guid}/elterninfo", ElterninfoGastEndpunkt.Laden);
+        gast.MapGet("/anmeldungen/{anmeldungId:guid}/elterninfo/{dokumentId:guid}", ElterninfoGastEndpunkt.Datei);
 
         var freizeit = freizeiten.MapGroup($"/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}");
         freizeit.MapGet("", FreizeitLadenEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Mitarbeit);
@@ -96,11 +103,23 @@ public static class FreizeitenModul
         freizeit.MapGet("/anmeldungen/{anmeldungId:guid}/notizen", TeamNotizEndpunkte.Laden).NurFreizeitRolle(FreizeitRechte.Freizeitpaesse);
         freizeit.MapPost("/anmeldungen/{anmeldungId:guid}/notizen", TeamNotizEndpunkte.Anlegen).NurFreizeitRolle(FreizeitRechte.Freizeitpaesse);
         freizeit.MapDelete("/anmeldungen/{anmeldungId:guid}/notizen/{notizId:guid}", TeamNotizEndpunkte.Loeschen).NurFreizeitRolle(FreizeitRechte.Freizeitpaesse);
+        // Story 2-7: Dokumente der Freizeit und Einbinden von Org-Dokumenten (FR-43); Dokumente sind keine Leitungsaufgabe.
+        var dokumente = freizeit.MapGroup("/dokumente");
+        dokumente.MapGet("", DokumentEndpunkte.Laden).NurFreizeitRolle(FreizeitRechte.Mitarbeit);
+        dokumente.MapPost("", DokumentEndpunkte.Hochladen).NurFreizeitRolle(FreizeitRechte.Mitarbeit);
+        dokumente.MapPatch("/{dokumentId:guid}", DokumentEndpunkte.Aendern).NurFreizeitRolle(FreizeitRechte.Mitarbeit);
+        dokumente.MapDelete("/{dokumentId:guid}", DokumentEndpunkte.Entfernen).NurFreizeitRolle(FreizeitRechte.Mitarbeit);
+        dokumente.MapGet("/{dokumentId:guid}/datei", DokumentEndpunkte.Datei).NurFreizeitRolle(FreizeitRechte.Mitarbeit);
+        dokumente.MapGet("/org", DokumentEndpunkte.OrgAuswahl).NurFreizeitRolle(FreizeitRechte.Mitarbeit);
+        dokumente.MapPost("/einbindungen", DokumentEndpunkte.Einbinden).NurFreizeitRolle(FreizeitRechte.Mitarbeit);
 
         api.MapGet("/ich/freizeiten", MeineFreizeitenEndpunkt.Laden).Organisationsuebergreifend();
         var anmeldungen = api.MapGroup("/ich/anmeldungen").Organisationsuebergreifend();
         anmeldungen.MapGet("", MeineAnmeldungenEndpunkt.Laden);
         anmeldungen.MapPost("", AnmeldenMitKontoEndpunkt.Absenden).Zugriffsbegrenzt();
+        // Story 2-7: Elterninfo je Anmeldung (FR-68); den Mandanten setzt die geprüfte Anmeldung.
+        anmeldungen.MapGet("/{anmeldungId:guid}/elterninfo", ElterninfoKontoEndpunkt.Laden);
+        anmeldungen.MapGet("/{anmeldungId:guid}/elterninfo/{dokumentId:guid}", ElterninfoKontoEndpunkt.Datei);
         return api;
     }
 }

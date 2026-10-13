@@ -93,7 +93,21 @@ Zum Konto speichert Zeltlotse die Mail-Adresse und, falls festgelegt, ein Passwo
 - **Anmeldelinks:** Ein Anmeldelink steht als Prüfwert und verschlüsselt in der Datenbank, damit die Leitung ihn wieder anzeigen kann. Er gilt bis zum Ende des letzten Freizeittages oder bis die Leitung ihn erneuert. Wer ihn aufruft, wird nicht protokolliert. Kommen zu viele Aufrufe von derselben Adresse, bremst Zeltlotse sie aus.
 - **Bestätigen und absagen:** An der Anmeldung speichert Zeltlotse den Status und wann die Leitung entschieden hat. Die Mail zur Entscheidung entsteht erst beim Versand; ihre Adresse kommt aus dem Konto oder der Gast-Anmeldung und wird nirgends zusätzlich abgelegt. Der **Kontakt für Absagen** ist, was die Leitung dafür selbst einträgt; die Mail-Adresse ihres Kontos zeigt Zeltlotse nie von selbst.
 - **Mitgliedschaft:** Mit der ersten bestätigten Mitarbeit wird eine Person **Mitarbeitende der Organisation**. Gespeichert sind nur Organisation, Person und seit wann; eine Absage beendet die Mitgliedschaft nicht. Sie steht in der Auskunft und wird mit dem Konto gelöscht.
-- **Freizeitseite:** Öffentlich stehen dort nur Name, Zeitraum, Ort und Beschreibung der Freizeit und vom Team Vorname, Rolle und die freiwillige **Herkunft** aus dem Profil, dazu ein Kreis mit den Initialen von Vor- und Nachname. Den vollen Nachnamen und Mail-Adressen zeigt sie nicht.
+- **Freizeitseite:** Öffentlich stehen dort nur Name, Zeitraum, Ort und Beschreibung der Freizeit und vom Team Vorname, Rolle und die freiwillige **Herkunft** aus dem Profil, dazu ein Kreis mit den Initialen von Vor- und Nachname. Den vollen Nachnamen und Mail-Adressen zeigt sie nicht. Dazu kommen die Dokumente mit Sichtbarkeit „Öffentlich“.
+
+## Dokumente: wer welches Dokument sieht
+
+Dokumente einer Freizeit wie Infobrief oder Packliste sind Arbeitsmaterial der Freizeit, keine Personendaten (siehe [Dokumente ablegen](/mitarbeitende/dokumente/)). Jedes Dokument hat genau eine Sichtbarkeit:
+
+| Sichtbarkeit | Leitung und Team | Eltern und Teilnehmende (Elterninfo, auch Gast-Link) | Alle mit dem Anmeldelink (Freizeitseite) |
+| --- | --- | --- | --- |
+| Team | ja | nein | nein |
+| Eltern und Teilnehmende | ja | ja | nein |
+| Öffentlich | ja | nein | ja |
+
+- **Elterninfo nur zur eigenen Anmeldung:** Eltern sehen sie nur für Anmeldungen der eigenen Familie, die nicht abgesagt sind, Gäste nur, solange der Gast-Link gilt (siehe [Elterninfo](/eltern/elterninfo/)).
+- **Org-Dokumente** sieht und verwaltet nur der Org-Admin. Eine Freizeit bindet sie per Verweis ein, ohne Kopie; was der Org-Admin entfernt, verschwindet überall (siehe [Org-Dokumente](/org-admin/org-dokumente/)).
+- **Kein Absender gespeichert:** Zeltlotse speichert zu einem Dokument Titel, Art, Größe und Datum, aber nicht, wer es hochgeladen hat. Die Dateien liegen im Dateispeicher in der EU und gehen nur über Zeltlotse hinaus, immer als Download, nie über öffentliche Adressen. Listen mit Personendaten gehören nicht in die Dokumente.
 
 ## Familie und Übergabe
 

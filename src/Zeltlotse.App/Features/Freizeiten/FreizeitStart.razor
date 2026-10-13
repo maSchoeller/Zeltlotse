@@ -113,6 +113,8 @@ else
     {
         <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/freizeitpaesse")" Ansichtswechsel="true">Freizeitpässe</Knopf></p>
     }
+    @* Story 2-7: Dokumente für Leitung und Team (keine Leitungsaufgabe, darum ohne Aktionsschlüssel). *@
+    <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/dokumente")" Ansichtswechsel="true">Dokumente</Knopf></p>
     @if (FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.FreizeitEinstellungen))
     {
         <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/einstellungen")" Ansichtswechsel="true">Einstellungen</Knopf></p>

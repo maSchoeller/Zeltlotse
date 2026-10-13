@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Zeltlotse.Organisationen.Datenschutz;
+using Zeltlotse.Organisationen.Dokumente;
 using Zeltlotse.Organisationen.Domaene;
 using Zeltlotse.Organisationen.Nachweise;
 using Zeltlotse.SharedKernel.Daten;
@@ -27,6 +28,8 @@ internal sealed class OrganisationenDbContext(DbContextOptions<OrganisationenDbC
 
     public DbSet<Mitgliedschaft> Mitgliedschaften => Set<Mitgliedschaft>();
 
+    public DbSet<OrgDokument> Dokumente => Set<OrgDokument>();
+
     protected override string Schema => OrganisationenModul.Schema;
 
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => OrganisationenModell.Konfigurieren(modelBuilder);
@@ -49,6 +52,8 @@ internal sealed class OrganisationenLeseDbContext(DbContextOptions<Organisatione
     public DbSet<Loeschfristen> Loeschfristen => Set<Loeschfristen>();
 
     public DbSet<Mitgliedschaft> Mitgliedschaften => Set<Mitgliedschaft>();
+
+    public DbSet<OrgDokument> Dokumente => Set<OrgDokument>();
 
     protected override string Schema => OrganisationenModul.Schema;
 
@@ -121,6 +126,17 @@ internal static class OrganisationenModell
             e.ToTable("mitgliedschaft");
             e.HasKey(m => new { m.OrganisationId, m.PersonId });
             e.HasIndex(m => m.PersonId);
+        });
+
+        // Story 2-7, FR-43: Org-Dokumente; die Datei liegt im Dateispeicher unter organisationen/<Id>.
+        modelBuilder.Entity<OrgDokument>(e =>
+        {
+            e.ToTable("dokument");
+            e.Property(d => d.Id).ValueGeneratedNever();
+            e.Property(d => d.Titel).HasMaxLength(Zeltlotse.SharedKernel.Dateien.DokumentDateien.TitelMaximaleLaenge);
+            e.Property(d => d.Dateiart).HasConversion<short>();
+            e.Property(d => d.Version).IsRowVersion();
+            e.HasIndex(d => d.OrganisationId);
         });
     }
 }

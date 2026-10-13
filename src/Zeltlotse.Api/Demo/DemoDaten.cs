@@ -6,6 +6,7 @@ using Zeltlotse.Api.Contracts.Freizeiten;
 using Zeltlotse.Freizeiten.Anmeldungen;
 using Zeltlotse.Freizeiten.Anmeldungen.Entscheiden;
 using Zeltlotse.Freizeiten.Daten;
+using Zeltlotse.Freizeiten.Dokumente;
 using Zeltlotse.Freizeiten.Domaene;
 using Zeltlotse.Freizeiten.Fragen;
 using Zeltlotse.Freizeiten.Freizeitseite;
@@ -14,6 +15,7 @@ using Zeltlotse.Freizeiten.TeamNotizen;
 using Zeltlotse.Freizeiten.Verwaltung;
 using Zeltlotse.Konten.Anmelden;
 using Zeltlotse.Organisationen.Daten;
+using Zeltlotse.Organisationen.Dokumente;
 using Zeltlotse.Organisationen.Einladungen;
 using Zeltlotse.Organisationen.Nachweise;
 using Zeltlotse.Organisationen.Verwaltung;
@@ -66,6 +68,7 @@ namespace Zeltlotse.Api.Demo;
 /// Emma Allergien, Notfallkontakte und Schwimmen (je nur, wenn es noch keine Antwort gibt).
 /// Story 2-5: Die Fragen-Auswahl kommt vor den Anmeldungen, damit die Freigaben die Fragen tragen; Daniel beantwortet für Mia
 /// Allergien, Notfallkontakte und Schwimmen (je nur ohne Antwort); Lea schreibt eine Team-Notiz zu Mia (nur ohne Notiz).
+/// Story 2-7: zwei Org-Dokumente, fünf Dokumente der Freizeit und die eingebundene Hausordnung (je nur, wenn sie fehlen).
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -115,6 +118,7 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await AnmeldungAsync(abbruch);
         await FreizeitpassAsync(abbruch);
         await TeamNotizAsync(abbruch);
+        await DokumenteAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -560,6 +564,57 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         if (await sender.Send(new TeamNotizAnlegenCommand(freizeitId, anmeldung, lea, DemoKatalog.TeamNotizZuMia), abbruch) is not TeamNotizAenderung.Angelegt)
         {
             throw new InvalidOperationException("Demo-Team-Notiz: ließ sich nicht anlegen.");
+        }
+    }
+
+    /// <summary>
+    /// Story 2-7: Andrea lädt die Org-Dokumente hoch (<see cref="DemoKatalog.OrgDokumente"/>), Miriam die Dokumente der Freizeit
+    /// (<see cref="DemoKatalog.Dokumente"/>) und bindet die Hausordnung mit Sichtbarkeit „Eltern und Teilnehmende“ ein. Je nur, wenn es den
+    /// Titel bzw. die Einbindung noch nicht gibt; die Dateien sind kleine erfundene PDFs.
+    /// </summary>
+    private async Task DokumenteAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        var organisationId = await OrganisationIdAsync(dienste, abbruch);
+        dienste.GetRequiredService<MandantenKontext>().Setzen(organisationId);
+        var org = dienste.GetRequiredService<OrganisationenLeseDbContext>();
+        var lesen = dienste.GetRequiredService<FreizeitenLeseDbContext>();
+        var freizeitId = await lesen.Freizeiten.Where(f => f.Name == DemoKatalog.Freizeit.Name).Select(f => f.Id).SingleAsync(abbruch);
+
+        var orgTitel = await org.Dokumente.Select(d => d.Titel).ToListAsync(abbruch);
+        foreach (var dateiname in DemoKatalog.OrgDokumente.Where(n => !orgTitel.Contains(Path.GetFileNameWithoutExtension(n))))
+        {
+            await sender.Send(
+                new OrgDokumentHochladenCommand(organisationId, dateiname, DemoDateien.Pdf($"Demo-Dokument: {Path.GetFileNameWithoutExtension(dateiname)} (erfunden)"), SharedKernel.Dateien.DateiArt.Pdf),
+                abbruch);
+        }
+
+        var titel = await lesen.Dokumente.Where(d => d.FreizeitId == freizeitId && d.Titel != null).Select(d => d.Titel!).ToListAsync(abbruch);
+        foreach (var (dateiname, sichtbarkeit) in DemoKatalog.Dokumente.Where(d => !titel.Contains(Path.GetFileNameWithoutExtension(d.Dateiname))))
+        {
+            var inhalt = DemoDateien.Pdf($"Demo-Dokument: {Path.GetFileNameWithoutExtension(dateiname)} (erfunden)");
+            if (await sender.Send(new DokumentHochladenCommand(freizeitId, dateiname, sichtbarkeit, inhalt, SharedKernel.Dateien.DateiArt.Pdf), abbruch)
+                is not DokumentAenderung.Gespeichert)
+            {
+                throw new InvalidOperationException("Demo-Dokument: ließ sich nicht hochladen.");
+            }
+        }
+
+        var hausordnung = await org.Dokumente.Where(d => d.Titel == DemoKatalog.EingebundenesOrgDokument).Select(d => d.Id).SingleAsync(abbruch);
+        if (await lesen.Dokumente.AnyAsync(d => d.FreizeitId == freizeitId && d.OrgDokumentId == hausordnung, abbruch))
+        {
+            return;
+        }
+
+        if (await sender.Send(new DokumentEinbindenCommand(freizeitId, hausordnung), abbruch) is not DokumentAenderung.Eingebunden eingebunden
+            || await sender.Send(
+                new DokumentFeldAendernCommand(
+                    freizeitId, eingebunden.Dokument.Id, DokumentFeld.Sichtbarkeit, 0, nameof(DokumentSichtbarkeit.Team), nameof(DokumentSichtbarkeit.ElternUndTeilnehmende)),
+                abbruch) is not DokumentAenderung.Gespeichert)
+        {
+            throw new InvalidOperationException("Demo-Dokument: Die Hausordnung ließ sich nicht einbinden.");
         }
     }
 

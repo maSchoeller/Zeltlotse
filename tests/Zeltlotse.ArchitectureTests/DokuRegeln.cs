@@ -17,7 +17,8 @@ internal static partial class DokuRegeln
         RollenOrdner.Select(o => $"{o}/index").Append("daten").Append("index").Append("erste-schritte/zeltlotse-oeffnen").Append("erste-schritte/anmelden")
             .Append("erste-schritte/meine-daten").Append("org-admin/loeschfristen").Append("eltern/freizeitseite").Append("leitung/freizeitseite-einrichten")
             .Append("eltern/kind-anmelden").Append("mitarbeitende/anmelden").Append("leitung/anmeldungen")
-            .Append("eltern/freizeitpass").Append("leitung/freizeitpass-fragen").Append("mitarbeitende/freizeitpaesse").Append("leitung/cockpit");
+            .Append("eltern/freizeitpass").Append("leitung/freizeitpass-fragen").Append("mitarbeitende/freizeitpaesse").Append("leitung/cockpit")
+            .Append("mitarbeitende/dokumente").Append("org-admin/org-dokumente").Append("eltern/elterninfo");
 
     public static string DokuSeitenOrdner => Path.Combine(Loesung.Wurzel, "doku", "src", "content", "docs");
 

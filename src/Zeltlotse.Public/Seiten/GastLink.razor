@@ -42,6 +42,11 @@ else if (_ansicht is not null)
                     {
                         <p><Knopf Href="@($"/gast/{Token}/freizeitpass/{anmeldung.AnmeldungId}")" Art="KnopfArt.Outline" Ansichtswechsel="true">Freizeitpass für @anmeldung.Vorname</Knopf></p>
                     }
+                    @if (anmeldung.AnmeldungId != Guid.Empty)
+                    {
+                        @* Story 2-7: Infobrief, Packliste und Notfallnummern der Freizeit ohne Konto (FR-68). *@
+                        <p><a href="@($"/gast/{Token}/elterninfo/{anmeldung.AnmeldungId}")">Elterninfo</a></p>
+                    }
                     <AbsageKontakt Mail="@anmeldung.KontaktMail" Telefon="@anmeldung.KontaktTelefon" />
                 }
             </Card>
