@@ -299,6 +299,24 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
             .Select(f => (f.GetProperty("kennung").GetString()!, f.GetProperty("wert").GetString()!));
         Assert.Equal(DemoKatalog.EmmasFreizeitpass, pass);
 
+        // Story 2-6: Jonas sieht im Leitungs-Cockpit vier unvollständige Freizeitpässe; keine Demo-Erinnerung, also auch keine Mail.
+        var stand = await AnmeldeHelfer.JsonAsync(await jonasClient.GetAsync($"/api/freizeiten/{freizeitId}/personen/freizeitpass-stand", Abbruch));
+        var gefragtTeilnehmende = DemoKatalog.Fragen.Teilnehmende.Split(',').Length;
+        var gefragtMitarbeitende = DemoKatalog.Fragen.Mitarbeitende.Split(',').Length;
+        Assert.Equal(
+            [
+                $"Lea Feuerstein {gefragtMitarbeitende}/{gefragtMitarbeitende}",
+                $"Emma Muster {gefragtTeilnehmende}/{gefragtTeilnehmende - 3}",
+                $"Mia Probst {gefragtTeilnehmende}/{gefragtTeilnehmende - 3}",
+                $"Tobias Wanderer {gefragtMitarbeitende}/{gefragtMitarbeitende}",
+            ],
+            stand.GetProperty("personen").EnumerateArray().Select(p =>
+                $"{p.GetProperty("vorname").GetString()} {p.GetProperty("nachname").GetString()} {p.GetProperty("gefragt").GetInt32()}/{p.GetProperty("offen").GetInt32()}"));
+        Assert.Equal((8, 5), (gefragtTeilnehmende, gefragtTeilnehmende - 3));
+        Assert.All(stand.GetProperty("personen").EnumerateArray(), p => Assert.Equal(System.Text.Json.JsonValueKind.Null, p.GetProperty("erinnertAm").ValueKind));
+        Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_erinnerung"));
+        Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.outbox_zustellung WHERE \"Empfaenger\" = 'Zeltlotse.Mail'"));
+
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,
             "SELECT count(*) FROM konten.konto k LEFT JOIN personen.person p ON p.\"Id\" = k.\"PersonId\" WHERE p.\"Id\" IS NULL OR p.\"Vorname\" IS NULL OR p.\"Nachname\" IS NULL"));

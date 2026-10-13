@@ -91,6 +91,15 @@ public sealed class KomponentenTests : BunitContext
         Assert.Equal("Meine Aufgaben", titel.TextContent);
         Assert.Equal(titel.Id, cut.Find("section.elkw-card").GetAttribute("aria-labelledby"));
         Assert.Equal("Zelt aufbauen", cut.Find(".elkw-card__body p").TextContent);
+        Assert.False(cut.Find("section.elkw-card").HasAttribute("id"));
+    }
+
+    [Fact]
+    public void Card_mit_Kennung_ist_Sprungziel()
+    {
+        var cut = Render<Card>(ps => ps.Add(p => p.Titel, "Freizeitpässe unvollständig").Add(p => p.Id, "freizeitpaesse-offen"));
+
+        Assert.Equal("freizeitpaesse-offen", cut.Find("section.elkw-card").Id);
     }
 
     // ---------- Feld ----------

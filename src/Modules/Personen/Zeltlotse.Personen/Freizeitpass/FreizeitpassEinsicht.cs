@@ -22,6 +22,12 @@ internal static class FreizeitpassRechte
 {
     /// <summary>Leitung und Team; was davon sichtbar ist, entscheidet die Freigabe.</summary>
     public static readonly RolleArt[] Einsicht = [RolleArt.Leitung, RolleArt.Team];
+
+    /// <summary>
+    /// Story 2-6: Freizeitpass-Stand sehen und zum Freizeitpass erinnern (nur Leitung, FR-25). In der Oberfläche gilt die erlaubte Aktion
+    /// <c>anmeldungen-bearbeiten</c> aus <c>FreizeitRechte.Anmeldungen</c>; ein Test hält beide Listen gleich.
+    /// </summary>
+    public static readonly RolleArt[] Erinnern = [RolleArt.Leitung];
 }
 
 /// <summary>

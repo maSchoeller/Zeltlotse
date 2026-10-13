@@ -186,6 +186,12 @@ internal sealed class FreizeitpassSzenario : IAsyncDisposable
 
     public static string PersonenlistePfad(Guid freizeit) => $"/api/freizeiten/{freizeit}/personenliste";
 
+    /// <summary>Story 2-6: Freizeitpass-Stand der Freizeit (Leitung).</summary>
+    public static string StandPfad(Guid freizeit) => $"/api/freizeiten/{freizeit}/personen/freizeitpass-stand";
+
+    /// <summary>Story 2-6: Erinnern zum Freizeitpass (Leitung).</summary>
+    public static string ErinnernPfad(Guid freizeit) => $"/api/freizeiten/{freizeit}/personen/freizeitpass/erinnerungen";
+
     /// <summary>Stellt die Uhr auf die nächste volle Sekunde (die Datenbank speichert Mikrosekunden) und liefert diesen Zeitpunkt.</summary>
     public DateTimeOffset VolleSekunde()
     {

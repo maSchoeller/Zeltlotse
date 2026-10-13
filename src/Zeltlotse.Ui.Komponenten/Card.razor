@@ -1,5 +1,5 @@
-@* Card der Bibliothek (DESIGN.md): weiße Fläche mit Titel und Inhalt. *@
-<section class="elkw-card" aria-labelledby="@(Titel is null ? null : _titelId)">
+@* Card der Bibliothek (DESIGN.md): weiße Fläche mit Titel und Inhalt; optional mit einer Kennung als Sprungziel für Links. *@
+<section class="elkw-card" id="@Id" aria-labelledby="@(Titel is null ? null : _titelId)">
     <div class="elkw-card__body">
         @if (Titel is not null)
         {
@@ -13,6 +13,9 @@
     private readonly string _titelId = Kennungen.Neu("card");
 
     [Parameter] public string? Titel { get; set; }
+
+    /// <summary>Kennung der Card (<c>id</c>), etwa als Anker eines Links auf derselben Seite; ohne Angabe keine.</summary>
+    [Parameter] public string? Id { get; set; }
 
     [Parameter] public RenderFragment? ChildContent { get; set; }
 }

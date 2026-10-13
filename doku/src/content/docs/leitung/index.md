@@ -14,7 +14,8 @@ Die Leitung darf alles, was das [Team](/mitarbeitende/) darf. **Nur die Leitung*
 
 - die Freizeitseite einrichten (Beschreibung, Ort, Höchstzahl) und die Anmeldelinks teilen und erneuern – siehe [Freizeitseite einrichten](/leitung/freizeitseite-einrichten/),
 - Anmeldungen bestätigen, Absagen eintragen und das Nachrücken bestimmen – siehe [Anmeldungen bestätigen und absagen](/leitung/anmeldungen/),
-- Erinnerungen auslösen, zum Beispiel an fehlende Nachweise – siehe [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/),
+- den Anmeldestand und die Warnhinweise im Leitungs-Cockpit sehen – siehe [Leitungs-Cockpit](/leitung/cockpit/),
+- Erinnerungen auslösen, an fehlende Nachweise – siehe [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/) – und an unvollständige Freizeitpässe – siehe [Leitungs-Cockpit](/leitung/cockpit/#erinnern),
 - den Stand der Nachweise im Team sehen und Nachweise prüfen – siehe [Nachweise prüfen](/leitung/nachweise-pruefen/),
 - festlegen, welche Fragen der Freizeitpass für Teilnehmende und für Mitarbeitende abfragt – siehe [Freizeitpass zusammenstellen](/leitung/freizeitpass-fragen/),
 - festlegen, welche Module (Verpflegung, Finanzen, Teilnehmer-Zugang) die Freizeit nutzt,
@@ -28,4 +29,4 @@ Die Leitung sieht den Freizeitpass einer Person schon **ab dem Eingang der Anmel
 
 ## Leitungs-Cockpit
 
-Auf dem Leitungs-Cockpit sieht die Leitung den Stand der Freizeit und Warnhinweise, etwa zu fehlenden Freizeitpässen oder Nachweisen.
+Für die Leitung ist die Startseite der Freizeit das Leitungs-Cockpit. Dort stehen auf einer Seite der Anmeldestand mit dem Balken **Plätze**, die Warnhinweise zu unvollständigen Freizeitpässen und fehlenden Nachweisen und die Liste der unvollständigen Freizeitpässe mit dem Knopf **Erinnern**. Wie das aussieht und was beim Erinnern passiert, steht unter [Leitungs-Cockpit](/leitung/cockpit/).

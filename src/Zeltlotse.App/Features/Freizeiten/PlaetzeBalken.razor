@@ -1,0 +1,35 @@
+@using System.Globalization
+@using Zeltlotse.Api.Contracts.Freizeiten
+@* Balken „Plätze“ (Story 2-3, Story 2-6): die bestätigten Teilnehmenden gegen die Höchstzahl (belegt, ausgebucht = Warnung, überbelegt =
+   Fehler; ohne Höchstzahl nur die Zahl). Gemeinsam für die Seite „Anmeldungen“ und das Leitungs-Cockpit auf der Startseite der Freizeit. *@
+<Balken Bezeichnung="Plätze" Zahl="@PlaetzeZahl" Prozent="@PlaetzeProzent" Statuswort="@PlaetzeWort" Art="@PlaetzeArt" />
+
+@code {
+    [Parameter, EditorRequired] public AnmeldungenUebersicht Uebersicht { get; set; } = null!;
+
+    private int Bestaetigt => Uebersicht.BestaetigteTeilnehmende;
+
+    private int? Hoechstzahl => Uebersicht.HoechstzahlTeilnehmende;
+
+    private string PlaetzeZahl => Hoechstzahl is { } hoechstzahl
+        ? $"{Bestaetigt.ToString(CultureInfo.InvariantCulture)} von {hoechstzahl.ToString(CultureInfo.InvariantCulture)}"
+        : $"{Bestaetigt.ToString(CultureInfo.InvariantCulture)} bestätigt";
+
+    private double PlaetzeProzent => Hoechstzahl is { } hoechstzahl && hoechstzahl > 0 ? 100.0 * Bestaetigt / hoechstzahl : 0;
+
+    private string PlaetzeWort => Hoechstzahl switch
+    {
+        null => "Ohne Höchstzahl",
+        var h when Bestaetigt > h => "Überbelegt",
+        var h when Bestaetigt == h => "Ausgebucht",
+        _ => "Belegt",
+    };
+
+    private BalkenArt PlaetzeArt => Hoechstzahl switch
+    {
+        null => BalkenArt.Normal,
+        var h when Bestaetigt > h => BalkenArt.Fehler,
+        var h when Bestaetigt == h => BalkenArt.Warnung,
+        _ => BalkenArt.Normal,
+    };
+}

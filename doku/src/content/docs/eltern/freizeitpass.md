@@ -48,6 +48,15 @@ Fragt die Freizeit nichts ab, steht dort „Diese Freizeit fragt keine Angaben a
 
 Wurde eine Angabe seit mehr als **12 Monaten** weder geändert noch bestätigt, steht darüber **Stimmt das noch?**. Ist die Angabe noch richtig, **Stimmt** wählen; der Hinweis verschwindet, und die Angabe gilt wieder für 12 Monate. Sonst die Angabe einfach ändern – auch das bestätigt sie.
 
+## Erinnerung der Leitung
+
+Fehlt im Freizeitpass noch etwas, kann die Leitung daran erinnern (siehe [Leitungs-Cockpit](/leitung/cockpit/#erinnern)). Dann kommt eine Mail „Erinnerung: Freizeitpass in Zeltlotse“. Sie nennt die Leitung und wessen Freizeitpass gemeint ist, aber keine Fragen und keine Antworten. Bei Kindern geht sie an einen Elternteil mit Konto, nach einer Gast-Anmeldung an die Mail-Adresse des Gast-Zugangs.
+
+- **Mit Konto:** Der Link in der Mail öffnet die Seite **Familie**; dort steht der Freizeitpass bei der Anmeldung.
+- **Ohne Konto:** Den Gast-Link aus der Mail zur Anmeldung öffnen und dort den Freizeitpass ausfüllen.
+
+Die Leitung erinnert nie von selbst und höchstens einmal am Tag je Person und Freizeit.
+
 ## Als Gast: über den Gast-Link
 
 Ohne Konto geht es über den **Gast-Link** aus der Mail nach der Gast-Anmeldung (siehe [Kind anmelden](/eltern/kind-anmelden/#der-gast-link)):

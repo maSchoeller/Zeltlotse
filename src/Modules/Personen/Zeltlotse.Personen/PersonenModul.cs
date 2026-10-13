@@ -46,6 +46,7 @@ public static class PersonenModul
         services.EmpfaengtEreignis<AnmeldungAbgesagt, FreigabeBeenden>();
         services.AddScoped<IAnmeldeKontakt, AnmeldeKontaktLesen>();
         services.VerschicktMail<NachweisErinnerungMail, NachweisErinnerungMailAufbau>();
+        services.VerschicktMail<FreizeitpassErinnerungMail, FreizeitpassErinnerungMailAufbau>();
         services.AddScoped<IDatenauskunft, PersonenAuskunft>();
         services.AddScoped<ILoeschlauf, PersonenLoeschlauf>();
         return services;
@@ -96,6 +97,11 @@ public static class PersonenModul
         // Story 2-5: Freizeitpass einer Person im Kontext der Freizeit (Leitung und Team, FR-24, AD-8).
         api.MapGet($"/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/personen/freizeitpass/{{personId:guid}}", FreizeitpassEinsichtEndpunkt.Laden)
             .NurFreizeitRolle(FreizeitpassRechte.Einsicht);
+        // Story 2-6: Freizeitpass-Stand und Erinnern zum Freizeitpass (nur Leitung, FR-25, FR-27).
+        api.MapGet($"/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/personen/freizeitpass-stand", FreizeitpassStandEndpunkt.Laden)
+            .NurFreizeitRolle(FreizeitpassRechte.Erinnern);
+        api.MapPost($"/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/personen/freizeitpass/erinnerungen", FreizeitpassErinnernEndpunkt.Erinnern)
+            .NurFreizeitRolle(FreizeitpassRechte.Erinnern);
         OrgPruefEndpunkt.Abbilden(api.MapGroup($"/organisationen/{{{Rechtemerkmale.OrgRouteWert}:guid}}/personen/nachweise")
             .NurOrgRolle(NachweisRechte.OrgPruefen));
 

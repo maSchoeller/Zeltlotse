@@ -21,11 +21,11 @@ Warnhinweise und **Erinnern** gibt es nur in der Freizeit, nicht auf der Seite �
 
 ## Meldung auf der Startseite
 
-Fehlt im Team etwas, steht auf der Startseite der Freizeit über dem Knopf **Nachweise prüfen** zum Beispiel „Achtung: Bei 2 Personen im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.“ Ist alles in Ordnung, entfällt die Meldung.
+Fehlt im Team etwas, steht im [Leitungs-Cockpit](/leitung/cockpit/) auf der Startseite der Freizeit in der Card **Warnhinweise** zum Beispiel die Zeile „Bei 2 Personen im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.“, darunter der Knopf **Nachweise prüfen**. Über allen Zeilen der Card steht „Achtung: … Punkte sind offen.“ Ist bei den Nachweisen alles in Ordnung, entfällt die Zeile.
 
-![Startseite der Freizeit am Handy mit der Meldung „Achtung: Bei 2 Personen im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.“ über dem Knopf „Nachweise prüfen“](../../../assets/screenshots/freizeit-start-handy.png)
+![Startseite der Freizeit am Handy mit dem Leitungs-Cockpit; in der Card „Warnhinweise“ stehen „Achtung: 2 Punkte sind offen.“ und die Zeile über fehlende Nachweise mit dem Knopf „Nachweise prüfen“](../../../assets/screenshots/freizeit-start-handy.png)
 
-![Startseite der Freizeit am Laptop mit der Meldung über fehlende Nachweise und dem Knopf „Nachweise prüfen“](../../../assets/screenshots/freizeit-start-laptop.png)
+![Startseite der Freizeit am Laptop mit der Card „Warnhinweise“, der Zeile über fehlende Nachweise und dem Knopf „Nachweise prüfen“](../../../assets/screenshots/freizeit-start-laptop.png)
 
 ## Warnhinweise in der Liste
 

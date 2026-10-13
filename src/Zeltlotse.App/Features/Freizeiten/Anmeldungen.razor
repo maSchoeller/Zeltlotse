@@ -1,11 +1,10 @@
 @page "/freizeiten/{FreizeitId:guid}/anmeldungen"
-@using System.Globalization
 @using Zeltlotse.Api.Contracts.Freizeiten
 @using Zeltlotse.Api.Contracts.Gemeinsam
 @using Zeltlotse.Ui.Kontext
 @inject FreizeitKontextDienst Kontext
 @inject FreizeitenApiClient Freizeiten
-@* Anmeldungen (EXPERIENCE.md → Fläche „Anmeldungen“, nur Leitung; FR-20, FR-21, FR-67, Story 2-3): Balken „Plätze“ mit den bestätigten
+@* Anmeldungen (EXPERIENCE.md → Fläche „Anmeldungen“, nur Leitung; FR-20, FR-21, FR-67, Story 2-3): Balken „Plätze“ (PlaetzeBalken) mit den bestätigten
    Teilnehmenden gegen die Höchstzahl (belegt, ausgebucht = Warnung, überbelegt = Fehler; ohne Höchstzahl nur die Zahl) und je ein
    Abschnitt „Teilnehmende“ und „Mitarbeitende“ als Datentabelle mit Name, Eingang, Status und Aktion. Eingegangen: „Bestätigen“ (direkt,
    die ausdrückliche Aktion nach AD-13) und „Absage eintragen“ mit Inline-Bestätigung; bestätigt: nur die Absage; abgesagt: keine Aktion.
@@ -45,7 +44,7 @@ else
     }
     else
     {
-        <Balken Bezeichnung="Plätze" Zahl="@PlaetzeZahl" Prozent="@PlaetzeProzent" Statuswort="@PlaetzeWort" Art="@PlaetzeArt" />
+        <PlaetzeBalken Uebersicht="_uebersicht" />
 
         @foreach (var (titel, art) in Abschnitte)
         {
@@ -75,32 +74,6 @@ else
     private bool _meldungHinweis;
 
     [Parameter] public Guid FreizeitId { get; set; }
-
-    private int Bestaetigt => _uebersicht?.BestaetigteTeilnehmende ?? 0;
-
-    private int? Hoechstzahl => _uebersicht?.HoechstzahlTeilnehmende;
-
-    private string PlaetzeZahl => Hoechstzahl is { } hoechstzahl
-        ? $"{Bestaetigt.ToString(CultureInfo.InvariantCulture)} von {hoechstzahl.ToString(CultureInfo.InvariantCulture)}"
-        : $"{Bestaetigt.ToString(CultureInfo.InvariantCulture)} bestätigt";
-
-    private double PlaetzeProzent => Hoechstzahl is { } hoechstzahl && hoechstzahl > 0 ? 100.0 * Bestaetigt / hoechstzahl : 0;
-
-    private string PlaetzeWort => Hoechstzahl switch
-    {
-        null => "Ohne Höchstzahl",
-        var h when Bestaetigt > h => "Überbelegt",
-        var h when Bestaetigt == h => "Ausgebucht",
-        _ => "Belegt",
-    };
-
-    private BalkenArt PlaetzeArt => Hoechstzahl switch
-    {
-        null => BalkenArt.Normal,
-        var h when Bestaetigt > h => BalkenArt.Fehler,
-        var h when Bestaetigt == h => BalkenArt.Warnung,
-        _ => BalkenArt.Normal,
-    };
 
     private IReadOnlyList<Spalte<LeitungAnmeldungZeile>> Spalten =>
     [

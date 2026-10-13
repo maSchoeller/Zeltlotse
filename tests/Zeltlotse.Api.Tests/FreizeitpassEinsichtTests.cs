@@ -192,7 +192,7 @@ public sealed class FreizeitpassEinsichtTests(PostgresContainer postgres) : IAsy
         Assert.Equal(Liste("Zeltlotse.Freizeiten", "Zeltlotse.Freizeiten.Rechte.FreizeitRechte", "Freizeitpaesse"), Liste("Zeltlotse.Personen", "Zeltlotse.Personen.Freizeitpass.FreizeitpassRechte", "Einsicht"));
     }
 
-    private static IEnumerable<object> Liste(string assembly, string typ, string feld)
+    internal static IEnumerable<object> Liste(string assembly, string typ, string feld)
     {
         var werte = (Array)Assembly.Load(assembly).GetType(typ, throwOnError: true)!.GetField(feld, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
         return werte.Cast<object>().Order();

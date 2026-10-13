@@ -43,6 +43,8 @@ internal sealed class PersonenDbContext(DbContextOptions<PersonenDbContext> opti
 
     public DbSet<NachweisErinnerung> Erinnerungen => Set<NachweisErinnerung>();
 
+    public DbSet<FreizeitpassErinnerung> FreizeitpassErinnerungen => Set<FreizeitpassErinnerung>();
+
     public DbSet<EinsichtProtokollEintrag> EinsichtProtokoll => Set<EinsichtProtokollEintrag>();
 
     public DbSet<GastZugang> GastZugaenge => Set<GastZugang>();
@@ -81,6 +83,8 @@ internal sealed class PersonenLeseDbContext(DbContextOptions<PersonenLeseDbConte
     public DbSet<NachweisEinsichtPosten> EinsichtPosten => Set<NachweisEinsichtPosten>();
 
     public DbSet<NachweisErinnerung> Erinnerungen => Set<NachweisErinnerung>();
+
+    public DbSet<FreizeitpassErinnerung> FreizeitpassErinnerungen => Set<FreizeitpassErinnerung>();
 
     public DbSet<EinsichtProtokollEintrag> EinsichtProtokoll => Set<EinsichtProtokollEintrag>();
 
@@ -213,6 +217,15 @@ internal static class PersonenModell
         modelBuilder.Entity<NachweisErinnerung>(e =>
         {
             e.ToTable("nachweis_erinnerung");
+            e.Property(t => t.Id).ValueGeneratedNever();
+            e.HasIndex(t => new { t.FreizeitId, t.PersonId }).IsUnique();
+            e.HasIndex(t => t.PersonId);
+        });
+
+        // Story 2-6, FR-25: die letzte Erinnerung zum Freizeitpass je (Freizeit, Person); der eindeutige Index verhindert doppelte Zeilen.
+        modelBuilder.Entity<FreizeitpassErinnerung>(e =>
+        {
+            e.ToTable("freizeitpass_erinnerung");
             e.Property(t => t.Id).ValueGeneratedNever();
             e.HasIndex(t => new { t.FreizeitId, t.PersonId }).IsUnique();
             e.HasIndex(t => t.PersonId);

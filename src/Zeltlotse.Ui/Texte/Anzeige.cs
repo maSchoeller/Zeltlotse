@@ -211,6 +211,26 @@ public static class Anzeige
         _ => art.ToString(Deutsch),
     };
 
+    /// <summary>Anzahl mit Einzahl oder Mehrzahl: „1 Punkt“, „2 Punkte“.</summary>
+    public static string Anzahl(int anzahl, string einzahl, string mehrzahl) => anzahl == 1 ? $"1 {einzahl}" : $"{anzahl.ToString(Deutsch)} {mehrzahl}";
+
+    /// <summary>
+    /// Stand eines Freizeitpasses im Leitungs-Cockpit (Story 2-6): „Freizeitpass fehlt noch“, wenn keine gefragte Angabe vollständig ist,
+    /// sonst „5 von 8 Angaben offen“.
+    /// </summary>
+    public static string FreizeitpassStand(int gefragt, int offen) =>
+        offen >= gefragt ? "Freizeitpass fehlt noch" : $"{offen.ToString(Deutsch)} von {gefragt.ToString(Deutsch)} Angaben offen";
+
+    /// <summary>Warnzeile im Leitungs-Cockpit: „1 Freizeitpass unvollständig“, „4 Freizeitpässe unvollständig“.</summary>
+    public static string FreizeitpaesseUnvollstaendig(int anzahl) => $"{Anzahl(anzahl, "Freizeitpass", "Freizeitpässe")} unvollständig";
+
+    /// <summary>Text der Meldung über den Warnhinweisen: „1 Punkt ist offen.“, „2 Punkte sind offen.“</summary>
+    public static string OffenePunkte(int anzahl) => anzahl == 1 ? "1 Punkt ist offen." : $"{anzahl.ToString(Deutsch)} Punkte sind offen.";
+
+    /// <summary>Anmeldestand je Art: „Teilnehmende: 1 eingegangen, 1 bestätigt“.</summary>
+    public static string Anmeldestand(string art, int eingegangen, int bestaetigt) =>
+        $"{art}: {eingegangen.ToString(Deutsch)} eingegangen, {bestaetigt.ToString(Deutsch)} bestätigt";
+
     /// <summary>„Vorname Nachname“; ohne beide „Name fehlt“.</summary>
     public static string Name(string? vorname, string? nachname)
     {

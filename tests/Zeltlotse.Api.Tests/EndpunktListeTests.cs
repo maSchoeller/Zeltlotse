@@ -215,6 +215,9 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 "GET /api/freizeiten/{freizeitId:guid}/anmeldungen/{anmeldungId:guid}/notizen",
                 "POST /api/freizeiten/{freizeitId:guid}/anmeldungen/{anmeldungId:guid}/notizen",
                 "DELETE /api/freizeiten/{freizeitId:guid}/anmeldungen/{anmeldungId:guid}/notizen/{notizId:guid}",
+                // Story 2-6: Freizeitpass-Stand und Erinnern zum Freizeitpass (Personen, Leitung).
+                "GET /api/freizeiten/{freizeitId:guid}/personen/freizeitpass-stand",
+                "POST /api/freizeiten/{freizeitId:guid}/personen/freizeitpass/erinnerungen",
             }.Order(StringComparer.Ordinal),
             freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
         Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));

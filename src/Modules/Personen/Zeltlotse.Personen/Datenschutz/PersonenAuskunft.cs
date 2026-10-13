@@ -49,7 +49,29 @@ internal sealed class PersonenAuskunft(PersonenLeseDbContext db, IVerschluesselu
         abschnitte.Add(new AuskunftAbschnitt("Gast-Link", await GastZugangAsync(personId, abbruch)));
         abschnitte.Add(new AuskunftAbschnitt("Freigaben", await FreigabenAsync(personId, abbruch)));
         abschnitte.Add(new AuskunftAbschnitt("Freizeitpass", await FreizeitpassAsync(personId, abbruch)));
+        abschnitte.Add(new AuskunftAbschnitt("Erinnerungen zum Freizeitpass", await FreizeitpassErinnerungenAsync(personId, abbruch)));
         return abschnitte;
+    }
+
+    /// <summary>
+    /// Story 2-6: die Erinnerungen der Leitung zum Freizeitpass der Person und der Kinder ihrer Familie (wie der Abschnitt „Freizeitpass“),
+    /// je mit Datum und wessen Freizeitpass. Ohne Mandantenfilter, aber nur die dieser Personen (AD-6).
+    /// </summary>
+    private async Task<List<AuskunftZeile>> FreizeitpassErinnerungenAsync(Guid personId, CancellationToken abbruch)
+    {
+        var familieId = await db.Elternteile.Where(e => e.PersonId == personId).Select(e => (Guid?)e.FamilieId).SingleOrDefaultAsync(abbruch);
+        List<Guid> ids = familieId is { } familie
+            ? [personId, .. await db.Personen.Where(p => p.FamilieId == familie).Select(p => p.Id).ToListAsync(abbruch)]
+            : [personId];
+        var erinnerungen = await db.FreizeitpassErinnerungen.IgnoreQueryFilters().Where(e => ids.Contains(e.PersonId)).OrderBy(e => e.ErinnertAm).ToListAsync(abbruch);
+        var personen = erinnerungen.SelectMany(e => new[] { e.PersonId, e.ErinnertVon }).Distinct().ToList();
+        var namen = await db.Personen.Where(p => personen.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => AuskunftFormat.Name(p.Vorname, p.Nachname), abbruch);
+        return
+        [
+            .. erinnerungen.Select(e => new AuskunftZeile(
+                $"Erinnert am {AuskunftFormat.Datum(e.ErinnertAm)}",
+                $"Freizeitpass von {namen.GetValueOrDefault(e.PersonId) ?? "Gelöschte Person"}, von {namen.GetValueOrDefault(e.ErinnertVon) ?? "Gelöschte Person"}")),
+        ];
     }
 
     /// <summary>

@@ -21,4 +21,6 @@ Die Seite sieht aus wie die Anmeldung mit Konto für Eltern, nur ohne die Auswah
 
 Eine Mail gibt es bei dieser Anmeldung nicht. Die Rechte im Team entstehen erst, wenn die Leitung die Anmeldung bestätigt: Dann kommt die Mail „Anmeldung bestätigt: …“, die Freizeit erscheint auf der Startseite, und mit der ersten bestätigten Mitarbeit gehört die Person zu den Mitarbeitenden der Organisation. Sagt die Leitung ab, kommt die Mail „Anmeldung abgesagt: …“, und die Freizeit verschwindet wieder von der Startseite. Absagen geht nur über die Leitung, über den Kontakt, den sie dafür eingetragen hat. Danach am besten gleich die [Nachweise](/mitarbeitende/nachweise/) am eigenen Profil hochladen.
 
+Fehlen im eigenen Freizeitpass noch Angaben oder sind sie älter als 12 Monate, kann die Leitung daran erinnern. Dann kommt die Mail „Erinnerung: Freizeitpass in Zeltlotse“ mit einem Link auf die Seite **Familie**; dort führt **Freizeitpass** in der Card **Eigene Anmeldungen** zu den Angaben (siehe [Freizeitpass ausfüllen](/eltern/freizeitpass/#erinnerung-der-leitung)).
+
 Erscheint „Dieser Anmeldelink ist nicht mehr gültig.“, ist die Freizeit vorbei oder die Leitung hat einen neuen Link erzeugt; die Leitung kann den aktuellen Link schicken.

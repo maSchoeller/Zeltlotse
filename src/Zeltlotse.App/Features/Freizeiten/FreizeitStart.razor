@@ -1,16 +1,24 @@
 @page "/freizeiten/{FreizeitId:guid}"
 @using Zeltlotse.Api.Contracts.Freizeiten
 @using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Personen
 @using Zeltlotse.Ui.Kontext
 @inject FreizeitKontextDienst Kontext
 @inject FreizeitenApiClient Freizeiten
+@inject PersonenApiClient Personen
 @* Startseite der Freizeit (FR-45, AD-29): Name, Phase, Zeitraum, eigene Rolle aus dem Freizeit-Kontext, die Leitung und bis
    wann die Freizeit Einsicht in Freizeitpässe hat (Freigabefenster). Der Client setzt die Ansicht aus dem Kontext-Endpunkt
-   und dem Endpunkt der Freizeit zusammen (AD-2). Mit der erlaubten Aktion „nachweise-pruefen“ der Weg zur Prüfliste und,
-   wenn im Team Pflicht-Nachweise fehlen oder vor dem Ende ablaufen, eine Warnung darüber (FR-11); scheitert der Abruf der
-   Warnhinweise, entfällt sie. Mit der erlaubten Aktion „anmeldungen-bearbeiten“ (nur Leitung, Story 2-3) der Weg zu den
-   Anmeldungen, mit „freizeitpaesse-sehen“ (Leitung und Team, Story 2-5) der Weg zu den Freizeitpässen, mit „freizeit-einstellungen“
-   (nur Leitung) der Weg zu den Einstellungen.
+   und dem Endpunkt der Freizeit zusammen (AD-2).
+   Für die Leitung ist sie das Leitungs-Cockpit (Story 2-6, FR-25, FR-27), zusammengesetzt aus vorhandenen Endpunkten und dem
+   Freizeitpass-Stand von Personen:
+   - Card „Anmeldungen“ (mit „anmeldungen-bearbeiten“): Balken „Plätze“, je Art eingegangen und bestätigt (ohne Absagen) und der Knopf
+     „Anmeldungen“. Scheitert der Abruf, bleibt nur der Knopf.
+   - Card „Warnhinweise“ (mit „anmeldungen-bearbeiten“ oder „nachweise-pruefen“): je Warnart eine Zeile, unvollständige Freizeitpässe
+     (Link auf die Tabelle) und fehlende Nachweise (Meldung aus 1-6) mit dem Knopf „Nachweise prüfen“. Mit Zeilen oben „Achtung: …“; ohne
+     Zeile „Keine offenen Punkte.“, aber nur, wenn alle Abrufe der Zeilen gelungen sind. Scheitert ein Abruf, entfällt seine Zeile.
+   - Card „Freizeitpässe unvollständig“ (nur mit Personen im Stand): Tabelle mit Name, Stand und „Erinnern“ (Inline-Bestätigung, AD-13).
+   Das Team sieht davon nichts. Mit „freizeitpaesse-sehen“ (Leitung und Team, Story 2-5) der Weg zu den Freizeitpässen, mit
+   „freizeit-einstellungen“ (nur Leitung) der Weg zu den Einstellungen.
    403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>@(_freizeit?.Name ?? "Freizeit") – Zeltlotse</PageTitle>
 
@@ -43,23 +51,67 @@ else
         <p>Leitung: @string.Join(", ", _freizeit.Leitung.Select(l => Anzeige.Name(l.Vorname, l.Nachname)))</p>
     }
     <p>Einsicht in Freizeitpässe bis @Anzeige.Datum(_freizeit.FreigabeBis)</p>
-    @if (FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.AnmeldungenBearbeiten))
+    @if (DarfAnmeldungen)
     {
-        <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/anmeldungen")" Ansichtswechsel="true">Anmeldungen</Knopf></p>
+        @if (_anmeldungen is not null)
+        {
+            <Card Titel="Anmeldungen">
+                <PlaetzeBalken Uebersicht="_anmeldungen" />
+                <p>@Anmeldestand("Teilnehmende", AnmeldungArt.Teilnehmende)</p>
+                <p>@Anmeldestand("Mitarbeitende", AnmeldungArt.Mitarbeitende)</p>
+                <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/anmeldungen")" Ansichtswechsel="true">Anmeldungen</Knopf></p>
+            </Card>
+        }
+        else if (_cockpitGeladen)
+        {
+            <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/anmeldungen")" Ansichtswechsel="true">Anmeldungen</Knopf></p>
+        }
+    }
+    @if ((DarfAnmeldungen || DarfNachweise) && _cockpitGeladen)
+    {
+        <Card Titel="Warnhinweise">
+            @if (AnzahlZeilen > 0)
+            {
+                <Meldung Titel="Achtung" Art="MeldungArt.Warnung">
+                    <p>@Anzeige.OffenePunkte(AnzahlZeilen)</p>
+                </Meldung>
+                <ul>
+                    @if (_stand is { Count: > 0 } stand)
+                    {
+                        <li><a href="@($"freizeiten/{FreizeitId}#{TabellenAnker}")">@Anzeige.FreizeitpaesseUnvollstaendig(stand.Count)</a></li>
+                    }
+                    @if (_personenMitWarnung is > 0 and var personen)
+                    {
+                        <li>Bei @(personen == 1 ? "1 Person" : $"{personen} Personen") im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.</li>
+                    }
+                </ul>
+            }
+            else if (AlleZeilenGeladen)
+            {
+                <Meldung Titel="Alles erledigt" Art="MeldungArt.Erfolg">
+                    <p>Keine offenen Punkte.</p>
+                </Meldung>
+            }
+            @if (DarfNachweise)
+            {
+                <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/nachweise")" Ansichtswechsel="true">Nachweise prüfen</Knopf></p>
+            }
+        </Card>
+    }
+    @if (DarfAnmeldungen && _stand is { Count: > 0 })
+    {
+        <Card Titel="Freizeitpässe unvollständig" Id="@TabellenAnker">
+            @ErinnerungsMeldung
+            <Datentabelle TZeile="FreizeitpassStandPerson" Beschriftung="Freizeitpässe unvollständig" Spalten="Spalten" Zeilen="_stand" />
+        </Card>
+    }
+    else
+    {
+        @ErinnerungsMeldung
     }
     @if (FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.FreizeitpaesseSehen))
     {
         <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/freizeitpaesse")" Ansichtswechsel="true">Freizeitpässe</Knopf></p>
-    }
-    @if (FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.NachweisePruefen))
-    {
-        @if (_personenMitWarnung > 0)
-        {
-            <Meldung Titel="Achtung" Art="MeldungArt.Warnung">
-                <p>Bei @(_personenMitWarnung == 1 ? "1 Person" : $"{_personenMitWarnung} Personen") im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.</p>
-            </Meldung>
-        }
-        <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/nachweise")" Ansichtswechsel="true">Nachweise prüfen</Knopf></p>
     }
     @if (FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.FreizeitEinstellungen))
     {
@@ -68,13 +120,68 @@ else
 }
 
 @code {
+    /// <summary>Sprungziel der Tabelle „Freizeitpässe unvollständig“ für den Link in den Warnhinweisen.</summary>
+    private const string TabellenAnker = "freizeitpaesse-offen";
+
     private FreizeitKontext? _kontext;
     private FreizeitAntwort? _freizeit;
     private bool _nichtVerfuegbar;
     private bool _aktionFehler;
-    private int _personenMitWarnung;
+    private bool _cockpitGeladen;
+    private AnmeldungenUebersicht? _anmeldungen;
+    private List<FreizeitpassStandPerson>? _stand;
+    private int? _personenMitWarnung;
+    private bool _uebertraegt;
+    private string? _meldung;
+    private bool _meldungFehler;
 
     [Parameter] public Guid FreizeitId { get; set; }
+
+    private bool DarfAnmeldungen => _kontext is not null && FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.AnmeldungenBearbeiten);
+
+    private bool DarfNachweise => _kontext is not null && FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.NachweisePruefen);
+
+    /// <summary>Zeilen der Card „Warnhinweise“: je vorhandener Warnart eine.</summary>
+    private int AnzahlZeilen => (_stand is { Count: > 0 } ? 1 : 0) + (_personenMitWarnung is > 0 ? 1 : 0);
+
+    /// <summary>Alle Abrufe, aus denen Zeilen entstehen können, sind gelungen.</summary>
+    private bool AlleZeilenGeladen => (!DarfAnmeldungen || _stand is not null) && (!DarfNachweise || _personenMitWarnung is not null);
+
+    private string Anmeldestand(string titel, AnmeldungArt art)
+    {
+        var zeilen = _anmeldungen!.Anmeldungen.Where(a => a.Art == art).ToList();
+        return Anzeige.Anmeldestand(titel, zeilen.Count(a => a.Status == AnmeldungStatus.Eingegangen), zeilen.Count(a => a.Status == AnmeldungStatus.Bestaetigt));
+    }
+
+    private IReadOnlyList<Spalte<FreizeitpassStandPerson>> Spalten =>
+    [
+        new("Name", p => @<a href="@($"freizeiten/{FreizeitId}/freizeitpaesse/{p.PersonId}")">@Anzeige.Name(p.Vorname, p.Nachname)</a>),
+        new("Stand", p => @<Status Wort="@Anzeige.FreizeitpassStand(p.Gefragt, p.Offen)" Art="StatusArt.Warnung" />),
+        new("Erinnerung", p => @<text>
+            @if (p.ErinnertAm is { } erinnertAm)
+            {
+                <p>Erinnert am @Anzeige.Datum(erinnertAm)</p>
+            }
+            <InlineBestaetigung AusloeserText="Erinnern" AusloeserArt="KnopfArt.Outline"
+                                Satz="@($"Erinnerung zum Freizeitpass von {Anzeige.Name(p.Vorname, p.Nachname)} senden?")"
+                                JaText="Ja, senden" Bestaetigt="@(() => ErinnernAsync(p))" />
+        </text>),
+    ];
+
+    private RenderFragment ErinnerungsMeldung => @<text>
+        @if (_aktionFehler && _freizeit is not null)
+        {
+            <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                <p>@AnmeldungAbschluss.FehlerText</p>
+            </Meldung>
+        }
+        @if (_meldung is not null)
+        {
+            <Meldung Titel="@(_meldungFehler ? "Fehler" : "Gesendet")" Art="@(_meldungFehler ? MeldungArt.Fehler : MeldungArt.Erfolg)">
+                <p>@_meldung</p>
+            </Meldung>
+        }
+    </text>;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -82,7 +189,11 @@ else
         _freizeit = null;
         _nichtVerfuegbar = false;
         _aktionFehler = false;
-        _personenMitWarnung = 0;
+        _cockpitGeladen = false;
+        _anmeldungen = null;
+        _stand = null;
+        _personenMitWarnung = null;
+        _meldung = null;
         try
         {
             var kontext = Kontext.LadenAsync(FreizeitId);
@@ -98,23 +209,78 @@ else
             return;
         }
 
-        if (_kontext is not null && FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.NachweisePruefen))
+        if (_nichtVerfuegbar || (!DarfAnmeldungen && !DarfNachweise))
         {
-            await WarnungenLadenAsync();
+            return;
         }
+
+        // Die Teile des Cockpits laden parallel; jeder fängt seine Fehler selbst (Abruf scheitert → Teil entfällt).
+        var anmeldungen = DarfAnmeldungen ? SicherAsync(() => Freizeiten.AnmeldungenAsync(FreizeitId)) : Task.FromResult<AnmeldungenUebersicht?>(null);
+        var stand = DarfAnmeldungen ? StandLadenAsync() : Task.FromResult<List<FreizeitpassStandPerson>?>(null);
+        var warnungen = DarfNachweise ? WarnungenLadenAsync() : Task.FromResult<int?>(null);
+        await Task.WhenAll(anmeldungen, stand, warnungen);
+        (_anmeldungen, _stand, _personenMitWarnung) = (anmeldungen.Result, stand.Result, warnungen.Result);
+        _cockpitGeladen = true;
     }
 
-    /// <summary>Warnhinweise zu Pflicht-Nachweisen (FR-11); scheitert der Abruf, entfällt die Meldung.</summary>
-    private async Task WarnungenLadenAsync()
+    /// <summary>Freizeitpass-Stand (Story 2-6); <c>null</c>, wenn der Abruf scheitert.</summary>
+    private async Task<List<FreizeitpassStandPerson>?> StandLadenAsync() =>
+        (await SicherAsync(() => Personen.FreizeitpassStandLadenAsync(FreizeitId)))?.Personen.ToList();
+
+    /// <summary>Warnhinweise zu Pflicht-Nachweisen (FR-11): Personen mit Warnung; <c>null</c>, wenn der Abruf scheitert.</summary>
+    private async Task<int?> WarnungenLadenAsync() =>
+        (await SicherAsync(() => Freizeiten.NachweisWarnungenLadenAsync(FreizeitId)))?.Personen.Count(p => p.Warnungen.Count > 0);
+
+    private static async Task<T?> SicherAsync<T>(Func<Task<T?>> abruf)
+        where T : class
     {
         try
         {
-            var warnungen = await Freizeiten.NachweisWarnungenLadenAsync(FreizeitId);
-            _personenMitWarnung = warnungen?.Personen.Count(p => p.Warnungen.Count > 0) ?? 0;
+            return await abruf();
         }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
         {
-            _personenMitWarnung = 0;
+            return null;
+        }
+    }
+
+    private async Task ErinnernAsync(FreizeitpassStandPerson person)
+    {
+        // Zweimal ausgelöst, während die erste Anfrage noch läuft: nur einmal senden.
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _aktionFehler = false;
+        _meldung = null;
+        var name = Anzeige.Name(person.Vorname, person.Nachname);
+        try
+        {
+            switch (await Personen.FreizeitpassErinnernAsync(FreizeitId, person.PersonId))
+            {
+                case ErinnerungErgebnis.Gesendet:
+                    (_meldung, _meldungFehler) = ($"Die Erinnerung zum Freizeitpass von {name} geht per Mail hinaus.", false);
+                    break;
+                case ErinnerungErgebnis.SchonHeute:
+                    (_meldung, _meldungFehler) = ($"Zum Freizeitpass von {name} wurde heute schon erinnert.", true);
+                    break;
+                default:
+                    (_meldung, _meldungFehler) = ("Die Erinnerung ließ sich nicht senden.", true);
+                    break;
+            }
+
+            // Scheitert das Neuladen, bleibt die bisherige Liste stehen.
+            _stand = await StandLadenAsync() ?? _stand;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
         }
     }
 }

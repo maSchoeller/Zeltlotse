@@ -147,6 +147,7 @@ internal sealed class PersonLoeschenHandler(PersonenDbContext db) : ICommandHand
         // Die Posten der eigenen Einsichten löscht die Datenbank mit (Fremdschlüssel mit Kaskade).
         await db.Einsichten.IgnoreQueryFilters().Where(e => ids.Contains(e.PersonId)).ExecuteDeleteAsync(abbruch);
         await db.Erinnerungen.IgnoreQueryFilters().Where(e => ids.Contains(e.PersonId)).ExecuteDeleteAsync(abbruch);
+        await db.FreizeitpassErinnerungen.IgnoreQueryFilters().Where(e => ids.Contains(e.PersonId)).ExecuteDeleteAsync(abbruch);
         await db.Uebergaben.Where(u => ids.Contains(u.PersonId)).ExecuteDeleteAsync(abbruch);
         await db.Freigaben.IgnoreQueryFilters().Where(f => ids.Contains(f.PersonId)).ExecuteDeleteAsync(abbruch);
         await db.GastZugaenge.Where(z => ids.Contains(z.ElternPersonId)).ExecuteDeleteAsync(abbruch);
@@ -167,6 +168,8 @@ internal sealed class PersonLoeschenHandler(PersonenDbContext db) : ICommandHand
         await db.Einsichten.IgnoreQueryFilters().Where(e => e.AngefragtVon != null && ids.Contains(e.AngefragtVon.Value))
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.AngefragtVon, platzhalter), abbruch);
         await db.Erinnerungen.IgnoreQueryFilters().Where(e => ids.Contains(e.ErinnertVon))
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.ErinnertVon, GeloeschtePerson.Id), abbruch);
+        await db.FreizeitpassErinnerungen.IgnoreQueryFilters().Where(e => ids.Contains(e.ErinnertVon))
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.ErinnertVon, GeloeschtePerson.Id), abbruch);
         await db.EinsichtProtokoll.Where(e => ids.Contains(e.LesendePersonId))
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.LesendePersonId, GeloeschtePerson.Id), abbruch);

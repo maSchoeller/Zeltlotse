@@ -21,7 +21,7 @@ internal sealed class PersonenLoeschlauf(ISender sender) : ILoeschlauf
 
 /// <summary>
 /// Fristen von Personen (AD-16, NFR-5): Familien-Einladungen und Profil-Übergaben, deren Ablauf mehr als
-/// <see cref="TechnischeFristen.Einladungen"/> zurückliegt, und die Nachweis-Erinnerungen der Freizeiten, deren Daten nach der Frist
+/// <see cref="TechnischeFristen.Einladungen"/> zurückliegt, und die Nachweis- und Freizeitpass-Erinnerungen der Freizeiten, deren Daten nach der Frist
 /// der Organisation abgelaufen sind (Arbeitsdaten der Freizeit). Über alle Organisationen hinweg; kein Benutzer-Command.
 /// </summary>
 internal sealed record PersonenFristenLoeschen(DateTimeOffset Jetzt, IReadOnlyList<Guid> FreizeitIds) : ICommand, IModulCommand<PersonenDbContext>;
@@ -37,6 +37,7 @@ internal sealed class PersonenFristenLoeschenHandler(PersonenDbContext db) : ICo
         {
             var freizeiten = command.FreizeitIds.ToList();
             await db.Erinnerungen.IgnoreQueryFilters().Where(e => freizeiten.Contains(e.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
+            await db.FreizeitpassErinnerungen.IgnoreQueryFilters().Where(e => freizeiten.Contains(e.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
         }
 
         return Unit.Value;

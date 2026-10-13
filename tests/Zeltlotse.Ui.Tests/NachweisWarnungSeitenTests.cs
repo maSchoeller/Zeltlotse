@@ -224,24 +224,29 @@ public sealed class NachweisWarnungSeitenTests : BunitContext
     [Fact]
     public void Startseite_meldet_Personen_mit_Warnung_in_Mehrzahl_und_Einzahl_ueber_dem_Knopf()
     {
+        // Story 2-6: Die Meldung steht wörtlich als Zeile in der Card „Warnhinweise“ über dem Knopf; darüber „Achtung: 1 Punkt ist offen.“
         var mehrere = Startseite([Aktionsschluessel.NachweisePruefen], () => Json(WarnungenFuer(Jonas, Lea)));
         mehrere.WaitForElement(".elkw-alert--warnung");
         Assert.Equal("Achtung:", mehrere.Find(".elkw-alert--warnung .elkw-alert__title").TextContent);
-        Assert.Contains("Bei 2 Personen im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.", mehrere.Find(".elkw-alert--warnung").TextContent, StringComparison.Ordinal);
+        Assert.Contains("1 Punkt ist offen.", mehrere.Find(".elkw-alert--warnung").TextContent, StringComparison.Ordinal);
+        Assert.Equal("Bei 2 Personen im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.", mehrere.Find(".elkw-card li").TextContent.Trim());
         var markup = mehrere.Markup;
-        Assert.True(markup.IndexOf("elkw-alert--warnung", StringComparison.Ordinal) < markup.IndexOf($"freizeiten/{Freizeit}/nachweise", StringComparison.Ordinal));
+        Assert.True(markup.IndexOf("Bei 2 Personen", StringComparison.Ordinal) < markup.IndexOf($"freizeiten/{Freizeit}/nachweise", StringComparison.Ordinal));
 
         var eine = Startseite([Aktionsschluessel.NachweisePruefen], () => Json(WarnungenFuer(Jonas)));
         eine.WaitForElement(".elkw-alert--warnung");
-        Assert.Contains("Bei 1 Person im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.", eine.Find(".elkw-alert--warnung").TextContent, StringComparison.Ordinal);
+        Assert.Equal("Bei 1 Person im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.", eine.Find(".elkw-card li").TextContent.Trim());
     }
 
     [Fact]
     public void Startseite_ohne_Warnung_mit_gescheitertem_Abruf_oder_ohne_erlaubte_Aktion_zeigt_keine_Meldung()
     {
+        // Story 2-6: Ohne Warnung meldet die Card „Keine offenen Punkte.“; scheitert der Abruf, gibt es keine Meldung.
         var ohne = Startseite([Aktionsschluessel.NachweisePruefen], () => Json(WarnungenFuer()));
         ohne.WaitForElement($"a[href='freizeiten/{Freizeit}/nachweise']");
-        Assert.Empty(ohne.FindAll(".elkw-alert"));
+        Assert.Empty(ohne.FindAll(".elkw-alert--warnung"));
+        Assert.Empty(ohne.FindAll(".elkw-card li"));
+        Assert.Contains("Keine offenen Punkte.", ohne.Find(".elkw-alert--erfolg").TextContent, StringComparison.Ordinal);
 
         var gescheitert = Startseite([Aktionsschluessel.NachweisePruefen], () => new HttpResponseMessage(HttpStatusCode.InternalServerError));
         gescheitert.WaitForElement($"a[href='freizeiten/{Freizeit}/nachweise']");

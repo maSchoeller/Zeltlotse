@@ -36,13 +36,16 @@ Die Startseite der Freizeit zeigt:
 - die eigene **Rolle**,
 - wer die **Leitung** hat,
 - bis wann die Freizeit **Einsicht in Freizeitpässe** hat,
-- für die Leitung den Knopf **Anmeldungen** (siehe [Anmeldungen bestätigen und absagen](/leitung/anmeldungen/)),
-- für die Leitung den Knopf **Nachweise prüfen** und darüber eine Meldung, wenn im Team Pflicht-Nachweise fehlen oder vor dem Ende der Freizeit ablaufen (siehe [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/)).
+- für die Leitung das **Leitungs-Cockpit** (siehe [Leitungs-Cockpit](/leitung/cockpit/)):
+  - die Card **Anmeldungen** mit dem Balken **Plätze**, den Zahlen je Art und dem Knopf **Anmeldungen** (siehe [Anmeldungen bestätigen und absagen](/leitung/anmeldungen/)),
+  - die Card **Warnhinweise** mit unvollständigen Freizeitpässen und fehlenden Pflicht-Nachweisen im Team und dem Knopf **Nachweise prüfen** (siehe [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/)),
+  - die Card **Freizeitpässe unvollständig** mit dem Knopf **Erinnern**,
+- für Leitung und Team den Knopf **Freizeitpässe** (siehe [Freizeitpässe ansehen](/mitarbeitende/freizeitpaesse/)),
 - für die Leitung den Knopf **Einstellungen** mit der Freizeitseite und den Anmeldelinks (siehe [Freizeitseite einrichten](/leitung/freizeitseite-einrichten/)).
 
-![Startseite der Freizeit „Zeltlager Sommer 2027“ am Handy mit Phase „in Vorbereitung“, „Zeitraum: 02.08.2027 – 13.08.2027“, „Rolle: Leitung“, „Leitung: Jonas Hüttner, Miriam Zeltner“, „Einsicht in Freizeitpässe bis 12.09.2027“ und der Meldung über fehlende Nachweise](../../../assets/screenshots/freizeit-start-handy.png)
+![Leitungs-Cockpit auf der Startseite der Freizeit am Handy: Card „Warnhinweise“ mit „Achtung: 2 Punkte sind offen.“ und darunter die Tabelle „Freizeitpässe unvollständig“](../../../assets/screenshots/freizeit-start-handy.png)
 
-![Startseite der Freizeit am Laptop](../../../assets/screenshots/freizeit-start-laptop.png)
+![Leitungs-Cockpit auf der Startseite der Freizeit am Laptop: Card „Anmeldungen“ mit dem Balken „Plätze“ und die Card „Warnhinweise“](../../../assets/screenshots/freizeit-start-laptop.png)
 
 Nur wer in der Freizeit eine Rolle hat, sieht diese Seite. Org-Admin und Org-Überblick ohne eigene Rolle in der Freizeit bekommen „Diese Seite ist nicht verfügbar.“
 

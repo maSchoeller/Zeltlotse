@@ -405,6 +405,33 @@ public sealed class PersonenApiClient(HttpClient http)
         return ErinnerungErgebnis.Gesendet;
     }
 
+    /// <summary>
+    /// <c>GET /api/freizeiten/{freizeitId}/personen/freizeitpass-stand</c> (nur Leitung, Story 2-6): wer offene Angaben im Freizeitpass hat;
+    /// <c>null</c> bei <c>403</c>/<c>404</c>.
+    /// </summary>
+    public Task<FreizeitpassStand?> FreizeitpassStandLadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
+        LadenOderNullAsync<FreizeitpassStand>($"/api/freizeiten/{freizeitId}/personen/freizeitpass-stand", abbruch);
+
+    /// <summary>
+    /// <c>POST /api/freizeiten/{freizeitId}/personen/freizeitpass/erinnerungen</c> (nur Leitung, Story 2-6): gesendet, heute schon erinnert
+    /// (<c>409</c>) oder nicht gefunden (<c>404</c>: keine aktive Freigabe in dieser Freizeit).
+    /// </summary>
+    public async Task<ErinnerungErgebnis> FreizeitpassErinnernAsync(Guid freizeitId, Guid personId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync(
+            $"/api/freizeiten/{freizeitId}/personen/freizeitpass/erinnerungen", new FreizeitpassErinnerungSenden(personId), ApiJson.Optionen, abbruch);
+        switch (antwort.StatusCode)
+        {
+            case HttpStatusCode.Conflict:
+                return ErinnerungErgebnis.SchonHeute;
+            case HttpStatusCode.NotFound:
+                return ErinnerungErgebnis.NichtGefunden;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return ErinnerungErgebnis.Gesendet;
+    }
+
     /// <summary><c>GET …/einsichten/{einsichtId}</c>: die Einsicht oder <c>null</c> bei <c>403</c>/<c>404</c>.</summary>
     public Task<EinsichtDetail?> EinsichtLadenAsync(PruefOrt ort, Guid einsichtId, CancellationToken abbruch = default) =>
         LadenOderNullAsync<EinsichtDetail>($"{ort.Basis}/einsichten/{einsichtId}", abbruch);

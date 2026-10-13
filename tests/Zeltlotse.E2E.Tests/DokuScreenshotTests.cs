@@ -273,15 +273,88 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(seite.GetByText("Leitung: Jonas Hüttner, Miriam Zeltner")).ToBeVisibleAsync();
         await Assertions.Expect(seite.GetByText("Einsicht in Freizeitpässe bis 12.09.2027")).ToBeVisibleAsync();
         // Story 2-5: Leitung und Team sehen den Knopf „Freizeitpässe“.
-        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Freizeitpässe" })).ToBeVisibleAsync();
-        // Story 1-6: Miriam fehlen Pflicht-Nachweise (Führungszeugnis, Erste Hilfe), Story 2-3: Lea (Team) ebenso; die Warnung steht
-        // über „Nachweise prüfen“.
-        await Assertions.Expect(seite.Locator(".elkw-alert--warnung"))
-            .ToContainTextAsync("Bei 2 Personen im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Freizeitpässe", Exact = true })).ToBeVisibleAsync();
+        // Story 2-6: das Leitungs-Cockpit. Card „Anmeldungen“ mit Balken und Zahlen je Art.
+        var anmeldungen = seite.Locator(".elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = "Anmeldungen", Exact = true }) });
+        await Assertions.Expect(anmeldungen.Locator(".zl-balken")).ToContainTextAsync("Plätze", new() { Timeout = 60_000 });
+        await Assertions.Expect(anmeldungen.Locator(".zl-zahl")).ToHaveTextAsync("1 von 40");
+        // Gast-Anmeldungen anderer Tests desselben Laufs (Familie „Beispiel“) zählen als eingegangene Teilnehmende und unvollständige
+        // Freizeitpässe mit; ihre Anzahl hängt von der Reihenfolge der Tests ab.
+        var tabelle = seite.Locator("#freizeitpaesse-offen tbody tr");
+        await Assertions.Expect(tabelle.Filter(new() { HasText = "Tobias Wanderer" })).ToHaveCountAsync(1, new() { Timeout = 60_000 });
+        var gaeste = await tabelle.Filter(new() { HasText = "Beispiel" }).CountAsync();
+        await Assertions.Expect(anmeldungen).ToContainTextAsync(new System.Text.RegularExpressions.Regex(@"Teilnehmende: \d+ eingegangen, 1 bestätigt"));
+        await Assertions.Expect(anmeldungen).ToContainTextAsync("Mitarbeitende: 1 eingegangen, 1 bestätigt");
+        // Warnhinweise: vier unvollständige Freizeitpässe und, aus Story 1-6, Miriam und Lea (Team) fehlen Pflicht-Nachweise.
+        var warnung = seite.Locator(".elkw-alert--warnung");
+        await Assertions.Expect(warnung).ToHaveCountAsync(1);
+        await Assertions.Expect(warnung).ToContainTextAsync("Achtung:");
+        await Assertions.Expect(warnung).ToContainTextAsync("2 Punkte sind offen.");
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = $"{4 + gaeste} Freizeitpässe unvollständig" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByText("Bei 2 Personen im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.")).ToBeVisibleAsync();
+        await Assertions.Expect(tabelle).ToHaveCountAsync(4 + gaeste);
+        foreach (var (name, stand) in new[]
+                 {
+                     ("Lea Feuerstein", "Freizeitpass fehlt noch"),
+                     ("Emma Muster", "5 von 8 Angaben offen"),
+                     ("Mia Probst", "5 von 8 Angaben offen"),
+                     ("Tobias Wanderer", "Freizeitpass fehlt noch"),
+                 })
+        {
+            await Assertions.Expect(tabelle.Filter(new() { HasText = name })).ToContainTextAsync(stand);
+        }
+
+        var demo = tabelle.Filter(new() { HasNotText = "Beispiel" });
+        await Assertions.Expect(demo.Nth(0)).ToContainTextAsync("Lea Feuerstein");
+        await Assertions.Expect(demo.Nth(3)).ToContainTextAsync("Tobias Wanderer");
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await E2EHilfe.AxeAsync(seite);
 
+        // Das Bild zeigt nur die Demo-Daten: Gast-Zeilen weg, die Zahlen wie ohne die Gast-Anmeldungen anderer Tests.
+        await GastZeilenAusblendenAsync(seite);
+        await seite.EvaluateAsync(
+            """
+            () => {
+                for (const p of document.querySelectorAll('.elkw-card p')) {
+                    if (p.textContent.trim().startsWith('Teilnehmende:')) p.textContent = 'Teilnehmende: 1 eingegangen, 1 bestätigt';
+                }
+                const link = document.querySelector('.elkw-card li a');
+                if (link) link.textContent = '4 Freizeitpässe unvollständig';
+            }
+            """);
+
+        // Das Bild zeigt das Cockpit: am Laptop ab „Anmeldungen“ (mit den Warnhinweisen), am Handy ab „Warnhinweise“.
+        var ziel = seite.Locator(".elkw-card").Filter(new()
+        {
+            Has = seite.GetByRole(AriaRole.Heading, new() { Name = geraet == "handy" ? "Warnhinweise" : "Anmeldungen", Exact = true }),
+        });
+        await ziel.EvaluateAsync("karte => karte.scrollIntoView({ block: 'start' })");
+
         await BildAsync(seite, "freizeit-start", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Freizeitpass_Erinnern(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        // Story 2-6: Jonas klappt im Leitungs-Cockpit „Erinnern“ bei Emma auf; gesendet wird nichts.
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, DemoMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
+        var zeile = seite.Locator("#freizeitpaesse-offen tbody tr").Filter(new() { HasText = "Emma Muster" });
+        await Assertions.Expect(zeile).ToContainTextAsync("5 von 8 Angaben offen", new() { Timeout = 60_000 });
+        await zeile.GetByRole(AriaRole.Button, new() { Name = "Erinnern" }).ClickAsync();
+        await Assertions.Expect(zeile).ToContainTextAsync("Erinnerung zum Freizeitpass von Emma Muster senden?");
+        await Assertions.Expect(zeile.GetByRole(AriaRole.Button, new() { Name = "Ja, senden" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        await GastZeilenAusblendenAsync(seite);
+        await zeile.GetByRole(AriaRole.Button, new() { Name = "Ja, senden" }).ScrollIntoViewIfNeededAsync();
+
+        await BildAsync(seite, "freizeitpass-erinnern", geraet);
     }
 
     /// <summary>Elternteil der Demo-Familie „Muster“ mit Paul (volljährig) und Emma (Story 1-4).</summary>
@@ -995,7 +1068,7 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync(new() { Timeout = 60_000 });
         await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
         await Assertions.Expect(seite.GetByText("Rolle: Team")).ToBeVisibleAsync();
-        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeitpässe" }).ClickAsync(new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeitpässe", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
         await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Freizeitpässe", new() { Timeout = 60_000 });
         await Assertions.Expect(seite.Locator("tbody tr").Filter(new() { HasText = "Mia Probst" })).ToBeVisibleAsync(new() { Timeout = 60_000 });
     }
