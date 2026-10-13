@@ -247,6 +247,85 @@ public sealed partial class GastAnmeldungSeitenTests(PostgresContainer postgres)
         Assert.Contains("Dieser Link ist nicht mehr gültig.", await HtmlAsync(ungueltig), StringComparison.Ordinal);
     }
 
+    // ---------- Story 2-4: Freizeitpass über den Gast-Link ----------
+
+    [Fact]
+    public async Task Gast_Freizeitpass_ist_ein_statisches_Formular_mit_den_Fragen_der_Freizeit_und_speichert_im_POST()
+    {
+        await FragenSetzenAsync("allergien,schwimmen,tetanus");
+        var (token, anmeldung) = await GastAnmeldungAsync();
+        var gastLink = await HtmlAsync(await SeiteAsync($"/gast/{token}"));
+        var pfad = $"/gast/{token}/freizeitpass/{anmeldung}";
+        Assert.Contains($"href=\"{pfad}\"", gastLink, StringComparison.Ordinal);
+        Assert.Contains("Freizeitpass für Lina", gastLink, StringComparison.Ordinal);
+
+        using var seite = await SeiteAsync(pfad);
+
+        Assert.Equal(HttpStatusCode.OK, seite.StatusCode);
+        var html = await HtmlAsync(seite);
+        Assert.Matches("<h1[^>]*>Freizeitpass für Lina</h1>", html);
+        Assert.Contains("<legend>Allergien und Unverträglichkeiten</legend>", html, StringComparison.Ordinal);
+        Assert.Matches("<input [^>]*type=\"checkbox\"[^>]*name=\"a.allergien\"[^>]*value=\"milch\"", html);
+        Assert.Matches("<input [^>]*type=\"radio\"[^>]*name=\"a.schwimmen\"[^>]*value=\"ja\"", html);
+        Assert.Matches("<input [^>]*name=\"a.tetanus\"[^>]*type=\"date\"", html);
+        Assert.Contains("name=\"s.allergien\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Medikamente", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Stimmt das noch?", html, StringComparison.Ordinal);
+        Statisch(html);
+
+        using var gespeichert = await AbsendenAsync(pfad, "freizeitpass",
+            [("a.allergien", "milch"), ("a.allergien", "eier"), ("s.allergien", "Kiwi"), ("a.schwimmen", "ja"), ("a.tetanus", "2024-05-17")]);
+
+        Assert.Equal(HttpStatusCode.OK, gespeichert.StatusCode);
+        var nachher = await HtmlAsync(gespeichert);
+        Assert.Contains("Freizeitpass gespeichert.", nachher, StringComparison.Ordinal);
+        Assert.Matches("<input [^>]*value=\"milch\" checked", nachher);
+        Assert.Matches("<input [^>]*value=\"eier\" checked", nachher);
+        Assert.Contains("value=\"Kiwi\"", nachher, StringComparison.Ordinal);
+        Assert.Equal(3L, await WertAsync<long>(_verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort"));
+    }
+
+    [Fact]
+    public async Task Gast_Freizeitpass_zeigt_Fehler_am_Feld_mit_Uebersicht_und_Stimmt_noch_bei_veralteten_Angaben()
+    {
+        await FragenSetzenAsync("schwimmen,tetanus");
+        var (token, anmeldung) = await GastAnmeldungAsync();
+        var pfad = $"/gast/{token}/freizeitpass/{anmeldung}";
+
+        using var fehler = await AbsendenAsync(pfad, "freizeitpass", [("a.schwimmen", "vielleicht"), ("a.tetanus", "31.02.")]);
+
+        var html = await HtmlAsync(fehler);
+        Assert.Contains("href=\"#freizeitpass-schwimmen\"", html, StringComparison.Ordinal);
+        Assert.Contains("href=\"#freizeitpass-tetanus\"", html, StringComparison.Ordinal);
+        Assert.Contains("value=\"31.02.\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Freizeitpass gespeichert.", html, StringComparison.Ordinal);
+        Assert.Equal(0L, await WertAsync<long>(_verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort"));
+
+        (await AbsendenAsync(pfad, "freizeitpass", [("a.schwimmen", "ja")])).Dispose();
+        await AusfuehrenAsync(_verbindung, "UPDATE personen.freizeitpass_antwort SET \"BestaetigtAm\" = @t", ("t", _factory.Uhr.GetUtcNow().AddMonths(-13)));
+        var veraltet = await HtmlAsync(await SeiteAsync(pfad));
+        Assert.Contains("Stimmt das noch?", veraltet, StringComparison.Ordinal);
+        Assert.Contains("name=\"b.schwimmen\"", veraltet, StringComparison.Ordinal);
+
+        using var stimmt = await AbsendenAsync(pfad, "freizeitpass", [("a.schwimmen", "ja"), ("b.schwimmen", "true")]);
+
+        Assert.DoesNotContain("Stimmt das noch?", await HtmlAsync(stimmt), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Gast_Freizeitpass_mit_fremder_Anmeldung_oder_ungueltigem_Link_ergibt_die_404_Seite()
+    {
+        await FragenSetzenAsync("schwimmen");
+        var (token, anmeldung) = await GastAnmeldungAsync();
+
+        using var fremd = await SeiteAsync($"/gast/{token}/freizeitpass/{Guid.CreateVersion7()}");
+        using var ungueltig = await SeiteAsync($"/gast/{Zugangslink.NeuesToken()}/freizeitpass/{anmeldung}");
+
+        Assert.Equal(HttpStatusCode.NotFound, fremd.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, ungueltig.StatusCode);
+        Assert.Contains("Dieser Link ist nicht mehr gültig.", await HtmlAsync(ungueltig), StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Doppelanmeldung_ueber_die_Seite_zeigt_den_Hinweis_mit_dem_Vornamen_und_legt_nichts_an()
     {
@@ -332,6 +411,24 @@ public sealed partial class GastAnmeldungSeitenTests(PostgresContainer postgres)
         ("e.KindVorname", kind), ("e.KindNachname", "Beispiel"), ("e.KindGeburtsdatum", geburtsdatum),
         ("e.ElternVorname", "Sabine"), ("e.ElternNachname", "Beispiel"), ("e.Mail", mail), ("e.Bestaetigt", "true"),
     ];
+
+    private async Task FragenSetzenAsync(string teilnehmende)
+    {
+        var version = (await JsonAsync(await _miriam.GetAsync($"/api/freizeiten/{_x}/fragen", Abbruch))).GetProperty("version").GetUInt32();
+        using var antwort = await SendenAsync(_miriam, HttpMethod.Patch, $"/api/freizeiten/{_x}/fragen", $$"""{"version":{{version}},"alterWert":null,"teilnehmende":"{{teilnehmende}}"}""");
+        Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
+    }
+
+    /// <summary>Lina als Gast über die Seite anmelden; liefert Gast-Token und Kennung der Anmeldung.</summary>
+    private async Task<(string Token, Guid Anmeldung)> GastAnmeldungAsync()
+    {
+        using (var erstes = await AbsendenAsync($"/freizeit/{_tn}/anmelden", "anmelden", Gast("Lina", "2016-04-01", Lina)))
+        {
+            Assert.Equal(HttpStatusCode.OK, erstes.StatusCode);
+        }
+
+        return (_factory.Mails.LetzteAn(Lina).Token, await WertAsync<Guid>(_verbindung, "SELECT \"Id\" FROM freizeiten.anmeldung"));
+    }
 
     private static void Statisch(string html)
     {

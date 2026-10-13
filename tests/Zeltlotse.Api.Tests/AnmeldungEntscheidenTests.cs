@@ -195,7 +195,7 @@ public sealed class AnmeldungEntscheidenTests(PostgresContainer postgres) : IAsy
 
         // Die Familienübersicht liest Status und Kontakt der Leitung.
         var zeile = Assert.Single(await MeineAnmeldungenAsync(_katrin));
-        Assert.Equal(["anmeldungId", "art", "ersterTag", "freizeitName", "kontaktMail", "kontaktTelefon", "letzterTag", "personId", "status"], Namen(zeile));
+        Assert.Equal(["anmeldungId", "art", "ersterTag", "fragen", "freizeitName", "kontaktMail", "kontaktTelefon", "letzterTag", "personId", "status"], Namen(zeile));
         Assert.Equal(("Bestaetigt", KontaktMail, KontaktTelefon), (
             zeile.GetProperty("status").GetString(), zeile.GetProperty("kontaktMail").GetString(), zeile.GetProperty("kontaktTelefon").GetString()));
         var liste = await JsonAsync(await _miriam.GetAsync(ListePfad(_x), Abbruch));
@@ -404,7 +404,7 @@ public sealed class AnmeldungEntscheidenTests(PostgresContainer postgres) : IAsy
         using var ansicht = await _anonym.GetAsync(GastPfad(token), Abbruch);
         Assert.Equal(HttpStatusCode.OK, ansicht.StatusCode);
         var zeile = Assert.Single((await JsonAsync(ansicht)).GetProperty("anmeldungen").EnumerateArray());
-        Assert.Equal(["ersterTag", "freizeitName", "kontaktMail", "kontaktTelefon", "letzterTag", "status", "vorname"], Namen(zeile));
+        Assert.Equal(["anmeldungId", "ersterTag", "fragen", "freizeitName", "kontaktMail", "kontaktTelefon", "letzterTag", "personId", "status", "vorname"], Namen(zeile));
         Assert.Equal(("Bestaetigt", KontaktMail, KontaktTelefon), (
             zeile.GetProperty("status").GetString(), zeile.GetProperty("kontaktMail").GetString(), zeile.GetProperty("kontaktTelefon").GetString()));
     }

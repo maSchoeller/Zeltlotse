@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Zeltlotse.Personen.Contracts.Freizeitpass;
 using Zeltlotse.Personen.Daten;
 using Zeltlotse.Personen.Freigaben;
 using Zeltlotse.Personen.Nachweise;
@@ -10,7 +11,7 @@ namespace Zeltlotse.Personen.Datenschutz;
 
 /// <summary>
 /// Datenauskunft von Personen (AD-16, FR-14): Profil, Familie, Nachweise, Einsicht-Anfragen (mit entschlüsseltem Hinweis),
-/// Erinnerungen, Zugriffsprotokoll, Gast-Link und Freigaben der Person. Liest nur über den Lese-Kontext; organisationseigene Zeilen
+/// Erinnerungen, Zugriffsprotokoll, Gast-Link, Freigaben und Freizeitpass der Person. Liest nur über den Lese-Kontext; organisationseigene Zeilen
 /// (Einsichten, Erinnerungen) ohne Mandantenfilter, aber nur die der Person (AD-6).
 /// </summary>
 internal sealed class PersonenAuskunft(PersonenLeseDbContext db, IVerschluesselung verschluesselung) : IDatenauskunft
@@ -47,7 +48,64 @@ internal sealed class PersonenAuskunft(PersonenLeseDbContext db, IVerschluesselu
         abschnitte.Add(new AuskunftAbschnitt("Zugriffsprotokoll", await ProtokollAsync(personId, abbruch)));
         abschnitte.Add(new AuskunftAbschnitt("Gast-Link", await GastZugangAsync(personId, abbruch)));
         abschnitte.Add(new AuskunftAbschnitt("Freigaben", await FreigabenAsync(personId, abbruch)));
+        abschnitte.Add(new AuskunftAbschnitt("Freizeitpass", await FreizeitpassAsync(personId, abbruch)));
         return abschnitte;
+    }
+
+    /// <summary>
+    /// Antworten im Freizeitpass (Story 2-4) der Person und der Kinder ihrer Familie, entschlüsselt und lesbar: Fragetext (bei Kindern mit
+    /// Namen), Wert mit den Anzeigetexten der Optionen, „Sonstiges“ und wann zuletzt bestätigt.
+    /// </summary>
+    private async Task<List<AuskunftZeile>> FreizeitpassAsync(Guid personId, CancellationToken abbruch)
+    {
+        var familieId = await db.Elternteile.Where(e => e.PersonId == personId).Select(e => (Guid?)e.FamilieId).SingleOrDefaultAsync(abbruch);
+        List<Profil.Person> kinder = familieId is { } familie ? await db.Personen.Where(p => p.FamilieId == familie).ToListAsync(abbruch) : [];
+        var namen = kinder.ToDictionary(k => k.Id, k => AuskunftFormat.Name(k.Vorname, k.Nachname));
+        List<Guid> ids = [personId, .. kinder.Select(k => k.Id)];
+        var antworten = await db.FreizeitpassAntworten.Where(a => ids.Contains(a.PersonId)).ToListAsync(abbruch);
+        var reihenfolge = Fragenkatalog.Fragen.Select((f, i) => (f.Kennung, i)).ToDictionary(t => t.Kennung, t => t.i, StringComparer.Ordinal);
+        var zeilen = new List<AuskunftZeile>();
+        foreach (var antwort in antworten.OrderBy(a => a.PersonId == personId ? 0 : 1).ThenBy(a => namen.GetValueOrDefault(a.PersonId)).ThenBy(a => reihenfolge.GetValueOrDefault(a.Kennung, int.MaxValue)))
+        {
+            var teile = new List<string>();
+            var frage = Fragenkatalog.Finden(antwort.Kennung);
+            if (antwort.Wert is { } wert)
+            {
+                teile.Add(Lesbar(frage, await verschluesselung.EntschluesselnAsync(wert, abbruch)));
+            }
+
+            if (antwort.Sonstiges is { } sonstiges)
+            {
+                teile.Add($"Sonstiges: {await verschluesselung.EntschluesselnAsync(sonstiges, abbruch)}");
+            }
+
+            teile.Add($"bestätigt am {AuskunftFormat.Datum(antwort.BestaetigtAm)}");
+            var titel = frage?.Frage ?? antwort.Kennung;
+            zeilen.Add(new AuskunftZeile(
+                namen.TryGetValue(antwort.PersonId, out var name) ? $"{name}: {titel}" : titel,
+                string.Join(", ", teile)));
+        }
+
+        return zeilen;
+    }
+
+    /// <summary>Ein Wert im Wire-Format lesbar: Optionen als Anzeigetexte, ein Datum als TT.MM.JJJJ, Freitext unverändert.</summary>
+    private static string Lesbar(Katalogfrage? frage, string wert)
+    {
+        if (frage is null)
+        {
+            return wert;
+        }
+
+        if (frage.Typ == Antworttyp.Datum
+            && DateOnly.TryParseExact(wert, Fragenkatalog.Datumsformat, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var tag))
+        {
+            return AuskunftFormat.Datum(tag);
+        }
+
+        return frage.Optionen.Count == 0
+            ? wert
+            : string.Join(", ", wert.Split(',').Select(w => frage.Optionen.FirstOrDefault(o => o.Wert == w)?.Text ?? w));
     }
 
     /// <summary>Der Gast-Link, wenn die Person als Elternteil ohne Konto angemeldet hat (nie das Token, nur der Hash ist gespeichert).</summary>

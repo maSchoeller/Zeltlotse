@@ -16,7 +16,8 @@ Die Leitung darf alles, was das [Team](/mitarbeitende/) darf. **Nur die Leitung*
 - Anmeldungen bestätigen, Absagen eintragen und das Nachrücken bestimmen – siehe [Anmeldungen bestätigen und absagen](/leitung/anmeldungen/),
 - Erinnerungen auslösen, zum Beispiel an fehlende Nachweise – siehe [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/),
 - den Stand der Nachweise im Team sehen und Nachweise prüfen – siehe [Nachweise prüfen](/leitung/nachweise-pruefen/),
-- festlegen, welche Module (Verpflegung, Finanzen, Teilnehmer-Zugang) die Freizeit nutzt und welche Fragen aus dem Fragenbaukasten der Freizeitpass enthält,
+- festlegen, welche Fragen der Freizeitpass für Teilnehmende und für Mitarbeitende abfragt – siehe [Freizeitpass zusammenstellen](/leitung/freizeitpass-fragen/),
+- festlegen, welche Module (Verpflegung, Finanzen, Teilnehmer-Zugang) die Freizeit nutzt,
 - die Sicherheitskette einrichten,
 - den Teilnehmer-Zugang per QR-Code an- und abschalten,
 - die Freizeit abschließen.

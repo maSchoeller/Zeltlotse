@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Design;
 using Zeltlotse.Api.Contracts.Personen;
 using Zeltlotse.Personen.Familien;
 using Zeltlotse.Personen.Freigaben;
+using Zeltlotse.Personen.Freizeitpass;
 using Zeltlotse.Personen.Gaeste;
 using Zeltlotse.Personen.Freizeitrollen;
 using Zeltlotse.Personen.Nachweise;
@@ -48,6 +49,8 @@ internal sealed class PersonenDbContext(DbContextOptions<PersonenDbContext> opti
 
     public DbSet<Freigabe> Freigaben => Set<Freigabe>();
 
+    public DbSet<FreizeitpassAntwort> FreizeitpassAntworten => Set<FreizeitpassAntwort>();
+
     protected override string Schema => PersonenModul.Schema;
 
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => PersonenModell.Konfigurieren(modelBuilder);
@@ -84,6 +87,8 @@ internal sealed class PersonenLeseDbContext(DbContextOptions<PersonenLeseDbConte
     public DbSet<GastZugang> GastZugaenge => Set<GastZugang>();
 
     public DbSet<Freigabe> Freigaben => Set<Freigabe>();
+
+    public DbSet<FreizeitpassAntwort> FreizeitpassAntworten => Set<FreizeitpassAntwort>();
 
     protected override string Schema => PersonenModul.Schema;
 
@@ -247,6 +252,17 @@ internal static class PersonenModell
             e.HasIndex(t => t.AnmeldungId).IsUnique();
             e.HasIndex(t => t.PersonId);
             e.HasIndex(t => new { t.OrganisationId, t.FreizeitId });
+        });
+
+        // FR-23, AD-10, AD-14: je (Person, Kennung) eine Antwort; Wert und Sonstiges nur verschlüsselt (bytea über Geschuetzt).
+        modelBuilder.Entity<FreizeitpassAntwort>(e =>
+        {
+            e.ToTable("freizeitpass_antwort");
+            e.Property(t => t.Id).ValueGeneratedNever();
+            e.Property(t => t.Kennung).HasMaxLength(50);
+            e.HasIndex(t => new { t.PersonId, t.Kennung }).IsUnique();
+            e.Ignore(t => t.Beantwortet);
+            e.Property(t => t.Version).IsRowVersion();
         });
     }
 }

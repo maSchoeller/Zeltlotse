@@ -7,6 +7,7 @@ using Zeltlotse.Freizeiten.Anmeldungen;
 using Zeltlotse.Freizeiten.Anmeldungen.Entscheiden;
 using Zeltlotse.Freizeiten.Daten;
 using Zeltlotse.Freizeiten.Domaene;
+using Zeltlotse.Freizeiten.Fragen;
 using Zeltlotse.Freizeiten.Freizeitseite;
 using Zeltlotse.Freizeiten.Leitung;
 using Zeltlotse.Freizeiten.Verwaltung;
@@ -17,6 +18,7 @@ using Zeltlotse.Organisationen.Nachweise;
 using Zeltlotse.Organisationen.Verwaltung;
 using Zeltlotse.Personen.Daten;
 using Zeltlotse.Personen.Familien;
+using Zeltlotse.Personen.Freizeitpass;
 using Zeltlotse.Personen.Nachweise;
 using Zeltlotse.Personen.Profil;
 using Zeltlotse.Personen.Zugriffsprotokoll;
@@ -59,6 +61,8 @@ namespace Zeltlotse.Api.Demo;
 /// Story 2-3: Die Demo-Freizeit hat den Kontakt für Absagen (nur, wenn leer); Daniel meldet Mia an, Lea und Tobias sich selbst als
 /// Mitarbeitende; Miriam bestätigt Mia und Lea (nur, solange eingegangen). Lea wird damit Team der Freizeit und Mitarbeitende der
 /// Organisation; Bestätigungs-Mails gehen an Daniel und Lea.
+/// Story 2-4: Miriam wählt die Fragen des Freizeitpasses je Zielgruppe (nur, wenn noch keine gewählt sind); Katrin beantwortet für
+/// Emma Allergien, Notfallkontakte und Schwimmen (je nur, wenn es noch keine Antwort gibt).
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -104,6 +108,7 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await HerkunftAsync(abbruch);
         await FreizeitseiteAsync(abbruch);
         await AnmeldungAsync(abbruch);
+        await FreizeitpassAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -474,6 +479,46 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         }
 
         await dienste.GetRequiredService<IOutboxZustellung>().AllesZustellenAsync(abbruch);
+    }
+
+    /// <summary>
+    /// Story 2-4: die Fragen-Auswahl der Demo-Freizeit (<see cref="DemoKatalog.Fragen"/>, je Zielgruppe nur, wenn leer) und Emmas
+    /// Antworten (<see cref="DemoKatalog.EmmasFreizeitpass"/>, je Frage nur, wenn es noch keine Antwort gibt), von Katrin gespeichert.
+    /// </summary>
+    private async Task FreizeitpassAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        var organisationId = await dienste.GetRequiredService<OrganisationenLeseDbContext>().Organisationen
+            .Where(o => o.Name == DemoKatalog.Organisation.Name)
+            .Select(o => o.Id)
+            .SingleAsync(abbruch);
+        dienste.GetRequiredService<MandantenKontext>().Setzen(organisationId);
+        var freizeit = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten.SingleAsync(f => f.Name == DemoKatalog.Freizeit.Name, abbruch);
+        foreach (var (feld, wert) in new[] { (FragenFeld.Teilnehmende, DemoKatalog.Fragen.Teilnehmende), (FragenFeld.Mitarbeitende, DemoKatalog.Fragen.Mitarbeitende) })
+        {
+            if (freizeit.Fragen(feld) is null
+                && await sender.Send(new FragenAuswahlAendernCommand(freizeit.Id, feld, null, wert), abbruch) is not FragenAenderung.Gespeichert)
+            {
+                throw new InvalidOperationException($"Demo-Freizeit: Die Fragen für {feld} ließen sich nicht setzen.");
+            }
+        }
+
+        var personen = dienste.GetRequiredService<PersonenLeseDbContext>();
+        var katrin = (await sender.Send(new KontoSicherstellen("katrin.muster@example.org"), abbruch)).PersonId;
+        var emma = await personen.Personen
+            .Where(p => p.Vorname == "Emma" && personen.Elternteile.Any(e => e.PersonId == katrin && e.FamilieId == p.FamilieId))
+            .Select(p => p.Id)
+            .SingleAsync(abbruch);
+        var vorhanden = await personen.FreizeitpassAntworten.Where(a => a.PersonId == emma).Select(a => a.Kennung).ToListAsync(abbruch);
+        foreach (var (kennung, wert) in DemoKatalog.EmmasFreizeitpass.Where(a => !vorhanden.Contains(a.Kennung)))
+        {
+            if (await sender.Send(new FreizeitpassAntwortAendern(katrin, emma, kennung, FreizeitpassFeld.Wert, null, wert), abbruch) is not AntwortAenderung.Gespeichert)
+            {
+                throw new InvalidOperationException($"Demo-Freizeitpass: {kennung} ließ sich nicht speichern.");
+            }
+        }
     }
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Demo-Daten eingespielt ({AnzahlPersonen} Personen im Katalog, {NeueKonten} neue Konten).")]

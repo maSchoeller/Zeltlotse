@@ -131,6 +131,14 @@ namespace Zeltlotse.Freizeiten.Migrationen
                         .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
+                    b.PrimitiveCollection<string[]>("FragenMitarbeitende")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.PrimitiveCollection<string[]>("FragenTeilnehmende")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
                     b.Property<int>("FreigabeIntervallTage")
                         .HasColumnType("integer");
 

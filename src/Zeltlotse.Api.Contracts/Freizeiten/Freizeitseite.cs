@@ -144,6 +144,8 @@ public sealed record TeamPerson(string Vorname, string Initialen, FreizeitRolle 
 /// <param name="FreizeitDatenMonate">Löschfrist der Organisation für Daten einer Freizeit, ab Freizeitende.</param>
 /// <param name="NachweisBestaetigungMonate">Löschfrist der Organisation für abgelaufene Nachweis-Bestätigungen.</param>
 /// <param name="PflichtNachweise">Pflicht-Nachweise der Organisation als deutsche Bezeichnungen.</param>
+/// <param name="FragenTeilnehmende">Texte der Fragen, die der Freizeitpass für Teilnehmende abfragt (Story 2-4, FR-22); leer = keine.</param>
+/// <param name="FragenMitarbeitende">Texte der Fragen, die der Freizeitpass für Mitarbeitende abfragt (Story 2-4); leer = keine.</param>
 public sealed record Vertrauensseite(
     string Organisation,
     string Name,
@@ -153,4 +155,6 @@ public sealed record Vertrauensseite(
     DateOnly FreigabeBis,
     int FreizeitDatenMonate,
     int NachweisBestaetigungMonate,
-    IReadOnlyList<string> PflichtNachweise);
+    IReadOnlyList<string> PflichtNachweise,
+    IReadOnlyList<string>? FragenTeilnehmende = null,
+    IReadOnlyList<string>? FragenMitarbeitende = null);

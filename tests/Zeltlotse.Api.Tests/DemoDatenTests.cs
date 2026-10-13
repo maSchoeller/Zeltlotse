@@ -268,6 +268,18 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(
             verbindung, "SELECT count(*) FROM freizeiten.outbox_zustellung WHERE \"Empfaenger\" = 'Zeltlotse.Mail' AND \"ErledigtAm\" IS NOT NULL"));
 
+        // Story 2-4: Miriam hat die Fragen je Zielgruppe gewählt; Katrin hat für Emma drei Antworten gespeichert (genau drei Zeilen,
+        // auch nach dem zweiten Einspielen, nur verschlüsselt); Emmas Anmeldung trägt die Fragen für Teilnehmende.
+        var fragen = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/fragen", Abbruch));
+        Assert.Equal((DemoKatalog.Fragen.Teilnehmende, DemoKatalog.Fragen.Mitarbeitende), (fragen.GetProperty("teilnehmende").GetString(), fragen.GetProperty("mitarbeitende").GetString()));
+        Assert.Equal(DemoKatalog.Fragen.Teilnehmende, string.Join(',', anmeldungen[0].GetProperty("fragen").EnumerateArray().Select(f => f.GetString())));
+        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort"));
+        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort WHERE \"PersonId\" = @e", ("e", emma)));
+        var pass = (await AnmeldeHelfer.JsonAsync(await katrinClient.GetAsync($"/api/ich/freizeitpass/{emma}", Abbruch))).GetProperty("fragen").EnumerateArray()
+            .Where(f => f.GetProperty("wert").ValueKind == System.Text.Json.JsonValueKind.String)
+            .Select(f => (f.GetProperty("kennung").GetString()!, f.GetProperty("wert").GetString()!));
+        Assert.Equal(DemoKatalog.EmmasFreizeitpass, pass);
+
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,
             "SELECT count(*) FROM konten.konto k LEFT JOIN personen.person p ON p.\"Id\" = k.\"PersonId\" WHERE p.\"Id\" IS NULL OR p.\"Vorname\" IS NULL OR p.\"Nachname\" IS NULL"));

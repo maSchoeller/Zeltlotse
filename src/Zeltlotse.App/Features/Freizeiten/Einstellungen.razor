@@ -6,7 +6,8 @@
 @inject FreizeitenApiClient Freizeiten
 @* Einstellungen der Freizeit (EXPERIENCE.md → Fläche „Einstellungen der Freizeit“, nur Leitung; FR-15, FR-16, FR-67): Abschnitt
    „Freizeitseite“ mit Beschreibung (mehrzeilig), Ort, Höchstzahl Teilnehmende und Teilnahmebedingungen (mehrzeilig, FR-19) per
-   Autosave (AD-19), Abschnitt „Kontakt für Absagen“ mit Mail-Adresse und Telefon der Leitung (FR-21, Story 2-3) per Autosave und Abschnitt
+   Autosave (AD-19), Abschnitt „Kontakt für Absagen“ mit Mail-Adresse und Telefon der Leitung (FR-21, Story 2-3) per Autosave, Abschnitt
+   „Freizeitpass“ mit der Fragen-Auswahl je Zielgruppe aus dem festen Katalog (FR-22, Story 2-4) per Autosave und Abschnitt
    „Anmeldelinks“ mit beiden Links als Text, „Freizeitseite öffnen“ und „Neuen Link erzeugen“ über die Inline-Bestätigung. Ohne
    die erlaubte Aktion „freizeit-einstellungen“ oder bei 403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>Einstellungen – Zeltlotse</PageTitle>
@@ -75,6 +76,20 @@ else
                           NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
         </Card>
 
+        @if (_fragen is not null)
+        {
+            <Card Titel="Freizeitpass">
+                <p>Ohne Auswahl fragt der Freizeitpass nichts ab.</p>
+                <p>Allergien, Medikamente und Notfallkontakte stehen im Freizeitpass immer oben. Die Antworten gehören den Personen und stehen bei der nächsten Freizeit schon da.</p>
+                <AutosaveAuswahlgruppe Legende="Fragen für Teilnehmende" Id="fragen-teilnehmende" Feldname="@FragenFelder.Teilnehmende"
+                                       Pfad="@FreizeitenApiClient.FragenPfad(FreizeitId)" Optionen="@Katalog" Wert="@_fragen.Teilnehmende" Version="@_fragen.Version"
+                                       NeuLaden="NeuLadenAsync" />
+                <AutosaveAuswahlgruppe Legende="Fragen für Mitarbeitende" Id="fragen-mitarbeitende" Feldname="@FragenFelder.Mitarbeitende"
+                                       Pfad="@FreizeitenApiClient.FragenPfad(FreizeitId)" Optionen="@Katalog" Wert="@_fragen.Mitarbeitende" Version="@_fragen.Version"
+                                       NeuLaden="NeuLadenAsync" />
+            </Card>
+        }
+
         <Card Titel="Anmeldelinks">
             <p>Jeder Link öffnet die Freizeitseite und lässt sich beliebig oft teilen. Er gilt bis zum Ende der Freizeit.</p>
             @foreach (var art in Enum.GetValues<AnmeldelinkArt>())
@@ -101,6 +116,7 @@ else
 
 @code {
     private FreizeitseiteEinstellungen? _einstellungen;
+    private FragenAuswahl? _fragen;
     private bool _nichtVerfuegbar;
     private bool _aktionFehler;
     private bool _abgeschlossen;
@@ -112,6 +128,7 @@ else
     protected override async Task OnParametersSetAsync()
     {
         _einstellungen = null;
+        _fragen = null;
         _nichtVerfuegbar = false;
         _aktionFehler = false;
         _abgeschlossen = false;
@@ -127,6 +144,7 @@ else
 
             _abgeschlossen = kontext.Phase == Phase.Gelaufen;
             _einstellungen = await Freizeiten.FreizeitseiteLadenAsync(FreizeitId);
+            _fragen = await Freizeiten.FragenLadenAsync(FreizeitId);
             _nichtVerfuegbar = _einstellungen is null;
         }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
@@ -143,6 +161,7 @@ else
         try
         {
             _einstellungen = await Freizeiten.FreizeitseiteLadenAsync(FreizeitId);
+            _fragen = await Freizeiten.FragenLadenAsync(FreizeitId);
             _nichtVerfuegbar = _einstellungen is null;
         }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
@@ -150,6 +169,9 @@ else
             _aktionFehler = true;
         }
     }
+
+    /// <summary>Die Fragen des Katalogs als Optionen der Auswahl, in Katalogreihenfolge.</summary>
+    private IReadOnlyList<AuswahlOption> Katalog => [.. (_fragen?.Katalog ?? []).Select(f => new AuswahlOption(f.Kennung, f.Frage))];
 
     private async Task ErneuernAsync(AnmeldelinkArt art)
     {

@@ -1,0 +1,187 @@
+@page "/anmeldungen/{AnmeldungId:guid}/freizeitpass"
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Personen
+@inject FreizeitenApiClient Freizeiten
+@inject PersonenApiClient Personen
+@* Freizeitpass ausfüllen (FR-22, FR-23, EXPERIENCE.md → Fläche „Freizeitpass ausfüllen“, NS-2, Story 2-4): Die Seite setzt zwei
+   Endpunkte zusammen (AD-2): Freizeiten liefert an der eigenen Anmeldung die Fragen der Freizeit, Personen den Pass der Person mit
+   allen Antworten. Gezeigt werden nur die abgefragten Fragen in Katalogreihenfolge (Allergien, Medikamente und Notfallkontakte
+   zuerst, nie zugeklappt), je nach Antworttyp als mehrzeiliges Feld, Datumsfeld oder Auswahl, dazu „Sonstiges“; jede Änderung
+   speichert beim Verlassen des Feldes (Autosave, AD-19). Eine Angabe mit Bestätigung älter als 12 Monate trägt „Stimmt das noch?“
+   mit dem Knopf „Stimmt“. Fragt die Freizeit nichts ab, steht der Leer-Zustand da. Eine fremde oder unbekannte Anmeldung zeigt
+   „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>Freizeitpass – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <h1>Freizeitpass@(_pass is null ? "" : $" für {Vorname}")</h1>
+    <p><a href="familie">Zurück zur Familienübersicht</a></p>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+
+    @if (_anmeldung is null || _pass is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        <p>@_anmeldung.FreizeitName · @Anzeige.Zeitraum(_anmeldung.ErsterTag, _anmeldung.LetzterTag)</p>
+        @if (Fragen.Count == 0)
+        {
+            <LeerZustand Satz="Diese Freizeit fragt keine Angaben ab." KnopfText="Zur Familienübersicht" KnopfHref="familie" />
+        }
+        else
+        {
+            <p>Die Angaben gehören @Vorname und stehen bei der nächsten Freizeit schon da. Jede Änderung speichert beim Verlassen des Feldes.</p>
+            <Card Titel="Angaben für diese Freizeit">
+                @foreach (var frage in Fragen)
+                {
+                    <div>
+                        @if (frage.Veraltet)
+                        {
+                            <p>
+                                <Status Wort="Stimmt das noch?" Art="StatusArt.Warnung" />
+                                <Knopf Art="KnopfArt.Outline" Deaktiviert="@_uebertraegt" aria-label="@($"Stimmt: {frage.Frage}")" @onclick="() => StimmtAsync(frage)">Stimmt</Knopf>
+                            </p>
+                        }
+                        @Eingabe(frage)
+                    </div>
+                }
+            </Card>
+        }
+    }
+}
+
+@code {
+    private AnmeldungZeile? _anmeldung;
+    private FreizeitpassAnsicht? _pass;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+
+    [Parameter] public Guid AnmeldungId { get; set; }
+
+    private string Vorname => string.IsNullOrWhiteSpace(_pass?.Vorname) ? "diese Person" : _pass.Vorname;
+
+    /// <summary>Nur die Fragen der Freizeit, in der Reihenfolge des Katalogs (so liefert Personen den Pass).</summary>
+    private IReadOnlyList<FreizeitpassFrage> Fragen =>
+        [.. (_pass?.Fragen ?? []).Where(f => (_anmeldung?.Fragen ?? []).Contains(f.Kennung))];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _anmeldung = null;
+        _pass = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        try
+        {
+            _anmeldung = (await Freizeiten.MeineAnmeldungenLadenAsync()).FirstOrDefault(a => a.AnmeldungId == AnmeldungId);
+            if (_anmeldung is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            _pass = await Personen.FreizeitpassLadenAsync(_anmeldung.PersonId);
+            _nichtVerfuegbar = _pass is null;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>„Neu laden“ nach einem Konflikt beim Autosave.</summary>
+    private async Task NeuLadenAsync()
+    {
+        if (_anmeldung is null)
+        {
+            return;
+        }
+
+        _aktionFehler = false;
+        try
+        {
+            _pass = await Personen.FreizeitpassLadenAsync(_anmeldung.PersonId);
+            _nichtVerfuegbar = _pass is null;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>„Stimmt“: bestätigt die Angabe; der Hinweis verschwindet.</summary>
+    private async Task StimmtAsync(FreizeitpassFrage frage)
+    {
+        if (_uebertraegt || _anmeldung is null)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _aktionFehler = false;
+        try
+        {
+            if (await Personen.FreizeitpassBestaetigenAsync(_anmeldung.PersonId, frage.Kennung))
+            {
+                await NeuLadenAsync();
+            }
+            else
+            {
+                _nichtVerfuegbar = true;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    /// <summary>Das Eingabeelement nach Antworttyp, bei Auswahl-Fragen mit „Sonstiges“.</summary>
+    private RenderFragment Eingabe(FreizeitpassFrage frage)
+    {
+        var pfad = PersonenApiClient.FreizeitpassAntwortPfad(_anmeldung!.PersonId, frage.Kennung);
+        var id = $"freizeitpass-{frage.Kennung}";
+        IReadOnlyList<AuswahlOption> optionen = [.. frage.Optionen.Select(o => new AuswahlOption(o.Wert, o.Text))];
+        return @<text>
+            @switch (frage.Art)
+            {
+                case FrageArt.Freitext:
+                    <AutosaveFeld Label="@frage.Frage" Id="@id" Feldname="@FreizeitpassFelder.Wert" Pfad="@pfad" Wert="@frage.Wert" Version="@frage.Version"
+                                  Mehrzeilig="true" NeuLaden="NeuLadenAsync" />
+                    break;
+                case FrageArt.Datum:
+                    <AutosaveFeld Label="@frage.Frage" Id="@id" Feldname="@FreizeitpassFelder.Wert" Pfad="@pfad" Wert="@frage.Wert" Version="@frage.Version"
+                                  Typ="date" NeuLaden="NeuLadenAsync" />
+                    break;
+                default:
+                    <AutosaveAuswahlgruppe Legende="@frage.Frage" Id="@id" Feldname="@FreizeitpassFelder.Wert" Pfad="@pfad" Optionen="@optionen"
+                                           Mehrfach="@(frage.Art == FrageArt.Auswahl)" Wert="@frage.Wert" Version="@frage.Version" NeuLaden="NeuLadenAsync" />
+                    break;
+            }
+            @if (frage.MitSonstiges)
+            {
+                <AutosaveFeld Label="Sonstiges" Id="@($"{id}-sonstiges")" Feldname="@FreizeitpassFelder.Sonstiges" Pfad="@pfad" Wert="@frage.Sonstiges"
+                              Version="@frage.Version" Hinweis="@($"Höchstens {FreizeitpassFelder.SonstigesMaximaleLaenge} Zeichen")" NeuLaden="NeuLadenAsync" />
+            }
+        </text>;
+    }
+}

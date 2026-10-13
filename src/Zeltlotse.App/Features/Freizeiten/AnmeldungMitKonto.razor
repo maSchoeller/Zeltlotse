@@ -6,7 +6,8 @@
 @* Anmeldung mit Konto über einen Anmeldelink (FR-16, FR-18, FR-19, NS-1 „Wiederanmeldung“, NS-3): Ohne Sitzung führt das Laden der
    Familie (401) zur Anmeldung und danach hierher zurück. Die Freizeit kommt über das öffentliche GET des Anmeldelinks. Beim Link für
    Teilnehmende wählt die Person ein Kind unter 18 der Familie oder sich selbst, beim Link für Mitarbeitende meldet sie sich selbst
-   an. Teilnahmebedingungen, Haken, „Anmeldung absenden“; danach die Meldung und der Weg zur Familienübersicht. Keine Mail: Der
+   an. Teilnahmebedingungen, Haken, „Anmeldung absenden“; danach die Meldung, „Freizeitpass für <Vorname> ausfüllen“ (Story 2-4) und der
+   Weg zur Familienübersicht. Keine Mail: Der
    Status steht in der Familienübersicht. Ein ungültiger Link zeigt „Dieser Anmeldelink ist nicht mehr gültig.“ *@
 <PageTitle>Anmeldung – Zeltlotse</PageTitle>
 
@@ -42,7 +43,11 @@ else
             <p>Die Leitung meldet sich in Kürze.</p>
         </Meldung>
         <p><Status Wort="Eingegangen" Art="StatusArt.Offen" /></p>
-        <p><Knopf Href="familie" Ansichtswechsel="true">Zur Familienübersicht</Knopf></p>
+        @if (_anmeldungId is { } anmeldungId)
+        {
+            <p><Knopf Href="@($"anmeldungen/{anmeldungId}/freizeitpass")" Ansichtswechsel="true">@FreizeitpassText</Knopf></p>
+        }
+        <p><Knopf Href="familie" Art="KnopfArt.Outline" Ansichtswechsel="true">Zur Familienübersicht</Knopf></p>
     }
     else
     {
@@ -103,6 +108,8 @@ else
     private string? _hinweis;
     private bool _ungueltig;
     private bool _eingegangen;
+    private Guid? _anmeldungId;
+    private string? _angemeldetVorname;
     private bool _aktionFehler;
     private bool _uebertraegt;
 
@@ -124,6 +131,7 @@ else
         _familie = null;
         _ungueltig = false;
         _eingegangen = false;
+        _anmeldungId = null;
         _aktionFehler = false;
         try
         {
@@ -167,6 +175,9 @@ else
             if (ergebnis.AnmeldungId is not null)
             {
                 _eingegangen = true;
+                _anmeldungId = ergebnis.AnmeldungId;
+                // Story 2-4: der Weg zum Freizeitpass, mit dem Vornamen der angemeldeten Person.
+                _angemeldetVorname = await VornameAsync(person);
             }
             else if (ergebnis.NichtGefunden)
             {
@@ -194,8 +205,37 @@ else
         }
     }
 
-    private string Name(Guid? person) =>
+    /// <summary>„Freizeitpass für &lt;Vorname&gt; ausfüllen“; ohne bekannten Vornamen „Freizeitpass ausfüllen“.</summary>
+    private string FreizeitpassText =>
+        string.IsNullOrWhiteSpace(_angemeldetVorname)
+            ? "Freizeitpass ausfüllen"
+            : $"Freizeitpass für {_angemeldetVorname} ausfüllen";
+
+    /// <summary>
+    /// Vorname der angemeldeten Person für den Knopf zum Freizeitpass: das Kind aus der Familie oder das eigene Profil; ist er unbekannt
+    /// oder scheitert das Laden des Profils, <c>null</c> (die Anmeldung ist trotzdem eingegangen).
+    /// </summary>
+    private async Task<string?> VornameAsync(Guid? person)
+    {
+        if (person is not null)
+        {
+            return KindVorname(person);
+        }
+
+        try
+        {
+            return (await Personen.ProfilLadenAsync())?.Vorname;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            return null;
+        }
+    }
+
+    private string? KindVorname(Guid? person) =>
         person is { } id && _familie?.Kinder.FirstOrDefault(k => k.PersonId == id) is { } kind && !string.IsNullOrWhiteSpace(kind.Vorname)
             ? kind.Vorname
-            : "Die Person";
+            : null;
+
+    private string Name(Guid? person) => KindVorname(person) ?? "Die Person";
 }

@@ -2,6 +2,7 @@ using System.Globalization;
 using Zeltlotse.Api.Contracts.Freizeiten;
 using Zeltlotse.Freizeiten.Contracts.Events;
 using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
+using Zeltlotse.Personen.Contracts.Freizeitpass;
 using Zeltlotse.SharedKernel;
 using Zeltlotse.SharedKernel.Mandanten;
 using RolleArt = Zeltlotse.SharedKernel.Rechte.FreizeitRolle;
@@ -72,6 +73,15 @@ internal sealed class Freizeit : Aggregat, IOrganisationsEigen
 
     /// <summary>Telefon für Absagen (FR-21), höchstens <see cref="FreizeitseiteFelder.KontaktTelefonMaximaleLaenge"/> Zeichen.</summary>
     public string? KontaktTelefon { get; private set; }
+
+    /// <summary>
+    /// Kennungen der Fragen, die der Freizeitpass für Teilnehmende abfragt (FR-22, AD-10), in Katalogreihenfolge; eine neue Freizeit
+    /// fragt nichts ab. Geändert nur über <see cref="FragenAendern"/>.
+    /// </summary>
+    public string[] FragenTeilnehmende { get; private set; } = [];
+
+    /// <summary>Kennungen der Fragen für Mitarbeitende, Form wie <see cref="FragenTeilnehmende"/>.</summary>
+    public string[] FragenMitarbeitende { get; private set; } = [];
 
     /// <summary>Versionsprüfung (xmin, AD-19).</summary>
     public uint Version { get; private set; }
@@ -193,6 +203,47 @@ internal sealed class Freizeit : Aggregat, IOrganisationsEigen
     }
 
     public static string? Normalisieren(string? wert) => string.IsNullOrWhiteSpace(wert) ? null : wert.Trim();
+
+    /// <summary>Die gewählten Fragen einer Zielgruppe als Komma-Liste in Katalogreihenfolge; keine Fragen = <c>null</c>.</summary>
+    public string? Fragen(FragenFeld feld)
+    {
+        var kennungen = feld switch
+        {
+            FragenFeld.Teilnehmende => FragenTeilnehmende,
+            FragenFeld.Mitarbeitende => FragenMitarbeitende,
+            _ => throw new ArgumentOutOfRangeException(nameof(feld), feld, null),
+        };
+        return kennungen.Length == 0 ? null : string.Join(',', kennungen);
+    }
+
+    /// <summary>
+    /// Ändert die Fragen-Auswahl einer Zielgruppe nach der Konfliktregel aus AD-19 (Vergleich in normalisierter Form): Weicht die
+    /// aktuelle Auswahl vom mitgeschickten alten Wert ab, bleibt alles, wie es ist (<c>false</c>). Die Prüfung gegen den Katalog hat
+    /// der Validator erledigt; gespeichert wird in Katalogreihenfolge ohne Doppelte.
+    /// </summary>
+    public bool FragenAendern(FragenFeld feld, string? alterWert, string? neuerWert)
+    {
+        var alt = Fragenkatalog.KennungenPruefen(alterWert);
+        if (!string.Equals(Fragen(feld), alt.Gueltig ? alt.Wert : Normalisieren(alterWert), StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        string[] neu = [.. Fragenkatalog.Kennungen(neuerWert)];
+        switch (feld)
+        {
+            case FragenFeld.Teilnehmende:
+                FragenTeilnehmende = neu;
+                break;
+            case FragenFeld.Mitarbeitende:
+                FragenMitarbeitende = neu;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(feld), feld, null);
+        }
+
+        return true;
+    }
 
     public FreizeitPhase Phase(DateTimeOffset jetzt) => FreizeitZeiten.Phase(ErsterTag, LetzterTag, AbgeschlossenAm, jetzt);
 

@@ -17,7 +17,9 @@ Der Freizeitpass enthält Angaben wie Allergien, Medikamente und Notfallkontakte
 - **Team ab Bestätigung.** Erst wenn die Leitung die Anmeldung bestätigt hat, sieht auch das Team den Freizeitpass.
 - **Absage beendet die Freigabe sofort.** Die Freizeit sieht den Freizeitpass ab dem Moment der Absage nicht mehr; vermerkt bleibt nur, dass es die Freigabe gab und bis wann sie lief.
 
-Die Freizeit sieht immer nur die Antworten auf die Fragen, die sie für den Freizeitpass ausgewählt hat. Andere Angaben bleiben verborgen. Erhoben wird nur, was die Leitung im Fragenbaukasten auswählt.
+Die Freizeit sieht immer nur die Antworten auf die Fragen, die sie für den Freizeitpass ausgewählt hat. Andere Angaben bleiben verborgen. Erhoben wird nur, was die Leitung auswählt: Der Freizeitpass zeigt beim Ausfüllen nur die Fragen dieser Freizeit, und die Vertrauensseite nennt sie (siehe [Freizeitpass zusammenstellen](/leitung/freizeitpass-fragen/)).
+
+Die Antworten **gehören der Person**, nicht der Freizeit: Es gibt je Person und Frage genau eine Antwort. Bei der nächsten Freizeit steht sie deshalb schon da; eine Angabe, die seit mehr als 12 Monaten weder geändert noch bestätigt wurde, trägt „Stimmt das noch?“ (siehe [Freizeitpass ausfüllen](/eltern/freizeitpass/)). Die Antworten sind mit dem Schlüssel der Person verschlüsselt gespeichert. Wird das Konto gelöscht oder läuft eine Gast-Anmeldung ab, verschwinden sie mit der Person; die Datenauskunft nennt sie im Abschnitt „Freizeitpass“.
 
 Org-Admin und Org-Überblick sehen keine Freizeitpässe, außer in Freizeiten, in denen sie selbst mitarbeiten.
 

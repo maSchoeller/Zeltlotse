@@ -8,6 +8,7 @@ using Zeltlotse.Personen.Daten;
 using Zeltlotse.Personen.Datenschutz;
 using Zeltlotse.Personen.Familien;
 using Zeltlotse.Personen.Freigaben;
+using Zeltlotse.Personen.Freizeitpass;
 using Zeltlotse.Personen.Freizeitrollen;
 using Zeltlotse.Personen.Gaeste;
 using Zeltlotse.Personen.Nachweise;
@@ -70,6 +71,12 @@ public static class PersonenModul
 
         api.MapGet("/ich/zugriffsprotokoll", ZugriffsprotokollEndpunkt.Laden).Organisationsuebergreifend();
 
+        // Story 2-4: Freizeitpass der Person selbst oder eines Kindes der Familie (AD-26, FR-23).
+        var freizeitpass = api.MapGroup("/ich/freizeitpass/{personId:guid}").Organisationsuebergreifend();
+        freizeitpass.MapGet("", FreizeitpassLadenEndpunkt.Laden);
+        freizeitpass.MapPatch("/antworten/{kennung}", FreizeitpassAntwortAendernEndpunkt.Aendern);
+        freizeitpass.MapPost("/antworten/{kennung}/bestaetigen", FreizeitpassAntwortBestaetigenEndpunkt.Bestaetigen);
+
         var familie = api.MapGroup("/ich/familie").Organisationsuebergreifend();
         familie.MapGet("", FamilieLadenEndpunkt.Laden);
         familie.MapPost("/kinder", KindAnlegenEndpunkt.Anlegen);
@@ -98,6 +105,9 @@ public static class PersonenModul
         var gaeste = personen.MapGroup("/oeffentlich/gaeste").AllowAnonymous().Zugriffsbegrenzt();
         gaeste.MapPost("", GastAnlegenEndpunkt.Anlegen);
         gaeste.MapPost("/{gastToken}/kinder", GastKindAnlegenEndpunkt.Anlegen);
+        // Story 2-4: Freizeitpass eines Kindes der Gast-Familie über den Gast-Link (klassisches Formular der öffentlichen Seiten).
+        gaeste.MapGet("/{gastToken}/freizeitpass/{personId:guid}", GastFreizeitpassLadenEndpunkt.Laden);
+        gaeste.MapPost("/{gastToken}/freizeitpass/{personId:guid}", GastFreizeitpassSpeichernEndpunkt.Speichern);
         api.MapPost("/ich/gastprofil/uebernehmen", GastprofilUebernehmenEndpunkt.Uebernehmen).Organisationsuebergreifend().Zugriffsbegrenzt();
         return api;
     }

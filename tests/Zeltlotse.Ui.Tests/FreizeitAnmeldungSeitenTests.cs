@@ -186,7 +186,9 @@ public sealed class FreizeitAnmeldungSeitenTests : BunitContext
     public void Mitarbeitende_melden_sich_selbst_an_ohne_Auswahl()
     {
         Freizeitseite("Mitarbeitende", ausgebucht: true);
-        _server.Bei(HttpMethod.Post, "/api/ich/anmeldungen", () => Json(new { anmeldungId = Guid.CreateVersion7() }, HttpStatusCode.Created));
+        var anmeldungId = Guid.CreateVersion7();
+        _server.Bei(HttpMethod.Post, "/api/ich/anmeldungen", () => Json(new { anmeldungId }, HttpStatusCode.Created));
+        _server.Bei(HttpMethod.Get, "/api/ich/profil", () => Json(new { version = 1u, vorname = "Jonas", nachname = "Hüttner" }));
         var cut = Seite();
 
         Assert.Empty(cut.FindAll("fieldset"));
@@ -197,6 +199,10 @@ public sealed class FreizeitAnmeldungSeitenTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.Contains("Anmeldung eingegangen:", cut.Markup, StringComparison.Ordinal));
         Assert.Equal($$"""{"anmeldelinkToken":"{{Token}}","personId":null,"teilnahmebedingungenBestaetigt":true}""", Koerper("/api/ich/anmeldungen"));
+        // Story 2-4: der Weg zum eigenen Freizeitpass mit dem Vornamen aus dem Profil.
+        cut.WaitForAssertion(() => Assert.Equal(
+            $"anmeldungen/{anmeldungId}/freizeitpass",
+            cut.FindAll("a").Single(a => a.TextContent.Contains("Freizeitpass für Jonas ausfüllen", StringComparison.Ordinal)).GetAttribute("href")));
     }
 
     [Fact]

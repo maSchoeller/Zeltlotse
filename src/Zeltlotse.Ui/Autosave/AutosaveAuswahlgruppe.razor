@@ -1,0 +1,178 @@
+@attribute [NurInteraktiv]
+@implements IDisposable
+@inject AutosaveDienst Dienst
+@* Autosave-Baustein für eine Auswahl (AD-19, AD-29, Story 2-4): gleicher Speicher-Dienst wie AutosaveFeld. Gesendet wird die
+   Auswahl als Komma-Liste der Werte in der Reihenfolge der Optionen (leer = null), bei Mehrfach als Kästchen, sonst als
+   Optionsknöpfe (z. B. Ja/Nein). Ein Klick speichert sofort. Gespeichert → „Gespeichert · Rückgängig“ (erneuter PATCH mit dem
+   vorigen Wert); 409 → „Inzwischen geändert – neu laden?“; Netzfehler oder 5xx → „Nicht gespeichert.“ mit „Erneut versuchen“,
+   die Auswahl bleibt, wie gewählt. Während der Übertragung sind die Optionen deaktiviert. *@
+<Auswahlgruppe Legende="@Legende" Optionen="@Optionen" Mehrfach="@Mehrfach" Werte="@_auswahl" Id="@Id" Name="@Feldname"
+               Hinweis="@(_zustand == SpeicherZustand.Keiner ? Hinweis : null)" Deaktiviert="@_uebertraegt" OptionAttribute="Ereignisse">
+    <UnterDemFeld>
+        <SpeicherHinweis Zustand="_zustand" MitRueckgaengig="_mitRueckgaengig" Uebertraegt="_uebertraegt"
+                         Rueckgaengig="RueckgaengigAsync" NeuLaden="NeuLaden" ErneutVersuchen="ErneutVersuchenAsync" />
+    </UnterDemFeld>
+</Auswahlgruppe>
+
+@code {
+    private string? _gespeichert;
+    private IReadOnlyCollection<string> _auswahl = [];
+    private uint _version;
+    private string? _vorher;
+    private SpeicherZustand _zustand;
+    private bool _mitRueckgaengig;
+    private bool _uebertraegt;
+    private AutosaveAnfrage? _letzteAnfrage;
+    private (string? Wert, uint Version)? _letzteParameter;
+
+    [Parameter, EditorRequired] public string Legende { get; set; } = "";
+
+    /// <summary>JSON-Name des Felds aus <c>Zeltlotse.Api.Contracts</c>.</summary>
+    [Parameter, EditorRequired] public string Feldname { get; set; } = "";
+
+    /// <summary>Pfad der Ressource für den PATCH.</summary>
+    [Parameter, EditorRequired] public string Pfad { get; set; } = "";
+
+    [Parameter, EditorRequired] public IReadOnlyList<AuswahlOption> Optionen { get; set; } = [];
+
+    /// <summary>Mehrere Werte wählbar (Kästchen); sonst genau einer (Optionsknöpfe).</summary>
+    [Parameter] public bool Mehrfach { get; set; } = true;
+
+    /// <summary>Wert beim Laden: Komma-Liste der gewählten Werte oder <c>null</c>.</summary>
+    [Parameter] public string? Wert { get; set; }
+
+    /// <summary>Version der Ressource beim Laden.</summary>
+    [Parameter] public uint Version { get; set; }
+
+    [Parameter] public string? Id { get; set; }
+
+    [Parameter] public string? Hinweis { get; set; }
+
+    /// <summary>„Neu laden“ beim Konflikt: die Seite lädt die Ressource neu und übergibt Wert und Version.</summary>
+    [Parameter] public EventCallback NeuLaden { get; set; }
+
+    protected override void OnInitialized() => Dienst.FeldAktiv += AnderesFeldAktiv;
+
+    protected override void OnParametersSet()
+    {
+        // Neue Werte von außen (erstes Laden oder nach „Neu laden“) übernehmen; eigene Speicherstände bleiben sonst.
+        if (_letzteParameter != (Wert, Version))
+        {
+            _letzteParameter = (Wert, Version);
+            _gespeichert = Wert;
+            _auswahl = Werte(Wert);
+            _version = Version;
+            _zustand = SpeicherZustand.Keiner;
+        }
+    }
+
+    /// <summary>Die Werte einer Komma-Liste.</summary>
+    private static HashSet<string> Werte(string? liste) =>
+        [.. (liste ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)];
+
+    /// <summary>Die Auswahl als Komma-Liste in der Reihenfolge der Optionen; leer = <c>null</c>.</summary>
+    private string? Text(IReadOnlyCollection<string> auswahl)
+    {
+        var text = string.Join(',', Optionen.Where(o => auswahl.Contains(o.Wert)).Select(o => o.Wert));
+        return text.Length == 0 ? null : text;
+    }
+
+    private IReadOnlyDictionary<string, object> Ereignisse(AuswahlOption option) => new Dictionary<string, object>
+    {
+        ["onfocus"] = EventCallback.Factory.Create<FocusEventArgs>(this, () => Dienst.Aktivieren(this)),
+        ["onchange"] = EventCallback.Factory.Create<ChangeEventArgs>(this, e => GeaendertAsync(option, e)),
+    };
+
+    private Task GeaendertAsync(AuswahlOption option, ChangeEventArgs e)
+    {
+        HashSet<string> neu;
+        if (Mehrfach)
+        {
+            var an = e.Value is bool angekreuzt ? angekreuzt : string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+            neu = [.. _auswahl];
+            if (an)
+            {
+                neu.Add(option.Wert);
+            }
+            else
+            {
+                neu.Remove(option.Wert);
+            }
+        }
+        else
+        {
+            neu = [option.Wert];
+        }
+
+        _auswahl = neu;
+        var text = Text(neu);
+        return string.Equals(text, Text(Werte(_gespeichert)), StringComparison.Ordinal)
+            ? Task.CompletedTask
+            : SendenAsync(new AutosaveAnfrage(Pfad, Feldname, _version, _gespeichert, text), rueckgaengig: false);
+    }
+
+    private Task RueckgaengigAsync()
+    {
+        _auswahl = Werte(_vorher);
+        return SendenAsync(new AutosaveAnfrage(Pfad, Feldname, _version, _gespeichert, _vorher), rueckgaengig: true);
+    }
+
+    private Task ErneutVersuchenAsync() =>
+        _letzteAnfrage is null ? Task.CompletedTask : SendenAsync(_letzteAnfrage with { Version = _version }, rueckgaengig: false);
+
+    private async Task SendenAsync(AutosaveAnfrage anfrage, bool rueckgaengig)
+    {
+        _letzteAnfrage = anfrage;
+        _uebertraegt = true;
+        Dienst.Aktivieren(this);
+        StateHasChanged();
+
+        AutosaveErgebnis ergebnis;
+        try
+        {
+            ergebnis = await Dienst.SpeichernAsync(anfrage);
+        }
+#pragma warning disable CA1031 // Jeder Fehler beim Speichern zeigt „Nicht gespeichert.“, statt die Fehlergrenze auszulösen.
+        catch (Exception)
+#pragma warning restore CA1031
+        {
+            ergebnis = new AutosaveErgebnis.Gescheitert();
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+
+        switch (ergebnis)
+        {
+            case AutosaveErgebnis.Gespeichert gespeichert:
+                _vorher = _gespeichert;
+                _version = gespeichert.Version;
+                _gespeichert = gespeichert.Wert;
+                _auswahl = Werte(gespeichert.Wert);
+                _zustand = SpeicherZustand.Gespeichert;
+                _mitRueckgaengig = !rueckgaengig;
+                break;
+            case AutosaveErgebnis.Konflikt:
+                _zustand = SpeicherZustand.Konflikt;
+                break;
+            default:
+                _zustand = SpeicherZustand.Gescheitert;
+                break;
+        }
+    }
+
+    // Nur „Gespeichert“ verschwindet; Konflikt und „Nicht gespeichert.“ bleiben, solange die Ursache besteht.
+    private void AnderesFeldAktiv(object feld)
+    {
+        if (ReferenceEquals(feld, this) || _uebertraegt || _zustand != SpeicherZustand.Gespeichert)
+        {
+            return;
+        }
+
+        _zustand = SpeicherZustand.Keiner;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => Dienst.FeldAktiv -= AnderesFeldAktiv;
+}

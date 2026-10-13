@@ -27,6 +27,8 @@ Im Abschnitt **Freizeitseite** stehen vier Felder. Jede Angabe speichert beim Ve
 | **Höchstzahl Teilnehmende** | 1 bis 1000 oder leer. Sind so viele Teilnehmende bestätigt, zeigt die Freizeitseite „Ausgebucht“; anmelden bleibt trotzdem möglich. Leer heißt: nie ausgebucht. Mitarbeitende zählen nicht mit. |
 | **Teilnahmebedingungen** | Freier Text, mehrzeilig, höchstens 4000 Zeichen. Erscheint bei der Anmeldung vor dem Absenden; wer anmeldet, bestätigt sie mit einem Haken. Bleibt das Feld leer, steht im Formular „Für diese Freizeit sind keine eigenen Teilnahmebedingungen hinterlegt.“ |
 
+Welche Fragen der Freizeitpass abfragt, steht im Abschnitt **Freizeitpass** derselben Seite (siehe [Freizeitpass zusammenstellen](/leitung/freizeitpass-fragen/)).
+
 Name und Zeitraum der Freizeit legt der Org-Admin beim Anlegen fest. Das Team auf der Freizeitseite ergibt sich aus der Leitung und dem Team der Freizeit; die Herkunft trägt jede Person selbst in ihrem Konto ein (siehe [Anmelden](/erste-schritte/anmelden/)).
 
 Hat jemand anderes dasselbe Feld inzwischen geändert, erscheint „Inzwischen geändert – neu laden?“ am Feld.

@@ -134,6 +134,16 @@ public sealed class FreizeitenApiClient(HttpClient http)
     /// <summary>Pfad der Einstellungen der Freizeitseite, auch für den Autosave-Baustein (<c>PATCH</c>, AD-19).</summary>
     public static string FreizeitseitePfad(Guid freizeitId) => $"/api/freizeiten/{freizeitId}/freizeitseite";
 
+    /// <summary>Pfad der Fragen-Auswahl des Freizeitpasses, auch für den Autosave-Baustein (<c>PATCH</c>, AD-19, Story 2-4).</summary>
+    public static string FragenPfad(Guid freizeitId) => $"/api/freizeiten/{freizeitId}/fragen";
+
+    /// <summary>
+    /// <c>GET /api/freizeiten/{freizeitId}/fragen</c> (Leitung, FR-22): die gewählten Fragen je Zielgruppe mit Version und der Katalog
+    /// oder <c>null</c> bei <c>403</c>/<c>404</c>.
+    /// </summary>
+    public Task<FragenAuswahl?> FragenLadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
+        LadenAsync<FragenAuswahl>(FragenPfad(freizeitId), abbruch);
+
     /// <summary>
     /// <c>GET /api/freizeiten/{freizeitId}/freizeitseite</c> (Leitung): Beschreibung, Ort, Höchstzahl und die Anmeldelinks oder
     /// <c>null</c> bei <c>403</c>/<c>404</c>.

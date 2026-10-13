@@ -30,7 +30,7 @@ Hat die Leitung eine Höchstzahl für Teilnehmende festgelegt und sind so viele 
 
 Die Vertrauensseite erklärt in drei Abschnitten, was mit den Daten bei einer Anmeldung zu dieser Freizeit passiert:
 
-- **Welche Daten erhoben werden** – die Angaben aus dem Anmeldeformular und der **Freizeitpass**, also die Angaben, die das Team auf der Freizeit über eine Person braucht. Dazu die Nachweise, die die Organisation von Mitarbeitenden verlangt.
+- **Welche Daten erhoben werden** – die Angaben aus dem Anmeldeformular und der **Freizeitpass**, also die Angaben, die das Team auf der Freizeit über eine Person braucht. Die Fragen, die die Leitung ausgewählt hat, stehen als Liste **Für Teilnehmende** und **Für Mitarbeitende** da; ohne Auswahl steht dort „Der Freizeitpass fragt derzeit nichts ab.“ Dazu die Nachweise, die die Organisation von Mitarbeitenden verlangt.
 - **Wer die Daten sieht** – die Leitung ab Eingang der Anmeldung, das Team ab der Bestätigung, beide nur bis zum Ende des **Freigabefensters**. Das Datum steht auf der Seite.
 - **Wann die Daten verschwinden** – nach welchen Fristen die Organisation die Daten der Freizeit und Bestätigungen von Nachweisen löscht, in Monaten.
 

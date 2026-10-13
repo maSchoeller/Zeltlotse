@@ -4,8 +4,8 @@ namespace Zeltlotse.Api.Demo;
 
 /// <summary>
 /// Erfundene Stammdaten für Screenshots und Anwender-Doku (NFR-20, Konvention „Anwender-Doku“): eine Organisation,
-/// eine Freizeit und Personen mit Rolle. Alle Mail-Adressen enden auf <c>@example.org</c>; die einzige Telefonnummer ist der erfundene
-/// Kontakt für Absagen (Story 2-3),
+/// eine Freizeit und Personen mit Rolle. Alle Mail-Adressen enden auf <c>@example.org</c>; Telefonnummern sind erfunden und beginnen mit
+/// <c>0123</c> (Kontakt für Absagen, Story 2-3; Notfallkontakt im Freizeitpass, Story 2-4),
 /// keine echten Namen von Organisationen. Die Fach-Stories spielen diese Daten über ihre Commands ein (<see cref="DemoDaten"/>).
 /// </summary>
 internal static class DemoKatalog
@@ -35,6 +35,20 @@ internal static class DemoKatalog
         new("daniel.probst@example.org", "Mia", Bestaetigt: true),
         new("lea.feuerstein@example.org", Kind: null, Bestaetigt: true),
         new("tobias.wanderer@example.org", Kind: null, Bestaetigt: false),
+    ];
+
+    /// <summary>
+    /// Story 2-4: Fragen des Freizeitpasses der Demo-Freizeit, die Miriam auswählt (je Zielgruppe nur, wenn noch keine gewählt sind).
+    /// </summary>
+    public static (string Teilnehmende, string Mitarbeitende) Fragen { get; } =
+        ("allergien,medikamente,notfallkontakte,ernaehrung,krankheiten,tetanus,schwimmen,zecken-entfernen", "allergien,medikamente,notfallkontakte,ernaehrung");
+
+    /// <summary>Story 2-4: Katrins Antworten für Emma im Freizeitpass (je Frage nur, wenn es noch keine Antwort gibt).</summary>
+    public static IReadOnlyList<(string Kennung, string Wert)> EmmasFreizeitpass { get; } =
+    [
+        ("allergien", "milch"),
+        ("notfallkontakte", "Katrin Muster (Mutter), 0123 456780"),
+        ("schwimmen", "ja"),
     ];
 
     /// <summary>Story 2-3: Kontakt der Leitung für Absagen auf der Demo-Freizeit (erfunden, Mail-Adresse unter example.org).</summary>

@@ -157,6 +157,8 @@ a.zl-gross:not(.elkw-btn) { display: inline-flex; align-items: center; }
 .zl-auswahl { margin: 0; }
 .zl-auswahl legend { font-size: var(--elkw-fs-small); font-weight: 400; margin-bottom: 0.25rem; }
 .zl-auswahl .elkw-choice { min-height: 24px; }
+/* Auswahlgruppe (Story 2-4): viele Optionen, z. B. die 14 Allergene, am Laptop in Spalten, am Handy untereinander. */
+.zl-auswahlgruppe__optionen { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0.25rem var(--elkw-space-m); }
 
 /* ---------- 5. Druck ---------- */
 /* Der Browser druckt nur den Inhalt (z. B. die Datenauskunft „Als PDF speichern“): ohne App-Leiste, Navigation, Knöpfe und

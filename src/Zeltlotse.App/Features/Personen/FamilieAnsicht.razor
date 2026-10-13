@@ -5,7 +5,8 @@
 @inject PersonenApiClient Personen
 @inject FreizeitenApiClient Freizeiten
 @* Familie (FR-3, FR-4, FR-20, EXPERIENCE.md → Familienübersicht, NS-1, NS-11): je Kind eine Card mit Geburtsdatum, seinen
-   Freizeiten mit Anmeldestatus (Status-Wort mit Quadrat), darunter der Kontakt der Leitung für Absagen (Story 2-3), und „Angaben ändern“; nur bei einem volljährigen Kind (der Server rechnet,
+   Freizeiten mit Anmeldestatus (Status-Wort mit Quadrat), darunter der Link „Freizeitpass“ mit dem Hinweis „Freizeitpass prüfen“, wenn
+   eine abgefragte Frage unbeantwortet oder veraltet ist (Story 2-4), und der Kontakt der Leitung für Absagen (Story 2-3), und „Angaben ändern“; nur bei einem volljährigen Kind (der Server rechnet,
    der Client nie) die Übergabe mit Inline-Bestätigung. Eigene Anmeldungen stehen in einer eigenen Card. Darunter „Kind
    hinzufügen“, die Eltern mit offenen Einladungen und, solange es weniger als 2 Eltern gibt, „Zweiten Elternteil hinzufügen“. Kein
    eigener Anmelden-Knopf: angemeldet wird über den Anmeldelink der Freizeit. Ohne frische Anmeldung (401 bei der Übergabe) führt
@@ -156,6 +157,7 @@ else
     private readonly Dictionary<Guid, UebergabeStand> _uebergaben = [];
     private FamilieAntwort? _familie;
     private IReadOnlyList<AnmeldungZeile> _anmeldungen = [];
+    private IReadOnlyDictionary<Guid, FreizeitpassAnsicht> _paesse = new Dictionary<Guid, FreizeitpassAnsicht>();
     private bool _aktionFehler;
     private bool _uebertraegt;
     private bool _kindHinzugefuegt;
@@ -208,7 +210,35 @@ else
         var anmeldungen = Freizeiten.MeineAnmeldungenLadenAsync();
         _anmeldungen = await anmeldungen;
         _familie = await familie;
+        // Story 2-4: die Pässe der Personen, deren Freizeit Fragen abfragt, für den Hinweis „Freizeitpass prüfen“.
+        var personen = _anmeldungen.Where(a => a.Status != AnmeldungStatus.Abgesagt && (a.Fragen?.Count ?? 0) > 0).Select(a => a.PersonId).Distinct().ToList();
+        var paesse = await Task.WhenAll(personen.Select(PassOderNullAsync));
+        _paesse = paesse.OfType<FreizeitpassAnsicht>().ToDictionary(p => p.PersonId);
     }
+
+    /// <summary>Der Pass einer Person; scheitert das Laden (offline, 5xx) oder ist er nicht zugänglich, kein Pass (kein Link, kein Hinweis).</summary>
+    private async Task<FreizeitpassAnsicht?> PassOderNullAsync(Guid personId)
+    {
+        try
+        {
+            return await Personen.FreizeitpassLadenAsync(personId);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Link „Freizeitpass“ nur, wenn die Freizeit Fragen abfragt und der Pass der Person geladen ist.</summary>
+    private bool MitPass(AnmeldungZeile anmeldung) => (anmeldung.Fragen?.Count ?? 0) > 0 && _paesse.ContainsKey(anmeldung.PersonId);
+
+    /// <summary>
+    /// Eine abgefragte Frage ist unbeantwortet oder veraltet („Stimmt das noch?“): Hinweis „Freizeitpass prüfen“ (EXPERIENCE.md →
+    /// Kind-Card). Ohne geladenen Pass kein Hinweis.
+    /// </summary>
+    private bool Pruefen(AnmeldungZeile anmeldung) =>
+        _paesse.TryGetValue(anmeldung.PersonId, out var pass)
+        && pass.Fragen.Any(f => (anmeldung.Fragen ?? []).Contains(f.Kennung) && ((f.Wert is null && f.Sonstiges is null) || f.Veraltet));
 
     /// <summary>Anmeldungen der Person selbst: alle, die keinem Kind der Familie gehören.</summary>
     private IReadOnlyList<AnmeldungZeile> EigeneAnmeldungen =>
@@ -227,14 +257,29 @@ else
                 $"{a.FreizeitName}, {Anzeige.Zeitraum(a.ErsterTag, a.LetzterTag)}",
                 Anzeige.Status(a.Status),
                 Anzeige.AnmeldungStatusArt(a.Status),
-                a.Status == AnmeldungStatus.Abgesagt ? null : Kontakt(a))),
+                a.Status == AnmeldungStatus.Abgesagt ? null : Darunter(a))),
         ];
         return @<StatusListe Eintraege="@eintraege" />;
     }
 
-    /// <summary>„Absage nur über die Leitung: …“ mit Mail- und Telefon-Link der Freizeit (FR-21).</summary>
-    private static RenderFragment Kontakt(AnmeldungZeile anmeldung) =>
-        @<AbsageKontakt Mail="@anmeldung.KontaktMail" Telefon="@anmeldung.KontaktTelefon" />;
+    /// <summary>
+    /// Unter einer Anmeldung: der Link „Freizeitpass“, bei Bedarf der Hinweis „Freizeitpass prüfen“ (Story 2-4) und „Absage nur über
+    /// die Leitung: …“ mit Mail- und Telefon-Link der Freizeit (FR-21).
+    /// </summary>
+    private RenderFragment Darunter(AnmeldungZeile anmeldung) =>
+        @<text>
+            @if (MitPass(anmeldung))
+            {
+                <p>
+                    <a href="@($"anmeldungen/{anmeldung.AnmeldungId}/freizeitpass")">Freizeitpass</a>
+                    @if (Pruefen(anmeldung))
+                    {
+                        <text> </text><Status Wort="Freizeitpass prüfen" Art="StatusArt.Warnung" />
+                    }
+                </p>
+            }
+            <AbsageKontakt Mail="@anmeldung.KontaktMail" Telefon="@anmeldung.KontaktTelefon" />
+        </text>;
 
     /// <summary>Wert eines Datumsfelds (<c>yyyy-MM-dd</c>); alles andere gilt als fehlend, den Fehler meldet der Server am Feld.</summary>
     private static DateOnly? Tag(string? wert) =>

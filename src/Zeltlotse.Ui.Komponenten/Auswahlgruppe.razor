@@ -1,0 +1,80 @@
+@* Auswahlgruppe (DESIGN.md → Formular „Fieldset“ und „Auswahl“, Story 2-4): fieldset mit legend, die Optionen als Kästchen (Mehrfach)
+   oder Optionsknöpfe (einfach), je Option eine ELKW-choice mit sichtbarer Beschriftung. Statisch tauglich wie das Ankreuzfeld: ohne
+   eigene Ereignis-Handler, jede Option schickt im Formular ihren Wert unter Name. Für interaktive Nutzung (Autosave) liefert
+   OptionAttribute je Option weitere Attribute (auch Ereignisse) für das input-Element. Hinweis und Fehler „Fehler: …“ stehen unter den
+   Optionen und sind über aria-describedby an die Gruppe gebunden; UnterDemFeld nimmt z. B. den Speicher-Hinweis auf. *@
+<div class="elkw-field">
+    <fieldset class="elkw-fieldset zl-auswahl" id="@KennungGruppe" aria-describedby="@Beschrieben">
+        <legend>@Legende</legend>
+        <div class="zl-auswahlgruppe__optionen">
+            @foreach (var option in Optionen)
+            {
+                <label class="elkw-choice">
+                    <input @attributes="OptionAttribute?.Invoke(option)" type="@(Mehrfach ? "checkbox" : "radio")" id="@OptionId(option)" name="@(Name ?? KennungGruppe)"
+                           value="@option.Wert" checked="@Werte.Contains(option.Wert)" disabled="@Deaktiviert" />
+                    @option.Text
+                </label>
+            }
+        </div>
+        @if (Hinweis is not null)
+        {
+            <span class="elkw-hint" id="@HinweisId">@Hinweis</span>
+        }
+        @if (Fehler is not null)
+        {
+            <span class="elkw-field-error" id="@FehlerId">Fehler: @Fehler</span>
+        }
+        @UnterDemFeld
+    </fieldset>
+</div>
+
+@code {
+    private readonly string _vorgabeId = Kennungen.Neu("auswahlgruppe");
+
+    [Parameter, EditorRequired] public string Legende { get; set; } = "";
+
+    [Parameter, EditorRequired] public IReadOnlyList<AuswahlOption> Optionen { get; set; } = [];
+
+    /// <summary>Kästchen (mehrere wählbar) statt Optionsknöpfen (genau eine).</summary>
+    [Parameter] public bool Mehrfach { get; set; } = true;
+
+    /// <summary>Die gewählten Werte.</summary>
+    [Parameter] public IReadOnlyCollection<string> Werte { get; set; } = [];
+
+    /// <summary>Name der Eingaben im Formular; ohne Angabe die Kennung der Gruppe.</summary>
+    [Parameter] public string? Name { get; set; }
+
+    /// <summary>Kennung der Gruppe; die Optionen heißen <c>&lt;Id&gt;-&lt;Wert&gt;</c>.</summary>
+    [Parameter] public string? Id { get; set; }
+
+    [Parameter] public string? Hinweis { get; set; }
+
+    /// <summary>Fehlertext ohne Präfix; angezeigt als „Fehler: …“.</summary>
+    [Parameter] public string? Fehler { get; set; }
+
+    [Parameter] public bool Deaktiviert { get; set; }
+
+    /// <summary>Weitere Attribute je Option für das input-Element, z. B. ein Ereignis in einem interaktiven Baustein.</summary>
+    [Parameter] public Func<AuswahlOption, IReadOnlyDictionary<string, object>?>? OptionAttribute { get; set; }
+
+    /// <summary>Platz unter den Optionen, z. B. für den Speicher-Hinweis.</summary>
+    [Parameter] public RenderFragment? UnterDemFeld { get; set; }
+
+    private string KennungGruppe => Id ?? _vorgabeId;
+
+    private string HinweisId => KennungGruppe + "-hinweis";
+
+    private string FehlerId => KennungGruppe + "-fehler";
+
+    /// <summary>Kennung des input-Elements einer Option, z. B. Ziel eines Sprunglinks.</summary>
+    public string OptionId(AuswahlOption option) => $"{KennungGruppe}-{option?.Wert}";
+
+    private string? Beschrieben
+    {
+        get
+        {
+            var text = string.Join(' ', new[] { Hinweis is null ? null : HinweisId, Fehler is null ? null : FehlerId }.Where(t => t is not null));
+            return text.Length == 0 ? null : text;
+        }
+    }
+}

@@ -62,6 +62,9 @@ internal static class FreizeitenModell
             e.Property(f => f.Teilnahmebedingungen).HasMaxLength(FreizeitseiteFelder.TeilnahmebedingungenMaximaleLaenge);
             e.Property(f => f.KontaktMail).HasMaxLength(FreizeitseiteFelder.KontaktMailMaximaleLaenge);
             e.Property(f => f.KontaktTelefon).HasMaxLength(FreizeitseiteFelder.KontaktTelefonMaximaleLaenge);
+            // FR-22: gewählte Fragen-Kennungen je Zielgruppe; eine neue Freizeit fragt nichts ab.
+            e.Property(f => f.FragenTeilnehmende).HasColumnType("text[]");
+            e.Property(f => f.FragenMitarbeitende).HasColumnType("text[]");
             e.Property(f => f.Version).IsRowVersion();
             e.HasIndex(f => f.OrganisationId);
             e.HasMany(f => f.Rollen).WithOne().HasForeignKey(r => r.FreizeitId);

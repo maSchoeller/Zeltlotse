@@ -18,8 +18,8 @@ namespace Zeltlotse.Api.Tests;
 public sealed class EndpunktListeTests(PostgresContainer postgres)
 {
     /// <summary>
-    /// Die anonymen Endpunkte: Betrieb, die vier Anmelde-Endpunkte, die zwei Anmeldelink-Seiten (Story 2-1) und die Gast-Anmeldung mit
-    /// Gast-Link (Story 2-2).
+    /// Die anonymen Endpunkte: Betrieb, die vier Anmelde-Endpunkte, die zwei Anmeldelink-Seiten (Story 2-1), die Gast-Anmeldung mit
+    /// Gast-Link (Story 2-2) und der Freizeitpass über den Gast-Link (Story 2-4).
     /// </summary>
     private static readonly string[] Anonym =
     [
@@ -31,6 +31,8 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         "POST /api/freizeiten/oeffentlich/{token}/anmeldungen",
         "POST /api/personen/oeffentlich/gaeste",
         "POST /api/personen/oeffentlich/gaeste/{gastToken}/kinder",
+        "GET /api/personen/oeffentlich/gaeste/{gastToken}/freizeitpass/{personId:guid}",
+        "POST /api/personen/oeffentlich/gaeste/{gastToken}/freizeitpass/{personId:guid}",
         "POST /api/konten/anmelden",
         "POST /api/konten/login-code/einloesen",
         "POST /api/konten/login-link",
@@ -44,6 +46,7 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         "GET /api/ich/daten",
         "GET /api/ich/familie",
         "GET /api/ich/freizeiten",
+        "GET /api/ich/freizeitpass/{personId:guid}",
         "GET /api/ich/konto",
         "GET /api/ich/nachweise",
         "GET /api/ich/organisationen",
@@ -52,12 +55,14 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         "GET /api/ich/profil",
         "GET /api/ich/zugriffsprotokoll",
         "PATCH /api/ich/familie/kinder/{personId:guid}",
+        "PATCH /api/ich/freizeitpass/{personId:guid}/antworten/{kennung}",
         "PATCH /api/ich/nachweise/{nachweisId:guid}",
         "PATCH /api/ich/profil",
         "POST /api/ich/anmeldungen",
         "POST /api/ich/familie/einladungen",
         "POST /api/ich/familie/kinder",
         "POST /api/ich/familie/kinder/{personId:guid}/uebergabe",
+        "POST /api/ich/freizeitpass/{personId:guid}/antworten/{kennung}/bestaetigen",
         "POST /api/ich/gastprofil/uebernehmen",
         "POST /api/ich/nachweise",
         "POST /api/ich/nachweise/einsichten/{einsichtId:guid}/freigeben",
@@ -97,11 +102,12 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
     {
         var endpunkte = await EndpunkteAsync();
 
-        // Story 2-2: dazu der Gast-Link, das Absenden der Gast-Anmeldung und die zwei Gast-Endpunkte von Personen.
+        // Story 2-2: dazu der Gast-Link, das Absenden der Gast-Anmeldung und die zwei Gast-Endpunkte von Personen; Story 2-4: der
+        // Freizeitpass über den Gast-Link (Lesen und Speichern).
         var oeffentlich = endpunkte.Where(e => e.Pfad.StartsWith("/api/freizeiten/oeffentlich/", StringComparison.Ordinal)
                                                || e.Pfad.StartsWith("/api/freizeiten/gast/", StringComparison.Ordinal)
                                                || e.Pfad.StartsWith("/api/personen/oeffentlich/", StringComparison.Ordinal)).ToList();
-        Assert.Equal(6, oeffentlich.Count);
+        Assert.Equal(8, oeffentlich.Count);
         Assert.All(oeffentlich, e =>
         {
             Assert.Contains(e.Name, Anonym);
@@ -200,6 +206,9 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 "GET /api/freizeiten/{freizeitId:guid}/anmeldungen",
                 "POST /api/freizeiten/{freizeitId:guid}/anmeldungen/{anmeldungId:guid}/bestaetigen",
                 "POST /api/freizeiten/{freizeitId:guid}/anmeldungen/{anmeldungId:guid}/absagen",
+                // Story 2-4: Fragen-Auswahl des Freizeitpasses (Leitung).
+                "GET /api/freizeiten/{freizeitId:guid}/fragen",
+                "PATCH /api/freizeiten/{freizeitId:guid}/fragen",
             }.Order(StringComparer.Ordinal),
             freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
         Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));

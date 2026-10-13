@@ -50,7 +50,7 @@ Die Elternangaben werden nur innerhalb dieser Seite weitergereicht, auf dem Ger�
 
 ## Der Gast-Link
 
-Der Gast-Link aus der Mail öffnet die Seite **Anmeldungen**: je angemeldetem Kind Vorname, Freizeit, Zeitraum, Status und, solange nicht abgesagt, der Kontakt der Leitung für Absagen (siehe [Absagen](#absagen)). Darunter steht, bis wann der Gast-Link gilt.
+Der Gast-Link aus der Mail öffnet die Seite **Anmeldungen**: je angemeldetem Kind Vorname, Freizeit, Zeitraum, Status und, solange nicht abgesagt, der Knopf **Freizeitpass für …** (siehe [Freizeitpass ausfüllen](/eltern/freizeitpass/#als-gast-über-den-gast-link)) und der Kontakt der Leitung für Absagen (siehe [Absagen](#absagen)). Darunter steht, bis wann der Gast-Link gilt.
 
 - Er gilt bis zum Ende des **Freigabefensters** der Freizeit, also so lange, wie die Freizeit die Angaben sehen darf. Ist bei der Leitung noch keine Anmeldung angekommen, gilt er **einen Tag**.
 - Hat ein Konto die Angaben übernommen, gilt der Gast-Link nicht mehr.
@@ -76,7 +76,7 @@ Danach gilt der Gast-Link nicht mehr. Hat das Konto schon eigene Angaben (etwa e
 1. Auf der Freizeitseite **Mit Konto anmelden** wählen. Ohne Anmeldung erscheint zuerst die Seite „Anmelden“; danach geht es zurück zur Anmeldung.
 2. Unter **Wer wird angemeldet?** ein Kind unter 18 aus dem Familienkonto oder **Selbst** wählen. Volljährige Kinder stehen nicht in der Liste; sie melden sich mit ihrem eigenen Konto an.
 3. Die Teilnahmebedingungen lesen, **Teilnahmebedingungen gelesen und bestätigt** ankreuzen und **Anmeldung absenden** wählen.
-4. Es erscheint „Anmeldung eingegangen: Die Leitung meldet sich in Kürze.“ mit dem Weg **Zur Familienübersicht**.
+4. Es erscheint „Anmeldung eingegangen: Die Leitung meldet sich in Kürze.“ mit dem Knopf **Freizeitpass für … ausfüllen** und dem Weg **Zur Familienübersicht**. Der Freizeitpass zeigt nur die Fragen dieser Freizeit; Angaben aus einer früheren Freizeit stehen schon da (siehe [Freizeitpass ausfüllen](/eltern/freizeitpass/)).
 
 Eine Mail gibt es bei dieser Anmeldung nicht; der Status steht in der Familienübersicht. Ist ein Kind schon angemeldet, erscheint „Hinweis: … ist für diese Freizeit schon angemeldet.“
 
@@ -86,7 +86,7 @@ Eine Mail gibt es bei dieser Anmeldung nicht; der Status steht in der Familienü
 
 ## Status in der Familienübersicht
 
-Auf der Seite **Familie** steht in der Card jedes Kindes jede Freizeit mit Zeitraum und Status, zum Beispiel „Zeltlager Sommer 2027, 02.08.2027 – 13.08.2027 · Eingegangen“. Eigene Anmeldungen stehen in einer eigenen Card **Eigene Anmeldungen**. Siehe [Familienkonto](/eltern/familienkonto/).
+Auf der Seite **Familie** steht in der Card jedes Kindes jede Freizeit mit Zeitraum und Status, zum Beispiel „Zeltlager Sommer 2027, 02.08.2027 – 13.08.2027 · Eingegangen“. Eigene Anmeldungen stehen in einer eigenen Card **Eigene Anmeldungen**. Unter jeder Anmeldung führt der Link **Freizeitpass** zum Freizeitpass; fehlt eine abgefragte Angabe oder ist sie älter als 12 Monate, steht daneben **Freizeitpass prüfen**. Siehe [Familienkonto](/eltern/familienkonto/).
 
 Der Status ist eines von drei Wörtern:
 

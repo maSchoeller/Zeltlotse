@@ -11,6 +11,7 @@ Ins Team einer Freizeit kommt, wer sich über den **Anmeldelink für Mitarbeiten
 2. **Anmelden** wählen. Ohne Anmeldung erscheint zuerst die Seite „Anmelden“; mit der eigenen Mail-Adresse anmelden (siehe [Anmelden](/erste-schritte/anmelden/)). Ein neues Konto entsteht dabei von selbst. Danach geht es zurück zur Anmeldung.
 3. Auf der Seite **Anmeldung** steht „Angemeldet wird die eigene Person für das Team der Freizeit.“ Die Teilnahmebedingungen lesen und **Teilnahmebedingungen gelesen und bestätigt** ankreuzen.
 4. **Anmeldung absenden** wählen. Es erscheint „Anmeldung eingegangen: Die Leitung meldet sich in Kürze.“
+5. Mit **Freizeitpass für … ausfüllen** den eigenen Freizeitpass öffnen. Er enthält nur die Fragen, die die Leitung für Mitarbeitende ausgewählt hat, meist weniger als für Teilnehmende. Später führt der Link **Freizeitpass** in der Card **Eigene Anmeldungen** der Familienübersicht dorthin (siehe [Freizeitpass ausfüllen](/eltern/freizeitpass/)).
 
 Die Seite sieht aus wie die Anmeldung mit Konto für Eltern, nur ohne die Auswahl einer Person (siehe [Kind anmelden](/eltern/kind-anmelden/#mit-konto-anmelden)):
 

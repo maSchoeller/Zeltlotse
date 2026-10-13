@@ -154,6 +154,7 @@ internal sealed class PersonLoeschenHandler(PersonenDbContext db) : ICommandHand
         await db.EinsichtProtokoll.Where(e => ids.Contains(e.BetroffenePersonId)).ExecuteDeleteAsync(abbruch);
         await db.Elternteile.Where(e => ids.Contains(e.PersonId)).ExecuteDeleteAsync(abbruch);
         await db.Nachweise.Where(n => ids.Contains(n.PersonId)).ExecuteDeleteAsync(abbruch);
+        await db.FreizeitpassAntworten.Where(a => ids.Contains(a.PersonId)).ExecuteDeleteAsync(abbruch);
         await db.PersonenSchluessel.Where(s => ids.Contains(s.PersonId)).ExecuteDeleteAsync(abbruch);
     }
 

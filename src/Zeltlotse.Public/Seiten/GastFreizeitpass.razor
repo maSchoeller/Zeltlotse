@@ -1,0 +1,245 @@
+@page "/gast/{Token}/freizeitpass/{AnmeldungId:guid}"
+@layout OhneRahmenLayout
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Primitives
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Personen
+@using Zeltlotse.Ui.Api
+@using Zeltlotse.Ui.Texte
+@inject FreizeitenApiClient Freizeiten
+@inject PersonenApiClient Personen
+@inject NavigationManager Navigation
+@* Freizeitpass über den Gast-Link (FR-17, FR-23, AD-11, AD-29, Story 2-4): ein klassisches Formular ohne Skript mit allen Fragen, die
+   die Freizeit für diese Anmeldung abfragt (in Katalogreihenfolge), vorausgefüllt mit den Antworten der Person. Veraltete Angaben
+   tragen „Stimmt das noch?“ mit dem Haken „Stimmt noch“. „Speichern“ schickt alle Antworten der Seite (zwei API-Aufrufe zum Laden: die
+   Anmeldungen des Gast-Links bei Freizeiten, der Pass bei Personen, AD-2); die Antwortseite rendert direkt im POST mit
+   „Freizeitpass gespeichert.“ Fehler stehen am Feld und in der Fehlerübersicht oben, die Eingaben bleiben. Unbekannte Anmeldung oder
+   ungültiger Gast-Link: Status 404 mit „Dieser Link ist nicht mehr gültig.“; Zugriffsbegrenzung: Status 429. noindex. *@
+
+@if (_zuViele)
+{
+    <ZuVieleAufrufe />
+}
+else if (_ungueltig)
+{
+    @* Ein Absenden nach Ablauf des Links findet sein Formular, damit Blazor nicht mit 400 abbricht; angezeigt wird die Seite für
+       Status 404 (NotFoundPage), dieses leere Formular erscheint nie. *@
+    <form method="post" @formname="freizeitpass" @onsubmit="SpeichernAsync"></form>
+}
+else if (_anmeldung is not null && _pass is not null)
+{
+    <PageTitle>Freizeitpass – Zeltlotse</PageTitle>
+    <HeadContent><meta name="robots" content="noindex" /></HeadContent>
+    <OeffentlicherRahmen>
+        <Dachzeile>@_anmeldung.FreizeitName · @Anzeige.ZeitraumLang(_anmeldung.ErsterTag, _anmeldung.LetzterTag)</Dachzeile>
+        <h1>Freizeitpass für @_anmeldung.Vorname</h1>
+        @if (_gespeichert)
+        {
+            <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+                <p>Freizeitpass gespeichert.</p>
+            </Meldung>
+        }
+        @if (Fragen.Count == 0)
+        {
+            <p>Diese Freizeit fragt keine Angaben ab.</p>
+            <form method="post" @formname="freizeitpass" @onsubmit="SpeichernAsync"></form>
+        }
+        else
+        {
+            <p>
+                Der Freizeitpass enthält die Angaben, die das Team auf der Freizeit braucht. Gefragt wird nur, was die Leitung für diese
+                Freizeit ausgewählt hat. Die Angaben gehören @_anmeldung.Vorname und stehen bei der nächsten Freizeit schon da.
+            </p>
+            <Fehleruebersicht Fehler="@Uebersicht" />
+            <form method="post" @formname="freizeitpass" @onsubmit="SpeichernAsync" novalidate>
+                <AntiforgeryToken />
+                <Card Titel="Angaben für diese Freizeit">
+                    @foreach (var frage in Fragen)
+                    {
+                        <div>
+                            @if (frage.Veraltet)
+                            {
+                                <p><Status Wort="Stimmt das noch?" Art="StatusArt.Warnung" /></p>
+                                <Ankreuzfeld Label="@($"Stimmt noch: {frage.Frage}")" Id="@($"stimmt-{frage.Kennung}")" Name="@($"b.{frage.Kennung}")"
+                                             Wert="@_bestaetigt.Contains(frage.Kennung)" />
+                            }
+                            @Eingabe(frage)
+                        </div>
+                    }
+                </Card>
+                <Knopf Typ="submit">Speichern</Knopf>
+            </form>
+        }
+        <p><a href="@($"/gast/{Token}")">Zurück zu den Anmeldungen</a></p>
+    </OeffentlicherRahmen>
+}
+
+@code {
+    private readonly Dictionary<string, string> _fehler = new(StringComparer.Ordinal);
+    private GastLinkAnmeldung? _anmeldung;
+    private FreizeitpassAnsicht? _pass;
+    private Dictionary<string, (string? Wert, string? Sonstiges)>? _eingaben;
+    private HashSet<string> _bestaetigt = new(StringComparer.Ordinal);
+    private bool _gespeichert;
+    private bool _ungueltig;
+    private bool _zuViele;
+
+    [Parameter] public string Token { get; set; } = "";
+
+    [Parameter] public Guid AnmeldungId { get; set; }
+
+    [CascadingParameter] public HttpContext? HttpKontext { get; set; }
+
+    /// <summary>Nur die Fragen der Freizeit für diese Anmeldung, in Katalogreihenfolge.</summary>
+    private IReadOnlyList<FreizeitpassFrage> Fragen =>
+        [.. (_pass?.Fragen ?? []).Where(f => (_anmeldung?.Fragen ?? []).Contains(f.Kennung))];
+
+    private IReadOnlyList<FeldFehler> Uebersicht =>
+    [
+        .. Fragen.SelectMany(f => new[]
+            {
+                (Schluessel: FreizeitpassFelder.FormularFehler(f.Kennung, FreizeitpassFeld.Wert), Id: $"freizeitpass-{f.Kennung}", Text: f.Frage),
+                (Schluessel: FreizeitpassFelder.FormularFehler(f.Kennung, FreizeitpassFeld.Sonstiges), Id: $"freizeitpass-{f.Kennung}-sonstiges", Text: $"{f.Frage}, Sonstiges"),
+            })
+            .Where(t => _fehler.ContainsKey(t.Schluessel))
+            .Select(t => new FeldFehler(t.Id, $"{t.Text}: {_fehler[t.Schluessel]}")),
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await LadenAsync();
+        }
+        catch (Exception fehler) when (ZuVieleAufrufe.IstZugriffsbegrenzt(fehler))
+        {
+            ZuViele();
+        }
+    }
+
+    /// <summary>Lädt die Anmeldung vom Gast-Link und den Pass der Person; ungültig: Status 404 (beim Absenden erst im Handler).</summary>
+    private async Task LadenAsync()
+    {
+        var ansicht = await Freizeiten.GastLinkLadenAsync(Token);
+        _anmeldung = ansicht?.Anmeldungen.FirstOrDefault(a => a.AnmeldungId == AnmeldungId && a.AnmeldungId != Guid.Empty);
+        _pass = _anmeldung is null ? null : await Personen.GastFreizeitpassLadenAsync(Token, _anmeldung.PersonId);
+        if (_pass is null)
+        {
+            if (HttpMethods.IsPost(HttpKontext?.Request.Method ?? ""))
+            {
+                _ungueltig = true;
+            }
+            else
+            {
+                ZeigeUngueltig();
+            }
+        }
+    }
+
+    private async Task SpeichernAsync()
+    {
+        if (_zuViele)
+        {
+            return;
+        }
+
+        if (_ungueltig || _anmeldung is null || _pass is null || HttpKontext is null)
+        {
+            ZeigeUngueltig();
+            return;
+        }
+
+        var formular = await HttpKontext.Request.ReadFormAsync();
+        _eingaben = Fragen.ToDictionary(
+            f => f.Kennung,
+            f => (Text(formular[$"a.{f.Kennung}"]), f.MitSonstiges ? Text(formular[$"s.{f.Kennung}"]) : null),
+            StringComparer.Ordinal);
+        _bestaetigt = [.. Fragen.Where(f => formular.ContainsKey($"b.{f.Kennung}")).Select(f => f.Kennung)];
+
+        try
+        {
+            var ergebnis = await Personen.GastFreizeitpassSpeichernAsync(
+                Token,
+                _anmeldung.PersonId,
+                new FreizeitpassFormular([.. _eingaben.Select(e => new FreizeitpassFormularAntwort(e.Key, e.Value.Wert, e.Value.Sonstiges))], [.. _bestaetigt]));
+            if (ergebnis.NichtGefunden)
+            {
+                ZeigeUngueltig();
+            }
+            else if (!ergebnis.Gespeichert)
+            {
+                foreach (var (feld, text) in ergebnis.Fehler)
+                {
+                    _fehler[feld] = text;
+                }
+            }
+            else
+            {
+                _gespeichert = true;
+                _eingaben = null;
+                _bestaetigt.Clear();
+                _pass = await Personen.GastFreizeitpassLadenAsync(Token, _anmeldung.PersonId) ?? _pass;
+            }
+        }
+        catch (Exception fehler) when (ZuVieleAufrufe.IstZugriffsbegrenzt(fehler))
+        {
+            ZuViele();
+        }
+    }
+
+    /// <summary>Mehrere Werte (Kästchen) mit Komma; leer = <c>null</c>.</summary>
+    private static string? Text(StringValues werte)
+    {
+        var text = string.Join(',', werte.Where(w => !string.IsNullOrWhiteSpace(w)));
+        return text.Length == 0 ? null : text;
+    }
+
+    private string? Wert(FreizeitpassFrage frage) => _eingaben?.TryGetValue(frage.Kennung, out var eingabe) == true ? eingabe.Wert : frage.Wert;
+
+    private string? Sonstiges(FreizeitpassFrage frage) => _eingaben?.TryGetValue(frage.Kennung, out var eingabe) == true ? eingabe.Sonstiges : frage.Sonstiges;
+
+    private string? Fehler(FreizeitpassFrage frage, FreizeitpassFeld feld) => _fehler.GetValueOrDefault(FreizeitpassFelder.FormularFehler(frage.Kennung, feld));
+
+    /// <summary>Das Eingabeelement nach Antworttyp, bei Auswahl-Fragen mit „Sonstiges“.</summary>
+    private RenderFragment Eingabe(FreizeitpassFrage frage)
+    {
+        var id = $"freizeitpass-{frage.Kennung}";
+        var name = $"a.{frage.Kennung}";
+        IReadOnlyList<AuswahlOption> optionen = [.. frage.Optionen.Select(o => new AuswahlOption(o.Wert, o.Text))];
+        IReadOnlyCollection<string> werte = [.. (Wert(frage) ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)];
+        return @<text>
+            @switch (frage.Art)
+            {
+                case FrageArt.Freitext:
+                    <Feld Label="@frage.Frage" Id="@id" Name="@name" Mehrzeilig="true" Wert="@Wert(frage)" Fehler="@Fehler(frage, FreizeitpassFeld.Wert)" />
+                    break;
+                case FrageArt.Datum:
+                    <Feld Label="@frage.Frage" Id="@id" Name="@name" Typ="date" Wert="@Wert(frage)" Fehler="@Fehler(frage, FreizeitpassFeld.Wert)" />
+                    break;
+                default:
+                    <Auswahlgruppe Legende="@frage.Frage" Id="@id" Name="@name" Optionen="@optionen" Mehrfach="@(frage.Art == FrageArt.Auswahl)" Werte="@werte"
+                                   Fehler="@Fehler(frage, FreizeitpassFeld.Wert)" />
+                    break;
+            }
+            @if (frage.MitSonstiges)
+            {
+                <Feld Label="Sonstiges" Id="@($"{id}-sonstiges")" Name="@($"s.{frage.Kennung}")" Wert="@Sonstiges(frage)"
+                      Hinweis="@($"Höchstens {FreizeitpassFelder.SonstigesMaximaleLaenge} Zeichen")" Fehler="@Fehler(frage, FreizeitpassFeld.Sonstiges)" />
+            }
+        </text>;
+    }
+
+    private void ZuViele()
+    {
+        _zuViele = true;
+        ZuVieleAufrufe.Status429(HttpKontext);
+    }
+
+    /// <summary>Status 404 mit „Dieser Link ist nicht mehr gültig.“ (NotFoundPage des Routers, markiert als Gast-Link).</summary>
+    private void ZeigeUngueltig()
+    {
+        _ungueltig = true;
+        GastLinkUngueltig.Markieren(HttpKontext);
+        Navigation.NotFound();
+    }
+}

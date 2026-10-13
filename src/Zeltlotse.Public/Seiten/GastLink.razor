@@ -5,7 +5,7 @@
 @inject FreizeitenApiClient Freizeiten
 @inject NavigationManager Navigation
 @* Gast-Link aus der Eingangsmail (AD-11, FR-17, FR-20, FR-21): die Anmeldungen der Gast-Familie mit Vorname, Freizeit, Zeitraum, Status
-   und, solange nicht abgesagt, dem Kontakt der Leitung für Absagen (Story 2-3),
+   und, solange nicht abgesagt, dem Weg zum Freizeitpass (Story 2-4) und dem Kontakt der Leitung für Absagen (Story 2-3),
    wie lange der Gast-Link gilt, und das Angebot „Konto aus diesen Daten erstellen?“. Nur eine Ansicht, statisch gerendert, ohne
    Skript. Ungültig, abgelaufen oder übernommen: Status 404 mit „Dieser Link ist nicht mehr gültig.“; Zugriffsbegrenzung: Status 429.
    Suchmaschinen nehmen die Seite nicht auf (noindex). *@
@@ -32,6 +32,10 @@ else if (_ansicht is not null)
                 <p><Status Wort="@Anzeige.Status(anmeldung.Status)" Art="@Anzeige.AnmeldungStatusArt(anmeldung.Status)" /></p>
                 @if (anmeldung.Status != Zeltlotse.Api.Contracts.Freizeiten.AnmeldungStatus.Abgesagt)
                 {
+                    @if (anmeldung.AnmeldungId != Guid.Empty && (anmeldung.Fragen?.Count ?? 0) > 0)
+                    {
+                        <p><Knopf Href="@($"/gast/{Token}/freizeitpass/{anmeldung.AnmeldungId}")" Art="KnopfArt.Outline" Ansichtswechsel="true">Freizeitpass für @anmeldung.Vorname</Knopf></p>
+                    }
                     <AbsageKontakt Mail="@anmeldung.KontaktMail" Telefon="@anmeldung.KontaktTelefon" />
                 }
             </Card>

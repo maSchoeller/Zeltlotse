@@ -189,6 +189,42 @@ namespace Zeltlotse.Personen.Migrationen
                     b.ToTable("freigabe", "personen");
                 });
 
+            modelBuilder.Entity("Zeltlotse.Personen.Freizeitpass.FreizeitpassAntwort", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("BestaetigtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Kennung")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("Sonstiges")
+                        .HasColumnType("bytea");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<byte[]>("Wert")
+                        .HasColumnType("bytea");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonId", "Kennung")
+                        .IsUnique();
+
+                    b.ToTable("freizeitpass_antwort", "personen");
+                });
+
             modelBuilder.Entity("Zeltlotse.Personen.Freizeitrollen.FreizeitRolle", b =>
                 {
                     b.Property<Guid>("FreizeitId")

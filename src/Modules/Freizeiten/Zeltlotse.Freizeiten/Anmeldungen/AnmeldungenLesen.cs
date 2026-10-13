@@ -32,8 +32,18 @@ internal static class AnmeldungWerte
 }
 
 /// <summary>Eine Anmeldung einer Person mit den Übersichtsfeldern ihrer Freizeit und dem Kontakt der Leitung für Absagen (FR-21).</summary>
+/// <param name="Fragen">Die Fragen des Freizeitpasses, die die Freizeit für die Art der Anmeldung abfragt (Story 2-4, FR-22).</param>
 internal sealed record AnmeldungDerPerson(
-    Guid AnmeldungId, Guid PersonId, string FreizeitName, DateOnly ErsterTag, DateOnly LetzterTag, AnmeldeArt Art, AnmeldeStatus Status, string? KontaktMail, string? KontaktTelefon);
+    Guid AnmeldungId,
+    Guid PersonId,
+    string FreizeitName,
+    DateOnly ErsterTag,
+    DateOnly LetzterTag,
+    AnmeldeArt Art,
+    AnmeldeStatus Status,
+    string? KontaktMail,
+    string? KontaktTelefon,
+    IReadOnlyList<string> Fragen);
 
 /// <summary>
 /// Liest Anmeldungen einer Menge von Personen über Organisationen hinweg (personenbezogener Lesepfad, AD-26): ohne Mandantenfilter,
@@ -52,7 +62,7 @@ internal static class AnmeldungenDerPersonen
         var freizeitIds = anmeldungen.Select(a => a.FreizeitId).Distinct().ToList();
         var freizeiten = await db.Freizeiten.IgnoreQueryFilters()
             .Where(f => freizeitIds.Contains(f.Id))
-            .Select(f => new { f.Id, f.Name, f.ErsterTag, f.LetzterTag, f.KontaktMail, f.KontaktTelefon })
+            .Select(f => new { f.Id, f.Name, f.ErsterTag, f.LetzterTag, f.KontaktMail, f.KontaktTelefon, f.FragenTeilnehmende, f.FragenMitarbeitende })
             .ToDictionaryAsync(f => f.Id, abbruch);
         return
         [
@@ -62,14 +72,15 @@ internal static class AnmeldungenDerPersonen
                 .ThenBy(a => a.Freizeit.Name, StringComparer.CurrentCulture)
                 .ThenBy(a => a.Id)
                 .Select(a => new AnmeldungDerPerson(
-                    a.Id, a.PersonId, a.Freizeit.Name, a.Freizeit.ErsterTag, a.Freizeit.LetzterTag, a.Art, a.Status, a.Freizeit.KontaktMail, a.Freizeit.KontaktTelefon)),
+                    a.Id, a.PersonId, a.Freizeit.Name, a.Freizeit.ErsterTag, a.Freizeit.LetzterTag, a.Art, a.Status, a.Freizeit.KontaktMail, a.Freizeit.KontaktTelefon,
+                    a.Art == AnmeldeArt.Mitarbeitende ? a.Freizeit.FragenMitarbeitende : a.Freizeit.FragenTeilnehmende)),
         ];
     }
 }
 
 /// <summary>
 /// <c>GET /api/ich/anmeldungen</c> (AD-26, organisationsübergreifend): die Anmeldungen der angemeldeten Person und der Kinder ihrer
-/// Familie (<see cref="IVertretung"/>), nur Übersichtsfelder.
+/// Familie (<see cref="IVertretung"/>), nur Übersichtsfelder und die Kennungen der abgefragten Fragen (Story 2-4).
 /// </summary>
 internal static class MeineAnmeldungenEndpunkt
 {
@@ -79,14 +90,15 @@ internal static class MeineAnmeldungenEndpunkt
         var zeilen = await AnmeldungenDerPersonen.LesenAsync(db, await vertretung.PersonenAsync(personId, abbruch), abbruch);
         return TypedResults.Ok(zeilen
             .Select(z => new AnmeldungZeile(
-                z.AnmeldungId, z.PersonId, z.FreizeitName, z.ErsterTag, z.LetzterTag, AnmeldungWerte.Art(z.Art), AnmeldungWerte.Status(z.Status), z.KontaktMail, z.KontaktTelefon))
+                z.AnmeldungId, z.PersonId, z.FreizeitName, z.ErsterTag, z.LetzterTag, AnmeldungWerte.Art(z.Art), AnmeldungWerte.Status(z.Status), z.KontaktMail, z.KontaktTelefon,
+                z.Fragen))
             .ToList());
     }
 }
 
 /// <summary>
 /// <c>GET /api/freizeiten/gast/{gastToken}</c> (anonym, zugriffsbegrenzt, AD-11): die Anmeldungen der Gast-Familie mit Vorname,
-/// Freizeit, Zeitraum und Status und das Ende des Gast-Links. Ungültig, abgelaufen, übernommen oder anderer Zweck <c>404</c>. Nur
+/// Freizeit, Zeitraum, Status, Kennungen von Anmeldung und Person und den abgefragten Fragen (Story 2-4) und das Ende des Gast-Links. Ungültig, abgelaufen, übernommen oder anderer Zweck <c>404</c>. Nur
 /// eine Ansicht, darum kein Eintrag im Sicherheitsprotokoll.
 /// </summary>
 internal static class GastLinkEndpunkt
@@ -106,7 +118,7 @@ internal static class GastLinkEndpunkt
             [
                 .. zeilen.Select(z => new GastLinkAnmeldung(
                     vornamen.GetValueOrDefault(z.PersonId)?.Vorname ?? "", z.FreizeitName, z.ErsterTag, z.LetzterTag, AnmeldungWerte.Status(z.Status),
-                    z.KontaktMail, z.KontaktTelefon)),
+                    z.KontaktMail, z.KontaktTelefon, z.AnmeldungId, z.PersonId, z.Fragen)),
             ]));
     }
 }

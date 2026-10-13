@@ -63,6 +63,10 @@ public sealed record AnmeldungAngelegt(Guid AnmeldungId);
 /// </summary>
 /// <param name="KontaktMail">Mail-Adresse der Leitung für Absagen (Story 2-3, FR-21), wenn die Leitung sie eingetragen hat.</param>
 /// <param name="KontaktTelefon">Telefon der Leitung für Absagen (Story 2-3, FR-21), wenn eingetragen.</param>
+/// <param name="Fragen">
+/// Kennungen der Fragen, die der Freizeitpass dieser Freizeit für die Art der Anmeldung abfragt (Story 2-4, FR-22), in
+/// Katalogreihenfolge; leer heißt: keine Fragen.
+/// </param>
 public sealed record AnmeldungZeile(
     Guid AnmeldungId,
     Guid PersonId,
@@ -72,7 +76,8 @@ public sealed record AnmeldungZeile(
     AnmeldungArt Art,
     AnmeldungStatus Status,
     string? KontaktMail = null,
-    string? KontaktTelefon = null);
+    string? KontaktTelefon = null,
+    IReadOnlyList<string>? Fragen = null);
 
 /// <summary>
 /// Antwort von <c>GET /api/freizeiten/gast/{gastToken}</c> (anonym, Gast-Link, AD-11): die Anmeldungen der Gast-Familie mit
@@ -85,6 +90,9 @@ public sealed record GastLinkAnsicht(DateTimeOffset GueltigBis, IReadOnlyList<Ga
 /// Eine Anmeldung auf dem Gast-Link: Vorname des Kindes, Freizeit, Zeitraum, Status und der Kontakt der Leitung für Absagen
 /// (Story 2-3, FR-21), wenn eingetragen.
 /// </summary>
+/// <param name="AnmeldungId">Kennung der Anmeldung (Story 2-4), für den Weg zum Freizeitpass.</param>
+/// <param name="PersonId">Kennung der angemeldeten Person (Story 2-4), für den Freizeitpass bei Personen.</param>
+/// <param name="Fragen">Kennungen der Fragen, die der Freizeitpass dieser Freizeit abfragt (Story 2-4); leer heißt: keine Fragen.</param>
 public sealed record GastLinkAnmeldung(
     string Vorname,
     string FreizeitName,
@@ -92,7 +100,10 @@ public sealed record GastLinkAnmeldung(
     DateOnly LetzterTag,
     AnmeldungStatus Status,
     string? KontaktMail = null,
-    string? KontaktTelefon = null);
+    string? KontaktTelefon = null,
+    Guid AnmeldungId = default,
+    Guid PersonId = default,
+    IReadOnlyList<string>? Fragen = null);
 
 /// <summary>
 /// Antwort von <c>GET /api/freizeiten/{freizeitId}/anmeldungen</c> (Leitung, FR-20, FR-21, FR-67): die Höchstzahl, die bestätigten

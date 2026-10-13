@@ -5,8 +5,8 @@
 @inject FreizeitenApiClient Freizeiten
 @inject NavigationManager Navigation
 @* Vertrauensseite (FR-66, EXPERIENCE.md → Öffentliche Seiten): erklärt in Klartext, welche Daten erhoben werden, wer sie sieht und
-   wann sie verschwinden. Sie entsteht nur aus gespeicherten Einstellungen: aus der Freizeit Name, Daten, Freigabe-Intervall und
-   „Freigabe bis“, aus der Organisation Name, Löschfristen und Pflicht-Nachweise. Freizeitpass und Freigabefenster sind beim ersten
+   wann sie verschwinden. Sie entsteht nur aus gespeicherten Einstellungen: aus der Freizeit Name, Daten, Freigabe-Intervall,
+   „Freigabe bis“ und die Fragen des Freizeitpasses je Zielgruppe (Story 2-4), aus der Organisation Name, Löschfristen und Pflicht-Nachweise. Freizeitpass und Freigabefenster sind beim ersten
    Auftreten erklärt. Statisch gerendert, ohne Skript; ein ungültiger Link ergibt Status 404 mit dem Hinweis. Wie die
    Freizeitseite ohne Aufnahme in Suchmaschinen (noindex). *@
 
@@ -32,6 +32,15 @@ else if (_seite is not null)
                 Dazu der Freizeitpass: Er enthält die Angaben, die das Team auf der Freizeit über eine Person braucht, zum Beispiel
                 Notfallkontakte. Erhoben werden nur die Fragen, die die Leitung für diese Freizeit ausgewählt hat.
             </p>
+            @if (FragenTeilnehmende.Count == 0 && FragenMitarbeitende.Count == 0)
+            {
+                <p>Der Freizeitpass fragt derzeit nichts ab.</p>
+            }
+            else
+            {
+                @Fragenliste("Für Teilnehmende", FragenTeilnehmende)
+                @Fragenliste("Für Mitarbeitende", FragenMitarbeitende)
+            }
             @if (_seite.PflichtNachweise.Count > 0)
             {
                 <p>
@@ -83,6 +92,29 @@ else if (_seite is not null)
     [CascadingParameter] public HttpContext? HttpKontext { get; set; }
 
     private bool _zuViele;
+
+    private IReadOnlyList<string> FragenTeilnehmende => _seite?.FragenTeilnehmende ?? [];
+
+    private IReadOnlyList<string> FragenMitarbeitende => _seite?.FragenMitarbeitende ?? [];
+
+    /// <summary>Die gewählten Fragen einer Zielgruppe als Liste; ohne Fragen der Satz, dass nichts abgefragt wird (Story 2-4).</summary>
+    private static RenderFragment Fragenliste(string titel, IReadOnlyList<string> fragen) =>
+        @<text>
+            <h3>@titel</h3>
+            @if (fragen.Count == 0)
+            {
+                <p>Keine Fragen.</p>
+            }
+            else
+            {
+                <ul>
+                    @foreach (var frage in fragen)
+                    {
+                        <li>@frage</li>
+                    }
+                </ul>
+            }
+        </text>;
 
     protected override async Task OnInitializedAsync()
     {

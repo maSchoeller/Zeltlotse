@@ -77,6 +77,12 @@ public sealed record GastAnlegenErgebnis(GastAngelegt? Angelegt, IReadOnlyDictio
 /// </summary>
 public sealed record GastKindErgebnis(Guid? KindPersonId, IReadOnlyDictionary<string, string> Fehler, bool NichtGefunden);
 
+/// <summary>
+/// Ergebnis von <see cref="PersonenApiClient.GastFreizeitpassSpeichernAsync"/>: gespeichert (<c>204</c>), die Fehler je
+/// <c>&lt;kennung&gt;.wert</c> bzw. <c>&lt;kennung&gt;.sonstiges</c> (<c>400</c>) oder der Gast-Link gilt nicht (mehr) (<c>404</c>).
+/// </summary>
+public sealed record GastFreizeitpassErgebnis(bool Gespeichert, IReadOnlyDictionary<string, string> Fehler, bool NichtGefunden);
+
 /// <summary>Ergebnis des Annehmens eines Zugangslinks: angenommen, nicht (mehr) gültig (<c>404</c>) oder ein Konflikt (<c>409</c>).</summary>
 public enum AnnahmeErgebnis
 {
@@ -480,6 +486,59 @@ public sealed class PersonenApiClient(HttpClient http)
         antwort.EnsureSuccessStatusCode();
         return await antwort.Content.ReadFromJsonAsync<T>(ApiJson.Optionen, abbruch)
                ?? throw new HttpRequestException($"Leere Antwort von {pfad}.");
+    }
+
+    /// <summary>Pfad des Freizeitpasses einer Person (AD-26, Story 2-4).</summary>
+    public static string FreizeitpassPfad(Guid personId) => $"/api/ich/freizeitpass/{personId}";
+
+    /// <summary>Pfad einer Antwort im Freizeitpass, auch für den Autosave-Baustein (<c>PATCH</c>, AD-19).</summary>
+    public static string FreizeitpassAntwortPfad(Guid personId, string kennung) => $"{FreizeitpassPfad(personId)}/antworten/{Uri.EscapeDataString(kennung)}";
+
+    /// <summary>
+    /// <c>GET /api/ich/freizeitpass/{personId}</c>: der Pass der Person selbst oder eines Kindes der Familie, je Katalogfrage mit Antwort;
+    /// <c>null</c> bei <c>404</c> (fremde Person).
+    /// </summary>
+    public Task<FreizeitpassAnsicht?> FreizeitpassLadenAsync(Guid personId, CancellationToken abbruch = default) =>
+        LadenOderNullAsync<FreizeitpassAnsicht>(FreizeitpassPfad(personId), abbruch);
+
+    /// <summary><c>POST …/antworten/{kennung}/bestaetigen</c> („Stimmt“, FR-23): <c>true</c> bei <c>204</c>, <c>false</c> bei <c>404</c>.</summary>
+    public async Task<bool> FreizeitpassBestaetigenAsync(Guid personId, string kennung, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsync($"{FreizeitpassAntwortPfad(personId, kennung)}/bestaetigen", content: null, abbruch);
+        if (antwort.StatusCode == HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return true;
+    }
+
+    /// <summary>Pfad des Freizeitpasses eines Kindes über den Gast-Link (anonym, Story 2-4).</summary>
+    public static string GastFreizeitpassPfad(string gastToken, Guid personId) =>
+        $"/api/personen/oeffentlich/gaeste/{Uri.EscapeDataString(gastToken)}/freizeitpass/{personId}";
+
+    /// <summary><c>GET</c> des Freizeitpasses über den Gast-Link; <c>null</c>, wenn der Gast-Link nicht (mehr) gilt oder das Kind fremd ist.</summary>
+    public Task<FreizeitpassAnsicht?> GastFreizeitpassLadenAsync(string gastToken, Guid personId, CancellationToken abbruch = default) =>
+        LadenOderNullAsync<FreizeitpassAnsicht>(GastFreizeitpassPfad(gastToken, personId), abbruch);
+
+    /// <summary><c>POST</c> des Formulars über den Gast-Link: gespeichert, Fehler je Feld oder nicht (mehr) gültig.</summary>
+    public async Task<GastFreizeitpassErgebnis> GastFreizeitpassSpeichernAsync(
+        string gastToken, Guid personId, FreizeitpassFormular formular, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync(GastFreizeitpassPfad(gastToken, personId), formular, ApiJson.Optionen, abbruch);
+        if (antwort.StatusCode == HttpStatusCode.NotFound)
+        {
+            return new GastFreizeitpassErgebnis(false, new Dictionary<string, string>(), NichtGefunden: true);
+        }
+
+        if (antwort.StatusCode == HttpStatusCode.BadRequest && await ApiFehler.AlleFeldFehlerAsync(antwort, abbruch) is { Count: > 0 } fehler)
+        {
+            return new GastFreizeitpassErgebnis(false, fehler, NichtGefunden: false);
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return new GastFreizeitpassErgebnis(true, new Dictionary<string, string>(), NichtGefunden: false);
     }
 
     private async Task<AnnahmeErgebnis> AnnehmenAsync<T>(string pfad, T koerper, CancellationToken abbruch)

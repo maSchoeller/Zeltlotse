@@ -117,6 +117,41 @@ public sealed class DatenauskunftTests(PostgresContainer postgres, S3Container s
     }
 
     [Fact]
+    public async Task Auskunft_nennt_die_Antworten_im_Freizeitpass_der_Person_und_der_Kinder_entschluesselt()
+    {
+        var verbindung = await postgres.NeueDatenbankAsync();
+        await using var factory = Factory(verbindung);
+        using var katrin = await AngemeldeterClientAsync(factory, FamilienHelfer.Katrin);
+        await FreizeitHelfer.NameSetzenAsync(katrin, "Katrin", "Muster");
+        var katrinId = await PersonIdAsync(verbindung, FamilienHelfer.Katrin);
+        var emma = await FamilienHelfer.KindAsync(katrin, "Emma");
+        foreach (var (person, kennung, json) in new[]
+                 {
+                     (katrinId, "hinweise", """{"version":0,"alterWert":null,"wert":"Brille"}"""),
+                     (emma, "allergien", """{"version":0,"alterWert":null,"wert":"milch,eier"}"""),
+                     (emma, "schwimmen", """{"version":0,"alterWert":null,"wert":"ja"}"""),
+                     (emma, "tetanus", """{"version":0,"alterWert":null,"wert":"2024-05-17"}"""),
+                     (emma, "allergien", """{"version":0,"alterWert":null,"sonstiges":"Kiwi"}"""),
+                 })
+        {
+            using var antwort = await SendenAsync(katrin, HttpMethod.Patch, $"/api/ich/freizeitpass/{person}/antworten/{kennung}", json);
+            Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
+        }
+
+        var auskunft = (await katrin.GetFromJsonAsync<DatenauskunftAntwort>(Pfad, Abbruch))!;
+
+        var heute = FreizeitHelfer.Heute(factory).ToString("dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture);
+        Assert.Equal(
+            [
+                new DatenauskunftZeile("Weitere Hinweise für das Team", $"Brille, bestätigt am {heute}"),
+                new DatenauskunftZeile("Emma Muster: Allergien und Unverträglichkeiten", $"Eier, Milch (inkl. Laktose), Sonstiges: Kiwi, bestätigt am {heute}"),
+                new DatenauskunftZeile("Emma Muster: Letzte Tetanus-Impfung", $"17.05.2024, bestätigt am {heute}"),
+                new DatenauskunftZeile("Emma Muster: Kann schwimmen", $"Ja, bestätigt am {heute}"),
+            ],
+            Abschnitt(auskunft, "Freizeitpass"));
+    }
+
+    [Fact]
     public async Task Ohne_Sitzung_401()
     {
         await using var factory = Factory(await postgres.NeueDatenbankAsync());

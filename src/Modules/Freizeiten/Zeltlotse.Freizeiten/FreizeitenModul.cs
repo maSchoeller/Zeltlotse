@@ -7,6 +7,7 @@ using Zeltlotse.Freizeiten.Contracts.Rollen;
 using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
 using Zeltlotse.Freizeiten.Daten;
 using Zeltlotse.Freizeiten.Datenschutz;
+using Zeltlotse.Freizeiten.Fragen;
 using Zeltlotse.Freizeiten.Freizeitseite;
 using Zeltlotse.Freizeiten.Nachweise;
 using Zeltlotse.Freizeiten.Rechte;
@@ -81,6 +82,9 @@ public static class FreizeitenModul
         freizeit.MapGet("/freizeitseite", FreizeitseiteLadenEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Einstellungen);
         freizeit.MapPatch("/freizeitseite", FreizeitseiteFeldAendernEndpunkt.Aendern).NurFreizeitRolle(FreizeitRechte.Einstellungen);
         freizeit.MapPost("/anmeldelinks/{art}/erneuern", AnmeldelinkErneuernEndpunkt.Erneuern).NurFreizeitRolle(FreizeitRechte.Einstellungen);
+        // Story 2-4: Fragen-Auswahl des Freizeitpasses je Zielgruppe (FR-22), nur Leitung.
+        freizeit.MapGet("/fragen", FragenAuswahlLadenEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Einstellungen);
+        freizeit.MapPatch("/fragen", FragenAuswahlAendernEndpunkt.Aendern).NurFreizeitRolle(FreizeitRechte.Einstellungen);
         // Story 2-3: Anmeldungen der Leitung (Liste, Bestätigen, Absagen); Statuswechsel als POST je Übergang (AD-19, AD-28).
         freizeit.MapGet("/anmeldungen", AnmeldungenListeEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Anmeldungen);
         freizeit.MapPost("/anmeldungen/{anmeldungId:guid}/bestaetigen", AnmeldungEntscheidenEndpunkt.Bestaetigen).NurFreizeitRolle(FreizeitRechte.Anmeldungen);

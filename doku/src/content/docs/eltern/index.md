@@ -12,7 +12,7 @@ sidebar:
 
 - **Die Freizeitseite ansehen** – der Anmeldelink öffnet die Freizeitseite mit Beschreibung, Team und Vertrauensseite, ohne Konto ([Freizeitseite und Vertrauensseite](/eltern/freizeitseite/)).
 - **Kinder unter 18 anmelden** – über den Anmeldelink für Teilnehmende, den die Leitung einer Freizeit verteilt, als Gast oder mit Konto. Geschwister lassen sich nacheinander anmelden ([Kind anmelden](/eltern/kind-anmelden/)).
-- **Den Freizeitpass pflegen** – Angaben wie Allergien, Medikamente und Notfallkontakte. Der Freizeitpass gehört dem Kind und wird bei der nächsten Freizeit vorausgefüllt.
+- **Den Freizeitpass pflegen** – Angaben wie Allergien, Medikamente und Notfallkontakte, nur für die Fragen, die die Freizeit abfragt. Der Freizeitpass gehört dem Kind und wird bei der nächsten Freizeit vorausgefüllt; ältere Angaben tragen „Stimmt das noch?“ ([Freizeitpass ausfüllen](/eltern/freizeitpass/)).
 - **Sehen, wer Einsicht hatte** – im Zugriffsprotokoll steht, wer wann die Daten des Kindes angesehen hat ([Zugriffsprotokoll und Meine Daten](/erste-schritte/meine-daten/)).
 - **Kinder ins Familienkonto aufnehmen** – mit Vorname und Geburtsdatum, die Angaben jederzeit ändern ([Familienkonto](/eltern/familienkonto/)).
 - **Einen zweiten Elternteil einladen** – per Mail, mit denselben Rechten im Familienkonto.
@@ -24,7 +24,7 @@ Für das Familienkonto genügt die Mail-Adresse: Zeltlotse schickt einen Login-L
 
 ## Ohne Konto: als Gast anmelden
 
-Eine Anmeldung gelingt auch ohne Konto. Nach der Gast-Anmeldung kommt eine Mail mit dem **Gast-Link**. Darüber lässt sich der Anmeldestatus sehen, bis das Freigabefenster endet, und mit einem Klick ein Konto aus den Angaben erstellen. Wie das geht, steht unter [Kind anmelden](/eltern/kind-anmelden/).
+Eine Anmeldung gelingt auch ohne Konto. Nach der Gast-Anmeldung kommt eine Mail mit dem **Gast-Link**. Darüber lässt sich der Anmeldestatus sehen und der Freizeitpass ausfüllen, bis das Freigabefenster endet, und mit einem Klick ein Konto aus den Angaben erstellen. Wie das geht, steht unter [Kind anmelden](/eltern/kind-anmelden/).
 
 ## Volljährige Teilnehmende
 

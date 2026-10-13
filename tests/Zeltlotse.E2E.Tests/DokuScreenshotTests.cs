@@ -301,9 +301,12 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(emma).ToContainTextAsync("Geboren am 02.09.2017");
         // Story 2-2: Katrin hat Emma mit Konto angemeldet; die Card zeigt die Freizeit mit dem Status.
         await Assertions.Expect(emma.Locator(".zl-statusliste li")).ToContainTextAsync("Zeltlager Sommer 2027, 02.08.2027 – 13.08.2027");
-        await Assertions.Expect(emma.Locator(".zl-statusliste .elkw-status")).ToHaveTextAsync("Eingegangen");
+        await Assertions.Expect(emma.Locator(".zl-statusliste li > .elkw-status")).ToHaveTextAsync("Eingegangen");
         // Story 2-3: darunter der Kontakt der Leitung für Absagen.
         await Assertions.Expect(emma.Locator(".zl-absage-kontakt")).ToHaveTextAsync("Absage nur über die Leitung: zeltlager@example.org · 0123 456789");
+        // Story 2-4: der Weg zum Freizeitpass; die Demo-Freizeit fragt mehr ab, als Emmas Pass beantwortet.
+        await Assertions.Expect(emma.GetByRole(AriaRole.Link, new() { Name = "Freizeitpass", Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(emma.Locator(".zl-statusliste__darunter .elkw-status--warnung")).ToHaveTextAsync("Freizeitpass prüfen");
         // Nur bei Paul (volljährig) steht die Übergabe.
         await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Profil an Paul übergeben" })).ToHaveCountAsync(1);
         await Assertions.Expect(emma.GetByRole(AriaRole.Button)).ToHaveCountAsync(0);
@@ -753,6 +756,93 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await E2EHilfe.AxeAsync(seite);
 
         await BildAsync(seite, "anmeldung-team", geraet);
+    }
+
+    // ---------- Story 2-4: Freizeitpass ----------
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Freizeitpass_Fragen(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, PruefMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Einstellungen" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Einstellungen", new() { Timeout = 60_000 });
+        var card = seite.Locator(".elkw-card").Filter(new() { HasText = "Ohne Auswahl fragt der Freizeitpass nichts ab." });
+        await Assertions.Expect(card).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        var teilnehmende = card.Locator("fieldset").Filter(new() { HasText = "Fragen für Teilnehmende" });
+        var mitarbeitende = card.Locator("fieldset").Filter(new() { HasText = "Fragen für Mitarbeitende" });
+        await Assertions.Expect(teilnehmende.GetByLabel("Allergien und Unverträglichkeiten")).ToBeCheckedAsync();
+        await Assertions.Expect(teilnehmende.GetByLabel("Kann schwimmen")).ToBeCheckedAsync();
+        await Assertions.Expect(teilnehmende.GetByLabel("Krankenversicherung")).Not.ToBeCheckedAsync();
+        await Assertions.Expect(teilnehmende.Locator("input:checked")).ToHaveCountAsync(8);
+        await Assertions.Expect(mitarbeitende.Locator("input:checked")).ToHaveCountAsync(4);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        await card.ScrollIntoViewIfNeededAsync();
+        await card.EvaluateAsync("k => k.scrollIntoView({ block: 'start' })");
+
+        await BildAsync(seite, "freizeitpass-fragen", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Freizeitpass_Ausfuellen(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, ElternMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Familie öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        var emma = seite.Locator(".elkw-card").Filter(new() { HasText = "Emma Muster" });
+        await emma.GetByRole(AriaRole.Link, new() { Name = "Freizeitpass", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Freizeitpass für Emma", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByText("Zeltlager Sommer 2027 · 02.08.2027 – 13.08.2027")).ToBeVisibleAsync();
+        // Allergien, Medikamente und Notfallkontakte zuerst, nie zugeklappt; nur die Fragen der Freizeit.
+        await Assertions.Expect(seite.Locator("legend, label:not(.elkw-choice)").First).ToHaveTextAsync("Allergien und Unverträglichkeiten");
+        await Assertions.Expect(seite.GetByLabel("Milch (inkl. Laktose)")).ToBeCheckedAsync();
+        await Assertions.Expect(seite.GetByLabel("Medikamente (Name, Dosierung, wann)")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByLabel("Notfallkontakte (Name, Telefon)")).ToHaveValueAsync("Katrin Muster (Mutter), 0123 456780");
+        await Assertions.Expect(seite.Locator("fieldset").Filter(new() { HasText = "Kann schwimmen" }).GetByLabel("Ja")).ToBeCheckedAsync();
+        await Assertions.Expect(seite.GetByLabel("Krankenversicherung")).ToHaveCountAsync(0);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "freizeitpass", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Gast_Freizeitpass(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+        var vorher = host.Mails.An(GastMail).Count;
+        await GastFormularAsync(seite);
+        await E2EHilfe.GastFormularAbsendenAsync(seite, "Lina", "Sabine", GastMail);
+        var link = (await host.Mails.WartenAufAsync(GastMail, vorher + 1)).Link;
+        await seite.GotoAsync(link);
+        var bis = DateTime.UtcNow.AddSeconds(60);
+        while (!(await seite.Locator("main").InnerTextAsync()).Contains("Gast-Link gilt bis 12.09.2027", StringComparison.Ordinal) && DateTime.UtcNow < bis)
+        {
+            await Task.Delay(1000, TestContext.Current.CancellationToken);
+            await seite.ReloadAsync();
+        }
+
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeitpass für Lina" }).Last.ClickAsync();
+
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Freizeitpass für Lina", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("legend").First).ToHaveTextAsync("Allergien und Unverträglichkeiten");
+        await Assertions.Expect(seite.GetByLabel("Notfallkontakte (Name, Telefon)")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByLabel("Letzte Tetanus-Impfung")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Speichern" })).ToBeVisibleAsync();
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "gast-freizeitpass", geraet);
     }
 
     // ---------- Story 2-3: Anmeldungen bestätigen und absagen ----------

@@ -7,6 +7,7 @@ using Zeltlotse.Freizeiten.Daten;
 using Zeltlotse.Freizeiten.Domaene;
 using Zeltlotse.Freizeiten.Rechte;
 using Zeltlotse.Organisationen.Contracts.Vertrauensseite;
+using Zeltlotse.Personen.Contracts.Freizeitpass;
 using Zeltlotse.Personen.Contracts.Namen;
 using Zeltlotse.SharedKernel.Mandanten;
 using ApiFreizeitseite = Zeltlotse.Api.Contracts.Freizeiten.Freizeitseite;
@@ -90,7 +91,8 @@ internal static class FreizeitseiteOeffentlichEndpunkt
 
 /// <summary>
 /// <c>GET /api/freizeiten/oeffentlich/{token}/vertrauensseite</c> (anonym, zugriffsbegrenzt, FR-66): die gespeicherten Einstellungen
-/// von Freizeit (Name, Daten, Freigabe-Intervall, „Freigabe bis“) und Organisation (Name, Löschfristen, Pflicht-Nachweise).
+/// von Freizeit (Name, Daten, Freigabe-Intervall, „Freigabe bis“, Fragen des Freizeitpasses je Zielgruppe) und Organisation (Name,
+/// Löschfristen, Pflicht-Nachweise).
 /// Mandant aus dem Token. Ungültiger Link <c>404</c>.
 /// </summary>
 internal static class VertrauensseiteEndpunkt
@@ -115,8 +117,14 @@ internal static class VertrauensseiteEndpunkt
             FreizeitZeiten.FreigabeBis(freizeit.LetzterTag, freizeit.FreigabeIntervallTage),
             angaben.FreizeitDatenMonate,
             angaben.NachweisBestaetigungMonate,
-            [.. angaben.PflichtArten.Select(Bezeichnung)]));
+            [.. angaben.PflichtArten.Select(Bezeichnung)],
+            Fragetexte(freizeit.FragenTeilnehmende),
+            Fragetexte(freizeit.FragenMitarbeitende)));
     }
+
+    /// <summary>Die Texte der gewählten Fragen aus dem Katalog von Personen (Story 2-4, FR-22), in Katalogreihenfolge.</summary>
+    private static List<string> Fragetexte(IEnumerable<string> kennungen) =>
+        [.. Fragenkatalog.Ordnen(kennungen).Select(k => Fragenkatalog.Finden(k)!.Frage)];
 
     /// <summary>Deutsche Bezeichnung einer Nachweisart (Glossar).</summary>
     internal static string Bezeichnung(OrgNachweisArt art) => art switch

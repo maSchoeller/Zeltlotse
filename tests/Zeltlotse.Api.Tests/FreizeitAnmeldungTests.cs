@@ -310,7 +310,7 @@ public sealed class FreizeitAnmeldungTests(PostgresContainer postgres) : IAsyncL
         var json = JsonDocument.Parse(roh).RootElement;
         Assert.Equal(["anmeldungen", "gueltigBis"], Namen(json));
         var zeile = Assert.Single(json.GetProperty("anmeldungen").EnumerateArray());
-        Assert.Equal(["ersterTag", "freizeitName", "kontaktMail", "kontaktTelefon", "letzterTag", "status", "vorname"], Namen(zeile));
+        Assert.Equal(["anmeldungId", "ersterTag", "fragen", "freizeitName", "kontaktMail", "kontaktTelefon", "letzterTag", "personId", "status", "vorname"], Namen(zeile));
         Assert.Equal(("Lina", Kapf, "2027-08-02", "2027-08-13", "Eingegangen"), (
             zeile.GetProperty("vorname").GetString(),
             zeile.GetProperty("freizeitName").GetString(),
@@ -318,7 +318,8 @@ public sealed class FreizeitAnmeldungTests(PostgresContainer postgres) : IAsyncL
             zeile.GetProperty("letzterTag").GetString(),
             zeile.GetProperty("status").GetString()));
         Assert.DoesNotContain("@", roh, StringComparison.Ordinal);
-        Assert.DoesNotContain(kind.ToString(), roh, StringComparison.OrdinalIgnoreCase);
+        // Story 2-4: Kennung des Kindes für den Freizeitpass über den Gast-Link (nur Kinder der eigenen Gast-Familie).
+        Assert.Equal(kind, zeile.GetProperty("personId").GetGuid());
 
         foreach (var falsch in new[] { Zugangslink.NeuesToken(), "kurz", _tnX, LeitungsToken(_factory, Miriam) })
         {
@@ -538,7 +539,7 @@ public sealed class FreizeitAnmeldungTests(PostgresContainer postgres) : IAsyncL
         Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
         var zeilen = (await JsonAsync(antwort)).EnumerateArray().ToList();
         Assert.Equal(3, zeilen.Count);
-        Assert.All(zeilen, z => Assert.Equal(["anmeldungId", "art", "ersterTag", "freizeitName", "kontaktMail", "kontaktTelefon", "letzterTag", "personId", "status"], Namen(z)));
+        Assert.All(zeilen, z => Assert.Equal(["anmeldungId", "art", "ersterTag", "fragen", "freizeitName", "kontaktMail", "kontaktTelefon", "letzterTag", "personId", "status"], Namen(z)));
         Assert.Equal(["Z", "Z", Kapf], zeilen.Select(z => z.GetProperty("freizeitName").GetString()));
         Assert.All(zeilen, z => Assert.Equal(("Teilnehmende", "Eingegangen"), (z.GetProperty("art").GetString(), z.GetProperty("status").GetString())));
 

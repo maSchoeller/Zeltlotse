@@ -335,7 +335,7 @@ public sealed class FreizeitseiteTests(PostgresContainer postgres) : IAsyncLifet
         var vorher = await JsonAsync(await _anonym.GetAsync(OeffentlichPfad(token) + "/vertrauensseite", Abbruch));
 
         Assert.Equal(
-            ["ersterTag", "freigabeBis", "freigabeIntervallTage", "freizeitDatenMonate", "letzterTag", "nachweisBestaetigungMonate", "name", "organisation", "pflichtNachweise"],
+            ["ersterTag", "fragenMitarbeitende", "fragenTeilnehmende", "freigabeBis", "freigabeIntervallTage", "freizeitDatenMonate", "letzterTag", "nachweisBestaetigungMonate", "name", "organisation", "pflichtNachweise"],
             Namen(vorher));
         Assert.Equal(("CVJM Musterstadt", "Zeltlager Kapf 2027", 30, "2027-09-12", 12, 12), (
             vorher.GetProperty("organisation").GetString(),
@@ -430,10 +430,34 @@ public sealed class FreizeitseiteTests(PostgresContainer postgres) : IAsyncLifet
         Assert.Contains("12 Monate", html, StringComparison.Ordinal);
         Assert.Contains("Freigabefenster", html, StringComparison.Ordinal);
         Assert.Contains("Freizeitpass", html, StringComparison.Ordinal);
+        // Story 2-4: Eine neue Freizeit fragt im Freizeitpass nichts ab.
+        Assert.Contains("Der Freizeitpass fragt derzeit nichts ab.", html, StringComparison.Ordinal);
         Assert.Contains($"href=\"/freizeit/{token}\"", html, StringComparison.Ordinal);
         Assert.Contains("<meta name=\"robots\" content=\"noindex\"", html, StringComparison.Ordinal);
         Assert.DoesNotContain("<script", html, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("style=", html, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Vertrauensseite_nennt_nach_der_Auswahl_die_Fragen_des_Freizeitpasses_je_Zielgruppe()
+    {
+        var token = Token((await AnmeldelinksAsync(_miriam, _x))["Teilnehmende"]);
+        foreach (var (feld, wert) in new[] { ("teilnehmende", "allergien,schwimmen"), ("mitarbeitende", "notfallkontakte") })
+        {
+            var version = (await JsonAsync(await _miriam.GetAsync($"/api/freizeiten/{_x}/fragen", Abbruch))).GetProperty("version").GetUInt32();
+            using var patch = await SendenAsync(_miriam, HttpMethod.Patch, $"/api/freizeiten/{_x}/fragen", $$"""{"version":{{version}},"alterWert":null,"{{feld}}":"{{wert}}"}""");
+            Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
+        }
+
+        using var antwort = await SeiteAsync($"/freizeit/{token}/vertrauensseite");
+
+        var html = WebUtility.HtmlDecode(await antwort.Content.ReadAsStringAsync(Abbruch));
+        Assert.DoesNotContain("Der Freizeitpass fragt derzeit nichts ab.", html, StringComparison.Ordinal);
+        Assert.Contains("Für Teilnehmende", html, StringComparison.Ordinal);
+        Assert.Contains("<li>Allergien und Unverträglichkeiten</li>", html, StringComparison.Ordinal);
+        Assert.Contains("<li>Kann schwimmen</li>", html, StringComparison.Ordinal);
+        Assert.Contains("Für Mitarbeitende", html, StringComparison.Ordinal);
+        Assert.Contains("<li>Notfallkontakte (Name, Telefon)</li>", html, StringComparison.Ordinal);
     }
 
     [Theory]
