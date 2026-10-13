@@ -1094,6 +1094,8 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         ("Notfallnummern", "Eltern und Teilnehmende", "Freizeit"),
         ("Packliste", "Eltern und Teilnehmende", "Freizeit"),
         ("Programmideen", "Team", "Freizeit"),
+        // Story 2-9: das eingebundene Schutzkonzept.
+        ("Schutzkonzept Jugendwerk Musterstadt", "Team", "Organisation"),
     ];
 
     /// <summary>Die Elterninfo der Demo-Freizeit: die vier Dokumente für Eltern und Teilnehmende.</summary>
@@ -1192,9 +1194,11 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Org-Dokumente", new() { Timeout = 60_000 });
         await Assertions.Expect(seite.GetByText("Freizeiten der Organisation binden diese Dokumente ein, ohne sie zu kopieren.")).ToBeVisibleAsync();
         var zeilen = seite.Locator("tbody tr");
-        await Assertions.Expect(zeilen).ToHaveCountAsync(2, new() { Timeout = 60_000 });
+        // Story 2-9: dazu das Schutzkonzept der Organisation.
+        await Assertions.Expect(zeilen).ToHaveCountAsync(3, new() { Timeout = 60_000 });
         await Assertions.Expect(zeilen.Nth(0).GetByRole(AriaRole.Link, new() { Name = "Hausordnung Zeltplatz" })).ToBeVisibleAsync();
         await Assertions.Expect(zeilen.Nth(1).GetByRole(AriaRole.Link, new() { Name = "Leitfaden Aufsichtspflicht" })).ToBeVisibleAsync();
+        await Assertions.Expect(zeilen.Nth(2).GetByRole(AriaRole.Link, new() { Name = "Schutzkonzept Jugendwerk Musterstadt" })).ToBeVisibleAsync();
         await Assertions.Expect(zeilen.Nth(0).GetByRole(AriaRole.Button, new() { Name = "Entfernen" })).ToBeVisibleAsync();
         await Assertions.Expect(seite.GetByRole(AriaRole.Heading, new() { Name = "Dokument hochladen" })).ToBeVisibleAsync();
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
@@ -1296,6 +1300,88 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await card.EvaluateAsync("karte => karte.scrollIntoView({ block: 'start' })");
 
         await BildAsync(seite, "sicherheitskette-einrichten", geraet);
+    }
+
+    // ---------- Story 2-9: Schutzkonzept ----------
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Schutzkonzept(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await LeaStartseiteAsync(seite);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Schutzkonzept", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Schutzkonzept", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator(".elkw-kicker")).ToHaveTextAsync("Sicherheit");
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Schutzkonzept Jugendwerk Musterstadt (PDF)" })).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        // Nur lesend: Lea bestätigt nicht, damit der Demo-Stand für die anderen Bilder bleibt.
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Als gelesen bestätigen" })).ToBeVisibleAsync();
+        var team = seite.Locator(".elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = "Team", Exact = true }) });
+        await Assertions.Expect(team.Locator(".zl-zahl")).ToHaveTextAsync("1 von 3 gelesen");
+        var personen = team.Locator(".elkw-people li");
+        await Assertions.Expect(personen).ToHaveCountAsync(3);
+        await Assertions.Expect(personen.Nth(0)).ToContainTextAsync("Lea Feuerstein");
+        await Assertions.Expect(personen.Nth(0)).ToContainTextAsync("Team · noch nicht gelesen");
+        await Assertions.Expect(personen.Nth(1)).ToContainTextAsync("Jonas Hüttner");
+        await Assertions.Expect(personen.Nth(1)).ToContainTextAsync("Leitung · gelesen am");
+        await Assertions.Expect(personen.Nth(2)).ToContainTextAsync("Miriam Zeltner");
+        await Assertions.Expect(personen.Nth(2)).ToContainTextAsync("Leitung · noch nicht gelesen");
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        // Das Datum der Bestätigung hängt vom Tag des Einspielens ab; im Bild steht ein festes.
+        await personen.Nth(1).Locator(".elkw-people__who span").EvaluateAsync("z => z.textContent = 'Leitung · gelesen am 12.10.2026'");
+
+        await BildAsync(seite, "schutzkonzept", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Schutzkonzept_Hinweis(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await LeaStartseiteAsync(seite);
+        var card = seite.Locator(".elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = "Schutzkonzept", Exact = true }) });
+        await Assertions.Expect(card).ToContainTextAsync("Das Schutzkonzept ist noch nicht als gelesen bestätigt.", new() { Timeout = 60_000 });
+        await Assertions.Expect(card.GetByRole(AriaRole.Link, new() { Name = "Schutzkonzept lesen" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Schutzkonzept", Exact = true })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "schutzkonzept-hinweis", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Schutzkonzept_Einrichten(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await EinstellungenAsync(seite);
+        var card = seite.Locator("#schutzkonzept");
+        await Assertions.Expect(card).ToContainTextAsync("Jedes Teammitglied bestätigt es als gelesen.", new() { Timeout = 60_000 });
+        await Assertions.Expect(card.GetByLabel("Schutzkonzept Jugendwerk Musterstadt")).ToBeCheckedAsync();
+        await Assertions.Expect(card.GetByLabel("Kein Schutzkonzept")).Not.ToBeCheckedAsync();
+        await Assertions.Expect(card.GetByLabel("Packliste")).ToBeVisibleAsync();
+        await Assertions.Expect(card.GetByRole(AriaRole.Link, new() { Name = "Wer hat gelesen?" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        await card.EvaluateAsync("karte => karte.scrollIntoView({ block: 'start' })");
+
+        await BildAsync(seite, "schutzkonzept-einrichten", geraet);
+    }
+
+    /// <summary>Lea (Team) meldet sich an und öffnet die Startseite der Demo-Freizeit.</summary>
+    private async Task LeaStartseiteAsync(IPage seite)
+    {
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, TeamMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByText("Rolle: Team")).ToBeVisibleAsync();
     }
 
     /// <summary>Lea (Team) meldet sich an, öffnet die Demo-Freizeit und tippt „Sicherheitskette“.</summary>

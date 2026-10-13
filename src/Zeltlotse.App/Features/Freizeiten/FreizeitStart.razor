@@ -23,6 +23,9 @@
    Story 2-8: Während der Freizeit (Phase „läuft“) steht für alle Rollen direkt unter der Überschrift die Notfall-Box und darunter die
    Schnellsuche; in jeder Phase führt der Knopf „Sicherheitskette“ zur Sicherheitskette. Mit „freizeit-einstellungen“ lädt das Cockpit
    die Kette; ist sie nicht eingerichtet, steht unter „Warnhinweise“ die Zeile mit Link auf die Card in den Einstellungen.
+   Story 2-9: Für alle Rollen lädt die Startseite das Schutzkonzept still mit (scheitert → keine Card). Gibt es eines, das die Person noch
+   nicht bestätigt hat, und ist die Freizeit nicht abgeschlossen, steht die Card „Schutzkonzept“ da (kein Cockpit-Warnhinweis); der Knopf
+   „Schutzkonzept“ steht in jeder Phase.
    403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>@(_freizeit?.Name ?? "Freizeit") – Zeltlotse</PageTitle>
 
@@ -63,6 +66,13 @@ else
         <p>Leitung: @string.Join(", ", _freizeit.Leitung.Select(l => Anzeige.Name(l.Vorname, l.Nachname)))</p>
     }
     <p>Einsicht in Freizeitpässe bis @Anzeige.Datum(_freizeit.FreigabeBis)</p>
+    @if (SchutzkonzeptOffen)
+    {
+        <Card Titel="Schutzkonzept">
+            <p>Das Schutzkonzept ist noch nicht als gelesen bestätigt.</p>
+            <p><Knopf Href="@SchutzkonzeptZiel" Ansichtswechsel="true">Schutzkonzept lesen</Knopf></p>
+        </Card>
+    }
     @if (DarfAnmeldungen)
     {
         @if (_anmeldungen is not null)
@@ -127,6 +137,8 @@ else
     }
     @* Story 2-8: Die Sicherheitskette ist in jeder Phase für Leitung und Team erreichbar. *@
     <p><Knopf Art="KnopfArt.Outline" Href="@NotfallZiel" Ansichtswechsel="true">Sicherheitskette</Knopf></p>
+    @* Story 2-9: Das Schutzkonzept ist in jeder Phase für Leitung und Team erreichbar. *@
+    <p><Knopf Art="KnopfArt.Outline" Href="@SchutzkonzeptZiel" Ansichtswechsel="true">Schutzkonzept</Knopf></p>
     @if (FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.FreizeitpaesseSehen))
     {
         <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/freizeitpaesse")" Ansichtswechsel="true">Freizeitpässe</Knopf></p>
@@ -153,6 +165,7 @@ else
     private int? _personenMitWarnung;
     private Zeltlotse.Api.Contracts.Sicherheit.Sicherheitskette? _kette;
     private List<PersonenlisteZeile>? _personen;
+    private Zeltlotse.Api.Contracts.Sicherheit.Schutzkonzept? _schutzkonzept;
     private bool _uebertraegt;
     private string? _meldung;
     private bool _meldungFehler;
@@ -176,6 +189,13 @@ else
 
     /// <summary>Story 2-8: Ziel der Notfall-Box und des Knopfs „Sicherheitskette“.</summary>
     private string NotfallZiel => $"freizeiten/{FreizeitId}/notfall";
+
+    /// <summary>Story 2-9: Ziel der Card und des Knopfs „Schutzkonzept“.</summary>
+    private string SchutzkonzeptZiel => $"freizeiten/{FreizeitId}/schutzkonzept";
+
+    /// <summary>Story 2-9: Ein Schutzkonzept ist angehängt, die Person hat es noch nicht bestätigt, und die Freizeit ist nicht abgeschlossen.</summary>
+    private bool SchutzkonzeptOffen =>
+        _schutzkonzept is { DokumentId: not null, SelbstGelesenAm: null } && _kontext is not null && _kontext.Phase != Phase.Gelaufen;
 
     private const string NotfallSatz = "Was jetzt zu tun ist, wen anrufen und die Freizeitpässe – ein Tipp entfernt.";
 
@@ -234,6 +254,7 @@ else
         _personenMitWarnung = null;
         _kette = null;
         _personen = null;
+        _schutzkonzept = null;
         _meldung = null;
         try
         {
@@ -257,9 +278,14 @@ else
 
         // Story 2-8: Während der Freizeit lädt die Startseite für alle Rollen die Personenliste der Schnellsuche (scheitert → keine Suche).
         var personen = _kontext!.Phase == Phase.Laeuft ? SicherAsync(() => Freizeiten.PersonenlisteLadenAsync(FreizeitId)) : Task.FromResult<List<PersonenlisteZeile>?>(null);
+        // Story 2-9: das Schutzkonzept für die Card (nicht nach dem Abschluss; scheitert → keine Card).
+        var schutzkonzept = _kontext.Phase != Phase.Gelaufen
+            ? SicherAsync(() => SicherheitApi.SchutzkonzeptLadenAsync(FreizeitId))
+            : Task.FromResult<Zeltlotse.Api.Contracts.Sicherheit.Schutzkonzept?>(null);
         if (!DarfCockpit)
         {
-            _personen = await personen;
+            await Task.WhenAll(personen, schutzkonzept);
+            (_personen, _schutzkonzept) = (personen.Result, schutzkonzept.Result);
             return;
         }
 
@@ -268,8 +294,9 @@ else
         var stand = DarfAnmeldungen ? StandLadenAsync() : Task.FromResult<List<FreizeitpassStandPerson>?>(null);
         var warnungen = DarfNachweise ? WarnungenLadenAsync() : Task.FromResult<int?>(null);
         var kette = DarfEinstellungen ? SicherAsync(() => SicherheitApi.SicherheitsketteLadenAsync(FreizeitId)) : Task.FromResult<Zeltlotse.Api.Contracts.Sicherheit.Sicherheitskette?>(null);
-        await Task.WhenAll(anmeldungen, stand, warnungen, kette, personen);
+        await Task.WhenAll(anmeldungen, stand, warnungen, kette, personen, schutzkonzept);
         (_anmeldungen, _stand, _personenMitWarnung, _kette, _personen) = (anmeldungen.Result, stand.Result, warnungen.Result, kette.Result, personen.Result);
+        _schutzkonzept = schutzkonzept.Result;
         _cockpitGeladen = true;
     }
 

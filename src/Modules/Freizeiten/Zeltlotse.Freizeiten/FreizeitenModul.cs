@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Freizeiten.Anmeldungen;
 using Zeltlotse.Freizeiten.Anmeldungen.Entscheiden;
+using Zeltlotse.Freizeiten.Contracts.Dokumente;
 using Zeltlotse.Freizeiten.Contracts.Rollen;
+using Zeltlotse.Freizeiten.Contracts.Team;
 using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
 using Zeltlotse.Freizeiten.Daten;
 using Zeltlotse.Freizeiten.Datenschutz;
@@ -38,6 +40,9 @@ public static class FreizeitenModul
         services.AddModul<FreizeitenDbContext, FreizeitenLeseDbContext>(Name, Schema);
         services.AddScoped<IFreizeitRollenLesen, FreizeitRollenLesen>();
         services.AddScoped<IFreizeitZeitpunkte, FreizeitZeitpunkteLesen>();
+        // Story 2-9: Team und Dokumente für das Schutzkonzept (Pfeil Sicherheit → Freizeiten).
+        services.AddScoped<IFreizeitTeamLesen, FreizeitTeamLesen>();
+        services.AddScoped<IFreizeitDokumenteLesen, FreizeitDokumenteLesen>();
         services.AddScoped<IFreizeitEndenLesen, FreizeitEndenLesen>();
         services.AddScoped<IBestaetigteTeilnehmende, BestaetigteTeilnehmendeZaehlen>();
         services.VerschicktMail<AnmeldungEntschiedenMail, AnmeldungEntschiedenMailAufbau>();

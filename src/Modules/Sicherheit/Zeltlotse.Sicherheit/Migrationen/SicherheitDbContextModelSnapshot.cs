@@ -120,6 +120,68 @@ namespace Zeltlotse.Sicherheit.Migrationen
                     b.ToTable("outbox_zustellung", "sicherheit");
                 });
 
+            modelBuilder.Entity("Zeltlotse.Sicherheit.Schutzkonzept.Schutzkonzept", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DokumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FreizeitId")
+                        .IsUnique();
+
+                    b.HasIndex("OrganisationId");
+
+                    b.ToTable("schutzkonzept", "sicherheit");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Sicherheit.Schutzkonzept.SchutzkonzeptBestaetigung", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DokumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("GelesenAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("FreizeitId", "DokumentId", "PersonId")
+                        .IsUnique();
+
+                    b.ToTable("schutzkonzept_bestaetigung", "sicherheit");
+                });
+
             modelBuilder.Entity("Zeltlotse.Sicherheit.Sicherheitskette.Sicherheitskette", b =>
                 {
                     b.Property<Guid>("Id")

@@ -13,7 +13,8 @@ namespace Zeltlotse.Ablaeufe.Tests;
 /// <summary>
 /// Durchlauf-Test (AD-28, AD-30) für die Zeile <c>PersonGeloescht</c> (Personen → jedes Modul mit Personenbezug) der Tabelle
 /// Ereignis-Fluss: Jonas (Org-Überblick und Leitung) löscht sein Konto; die Outbox wird sofort abgearbeitet. Danach haben Konten,
-/// Organisationen und Freizeiten das Ereignis je genau einmal verarbeitet (Inbox), und keines hat noch eine Zeile der Person. Ein
+/// Organisationen, Freizeiten und Sicherheit (Story 2-9: Schutzkonzept-Bestätigungen) das Ereignis je genau einmal verarbeitet (Inbox),
+/// und keines hat noch eine Zeile der Person. Ein
 /// zweites Zustellen desselben Ereignisses verwirft die Inbox.
 /// </summary>
 public sealed class PersonGeloeschtTests(PostgresContainer postgres)
@@ -51,6 +52,12 @@ public sealed class PersonGeloeschtTests(PostgresContainer postgres)
         Assert.Equal(1L, await WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.org_rolle WHERE \"PersonId\" = @p", ("p", jonasId)));
         Assert.Equal(1L, await WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.freizeit_rolle WHERE \"PersonId\" = @p", ("p", jonasId)));
 
+        // Story 2-9: eine Schutzkonzept-Bestätigung von Jonas (direkt eingefügt; das Bestätigen selbst prüfen die API-Tests).
+        await AusfuehrenAsync(
+            verbindung,
+            "INSERT INTO sicherheit.schutzkonzept_bestaetigung (\"Id\", \"OrganisationId\", \"FreizeitId\", \"DokumentId\", \"PersonId\", \"GelesenAm\") VALUES (@id, @o, @f, @d, @p, now())",
+            ("id", Guid.CreateVersion7()), ("o", orgId), ("f", freizeitId), ("d", Guid.CreateVersion7()), ("p", jonasId));
+
         Assert.Equal(HttpStatusCode.NoContent, (await SendenAsync(jonas, "/api/ich/profil/loeschen", null)).StatusCode);
         Assert.Equal(1L, await WertAsync<long>(verbindung, "SELECT count(*) FROM konten.konto WHERE \"PersonId\" = @p", ("p", jonasId)));
 
@@ -60,10 +67,11 @@ public sealed class PersonGeloeschtTests(PostgresContainer postgres)
         Assert.Equal(0L, await WertAsync<long>(verbindung, "SELECT count(*) FROM konten.konto WHERE \"PersonId\" = @p", ("p", jonasId)));
         Assert.Equal(0L, await WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.org_rolle WHERE \"PersonId\" = @p", ("p", jonasId)));
         Assert.Equal(0L, await WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.freizeit_rolle WHERE \"PersonId\" = @p", ("p", jonasId)));
-        Assert.Equal(3L, await WertAsync<long>(
+        Assert.Equal(0L, await WertAsync<long>(verbindung, "SELECT count(*) FROM sicherheit.schutzkonzept_bestaetigung WHERE \"PersonId\" = @p", ("p", jonasId)));
+        Assert.Equal(4L, await WertAsync<long>(
             verbindung,
             "SELECT count(*) FROM personen.outbox_zustellung z JOIN personen.outbox o ON o.\"Id\" = z.\"EreignisId\" WHERE o.\"Typ\" LIKE '%.PersonGeloescht' AND z.\"ErledigtAm\" IS NOT NULL"));
-        foreach (var schema in new[] { "konten", "organisationen", "freizeiten" })
+        foreach (var schema in new[] { "konten", "organisationen", "freizeiten", "sicherheit" })
         {
             Assert.Equal(1L, await WertAsync<long>(verbindung, $"SELECT count(*) FROM {schema}.inbox WHERE \"Empfaenger\" LIKE '%PersonLoeschen' OR \"Empfaenger\" LIKE '%KontoLoeschen'"));
         }
@@ -71,7 +79,7 @@ public sealed class PersonGeloeschtTests(PostgresContainer postgres)
         // Ein zweites Zustellen desselben Ereignisses verwirft die Inbox (Zustellstand zurücksetzen und erneut zustellen).
         await AusfuehrenAsync(verbindung, "UPDATE personen.outbox_zustellung SET \"ErledigtAm\" = NULL");
         await factory.OutboxJetztZustellenAsync(Abbruch);
-        foreach (var schema in new[] { "konten", "organisationen", "freizeiten" })
+        foreach (var schema in new[] { "konten", "organisationen", "freizeiten", "sicherheit" })
         {
             Assert.Equal(1L, await WertAsync<long>(verbindung, $"SELECT count(*) FROM {schema}.inbox WHERE \"Empfaenger\" LIKE '%PersonLoeschen' OR \"Empfaenger\" LIKE '%KontoLoeschen'"));
         }
@@ -127,11 +135,16 @@ public sealed class PersonGeloeschtTests(PostgresContainer postgres)
         return (T)(await befehl.ExecuteScalarAsync(Abbruch))!;
     }
 
-    private static async Task AusfuehrenAsync(string verbindung, string sql)
+    private static async Task AusfuehrenAsync(string verbindung, string sql, params (string Name, object Wert)[] parameter)
     {
         await using var db = new NpgsqlConnection(verbindung);
         await db.OpenAsync(Abbruch);
         await using var befehl = new NpgsqlCommand(sql, db);
+        foreach (var (name, wert) in parameter)
+        {
+            befehl.Parameters.AddWithValue(name, wert);
+        }
+
         await befehl.ExecuteNonQueryAsync(Abbruch);
     }
 }

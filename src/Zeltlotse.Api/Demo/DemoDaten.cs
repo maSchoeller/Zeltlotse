@@ -30,6 +30,7 @@ using Zeltlotse.SharedKernel.Outbox;
 using Zeltlotse.SharedKernel.Rechte;
 using Zeltlotse.Api.Contracts.Sicherheit;
 using Zeltlotse.Sicherheit.Daten;
+using Zeltlotse.Sicherheit.Schutzkonzept;
 using Zeltlotse.Sicherheit.Sicherheitskette;
 using EinsichtStatus = Zeltlotse.Personen.Nachweise.EinsichtStatus;
 using NachweisArt = Zeltlotse.Personen.Contracts.Events.NachweisArt;
@@ -73,6 +74,8 @@ namespace Zeltlotse.Api.Demo;
 /// Allergien, Notfallkontakte und Schwimmen (je nur ohne Antwort); Lea schreibt eine Team-Notiz zu Mia (nur ohne Notiz).
 /// Story 2-7: zwei Org-Dokumente, fünf Dokumente der Freizeit und die eingebundene Hausordnung (je nur, wenn sie fehlen).
 /// Story 2-8: Miriam richtet die Sicherheitskette ein (je Feld nur, wenn es leer ist).
+/// Story 2-9: Andrea lädt das Org-Dokument „Schutzkonzept Jugendwerk Musterstadt“ hoch, die Freizeit bindet es ein (Sichtbarkeit Team) und
+/// wählt es als Schutzkonzept; Jonas bestätigt es als gelesen (je nur, wenn es fehlt).
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -124,6 +127,7 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await TeamNotizAsync(abbruch);
         await DokumenteAsync(abbruch);
         await SicherheitsketteAsync(abbruch);
+        await SchutzkonzeptAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -652,6 +656,65 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             {
                 throw new InvalidOperationException($"Demo-Sicherheitskette: {feld} ließ sich nicht setzen.");
             }
+        }
+    }
+
+    /// <summary>
+    /// Story 2-9: Andrea lädt das Org-Dokument <see cref="DemoKatalog.Schutzkonzept"/> hoch, die Demo-Freizeit bindet es ein (Sichtbarkeit
+    /// Team) und wählt es als Schutzkonzept, Jonas bestätigt es als gelesen. Über die Commands der Module und je nur, wenn es fehlt; ein schon
+    /// gewähltes anderes Schutzkonzept bleibt.
+    /// </summary>
+    private async Task SchutzkonzeptAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        var organisationId = await OrganisationIdAsync(dienste, abbruch);
+        dienste.GetRequiredService<MandantenKontext>().Setzen(organisationId);
+        var org = dienste.GetRequiredService<OrganisationenLeseDbContext>();
+        var lesen = dienste.GetRequiredService<FreizeitenLeseDbContext>();
+        var freizeitId = await lesen.Freizeiten.Where(f => f.Name == DemoKatalog.Freizeit.Name).Select(f => f.Id).SingleAsync(abbruch);
+
+        if (!await org.Dokumente.AnyAsync(d => d.Titel == DemoKatalog.Schutzkonzept, abbruch))
+        {
+            await sender.Send(
+                new OrgDokumentHochladenCommand(
+                    organisationId, $"{DemoKatalog.Schutzkonzept}.pdf", DemoDateien.Pdf($"Demo-Dokument: {DemoKatalog.Schutzkonzept} (erfunden)"),
+                    SharedKernel.Dateien.DateiArt.Pdf),
+                abbruch);
+        }
+
+        var orgDokument = await org.Dokumente.Where(d => d.Titel == DemoKatalog.Schutzkonzept).Select(d => d.Id).SingleAsync(abbruch);
+        var dokumentId = await lesen.Dokumente.Where(d => d.FreizeitId == freizeitId && d.OrgDokumentId == orgDokument).Select(d => (Guid?)d.Id).SingleOrDefaultAsync(abbruch);
+        if (dokumentId is null)
+        {
+            if (await sender.Send(new DokumentEinbindenCommand(freizeitId, orgDokument), abbruch) is not DokumentAenderung.Eingebunden eingebunden)
+            {
+                throw new InvalidOperationException("Demo-Schutzkonzept: ließ sich nicht einbinden.");
+            }
+
+            dokumentId = eingebunden.Dokument.Id;
+        }
+
+        var sicherheit = dienste.GetRequiredService<SicherheitLeseDbContext>();
+        var konzept = await sicherheit.Schutzkonzepte.SingleOrDefaultAsync(k => k.FreizeitId == freizeitId, abbruch);
+        if (konzept?.DokumentId is null
+            && await sender.Send(new SchutzkonzeptFeldAendernCommand(freizeitId, Api.Contracts.Sicherheit.SchutzkonzeptFeld.DokumentId, konzept?.Version ?? 0, null, dokumentId), abbruch)
+                is not SchutzkonzeptAenderung.Gespeichert)
+        {
+            throw new InvalidOperationException("Demo-Schutzkonzept: ließ sich nicht wählen.");
+        }
+
+        if (konzept?.DokumentId is { } anderes && anderes != dokumentId)
+        {
+            return;
+        }
+
+        var jonas = (await sender.Send(new KontoSicherstellen("jonas.huettner@example.org"), abbruch)).PersonId;
+        if (!await sicherheit.SchutzkonzeptBestaetigungen.AnyAsync(b => b.FreizeitId == freizeitId && b.DokumentId == dokumentId && b.PersonId == jonas, abbruch)
+            && await sender.Send(new SchutzkonzeptGelesenCommand(freizeitId, dokumentId.Value, jonas), abbruch) != SchutzkonzeptBestaetigen.Bestaetigt)
+        {
+            throw new InvalidOperationException("Demo-Schutzkonzept: Jonas' Bestätigung ließ sich nicht speichern.");
         }
     }
 

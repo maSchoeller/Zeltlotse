@@ -10,6 +10,8 @@
     <ProjectReference Include="..\Zeltlotse.Sicherheit.Contracts\Zeltlotse.Sicherheit.Contracts.csproj" />
     <!-- Pfeil aus AD-2: Sicherheit liest Freizeiten (Phase für den Schreibschutz, AD-17). -->
     <ProjectReference Include="..\..\Freizeiten\Zeltlotse.Freizeiten.Contracts\Zeltlotse.Freizeiten.Contracts.csproj" />
+    <!-- Pfeil aus AD-2: Sicherheit liest Personen (Namen des Teams beim Schutzkonzept) und abonniert PersonGeloescht. -->
+    <ProjectReference Include="..\..\Personen\Zeltlotse.Personen.Contracts\Zeltlotse.Personen.Contracts.csproj" />
     <ProjectReference Include="..\..\..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
   </ItemGroup>
 

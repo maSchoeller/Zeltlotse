@@ -10,7 +10,9 @@
    „Freizeitseite“ mit Beschreibung (mehrzeilig), Ort, Höchstzahl Teilnehmende und Teilnahmebedingungen (mehrzeilig, FR-19) per
    Autosave (AD-19), Abschnitt „Kontakt für Absagen“ mit Mail-Adresse und Telefon der Leitung (FR-21, Story 2-3) per Autosave, Abschnitt
    „Freizeitpass“ mit der Fragen-Auswahl je Zielgruppe aus dem festen Katalog (FR-22, Story 2-4) per Autosave, Abschnitt „Sicherheitskette“
-   (FR-29, Story 2-8: was jetzt zu tun ist, Telefon der Leitung, Ansprechperson am Heimatort und ihr Telefon) per Autosave und Abschnitt
+   (FR-29, Story 2-8: was jetzt zu tun ist, Telefon der Leitung, Ansprechperson am Heimatort und ihr Telefon) per Autosave, Abschnitt
+   „Schutzkonzept“ (FR-30, Story 2-9: welches Dokument der Freizeit es ist, per Autosave, mit Weg zu den Dokumenten und zur Liste, wer
+   gelesen hat) und Abschnitt
    „Anmeldelinks“ mit beiden Links als Text, „Freizeitseite öffnen“ und „Neuen Link erzeugen“ über die Inline-Bestätigung. Ohne
    die erlaubte Aktion „freizeit-einstellungen“ oder bei 403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>Einstellungen – Zeltlotse</PageTitle>
@@ -112,6 +114,19 @@ else
             </Card>
         }
 
+        @if (_schutzkonzept is not null && _dokumente is not null)
+        {
+            <Card Titel="Schutzkonzept" Id="schutzkonzept">
+                <p>Jedes Teammitglied bestätigt es als gelesen. Wird es ausgetauscht, bestätigen alle neu.</p>
+                <AutosaveAuswahlgruppe Legende="Dokument" Id="schutzkonzept-dokument" Feldname="@SchutzkonzeptFelder.DokumentId" Mehrfach="false"
+                                       Pfad="@SicherheitApiClient.SchutzkonzeptPfad(FreizeitId)" Optionen="@SchutzkonzeptOptionen"
+                                       Wert="@_schutzkonzept.DokumentId?.ToString()" Version="@_schutzkonzept.Version"
+                                       NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+                <p>Neue Datei unter „<a href="@($"freizeiten/{FreizeitId}/dokumente")">Dokumente</a>“ hochladen oder aus der Organisation einbinden.</p>
+                <p><a href="@($"freizeiten/{FreizeitId}/schutzkonzept")">Wer hat gelesen?</a></p>
+            </Card>
+        }
+
         <Card Titel="Anmeldelinks">
             <p>Jeder Link öffnet die Freizeitseite und lässt sich beliebig oft teilen. Er gilt bis zum Ende der Freizeit.</p>
             @foreach (var art in Enum.GetValues<AnmeldelinkArt>())
@@ -140,6 +155,8 @@ else
     private FreizeitseiteEinstellungen? _einstellungen;
     private FragenAuswahl? _fragen;
     private Zeltlotse.Api.Contracts.Sicherheit.Sicherheitskette? _kette;
+    private Zeltlotse.Api.Contracts.Sicherheit.Schutzkonzept? _schutzkonzept;
+    private FreizeitDokumente? _dokumente;
     private bool _nichtVerfuegbar;
     private bool _aktionFehler;
     private bool _abgeschlossen;
@@ -155,6 +172,8 @@ else
         _einstellungen = null;
         _fragen = null;
         _kette = null;
+        _schutzkonzept = null;
+        _dokumente = null;
         _nichtVerfuegbar = false;
         _aktionFehler = false;
         _abgeschlossen = false;
@@ -172,6 +191,7 @@ else
             _einstellungen = await Freizeiten.FreizeitseiteLadenAsync(FreizeitId);
             _fragen = await Freizeiten.FragenLadenAsync(FreizeitId);
             _kette = await SicherheitApi.SicherheitsketteLadenAsync(FreizeitId);
+            (_schutzkonzept, _dokumente) = await SchutzkonzeptLadenAsync();
             _nichtVerfuegbar = _einstellungen is null;
         }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
@@ -190,6 +210,7 @@ else
             _einstellungen = await Freizeiten.FreizeitseiteLadenAsync(FreizeitId);
             _fragen = await Freizeiten.FragenLadenAsync(FreizeitId);
             _kette = await SicherheitApi.SicherheitsketteLadenAsync(FreizeitId);
+            (_schutzkonzept, _dokumente) = await SchutzkonzeptLadenAsync();
             _nichtVerfuegbar = _einstellungen is null;
         }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
@@ -197,6 +218,23 @@ else
             _aktionFehler = true;
         }
     }
+
+    /// <summary>Story 2-9: Schutzkonzept und Dokumente der Freizeit (die Optionen) parallel.</summary>
+    private async Task<(Zeltlotse.Api.Contracts.Sicherheit.Schutzkonzept?, FreizeitDokumente?)> SchutzkonzeptLadenAsync()
+    {
+        var schutzkonzept = SicherheitApi.SchutzkonzeptLadenAsync(FreizeitId);
+        var dokumente = Freizeiten.DokumenteLadenAsync(FreizeitId);
+        await Task.WhenAll(schutzkonzept, dokumente);
+        return (schutzkonzept.Result, dokumente.Result);
+    }
+
+    /// <summary>Story 2-9: „Kein Schutzkonzept“ (leer = <c>null</c>) und alle Dokumente der Freizeit nach Titel.</summary>
+    private IReadOnlyList<AuswahlOption> SchutzkonzeptOptionen =>
+    [
+        new("", "Kein Schutzkonzept"),
+        .. (_dokumente?.Dokumente ?? []).OrderBy(d => d.Titel, StringComparer.Create(System.Globalization.CultureInfo.GetCultureInfo("de-DE"), true))
+            .Select(d => new AuswahlOption(d.Id.ToString(), d.Titel)),
+    ];
 
     /// <summary>Die Fragen des Katalogs als Optionen der Auswahl, in Katalogreihenfolge.</summary>
     private IReadOnlyList<AuswahlOption> Katalog => [.. (_fragen?.Katalog ?? []).Select(f => new AuswahlOption(f.Kennung, f.Frage))];

@@ -5,12 +5,23 @@
    Auswahl als Komma-Liste der Werte in der Reihenfolge der Optionen (leer = null), bei Mehrfach als Kästchen, sonst als
    Optionsknöpfe (z. B. Ja/Nein). Ein Klick speichert sofort. Gespeichert → „Gespeichert · Rückgängig“ (erneuter PATCH mit dem
    vorigen Wert); 409 → „Inzwischen geändert – neu laden?“; Netzfehler oder 5xx → „Nicht gespeichert.“ mit „Erneut versuchen“,
-   die Auswahl bleibt, wie gewählt. Während der Übertragung sind die Optionen deaktiviert. *@
-<Auswahlgruppe Legende="@Legende" Optionen="@Optionen" Mehrfach="@Mehrfach" Werte="@_auswahl" Id="@Id" Name="@Feldname"
+   die Auswahl bleibt, wie gewählt. Während der Übertragung sind die Optionen deaktiviert.
+   Story 2-9: Bei Optionsknöpfen ist eine Option mit leerem Wert gewählt, solange nichts gewählt ist (z. B. „Kein Schutzkonzept“); mit
+   KonfliktText zeigt ein 409 wie beim AutosaveFeld eine Fehlermeldung mit diesem Text. *@
+<Auswahlgruppe Legende="@Legende" Optionen="@Optionen" Mehrfach="@Mehrfach" Werte="@Angezeigt" Id="@Id" Name="@Feldname"
                Hinweis="@(_zustand == SpeicherZustand.Keiner ? Hinweis : null)" Deaktiviert="@_uebertraegt" OptionAttribute="Ereignisse">
     <UnterDemFeld>
-        <SpeicherHinweis Zustand="_zustand" MitRueckgaengig="_mitRueckgaengig" Uebertraegt="_uebertraegt"
-                         Rueckgaengig="RueckgaengigAsync" NeuLaden="NeuLaden" ErneutVersuchen="ErneutVersuchenAsync" />
+        @if (_zustand == SpeicherZustand.Konflikt && KonfliktText is not null)
+        {
+            <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                <p>@KonfliktText</p>
+            </Meldung>
+        }
+        else
+        {
+            <SpeicherHinweis Zustand="_zustand" MitRueckgaengig="_mitRueckgaengig" Uebertraegt="_uebertraegt"
+                             Rueckgaengig="RueckgaengigAsync" NeuLaden="NeuLaden" ErneutVersuchen="ErneutVersuchenAsync" />
+        }
     </UnterDemFeld>
 </Auswahlgruppe>
 
@@ -50,6 +61,12 @@
 
     /// <summary>„Neu laden“ beim Konflikt: die Seite lädt die Ressource neu und übergibt Wert und Version.</summary>
     [Parameter] public EventCallback NeuLaden { get; set; }
+
+    /// <summary>Text für eine Antwort <c>409</c> statt „Inzwischen geändert – neu laden?“, z. B. in einer abgeschlossenen Freizeit.</summary>
+    [Parameter] public string? KonfliktText { get; set; }
+
+    /// <summary>Die gewählten Werte; bei Optionsknöpfen ohne Auswahl die Option mit leerem Wert (leer = <c>null</c>).</summary>
+    private IReadOnlyCollection<string> Angezeigt => !Mehrfach && _auswahl.Count == 0 && Optionen.Any(o => o.Wert.Length == 0) ? [""] : _auswahl;
 
     protected override void OnInitialized() => Dienst.FeldAktiv += AnderesFeldAktiv;
 

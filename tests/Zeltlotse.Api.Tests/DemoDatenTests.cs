@@ -327,6 +327,8 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
                 "Anfahrt zum Zeltplatz | Oeffentlich | False", "Hausordnung Zeltplatz | ElternUndTeilnehmende | True",
                 "Infobrief Zeltlager Sommer 2027 | ElternUndTeilnehmende | False", "Notfallnummern | ElternUndTeilnehmende | False",
                 "Packliste | ElternUndTeilnehmende | False", "Programmideen | Team | False",
+                // Story 2-9: das eingebundene Schutzkonzept (Sichtbarkeit Team).
+                "Schutzkonzept Jugendwerk Musterstadt | Team | True",
             ],
             dokumente);
         var einbindbar = (await AnmeldeHelfer.JsonAsync(await leaClient.GetAsync($"/api/freizeiten/{freizeitId}/dokumente/org", Abbruch))).GetProperty("dokumente");
@@ -336,8 +338,8 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal(
             ["Hausordnung Zeltplatz", "Infobrief Zeltlager Sommer 2027", "Notfallnummern", "Packliste"],
             elterninfo.GetProperty("dokumente").EnumerateArray().Select(d => d.GetProperty("titel").GetString()));
-        Assert.Equal(6L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.dokument"));
-        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.dokument"));
+        Assert.Equal(7L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.dokument"));
+        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.dokument"));
 
         // Story 2-8: Die Demo-Kette ist eingerichtet; Lea (Team) liest sie, genau eine Zeile auch nach dem zweiten Einspielen.
         var kette = await AnmeldeHelfer.JsonAsync(await leaClient.GetAsync($"/api/freizeiten/{freizeitId}/sicherheit/sicherheitskette", Abbruch));
@@ -353,6 +355,21 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
             ],
             DemoKatalog.Sicherheitskette.WasTun);
         Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM sicherheit.sicherheitskette"));
+
+        // Story 2-9: Das eingebundene Org-Dokument ist das Schutzkonzept; Jonas hat es bestätigt, Lea und Miriam noch nicht. Je genau eine
+        // Zeile auch nach dem zweiten Einspielen.
+        var schutzkonzept = await AnmeldeHelfer.JsonAsync(await leaClient.GetAsync($"/api/freizeiten/{freizeitId}/sicherheit/schutzkonzept", Abbruch));
+        Assert.Equal(
+            (DemoKatalog.Schutzkonzept, "PDF"),
+            (schutzkonzept.GetProperty("titel").GetString(), schutzkonzept.GetProperty("dateiart").GetString()));
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, schutzkonzept.GetProperty("selbstGelesenAm").ValueKind);
+        Assert.Equal(
+            ["Lea Feuerstein Team False", "Jonas Hüttner Leitung True", "Miriam Zeltner Leitung False"],
+            schutzkonzept.GetProperty("team").EnumerateArray().Select(l =>
+                $"{l.GetProperty("vorname").GetString()} {l.GetProperty("nachname").GetString()} {(l.GetProperty("leitung").GetBoolean() ? "Leitung" : "Team")} "
+                + $"{l.GetProperty("gelesenAm").ValueKind != System.Text.Json.JsonValueKind.Null}"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM sicherheit.schutzkonzept"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM sicherheit.schutzkonzept_bestaetigung"));
 
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,

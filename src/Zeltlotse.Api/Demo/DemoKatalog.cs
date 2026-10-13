@@ -105,6 +105,12 @@ internal static class DemoKatalog
         "0123 456783");
 
     /// <summary>
+    /// Story 2-9: Titel des Org-Dokuments, das die Demo-Freizeit einbindet (Sichtbarkeit Team) und als Schutzkonzept wählt. Jonas hat es als
+    /// gelesen bestätigt, Miriam und Lea noch nicht.
+    /// </summary>
+    public const string Schutzkonzept = "Schutzkonzept Jugendwerk Musterstadt";
+
+    /// <summary>
     /// Jonas' Nachweise (Story 1-5): Art, Ausstellungsdatum und eine kleine erfundene Demo-Datei. Ohne Präventionsschulung, damit
     /// „Nachweis hinzufügen“ in der Doku sichtbar bleibt.
     /// </summary>

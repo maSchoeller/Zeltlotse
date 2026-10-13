@@ -1,0 +1,163 @@
+@page "/freizeiten/{FreizeitId:guid}/schutzkonzept"
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Ui.Kontext
+@using ApiSchutzkonzept = Zeltlotse.Api.Contracts.Sicherheit.Schutzkonzept
+@inject FreizeitKontextDienst Kontext
+@inject SicherheitApiClient SicherheitApi
+@* Schutzkonzept (CAP-16, FR-30, Story 2-9), in allen Phasen für Leitung und Team: Dachzeile „Sicherheit“ und Überschrift, ohne Dokument der
+   Leer-Zustand (mit „freizeit-einstellungen“ der Link in die Einstellungen), sonst Card „Dokument“ mit dem Link auf die Datei und – solange
+   nicht selbst bestätigt und nicht abgeschlossen – „Als gelesen bestätigen“, nach der Bestätigung „Gelesen am …“, und Card „Team“ mit
+   Balken und Personenliste (wer gelesen hat). Kontext oder Schutzkonzept nicht verfügbar → „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>Schutzkonzept – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Sicherheit</Dachzeile>
+    <h1>Schutzkonzept</h1>
+
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="@(_meldungArt == MeldungArt.Erfolg ? "Gespeichert" : "Achtung")" Art="_meldungArt">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+
+    @if (_konzept is null || _kontext is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else if (_konzept.DokumentId is not { } dokumentId)
+    {
+        @if (FreizeitKontextDienst.Darf(_kontext, Aktionsschluessel.FreizeitEinstellungen))
+        {
+            <LeerZustand Satz="Noch kein Schutzkonzept angehängt." KnopfText="In den Einstellungen anhängen"
+                         KnopfHref="@($"freizeiten/{FreizeitId}/einstellungen#schutzkonzept")" />
+        }
+        else
+        {
+            <LeerZustand Satz="Noch kein Schutzkonzept angehängt." />
+        }
+    }
+    else
+    {
+        <Card Titel="Dokument">
+            <p><a href="@FreizeitenApiClient.DokumentDateiPfad(FreizeitId, dokumentId)" target="_blank" rel="noopener">@($"{_konzept.Titel} ({_konzept.Dateiart})")</a></p>
+            @if (_konzept.SelbstGelesenAm is { } gelesenAm)
+            {
+                <Meldung Titel="Erledigt" Art="MeldungArt.Erfolg">
+                    <p>Gelesen am @(Anzeige.Datum(gelesenAm)).</p>
+                </Meldung>
+            }
+            else if (_kontext.Phase != Phase.Gelaufen)
+            {
+                <p>Nach dem Lesen hier bestätigen.</p>
+                <p><Knopf Deaktiviert="_uebertraegt" @onclick="BestaetigenAsync">Als gelesen bestätigen</Knopf></p>
+            }
+        </Card>
+        <Card Titel="Team">
+            <Balken Bezeichnung="Gelesen" Zahl="@($"{Gelesen} von {_konzept.Team.Count} gelesen")" Prozent="@Prozent"
+                    Statuswort="@(Gelesen == _konzept.Team.Count ? "Alle gelesen" : "Noch offen")"
+                    Art="@(Gelesen == _konzept.Team.Count ? BalkenArt.Normal : BalkenArt.Warnung)" />
+            <PersonenListe Personen="Personen" />
+        </Card>
+    }
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    private ApiSchutzkonzept? _konzept;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private string? _meldung;
+    private MeldungArt _meldungArt;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    private int Gelesen => _konzept!.Team.Count(l => l.GelesenAm is not null);
+
+    private double Prozent => _konzept!.Team.Count == 0 ? 0 : 100.0 * Gelesen / _konzept.Team.Count;
+
+    private IReadOnlyList<PersonenEintrag> Personen =>
+    [
+        .. _konzept!.Team.Select(l => new PersonenEintrag(
+            Anzeige.Initialen(l.Vorname, l.Nachname),
+            Anzeige.Name(l.Vorname, l.Nachname),
+            $"{(l.Leitung ? "Leitung" : "Team")} · {(l.GelesenAm is { } am ? $"gelesen am {Anzeige.Datum(am)}" : "noch nicht gelesen")}")),
+    ];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _konzept = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var konzept = SicherheitApi.SchutzkonzeptLadenAsync(FreizeitId);
+            await Task.WhenAll(kontext, konzept);
+            (_kontext, _konzept) = (kontext.Result, konzept.Result);
+            _nichtVerfuegbar = _kontext is null || _konzept is null;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    private async Task BestaetigenAsync()
+    {
+        // Zweimal getippt, während die erste Anfrage noch läuft: nur einmal senden.
+        if (_uebertraegt || _konzept?.DokumentId is not { } dokumentId)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _aktionFehler = false;
+        _meldung = null;
+        try
+        {
+            switch (await SicherheitApi.GelesenAsync(FreizeitId, dokumentId))
+            {
+                case SchutzkonzeptGelesenErgebnis.Erfolg:
+                    (_meldung, _meldungArt) = ("Als gelesen bestätigt.", MeldungArt.Erfolg);
+                    break;
+                case SchutzkonzeptGelesenErgebnis.Konflikt:
+                    (_meldung, _meldungArt) = ("Das Schutzkonzept wurde inzwischen ausgetauscht oder entfernt.", MeldungArt.Warnung);
+                    break;
+                default:
+                    _aktionFehler = true;
+                    return;
+            }
+
+            // Scheitert das Neuladen, bleibt der bisherige Stand stehen.
+            _konzept = await SicherheitApi.SchutzkonzeptLadenAsync(FreizeitId) ?? _konzept;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

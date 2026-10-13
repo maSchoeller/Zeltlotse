@@ -19,7 +19,8 @@ internal static partial class DokuRegeln
             .Append("eltern/kind-anmelden").Append("mitarbeitende/anmelden").Append("leitung/anmeldungen")
             .Append("eltern/freizeitpass").Append("leitung/freizeitpass-fragen").Append("mitarbeitende/freizeitpaesse").Append("leitung/cockpit")
             .Append("mitarbeitende/dokumente").Append("org-admin/org-dokumente").Append("eltern/elterninfo")
-            .Append("mitarbeitende/notfall").Append("leitung/sicherheitskette");
+            .Append("mitarbeitende/notfall").Append("leitung/sicherheitskette")
+            .Append("mitarbeitende/schutzkonzept").Append("leitung/schutzkonzept");
 
     public static string DokuSeitenOrdner => Path.Combine(Loesung.Wurzel, "doku", "src", "content", "docs");
 

@@ -237,6 +237,10 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 // Story 2-8: Sicherheitskette (Sicherheit): lesen für Leitung und Team, einrichten nur Leitung.
                 "GET /api/freizeiten/{freizeitId:guid}/sicherheit/sicherheitskette",
                 "PATCH /api/freizeiten/{freizeitId:guid}/sicherheit/sicherheitskette",
+                // Story 2-9: Schutzkonzept (Sicherheit): lesen und bestätigen für Leitung und Team, Dokument wählen nur Leitung.
+                "GET /api/freizeiten/{freizeitId:guid}/sicherheit/schutzkonzept",
+                "PATCH /api/freizeiten/{freizeitId:guid}/sicherheit/schutzkonzept",
+                "POST /api/freizeiten/{freizeitId:guid}/sicherheit/schutzkonzept/gelesen",
             }.Order(StringComparer.Ordinal),
             freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
         Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));

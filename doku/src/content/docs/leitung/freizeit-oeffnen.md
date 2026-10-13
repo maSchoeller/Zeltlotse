@@ -37,11 +37,13 @@ Die Startseite der Freizeit zeigt:
 - die eigene **Rolle**,
 - wer die **Leitung** hat,
 - bis wann die Freizeit **Einsicht in Freizeitpässe** hat,
+- solange die eigene Bestätigung fehlt, die Card **Schutzkonzept** mit dem Knopf **Schutzkonzept lesen** (siehe [Schutzkonzept lesen](/mitarbeitende/schutzkonzept/)),
 - für die Leitung das **Leitungs-Cockpit** (siehe [Leitungs-Cockpit](/leitung/cockpit/)):
   - die Card **Anmeldungen** mit dem Balken **Plätze**, den Zahlen je Art und dem Knopf **Anmeldungen** (siehe [Anmeldungen bestätigen und absagen](/leitung/anmeldungen/)),
   - die Card **Warnhinweise** mit unvollständigen Freizeitpässen und fehlenden Pflicht-Nachweisen im Team, dazu der Hinweis, wenn die Sicherheitskette noch nicht eingerichtet ist, und dem Knopf **Nachweise prüfen** (siehe [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/)),
   - die Card **Freizeitpässe unvollständig** mit dem Knopf **Erinnern**,
 - für Leitung und Team den Knopf **Sicherheitskette** (siehe [Notfall](/mitarbeitende/notfall/)),
+- für Leitung und Team den Knopf **Schutzkonzept** (siehe [Schutzkonzept lesen](/mitarbeitende/schutzkonzept/)),
 - für Leitung und Team den Knopf **Freizeitpässe** (siehe [Freizeitpässe ansehen](/mitarbeitende/freizeitpaesse/)),
 - für die Leitung den Knopf **Einstellungen** mit der Freizeitseite und den Anmeldelinks (siehe [Freizeitseite einrichten](/leitung/freizeitseite-einrichten/)).
 
