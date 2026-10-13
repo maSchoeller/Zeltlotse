@@ -26,6 +26,7 @@ using Zeltlotse.Personen.Nachweise;
 using Zeltlotse.Personen.Profil;
 using Zeltlotse.Personen.Zugriffsprotokoll;
 using Zeltlotse.Programm.Daten;
+using Zeltlotse.Programm.Materialien;
 using Zeltlotse.Programm.Programme;
 using Zeltlotse.SharedKernel.Mandanten;
 using Zeltlotse.SharedKernel.Outbox;
@@ -82,6 +83,8 @@ namespace Zeltlotse.Api.Demo;
 /// wählt es als Schutzkonzept; Jonas bestätigt es als gelesen (je nur, wenn es fehlt).
 /// Story 3-1: Die festen Mahlzeiten der Demo-Freizeit und die Programmpunkte aus <see cref="DemoKatalog.Programmpunkte"/>; Lea und Jonas
 /// übernehmen je einen selbst (je nur, wenn es den Titel noch nicht gibt).
+/// Story 3-2: Material an Geländespiel und Lagerfeuer aus <see cref="DemoKatalog.Material"/> mit Menge und Status; Miriam bringt die
+/// Taschenlampen mit (je nur, wenn es die Bezeichnung am Programmpunkt noch nicht gibt).
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -136,6 +139,7 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await SchutzkonzeptAsync(abbruch);
         await VorfaelleAsync(abbruch);
         await ProgrammAsync(abbruch);
+        await MaterialAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -791,6 +795,62 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
                 is not ProgrammpunktUebergang.Erfolg)
             {
                 throw new InvalidOperationException($"Demo-Programm: {titel} ließ sich nicht übernehmen.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Story 3-2: Material an den Programmpunkten aus <see cref="DemoKatalog.Material"/>, über die Commands des Moduls Programm. Idempotent nach
+    /// (Programmpunkt, Bezeichnung): Ein Material mit dieser Bezeichnung am Punkt legt das Einspielen nicht noch einmal an. Wer etwas mitbringt,
+    /// tippt das selbst.
+    /// </summary>
+    private async Task MaterialAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var freizeitId = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name)
+            .Select(f => f.Id)
+            .SingleAsync(abbruch);
+        var lesen = dienste.GetRequiredService<ProgrammLeseDbContext>();
+        var punkte = await lesen.Programmpunkte
+            .Where(p => p.FreizeitId == freizeitId && p.Mahlzeit == null)
+            .Select(p => new { p.Id, p.Titel })
+            .ToListAsync(abbruch);
+        var vorhanden = await lesen.Material
+            .Where(m => m.FreizeitId == freizeitId)
+            .Select(m => new { m.ProgrammpunktId, m.Bezeichnung })
+            .ToListAsync(abbruch);
+        foreach (var (titel, bezeichnung, menge, status, bringtMit) in DemoKatalog.Material)
+        {
+            var punkt = punkte.Single(p => p.Titel == titel).Id;
+            if (vorhanden.Any(m => m.ProgrammpunktId == punkt && m.Bezeichnung == bezeichnung))
+            {
+                continue;
+            }
+
+            if (await sender.Send(new MaterialAnlegenCommand(freizeitId, punkt, bezeichnung, menge), abbruch) is not MaterialAnlegen.Angelegt angelegt)
+            {
+                throw new InvalidOperationException($"Demo-Material: {bezeichnung} ließ sich nicht anlegen.");
+            }
+
+            if (status != Api.Contracts.Programm.MaterialStatus.Gebraucht
+                && await sender.Send(new MaterialStatusSetzenCommand(freizeitId, angelegt.Material.Id, status), abbruch) is not MaterialUebergang.Erfolg)
+            {
+                throw new InvalidOperationException($"Demo-Material: Status von {bezeichnung} ließ sich nicht setzen.");
+            }
+
+            if (bringtMit is null)
+            {
+                continue;
+            }
+
+            var person = (await sender.Send(new KontoSicherstellen(bringtMit), abbruch)).PersonId;
+            if (await sender.Send(new MaterialMitbringenCommand(freizeitId, angelegt.Material.Id, person, Mitbringen: true), abbruch) is not MaterialUebergang.Erfolg)
+            {
+                throw new InvalidOperationException($"Demo-Material: {bezeichnung} ließ sich nicht mitbringen.");
             }
         }
     }

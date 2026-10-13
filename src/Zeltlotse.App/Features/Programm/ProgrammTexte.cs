@@ -1,13 +1,15 @@
 using System.Globalization;
 using Zeltlotse.Api.Contracts.Freizeiten;
 using Zeltlotse.Api.Contracts.Programm;
+using Zeltlotse.Ui.Komponenten;
 using Zeltlotse.Ui.Texte;
 
 namespace Zeltlotse.App.Features.Programm;
 
 /// <summary>
 /// Story 3-1: Gemeinsames der Programm-Seiten: Namen der übernehmenden Personen (der Client setzt sie zusammen, AD-2: die Leitung aus der Freizeit,
-/// das Team aus der Personenliste), das Status-Wort und die Ziele der Links.
+/// das Team aus der Personenliste), das Status-Wort und die Ziele der Links. Story 3-2: „Bringt mit: …“, die vier Material-Zustände und das Ziel
+/// der Materialliste.
 /// </summary>
 internal static class ProgrammTexte
 {
@@ -41,4 +43,17 @@ internal static class ProgrammTexte
         $"freizeiten/{freizeitId}/programm?tag={tag.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}";
 
     public static string DetailZiel(Guid freizeitId, Guid punktId) => $"freizeiten/{freizeitId}/programm/{punktId}";
+
+    /// <summary>Story 3-2: die Materialliste der Freizeit.</summary>
+    public static string MaterialZiel(Guid freizeitId) => $"freizeiten/{freizeitId}/programm/material";
+
+    public const string MaterialKonfliktText = "Jemand anderes bringt dieses Material inzwischen mit.";
+
+    /// <summary>Story 3-2: „Bringt mit: Miriam Zeltner“, ohne bekannten Namen „Bringt jemand mit“; bringt es niemand mit <c>null</c>.</summary>
+    public static string? BringtMitWort(Material material, IReadOnlyDictionary<Guid, string> namen) =>
+        material.BringtMit is { } person ? Anzeige.BringtMit(namen.GetValueOrDefault(person)) : null;
+
+    /// <summary>Story 3-2: die vier Zustände als Segmente „gebraucht / vorhanden / besorgt / eingepackt“ (FR-36).</summary>
+    public static IReadOnlyList<AuswahlOption> MaterialStatusOptionen { get; } =
+        [.. Enum.GetValues<MaterialStatus>().Select(s => new AuswahlOption(s.ToString(), Anzeige.MaterialStatus(s)))];
 }

@@ -68,6 +68,9 @@
     /// <summary>„Neu laden“ beim Konflikt: die Seite lädt die Ressource neu und übergibt Wert und Version.</summary>
     [Parameter] public EventCallback NeuLaden { get; set; }
 
+    /// <summary>Story 3-2: Nach jedem gelungenen Speichern (auch Rückgängig) mit dem gespeicherten Wert, z. B. für eine Überschrift.</summary>
+    [Parameter] public EventCallback<string?> Gespeichert { get; set; }
+
     protected override void OnInitialized() => Dienst.FeldAktiv += AnderesFeldAktiv;
 
     protected override void OnParametersSet()
@@ -152,6 +155,7 @@
 
                 _zustand = SpeicherZustand.Gespeichert;
                 _mitRueckgaengig = !rueckgaengig;
+                await Gespeichert.InvokeAsync(gespeichert.Wert);
                 if (_nachspeichern && Geaendert)
                 {
                     await SendenAsync(Aktuelle(), rueckgaengig: false);

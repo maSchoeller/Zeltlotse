@@ -253,6 +253,14 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 "DELETE /api/freizeiten/{freizeitId:guid}/programm/punkte/{punktId:guid}",
                 "POST /api/freizeiten/{freizeitId:guid}/programm/punkte/{punktId:guid}/uebernehmen",
                 "POST /api/freizeiten/{freizeitId:guid}/programm/punkte/{punktId:guid}/abgeben",
+                // Story 3-2: Material am Programmpunkt (Programm), alles für Leitung und Team.
+                "GET /api/freizeiten/{freizeitId:guid}/programm/material",
+                "POST /api/freizeiten/{freizeitId:guid}/programm/punkte/{punktId:guid}/material",
+                "PATCH /api/freizeiten/{freizeitId:guid}/programm/material/{materialId:guid}",
+                "DELETE /api/freizeiten/{freizeitId:guid}/programm/material/{materialId:guid}",
+                "POST /api/freizeiten/{freizeitId:guid}/programm/material/{materialId:guid}/status",
+                "POST /api/freizeiten/{freizeitId:guid}/programm/material/{materialId:guid}/mitbringen",
+                "POST /api/freizeiten/{freizeitId:guid}/programm/material/{materialId:guid}/nicht-mitbringen",
             }.Order(StringComparer.Ordinal),
             freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
         Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));

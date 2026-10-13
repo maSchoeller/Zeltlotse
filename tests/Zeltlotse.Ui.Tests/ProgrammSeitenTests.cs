@@ -105,6 +105,7 @@ public sealed class ProgrammSeitenTests : BunitContext
             new { anmeldungId = Guid.CreateVersion7(), personId = Ich, vorname = "Tobias", nachname = "Wanderer", art = "Mitarbeitende", status = "Bestaetigt" },
         }));
         _server.Bei(HttpMethod.Get, RasterPfad, raster ?? (() => Json(Raster())));
+        _server.Bei(HttpMethod.Get, $"{RasterPfad}/material", () => Json(new { material = Array.Empty<object>() }));
     }
 
     private IRenderedComponent<RasterSeite> RasterRendern(string? tag = null)

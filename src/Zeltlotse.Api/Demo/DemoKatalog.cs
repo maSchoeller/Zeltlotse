@@ -140,6 +140,19 @@ internal static class DemoKatalog
     ];
 
     /// <summary>
+    /// Story 3-2: Material an den Programmpunkten der Demo-Freizeit (je nur, wenn es die Bezeichnung am Programmpunkt noch nicht gibt), mit Menge,
+    /// Status und der Person, die es mitbringt (Mail-Adresse) oder ohne. „Ich bringe das mit“ führt die Person selbst aus.
+    /// </summary>
+    public static IReadOnlyList<(string Programmpunkt, string Bezeichnung, string Menge, Zeltlotse.Api.Contracts.Programm.MaterialStatus Status, string? BringtMit)> Material { get; } =
+    [
+        ("Geländespiel", "Fahnen", "8 Stück", Zeltlotse.Api.Contracts.Programm.MaterialStatus.Vorhanden, null),
+        ("Geländespiel", "Seile", "4 × 10 m", Zeltlotse.Api.Contracts.Programm.MaterialStatus.Gebraucht, null),
+        ("Geländespiel", "Taschenlampen", "10 Stück", Zeltlotse.Api.Contracts.Programm.MaterialStatus.Gebraucht, "miriam.zeltner@example.org"),
+        ("Lagerfeuer", "Feuerholz", "2 Kisten", Zeltlotse.Api.Contracts.Programm.MaterialStatus.Besorgt, null),
+        ("Lagerfeuer", "Stockbrot-Teig", "3 kg", Zeltlotse.Api.Contracts.Programm.MaterialStatus.Eingepackt, null),
+    ];
+
+    /// <summary>
     /// Jonas' Nachweise (Story 1-5): Art, Ausstellungsdatum und eine kleine erfundene Demo-Datei. Ohne Präventionsschulung, damit
     /// „Nachweis hinzufügen“ in der Doku sichtbar bleibt.
     /// </summary>

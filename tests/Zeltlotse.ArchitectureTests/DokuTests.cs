@@ -70,7 +70,7 @@ public sealed class DokuTests
                 "Seite mitarbeitende/notfall.md fehlt.", "Seite leitung/sicherheitskette.md fehlt.",
                 "Seite mitarbeitende/schutzkonzept.md fehlt.", "Seite leitung/schutzkonzept.md fehlt.",
                 "Seite mitarbeitende/vorfall-protokoll.md fehlt.", "Seite leitung/vorfall-notizen.md fehlt.", "Seite org-admin/vorfall-archiv.md fehlt.",
-                "Seite mitarbeitende/notfallordner.md fehlt.", "Seite mitarbeitende/programm.md fehlt.",
+                "Seite mitarbeitende/notfallordner.md fehlt.", "Seite mitarbeitende/programm.md fehlt.", "Seite mitarbeitende/material.md fehlt.",
             ],
             fehlend);
     }

@@ -92,12 +92,9 @@ internal sealed class ProgrammpunktFeldAendernHandler(ProgrammDbContext db, IFre
 /// </summary>
 internal static class ProgrammpunktFeldAendernEndpunkt
 {
-    /// <summary>Erlaubte Eigenschaften neben den Feldern.</summary>
-    private static readonly string[] Rahmen = ["version", "alterWert"];
-
     public static async Task<IResult> Aendern(Guid freizeitId, Guid punktId, JsonElement koerper, ISender sender, CancellationToken abbruch)
     {
-        var (version, alterWert, feld, neuerWert) = Lesen(koerper);
+        var (version, alterWert, feld, neuerWert) = FeldPatch.Lesen<ProgrammpunktFeld>(koerper, ProgrammpunktFelder.JsonName);
         return await sender.Send(new ProgrammpunktFeldAendernCommand(freizeitId, punktId, feld, version, alterWert, neuerWert), abbruch) switch
         {
             ProgrammpunktAenderung.Gespeichert gespeichert => TypedResults.Ok(new Dictionary<string, object?>
@@ -110,39 +107,4 @@ internal static class ProgrammpunktFeldAendernEndpunkt
             _ => TypedResults.NotFound(),
         };
     }
-
-    /// <summary>Liest Version, alten Wert und genau ein Feld; jede andere Form ist ein Validierungsfehler (<c>400</c>).</summary>
-    private static (uint Version, string? AlterWert, ProgrammpunktFeld Feld, string? NeuerWert) Lesen(JsonElement koerper)
-    {
-        if (koerper.ValueKind != JsonValueKind.Object)
-        {
-            throw Fehler("version", "Der Körper ist kein JSON-Objekt.");
-        }
-
-        if (!koerper.TryGetProperty("version", out var versionWert) || versionWert.ValueKind != JsonValueKind.Number || !versionWert.TryGetUInt32(out var version))
-        {
-            throw Fehler("version", "Version fehlt.");
-        }
-
-        var alterWert = koerper.TryGetProperty("alterWert", out var alt) ? Text(alt, "alterWert") : null;
-        var felder = Enum.GetValues<ProgrammpunktFeld>();
-        var genannt = koerper.EnumerateObject().Select(e => e.Name).Where(n => !Rahmen.Contains(n)).ToList();
-        if (genannt.Count != 1 || felder.Where(f => ProgrammpunktFelder.JsonName(f) == genannt[0]).ToList() is not [var feld])
-        {
-            throw Fehler("feld", $"Genau ein Feld: {string.Join(", ", felder.Select(ProgrammpunktFelder.JsonName))}.");
-        }
-
-        var name = ProgrammpunktFelder.JsonName(feld);
-        return (version, alterWert, feld, Text(koerper.GetProperty(name), name));
-    }
-
-    private static string? Text(JsonElement wert, string name) => wert.ValueKind switch
-    {
-        JsonValueKind.String => wert.GetString(),
-        JsonValueKind.Null => null,
-        _ => throw Fehler(name, "Nur Text oder null."),
-    };
-
-    private static ValidierungsAusnahme Fehler(string feld, string text) =>
-        new(new Dictionary<string, string[]> { [feld] = [text] });
 }

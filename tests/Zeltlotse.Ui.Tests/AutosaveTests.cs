@@ -415,4 +415,26 @@ public sealed class AutosaveTests : BunitContext
         Assert.Equal("Zeile 1\nZeile 2", koerper.GetProperty("beschreibung").GetString());
         Assert.StartsWith("Gespeichert · ", feld.Find("p[role=status]").TextContent, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Gespeichert_meldet_den_gespeicherten_Wert_auch_nach_Rueckgaengig_ein_Konflikt_nicht()
+    {
+        // Story 3-2: Die Seite führt eine Überschrift mit dem gespeicherten Wert nach (z. B. die Bezeichnung eines Materials).
+        var gemeldet = new List<string?>();
+        _server.BeiDerReihe(HttpMethod.Patch, Pfad, Gespeichert(8, "titel", "Nachtwanderung"), Gespeichert(9, "titel", "Geländespiel"),
+            () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, "konflikt"));
+        var feld = Render<AutosaveFeld>(ps => ps
+            .Add(p => p.Label, "Titel")
+            .Add(p => p.Feldname, "titel")
+            .Add(p => p.Pfad, Pfad)
+            .Add(p => p.Wert, "Geländespiel")
+            .Add(p => p.Version, 7u)
+            .Add(p => p.Gespeichert, (string? wert) => gemeldet.Add(wert)));
+
+        Aendern(feld, "Nachtwanderung ");
+        feld.Find("p[role=status] button").Click();
+        Aendern(feld, "Abbau");
+
+        Assert.Equal(["Nachtwanderung", "Geländespiel"], gemeldet);
+    }
 }

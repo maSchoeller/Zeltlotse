@@ -27,9 +27,16 @@ public sealed record ProgrammAktion(ProgrammAktionErgebnis Ergebnis, Programmpun
     public static ProgrammAktion Ohne(ProgrammAktionErgebnis ergebnis) => new(ergebnis, null, new Dictionary<string, string>());
 }
 
+/// <summary>Story 3-2: Ergebnis von Anlegen, Status setzen und Mitbringen eines Materials; bei Erfolg das Material, beim Anlegen sonst die Fehler je Feld.</summary>
+public sealed record MaterialAktion(ProgrammAktionErgebnis Ergebnis, Material? Material, IReadOnlyDictionary<string, string> Feldfehler)
+{
+    public static MaterialAktion Ohne(ProgrammAktionErgebnis ergebnis) => new(ergebnis, null, new Dictionary<string, string>());
+}
+
 /// <summary>
 /// Typisierter Client des Moduls Programm (AD-29, handgeschrieben). Story 3-1: der Wochenraster einer Freizeit und ihre Programmpunkte; den
-/// Autosave von Titel und Uhrzeit übernimmt der Autosave-Baustein mit <see cref="PunktPfad"/>.
+/// Autosave von Titel und Uhrzeit übernimmt der Autosave-Baustein mit <see cref="PunktPfad"/>. Story 3-2: das Material an den Programmpunkten;
+/// den Autosave von Bezeichnung und Menge übernimmt der Autosave-Baustein mit <see cref="MaterialPfad"/>.
 /// </summary>
 public sealed class ProgrammApiClient(HttpClient http)
 {
@@ -90,6 +97,84 @@ public sealed class ProgrammApiClient(HttpClient http)
     {
         using var antwort = await http.DeleteAsync(PunktPfad(freizeitId, punktId), abbruch);
         return antwort.IsSuccessStatusCode ? ProgrammAktionErgebnis.Erfolg : await FehlerAsync(antwort, abbruch);
+    }
+
+    /// <summary>Story 3-2: Pfad der Materialliste einer Freizeit.</summary>
+    public static string MaterialListePfad(Guid freizeitId) => $"{ProgrammPfad(freizeitId)}/material";
+
+    /// <summary>Story 3-2: Pfad eines Materials, auch für den Autosave-Baustein (<c>PATCH</c>, AD-19).</summary>
+    public static string MaterialPfad(Guid freizeitId, Guid materialId) => $"{MaterialListePfad(freizeitId)}/{materialId}";
+
+    /// <summary>
+    /// Story 3-2: <c>GET …/programm/material</c> (Leitung und Team, FR-69): das Material aller Programmpunkte oder <c>null</c> bei
+    /// <c>403</c>/<c>404</c>.
+    /// </summary>
+    public async Task<Materialliste?> MaterialLadenAsync(Guid freizeitId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.GetAsync(MaterialListePfad(freizeitId), abbruch);
+        if (antwort.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return await antwort.Content.ReadFromJsonAsync<Materialliste>(ApiJson.Optionen, abbruch)
+               ?? throw new HttpRequestException("Leere Antwort beim Laden der Materialliste.");
+    }
+
+    /// <summary>
+    /// Story 3-2: <c>POST …/punkte/{punktId}/material</c>: angelegt mit dem Material, Feldfehler (<c>400</c>, Fehler je JSON-Feldname),
+    /// abgeschlossene Freizeit oder ein anderer Fehler.
+    /// </summary>
+    public async Task<MaterialAktion> MaterialAnlegenAsync(Guid freizeitId, Guid punktId, MaterialNeu material, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync($"{PunktPfad(freizeitId, punktId)}/material", material, ApiJson.Optionen, abbruch);
+        if (antwort.StatusCode == HttpStatusCode.BadRequest)
+        {
+            return new MaterialAktion(ProgrammAktionErgebnis.Fehler, null, await ApiFehler.AlleFeldFehlerAsync(antwort, abbruch));
+        }
+
+        return await MaterialAktionAsync(antwort, abbruch);
+    }
+
+    /// <summary>Story 3-2: <c>POST …/material/{materialId}/status</c> (FR-36): mit dem Material danach.</summary>
+    public async Task<MaterialAktion> MaterialStatusAsync(Guid freizeitId, Guid materialId, MaterialStatus status, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync($"{MaterialPfad(freizeitId, materialId)}/status", new MaterialStatusNeu(status), ApiJson.Optionen, abbruch);
+        return await MaterialAktionAsync(antwort, abbruch);
+    }
+
+    /// <summary>Story 3-2: <c>POST …/material/{materialId}/mitbringen</c> („Ich bringe das mit“): mit dem Material danach.</summary>
+    public async Task<MaterialAktion> MitbringenAsync(Guid freizeitId, Guid materialId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsync($"{MaterialPfad(freizeitId, materialId)}/mitbringen", null, abbruch);
+        return await MaterialAktionAsync(antwort, abbruch);
+    }
+
+    /// <summary>Story 3-2: <c>POST …/material/{materialId}/nicht-mitbringen</c> („Doch nicht mitbringen“): mit dem Material danach.</summary>
+    public async Task<MaterialAktion> NichtMitbringenAsync(Guid freizeitId, Guid materialId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsync($"{MaterialPfad(freizeitId, materialId)}/nicht-mitbringen", null, abbruch);
+        return await MaterialAktionAsync(antwort, abbruch);
+    }
+
+    /// <summary>Story 3-2: <c>DELETE …/material/{materialId}</c>: gelöscht, abgeschlossene Freizeit oder ein anderer Fehler.</summary>
+    public async Task<ProgrammAktionErgebnis> MaterialLoeschenAsync(Guid freizeitId, Guid materialId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.DeleteAsync(MaterialPfad(freizeitId, materialId), abbruch);
+        return antwort.IsSuccessStatusCode ? ProgrammAktionErgebnis.Erfolg : await FehlerAsync(antwort, abbruch);
+    }
+
+    private static async Task<MaterialAktion> MaterialAktionAsync(HttpResponseMessage antwort, CancellationToken abbruch)
+    {
+        if (!antwort.IsSuccessStatusCode)
+        {
+            return MaterialAktion.Ohne(await FehlerAsync(antwort, abbruch));
+        }
+
+        var material = await antwort.Content.ReadFromJsonAsync<Material>(ApiJson.Optionen, abbruch)
+                       ?? throw new HttpRequestException("Leere Antwort zum Material.");
+        return new MaterialAktion(ProgrammAktionErgebnis.Erfolg, material, new Dictionary<string, string>());
     }
 
     private static async Task<ProgrammAktion> AktionAsync(HttpResponseMessage antwort, CancellationToken abbruch)

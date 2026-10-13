@@ -3,6 +3,7 @@
 @using Zeltlotse.Api.Contracts.Gemeinsam
 @using Zeltlotse.Api.Contracts.Programm
 @using Zeltlotse.Ui.Kontext
+@using ApiMaterialliste = Zeltlotse.Api.Contracts.Programm.Materialliste
 @inject FreizeitKontextDienst Kontext
 @inject FreizeitenApiClient Freizeiten
 @inject ProgrammApiClient ProgrammApi
@@ -11,7 +12,9 @@
    Wochenraster. Dachzeile „Programm“, Überschrift „Programmpunkt“ und der Tag (Titel und Uhrzeit nur in den Feldern, nach dem Abschluss als Liste); „Übernommen: …“ mit „Ich übernehme“ bzw. „Abgeben“ (ein Tipp, nur
    für sich selbst). Card „Bearbeiten“ mit Titel und Uhrzeit als Autosave-Felder (AD-19; verschieben heißt Uhrzeit ändern). Löschen per
    Inline-Bestätigung, nicht bei den festen Mahlzeiten. In der Phase „gelaufen“ nur lesbar. Kontext, Raster oder Punkt nicht verfügbar →
-   „Diese Seite ist nicht verfügbar.“ *@
+   „Diese Seite ist nicht verfügbar.“ Story 3-2: Card „Material“ mit dem Material des Punkts (aus der Materialliste gefiltert; Bezeichnung und
+   Menge als Autosave-Felder, Status per Segmente, „Ich bringe das mit“, Löschen), ohne Material „Noch kein Material.“, darunter das Formular
+   „Material hinzufügen“ (Bezeichnung *, Menge). *@
 <PageTitle>Programmpunkt – Zeltlotse</PageTitle>
 
 @if (_nichtVerfuegbar)
@@ -79,6 +82,41 @@ else
                               Wert="@_punkt.Beginn" Version="@_punkt.Version" Hinweis="Ohne Uhrzeit steht der Programmpunkt am Ende des Tages."
                               NeuLaden="NeuLadenAsync" />
             </Card>
+        }
+        <Card Titel="Material" Id="material">
+            @if (_materialFehlt)
+            {
+                <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                    <p>@MaterialFehltText</p>
+                </Meldung>
+            }
+            else
+            {
+                @foreach (var material in _material)
+                {
+                    <MaterialEintrag @key="material.Id" FreizeitId="FreizeitId" Material="material" Namen="_namen" Bearbeiten="true" NurLesen="Abgeschlossen"
+                                     Geaendert="MaterialGeaendert" Geloescht="MaterialGeloescht" NeuLaden="MaterialNeuLadenAsync" />
+                }
+                @if (_material.Count == 0)
+                {
+                    <LeerZustand Satz="Noch kein Material." />
+                }
+                @if (!Abgeschlossen)
+                {
+                    <h3>Material hinzufügen</h3>
+                    <Formular Absenden="MaterialAnlegenAsync">
+                        <Feld Label="Bezeichnung *" Id="material-bezeichnung" Wert="@_bezeichnung" Fehler="@_bezeichnungFehler" autocomplete="off"
+                              Hinweis="@($"Höchstens {MaterialFelder.BezeichnungMaximaleLaenge} Zeichen")" @oninput="@(e => _bezeichnung = e.Value?.ToString())" />
+                        <Feld Label="Menge" Id="material-menge" Wert="@_menge" Fehler="@_mengeFehler" autocomplete="off" Hinweis="Freitext, z. B. 4 × 10 m"
+                              @oninput="@(e => _menge = e.Value?.ToString())" />
+                        <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Material hinzufügen</Knopf>
+                    </Formular>
+                    <p>* Pflichtfeld</p>
+                }
+            }
+        </Card>
+        @if (!Abgeschlossen)
+        {
             @if (_punkt.Mahlzeit is null)
             {
                 <InlineBestaetigung AusloeserText="Programmpunkt löschen" AusloeserArt="KnopfArt.Outline" Satz="Diesen Programmpunkt löschen?"
@@ -97,6 +135,12 @@ else
     private bool _aktionFehler;
     private bool _uebertraegt;
     private string? _meldung;
+    private List<Material> _material = [];
+    private bool _materialFehlt;
+    private string? _bezeichnung;
+    private string? _menge;
+    private string? _bezeichnungFehler;
+    private string? _mengeFehler;
 
     [Parameter] public Guid FreizeitId { get; set; }
 
@@ -119,8 +163,11 @@ else
             var raster = ProgrammApi.LadenAsync(FreizeitId);
             var freizeit = Leise(Freizeiten.LadenAsync(FreizeitId));
             var personen = Leise(Freizeiten.PersonenlisteLadenAsync(FreizeitId));
-            await Task.WhenAll(kontext, raster, freizeit, personen);
+            var material = Leise(ProgrammApi.MaterialLadenAsync(FreizeitId));
+            await Task.WhenAll(kontext, raster, freizeit, personen, material);
             _punkt = raster.Result?.Punkte.FirstOrDefault(p => p.Id == PunktId);
+            _materialFehlt = material.Result is null;
+            _material = MaterialDesPunkts(material.Result);
             if (kontext.Result is null || _punkt is null)
             {
                 _nichtVerfuegbar = true;
@@ -146,6 +193,73 @@ else
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
         {
             _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Scheitert die Materialliste (Fehler oder nicht verfügbar), zeigt die Card nur diese Meldung; der Rest der Seite bleibt.</summary>
+    public const string MaterialFehltText = "Das Material lässt sich gerade nicht laden.";
+
+    private List<Material> MaterialDesPunkts(ApiMaterialliste? liste) => [.. (liste?.Material ?? []).Where(m => m.ProgrammpunktId == PunktId)];
+
+    private void MaterialGeaendert(Material material) =>
+        _material = [.. _material.Select(m => m.Id == material.Id ? material : m)];
+
+    private void MaterialGeloescht(Material material) => _material.RemoveAll(m => m.Id == material.Id);
+
+    /// <summary>„Neu laden“ beim Konflikt am Material: das Material des Punkts neu holen.</summary>
+    private async Task MaterialNeuLadenAsync()
+    {
+        try
+        {
+            _material = MaterialDesPunkts(await ProgrammApi.MaterialLadenAsync(FreizeitId));
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>„Material hinzufügen“: danach steht es mit Status „gebraucht“ in der Card, das Formular ist leer.</summary>
+    private async Task MaterialAnlegenAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        (_bezeichnungFehler, _mengeFehler, _meldung) = (null, null, null);
+        try
+        {
+            var aktion = await ProgrammApi.MaterialAnlegenAsync(FreizeitId, PunktId, new MaterialNeu(_bezeichnung, string.IsNullOrWhiteSpace(_menge) ? null : _menge));
+            switch (aktion.Ergebnis)
+            {
+                case ProgrammAktionErgebnis.Erfolg:
+                    _material.Add(aktion.Material!);
+                    _material = [.. _material.OrderBy(m => m.Bezeichnung, StringComparer.Create(System.Globalization.CultureInfo.GetCultureInfo("de-DE"), true))];
+                    (_bezeichnung, _menge) = (null, null);
+                    break;
+                case ProgrammAktionErgebnis.Abgeschlossen:
+                    _meldung = ProgrammTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _bezeichnungFehler = aktion.Feldfehler.GetValueOrDefault(MaterialFelder.Bezeichnung);
+                    _mengeFehler = aktion.Feldfehler.GetValueOrDefault(MaterialFelder.Menge);
+                    if (_bezeichnungFehler is null && _mengeFehler is null)
+                    {
+                        _meldung = AnmeldungAbschluss.FehlerText;
+                    }
+
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
         }
     }
 

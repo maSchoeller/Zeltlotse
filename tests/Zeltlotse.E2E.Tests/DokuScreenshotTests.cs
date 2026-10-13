@@ -1612,6 +1612,70 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await BildAsync(seite, "programmpunkt", geraet);
     }
 
+    // ---------- Story 3-2: Material am Programmpunkt und Materialliste ----------
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task MaterialAmProgrammpunkt(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await ProgrammAsync(seite);
+        if (geraet == "handy")
+        {
+            // Am Handy ist der erste Tag gewählt; das Geländespiel liegt am zweiten.
+            await seite.Locator(".zl-reiter nav a").Nth(1).ClickAsync();
+            await Assertions.Expect(seite.Locator(".zl-reiter__inhalt h2")).ToHaveTextAsync("Dienstag, 3. August 2027", new() { Timeout = 60_000 });
+        }
+
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Geländespiel", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Programmpunkt", new() { Timeout = 60_000 });
+        var card = seite.Locator("#material");
+        await Assertions.Expect(card.Locator(".zl-termin h3")).ToHaveTextAsync(["Fahnen", "Seile", "Taschenlampen"], new() { Timeout = 60_000 });
+        var seile = TerminIn(card, "Seile");
+        await Assertions.Expect(seile.GetByLabel("Menge", new() { Exact = true })).ToHaveValueAsync("4 × 10 m");
+        await Assertions.Expect(seile.GetByRole(AriaRole.Button, new() { Name = "gebraucht", Exact = true })).ToHaveAttributeAsync("aria-pressed", "true");
+        await Assertions.Expect(TerminIn(card, "Fahnen").GetByRole(AriaRole.Button, new() { Name = "vorhanden", Exact = true })).ToHaveAttributeAsync("aria-pressed", "true");
+        // Miriam bringt die Taschenlampen mit: bei Jonas steht ihr Name, ein Knopf fehlt.
+        var taschenlampen = TerminIn(card, "Taschenlampen");
+        await Assertions.Expect(taschenlampen.Locator(".elkw-status")).ToHaveTextAsync("Bringt mit: Miriam Zeltner");
+        await Assertions.Expect(taschenlampen.GetByRole(AriaRole.Button, new() { Name = "Ich bringe das mit" })).ToHaveCountAsync(0);
+        await Assertions.Expect(seile.GetByRole(AriaRole.Button, new() { Name = "Ich bringe das mit" })).ToBeVisibleAsync();
+        await Assertions.Expect(card.GetByRole(AriaRole.Button, new() { Name = "Material hinzufügen" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        // Nur lesend, damit der Demo-Stand für die anderen Bilder bleibt; im Bild stehen die Taschenlampen, die Miriam mitbringt.
+        await taschenlampen.ScrollIntoViewIfNeededAsync();
+        await BildAsync(seite, "material-programmpunkt", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Materialliste(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await ProgrammAsync(seite);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Materialliste", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Materialliste", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator(".zl-balken .zl-zahl")).ToHaveTextAsync("1 von 5 eingepackt", new() { Timeout = 60_000 });
+        var cards = seite.Locator("section.elkw-card");
+        await Assertions.Expect(cards.Locator("h2")).ToHaveTextAsync(["Lagerfeuer", "Geländespiel"]);
+        await Assertions.Expect(cards.Locator(".elkw-kicker")).ToHaveTextAsync(["Mo 02.08. · 20:00", "Di 03.08. · 14:30"]);
+        await Assertions.Expect(cards.Nth(0).Locator(".zl-termin h3")).ToHaveTextAsync(["Feuerholz", "Stockbrot-Teig"]);
+        await Assertions.Expect(TerminIn(cards.Nth(0), "Stockbrot-Teig").GetByText("Menge: 3 kg")).ToBeVisibleAsync();
+        await Assertions.Expect(TerminIn(cards.Nth(0), "Stockbrot-Teig").GetByRole(AriaRole.Button, new() { Name = "eingepackt", Exact = true }))
+            .ToHaveAttributeAsync("aria-pressed", "true");
+        await Assertions.Expect(TerminIn(cards.Nth(1), "Taschenlampen").Locator(".elkw-status")).ToHaveTextAsync("Bringt mit: Miriam Zeltner");
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "materialliste", geraet);
+    }
+
     /// <summary>Der Termin mit diesem Titel innerhalb eines Bereichs (ein Tag am Handy oder eine Spalte am Laptop).</summary>
     private static ILocator TerminIn(ILocator bereich, string titel) =>
         bereich.Locator(".zl-termin").Filter(new() { Has = bereich.Page.GetByRole(AriaRole.Heading, new() { Name = titel, Exact = true }) });

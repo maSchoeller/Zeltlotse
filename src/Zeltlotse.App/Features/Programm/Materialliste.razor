@@ -1,0 +1,150 @@
+@page "/freizeiten/{FreizeitId:guid}/programm/material"
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Programm
+@using Zeltlotse.Ui.Kontext
+@inject FreizeitKontextDienst Kontext
+@inject FreizeitenApiClient Freizeiten
+@inject ProgrammApiClient ProgrammApi
+@* Gesamt-Materialliste (CAP-20, FR-69, Story 3-2; EXPERIENCE.md → Fläche „Gesamt-Materialliste“) für Leitung und Team, erreicht über den
+   Link „Materialliste“ im Wochenraster. Dachzeile „Programm“, Überschrift „Materialliste“, Balken „N von M eingepackt“ (Zahl als Text), je
+   Programmpunkt eine Card (Tag und Uhrzeit als Dachzeile, Titel als Link zur Detailseite) mit seinem Material: Menge als Text, Status per
+   Segmente, „Ich bringe das mit“. Ohne Material: „Noch kein Material. Material hängt an den Programmpunkten.“ mit „Zum Programm“. In der
+   Phase „gelaufen“ nur lesbar. Kontext oder Liste nicht verfügbar → „Diese Seite ist nicht verfügbar.“; scheitern Freizeit oder
+   Personenliste, fehlen nur die Namen. *@
+<PageTitle>Materialliste – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Programm</Dachzeile>
+    <h1>Materialliste</h1>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+
+    @if (_liste is null || _kontext is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@ProgrammTexte.AbgeschlossenText</p>
+            </Meldung>
+        }
+        @if (_liste.Count == 0)
+        {
+            <LeerZustand Satz="Noch kein Material. Material hängt an den Programmpunkten." KnopfText="Zum Programm" KnopfHref="@RasterZiel" />
+        }
+        else
+        {
+            <Balken Bezeichnung="Eingepackt" Zahl="@($"{Eingepackt} von {_liste.Count} eingepackt")" Prozent="@(100.0 * Eingepackt / _liste.Count)"
+                    Statuswort="@(Eingepackt == _liste.Count ? "Alles eingepackt" : "Noch nicht alles eingepackt")" />
+            @foreach (var punkt in _liste.GroupBy(m => m.ProgrammpunktId))
+            {
+                var erstes = punkt.First();
+                <Card @key="punkt.Key" Titel="@erstes.Programmpunkt" Dachzeile="@Zeitpunkt(erstes)" TitelHref="@ProgrammTexte.DetailZiel(FreizeitId, punkt.Key)">
+                    @foreach (var material in punkt)
+                    {
+                        <MaterialEintrag @key="material.Id" FreizeitId="FreizeitId" Material="material" Namen="_namen" NurLesen="Abgeschlossen"
+                                         Geaendert="Geaendert" NeuLaden="NeuLadenAsync" />
+                    }
+                </Card>
+            }
+        }
+    }
+    <p><a href="@RasterZiel">Zurück zum Programm</a></p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    private List<Material>? _liste;
+    private IReadOnlyDictionary<Guid, string> _namen = new Dictionary<Guid, string>();
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    private int Eingepackt => _liste!.Count(m => m.Status == MaterialStatus.Eingepackt);
+
+    private string RasterZiel => $"freizeiten/{FreizeitId}/programm";
+
+    /// <summary>Tag und Uhrzeit des Programmpunkts, z. B. „Di 03.08. · 14:30“; ohne Uhrzeit nur der Tag.</summary>
+    private static string Zeitpunkt(Material material) =>
+        material.Beginn is { } beginn ? $"{Anzeige.TagKurz(material.Tag)} · {beginn}" : Anzeige.TagKurz(material.Tag);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _liste = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var liste = ProgrammApi.MaterialLadenAsync(FreizeitId);
+            var freizeit = Leise(Freizeiten.LadenAsync(FreizeitId));
+            var personen = Leise(Freizeiten.PersonenlisteLadenAsync(FreizeitId));
+            await Task.WhenAll(kontext, liste, freizeit, personen);
+            if (kontext.Result is null || liste.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _liste) = (kontext.Result, [.. liste.Result.Material]);
+            _namen = ProgrammTexte.Namen(freizeit.Result, personen.Result);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    private void Geaendert(Material material) => _liste = [.. _liste!.Select(m => m.Id == material.Id ? material : m)];
+
+    /// <summary>„Neu laden“ beim Konflikt: die Liste neu holen.</summary>
+    private async Task NeuLadenAsync()
+    {
+        try
+        {
+            if (await ProgrammApi.MaterialLadenAsync(FreizeitId) is { } liste)
+            {
+                _liste = [.. liste.Material];
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>Ein Abruf, dessen Scheitern nur die Namen kostet.</summary>
+    private static async Task<T?> Leise<T>(Task<T?> abruf)
+        where T : class
+    {
+        try
+        {
+            return await abruf;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            return null;
+        }
+    }
+}

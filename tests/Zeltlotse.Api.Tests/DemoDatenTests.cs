@@ -411,6 +411,24 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
             }));
         Assert.Equal(39L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.programmpunkt"));
 
+        // Story 3-2: fünf Materialien an Geländespiel und Lagerfeuer mit Menge und Status; Miriam bringt die Taschenlampen mit (für Lea nicht
+        // „meins“). Nichts doppelt, auch nach dem zweiten Einspielen.
+        var material = (await AnmeldeHelfer.JsonAsync(await leaClient.GetAsync($"/api/freizeiten/{freizeitId}/programm/material", Abbruch))).GetProperty("material").EnumerateArray().ToList();
+        Assert.Equal(
+            [
+                "Lagerfeuer Feuerholz 2 Kisten Besorgt -", "Lagerfeuer Stockbrot-Teig 3 kg Eingepackt -", "Geländespiel Fahnen 8 Stück Vorhanden -",
+                "Geländespiel Seile 4 × 10 m Gebraucht -", "Geländespiel Taschenlampen 10 Stück Gebraucht Miriam",
+            ],
+            material.Select(m =>
+            {
+                var von = m.GetProperty("bringtMit").ValueKind == System.Text.Json.JsonValueKind.Null ? null : (Guid?)m.GetProperty("bringtMit").GetGuid();
+                var wer = von == miriam ? "Miriam" : von is null ? "-" : "?";
+                return $"{m.GetProperty("programmpunkt").GetString()} {m.GetProperty("bezeichnung").GetString()} {m.GetProperty("menge").GetString()} "
+                       + $"{m.GetProperty("status").GetString()} {wer}";
+            }));
+        Assert.All(material, m => Assert.False(m.GetProperty("meins").GetBoolean()));
+        Assert.Equal(5L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.material"));
+
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,
             "SELECT count(*) FROM konten.konto k LEFT JOIN personen.person p ON p.\"Id\" = k.\"PersonId\" WHERE p.\"Id\" IS NULL OR p.\"Vorname\" IS NULL OR p.\"Nachname\" IS NULL"));

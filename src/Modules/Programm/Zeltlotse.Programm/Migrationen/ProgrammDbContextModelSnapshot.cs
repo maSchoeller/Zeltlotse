@@ -23,6 +23,54 @@ namespace Zeltlotse.Programm.Migrationen
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Zeltlotse.Programm.Materialien.Material", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Bezeichnung")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Menge")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProgrammpunktId")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FreizeitId");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("ProgrammpunktId");
+
+                    b.ToTable("material", "programm");
+                });
+
             modelBuilder.Entity("Zeltlotse.Programm.Programme.Programmpunkt", b =>
                 {
                     b.Property<Guid>("Id")
@@ -167,6 +215,15 @@ namespace Zeltlotse.Programm.Migrationen
                     b.HasIndex("ErledigtAm", "NaechsterVersuch");
 
                     b.ToTable("outbox_zustellung", "programm");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Programm.Materialien.Material", b =>
+                {
+                    b.HasOne("Zeltlotse.Programm.Programme.Programmpunkt", null)
+                        .WithMany()
+                        .HasForeignKey("ProgrammpunktId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.Zustellung", b =>

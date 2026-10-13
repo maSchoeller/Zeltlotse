@@ -1,0 +1,154 @@
+@attribute [NurInteraktiv]
+@using Zeltlotse.Api.Contracts.Programm
+@inject ProgrammApiClient ProgrammApi
+@* Ein Material (Story 3-2, FR-36) als Termin: Bezeichnung als Überschrift, „Bringt mit: …“ als Status (Erfolg). Auf der Detailseite
+   (Bearbeiten) Bezeichnung und Menge als Autosave-Felder (AD-19) und Löschen per Inline-Bestätigung, in der Materialliste die Menge als Text.
+   Darunter die Segmente des Status und „Ich bringe das mit“ bzw. „Doch nicht mitbringen“ (ein Tipp, nur für sich selbst; bringt es jemand
+   anderes mit, kein Knopf). Nur lesbar (Phase „gelaufen“): Menge als Text und der Status als Wort mit Quadrat. *@
+<Termin Titel="@_titel" StatusWort="@ProgrammTexte.BringtMitWort(Material, Namen)" StatusArt="StatusArt.Erfolg">
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+    @if (Bearbeiten && !NurLesen)
+    {
+        <AutosaveFeld Label="Bezeichnung" Id="@($"material-{Material.Id}-bezeichnung")" Feldname="@MaterialFelder.Bezeichnung" Pfad="@Pfad"
+                      Wert="@Material.Bezeichnung" Version="@Material.Version" NeuLaden="NeuLaden" Gespeichert="BezeichnungGespeichert"
+                      Hinweis="@($"Höchstens {MaterialFelder.BezeichnungMaximaleLaenge} Zeichen")" />
+        <AutosaveFeld Label="Menge" Id="@($"material-{Material.Id}-menge")" Feldname="@MaterialFelder.Menge" Pfad="@Pfad"
+                      Wert="@Material.Menge" Version="@Material.Version" NeuLaden="NeuLaden" Hinweis="Freitext, z. B. 4 × 10 m" />
+    }
+    else if (Material.Menge is not null)
+    {
+        <p>Menge: @Material.Menge</p>
+    }
+    @if (NurLesen)
+    {
+        <p><Status Wort="@Anzeige.MaterialStatus(Material.Status)" Art="@Anzeige.MaterialStatusArt(Material.Status)" /></p>
+    }
+    else
+    {
+        <MaterialStatusWahl FreizeitId="FreizeitId" Material="Material" Bezeichnung="@_titel" Geaendert="Geaendert" />
+        @if (Material.BringtMit is null)
+        {
+            <p><Knopf Art="KnopfArt.Outline" Deaktiviert="_uebertraegt" @onclick="@(() => MitbringenAsync(mitbringen: true))">Ich bringe das mit</Knopf></p>
+        }
+        else if (Material.Meins)
+        {
+            <p><Knopf Art="KnopfArt.Outline" Deaktiviert="_uebertraegt" @onclick="@(() => MitbringenAsync(mitbringen: false))">Doch nicht mitbringen</Knopf></p>
+        }
+        @if (Bearbeiten)
+        {
+            <InlineBestaetigung AusloeserText="Material löschen" AusloeserArt="KnopfArt.Text" Satz="@($"„{_titel}“ löschen?")" JaText="Ja, löschen"
+                                Bestaetigt="LoeschenAsync" />
+        }
+    }
+</Termin>
+
+@code {
+    private string _titel = "";
+    private Guid? _titelVon;
+    private uint _version;
+    private bool _uebertraegt;
+    private string? _meldung;
+
+    [Parameter, EditorRequired] public Guid FreizeitId { get; set; }
+
+    [Parameter, EditorRequired] public Material Material { get; set; } = null!;
+
+    /// <summary>Namen der Leitung und des Teams für „Bringt mit: …“.</summary>
+    [Parameter] public IReadOnlyDictionary<Guid, string> Namen { get; set; } = new Dictionary<Guid, string>();
+
+    /// <summary>Detailseite: Bezeichnung und Menge als Autosave-Felder, Löschen per Inline-Bestätigung.</summary>
+    [Parameter] public bool Bearbeiten { get; set; }
+
+    /// <summary>Phase „gelaufen“: nur lesbar.</summary>
+    [Parameter] public bool NurLesen { get; set; }
+
+    /// <summary>Das Material nach einem Statuswechsel oder „Ich bringe das mit“.</summary>
+    [Parameter] public EventCallback<Material> Geaendert { get; set; }
+
+    /// <summary>Nach dem Löschen.</summary>
+    [Parameter] public EventCallback<Material> Geloescht { get; set; }
+
+    /// <summary>„Neu laden“ beim Konflikt: die Seite lädt das Material neu.</summary>
+    [Parameter] public EventCallback NeuLaden { get; set; }
+
+    private string Pfad => ProgrammApiClient.MaterialPfad(FreizeitId, Material.Id);
+
+    protected override void OnParametersSet()
+    {
+        // Die Überschrift folgt dem Material von außen und den eigenen Speicherständen der Bezeichnung.
+        if (_titelVon != Material.Id || Material.Version != _version)
+        {
+            (_titel, _titelVon, _version) = (Material.Bezeichnung, Material.Id, Material.Version);
+        }
+    }
+
+    private void BezeichnungGespeichert(string? wert) => _titel = wert ?? "";
+
+    private async Task MitbringenAsync(bool mitbringen)
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _meldung = null;
+        try
+        {
+            var aktion = mitbringen ? await ProgrammApi.MitbringenAsync(FreizeitId, Material.Id) : await ProgrammApi.NichtMitbringenAsync(FreizeitId, Material.Id);
+            switch (aktion.Ergebnis)
+            {
+                case ProgrammAktionErgebnis.Erfolg:
+                    await Geaendert.InvokeAsync(aktion.Material!);
+                    break;
+                case ProgrammAktionErgebnis.Konflikt:
+                    _meldung = ProgrammTexte.MaterialKonfliktText;
+                    await NeuLaden.InvokeAsync();
+                    break;
+                case ProgrammAktionErgebnis.Abgeschlossen:
+                    _meldung = ProgrammTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task LoeschenAsync()
+    {
+        _meldung = null;
+        try
+        {
+            switch (await ProgrammApi.MaterialLoeschenAsync(FreizeitId, Material.Id))
+            {
+                case ProgrammAktionErgebnis.Erfolg:
+                    await Geloescht.InvokeAsync(Material);
+                    break;
+                case ProgrammAktionErgebnis.Abgeschlossen:
+                    _meldung = ProgrammTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+}

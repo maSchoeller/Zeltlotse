@@ -102,6 +102,20 @@ public sealed class KomponentenTests : BunitContext
         Assert.Equal("freizeitpaesse-offen", cut.Find("section.elkw-card").Id);
     }
 
+    [Fact]
+    public void Card_mit_Dachzeile_und_Titel_Link()
+    {
+        // Story 3-2: je Programmpunkt eine Card in der Materialliste, Tag und Uhrzeit als Dachzeile, der Titel führt zur Detailseite.
+        var cut = Render<Card>(ps => ps.Add(p => p.Titel, "Geländespiel").Add(p => p.Dachzeile, "Di 03.08. · 14:30").Add(p => p.TitelHref, "programm/1"));
+
+        var body = cut.Find(".elkw-card__body");
+        Assert.Equal("Di 03.08. · 14:30", body.QuerySelector("p.elkw-kicker:first-child")!.TextContent);
+        var link = cut.Find("h2.elkw-card__title a");
+        Assert.Equal(("Geländespiel", "programm/1"), (link.TextContent, link.GetAttribute("href")));
+        Assert.Equal(cut.Find("h2").Id, cut.Find("section.elkw-card").GetAttribute("aria-labelledby"));
+        Assert.Empty(Render<Card>(ps => ps.Add(p => p.Titel, "Ohne")).FindAll(".elkw-kicker, a"));
+    }
+
     // ---------- Feld ----------
 
     [Fact]
@@ -938,5 +952,46 @@ public sealed class KomponentenTests : BunitContext
         Assert.Equal(["Mo 02.08.", "Di 03.08."], abschnitte.Select(a => a.QuerySelector("h2")!.TextContent));
         Assert.All(abschnitte, a => Assert.Equal(a.QuerySelector("h2")!.Id, a.GetAttribute("aria-labelledby")));
         Assert.Equal(["Frühstück", "Geländespiel"], abschnitte.Select(a => a.QuerySelector("p")!.TextContent));
+    }
+
+    // ---------- Story 3-2: Segmente ----------
+
+    private static readonly AuswahlOption[] Zustaende =
+        [new("Gebraucht", "gebraucht"), new("Vorhanden", "vorhanden"), new("Besorgt", "besorgt"), new("Eingepackt", "eingepackt")];
+
+    [Fact]
+    public void Segmente_sind_eine_Gruppe_mit_Legende_je_Option_ein_Knopf_und_aria_pressed_am_gewaehlten()
+    {
+        var cut = Render<Segmente>(ps => ps.Add(p => p.Legende, "Status von Seile").Add(p => p.Optionen, Zustaende).Add(p => p.Wert, "Besorgt"));
+
+        var gruppe = cut.Find("div.elkw-segments");
+        Assert.Equal(("group", "Status von Seile"), (gruppe.GetAttribute("role"), gruppe.GetAttribute("aria-label")));
+        var knoepfe = gruppe.QuerySelectorAll("button");
+        Assert.Equal(["gebraucht", "vorhanden", "besorgt", "eingepackt"], knoepfe.Select(k => k.TextContent));
+        Assert.All(knoepfe, k => Assert.Equal("button", k.GetAttribute("type")));
+        Assert.Equal(["false", "false", "true", "false"], knoepfe.Select(k => k.GetAttribute("aria-pressed")));
+        Assert.All(knoepfe, k => Assert.False(k.HasAttribute("disabled")));
+    }
+
+    [Fact]
+    public void Segmente_ein_Tipp_meldet_den_Wert_der_gewaehlte_Wert_loest_nichts_aus()
+    {
+        var gewaehlt = new List<string>();
+        var cut = Render<Segmente>(ps => ps.Add(p => p.Legende, "Status").Add(p => p.Optionen, Zustaende).Add(p => p.Wert, "Gebraucht")
+            .Add(p => p.Gewaehlt, (string wert) => gewaehlt.Add(wert)));
+
+        cut.FindAll("button")[3].Click();
+        cut.FindAll("button")[0].Click();
+
+        Assert.Equal(["Eingepackt"], gewaehlt);
+    }
+
+    [Fact]
+    public void Segmente_deaktiviert_setzen_disabled_an_jedem_Knopf()
+    {
+        var cut = Render<Segmente>(ps => ps.Add(p => p.Legende, "Status").Add(p => p.Optionen, Zustaende).Add(p => p.Deaktiviert, true));
+
+        Assert.All(cut.FindAll("button"), k => Assert.True(k.HasAttribute("disabled")));
+        Assert.All(cut.FindAll("button"), k => Assert.Equal("false", k.GetAttribute("aria-pressed")));
     }
 }

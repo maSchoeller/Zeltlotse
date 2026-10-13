@@ -1,0 +1,86 @@
+@attribute [NurInteraktiv]
+@using Zeltlotse.Api.Contracts.Programm
+@inject ProgrammApiClient ProgrammApi
+@* Material-Status (Story 3-2, FR-36; EXPERIENCE.md → Component Patterns „Material-Status“): Segmente „gebraucht / vorhanden / besorgt /
+   eingepackt“. Ein Tipp setzt den Status und speichert sofort; danach „Gespeichert · Rückgängig“ (Rückgängig sendet den vorigen Status
+   erneut). Scheitert das Speichern: „Nicht gespeichert.“ mit „Erneut versuchen“; abgeschlossene Freizeit: Fehlermeldung. Das neue Material
+   meldet Geaendert an die Seite. *@
+<Segmente Legende="@($"Status von {Bezeichnung ?? Material.Bezeichnung}")" Optionen="ProgrammTexte.MaterialStatusOptionen" Wert="@Material.Status.ToString()"
+          Deaktiviert="_uebertraegt" Gewaehlt="WaehlenAsync" />
+@if (_abgeschlossen)
+{
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>@ProgrammTexte.AbgeschlossenText</p>
+    </Meldung>
+}
+else
+{
+    <SpeicherHinweis Zustand="_zustand" MitRueckgaengig="_mitRueckgaengig" Uebertraegt="_uebertraegt"
+                     Rueckgaengig="RueckgaengigAsync" ErneutVersuchen="ErneutVersuchenAsync" />
+}
+
+@code {
+    private SpeicherZustand _zustand;
+    private bool _mitRueckgaengig;
+    private bool _uebertraegt;
+    private bool _abgeschlossen;
+    private MaterialStatus? _vorher;
+    private (MaterialStatus Status, bool Rueckgaengig)? _letzte;
+
+    [Parameter, EditorRequired] public Guid FreizeitId { get; set; }
+
+    [Parameter, EditorRequired] public Material Material { get; set; } = null!;
+
+    /// <summary>Die Bezeichnung für die Beschriftung der Segmente („Status von Seile“); ohne Angabe die des Materials.</summary>
+    [Parameter] public string? Bezeichnung { get; set; }
+
+    /// <summary>Das Material nach einem gelungenen Statuswechsel.</summary>
+    [Parameter] public EventCallback<Material> Geaendert { get; set; }
+
+    private Task WaehlenAsync(string wert) => SetzenAsync(Enum.Parse<MaterialStatus>(wert), rueckgaengig: false);
+
+    private Task RueckgaengigAsync() => _vorher is { } vorher ? SetzenAsync(vorher, rueckgaengig: true) : Task.CompletedTask;
+
+    private Task ErneutVersuchenAsync() => _letzte is { } letzte ? SetzenAsync(letzte.Status, letzte.Rueckgaengig) : Task.CompletedTask;
+
+    private async Task SetzenAsync(MaterialStatus status, bool rueckgaengig)
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        var bisher = Material.Status;
+        _letzte = (status, rueckgaengig);
+        _uebertraegt = true;
+        _abgeschlossen = false;
+        try
+        {
+            var aktion = await ProgrammApi.MaterialStatusAsync(FreizeitId, Material.Id, status);
+            switch (aktion.Ergebnis)
+            {
+                case ProgrammAktionErgebnis.Erfolg:
+                    _vorher = bisher;
+                    _zustand = SpeicherZustand.Gespeichert;
+                    _mitRueckgaengig = !rueckgaengig;
+                    await Geaendert.InvokeAsync(aktion.Material!);
+                    break;
+                case ProgrammAktionErgebnis.Abgeschlossen:
+                    _abgeschlossen = true;
+                    _zustand = SpeicherZustand.Keiner;
+                    break;
+                default:
+                    _zustand = SpeicherZustand.Gescheitert;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _zustand = SpeicherZustand.Gescheitert;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

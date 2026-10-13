@@ -65,7 +65,7 @@ Leitung und Team halten im [Vorfall-Protokoll](/mitarbeitende/vorfall-protokoll/
 
 ## Programm
 
-Im [Wochenraster](/mitarbeitende/programm/) merkt sich Zeltlotse an einem Programmpunkt nur, wer ihn übernommen hat. Die Person sieht ihre Übernahmen in der **Datenauskunft** im Abschnitt „Programm“. Wird ihr Konto gelöscht, ersetzt Zeltlotse ihre Kennung durch einen Platzhalter; der Programmpunkt gilt danach wieder als frei und lässt sich neu übernehmen. Nach Ablauf der Löschfrist der Organisation für Freizeit-Daten löscht Zeltlotse die Programmpunkte der Freizeit.
+Im [Wochenraster](/mitarbeitende/programm/) merkt sich Zeltlotse an einem Programmpunkt nur, wer ihn übernommen hat, und am [Material](/mitarbeitende/material/) nur, wer es mitbringt. Die Person sieht ihre Übernahmen („Programmpunkt übernommen“) und das Material, das sie mitbringt („Bringt Material mit“), in der **Datenauskunft** im Abschnitt „Programm“. Wird ihr Konto gelöscht, ersetzt Zeltlotse ihre Kennung durch einen Platzhalter; der Programmpunkt gilt danach wieder als frei und lässt sich neu übernehmen, beim Material ist „Ich bringe das mit“ wieder möglich. Nach Ablauf der Löschfrist der Organisation für Freizeit-Daten löscht Zeltlotse die Programmpunkte der Freizeit und ihr Material.
 
 ## Nachweise: nur eine einmalige Einsicht
 

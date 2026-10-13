@@ -1,5 +1,6 @@
 using System.Globalization;
 using Zeltlotse.Api.Contracts.Gemeinsam;
+using MaterialZustand = Zeltlotse.Api.Contracts.Programm.MaterialStatus;
 using Zeltlotse.Ui.Komponenten;
 using ApiPhase = Zeltlotse.Api.Contracts.Gemeinsam.Phase;
 
@@ -288,6 +289,27 @@ public static class Anzeige
 
     /// <summary>Story 3-1: Status eines übernommenen Programmpunkts: „Übernommen: Lea Feuerstein“, ohne bekannten Namen nur „Übernommen“.</summary>
     public static string Uebernommen(string? name) => string.IsNullOrWhiteSpace(name) ? "Übernommen" : $"Übernommen: {name}";
+
+    /// <summary>Story 3-2: Wer ein Material mitbringt: „Bringt mit: Miriam Zeltner“, ohne bekannten Namen „Bringt jemand mit“.</summary>
+    public static string BringtMit(string? name) => string.IsNullOrWhiteSpace(name) ? "Bringt jemand mit" : $"Bringt mit: {name}";
+
+    /// <summary>Story 3-2: Status eines Materials als Wort: „gebraucht“, „vorhanden“, „besorgt“, „eingepackt“.</summary>
+    public static string MaterialStatus(MaterialZustand status) => status switch
+    {
+        MaterialZustand.Gebraucht => "gebraucht",
+        MaterialZustand.Vorhanden => "vorhanden",
+        MaterialZustand.Besorgt => "besorgt",
+        MaterialZustand.Eingepackt => "eingepackt",
+        _ => status.ToString(),
+    };
+
+    /// <summary>Story 3-2: Farbe des Material-Status (EXPERIENCE.md → Status): gebraucht = offen, vorhanden und besorgt = aktiv, eingepackt = Erfolg.</summary>
+    public static StatusArt MaterialStatusArt(MaterialZustand status) => status switch
+    {
+        MaterialZustand.Vorhanden or MaterialZustand.Besorgt => StatusArt.Aktiv,
+        MaterialZustand.Eingepackt => StatusArt.Erfolg,
+        _ => StatusArt.Offen,
+    };
 
     private static TimeZoneInfo Berlin()
     {

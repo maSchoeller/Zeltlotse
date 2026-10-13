@@ -54,7 +54,11 @@ In der Card **Bearbeiten** lassen sich **Titel** und **Uhrzeit** ändern. Zeltlo
 
 ![Seite des Programmpunkts „Lagerfeuer“ am Handy: Montag, 2. August 2027, übernommen von Lea Feuerstein, darunter die Card „Bearbeiten“ mit Titel „Lagerfeuer“ und Uhrzeit 20:00](../../../assets/screenshots/programmpunkt-handy.png)
 
-![Seite des Programmpunkts „Lagerfeuer“ am Laptop mit der Card „Bearbeiten“, dem Knopf „Programmpunkt löschen“ und dem Link „Zurück zum Programm“](../../../assets/screenshots/programmpunkt-laptop.png)
+![Seite des Programmpunkts „Lagerfeuer“ am Laptop mit der Card „Bearbeiten“ und darunter der Card „Material“ mit dem Feuerholz](../../../assets/screenshots/programmpunkt-laptop.png)
+
+## Material am Programmpunkt
+
+Unter der Card **Bearbeiten** steht die Card **Material**: was für den Programmpunkt gebraucht wird, mit Menge, Stand und wer es mitbringt. Über dem Wochenraster führt der Link **Materialliste** zum Material aller Programmpunkte. Wie das geht, steht unter [Material planen und packen](/mitarbeitende/material/).
 
 ## Nach dem Abschluss
 
@@ -62,6 +66,6 @@ Nach dem Abschluss der Freizeit ist das Programm nur lesbar: Oben steht „Diese
 
 ## Noch nicht dabei
 
-Material, Aufgaben, Dokumente am Programmpunkt, die Programmbibliothek und „Alle informieren?“ nach einer geänderten Uhrzeit kommen mit späteren Versionen. Eine geänderte Uhrzeit teilt Zeltlotse heute niemandem mit.
+Aufgaben, Dokumente am Programmpunkt, die Programmbibliothek und „Alle informieren?“ nach einer geänderten Uhrzeit kommen mit späteren Versionen. Eine geänderte Uhrzeit teilt Zeltlotse heute niemandem mit.
 
 Wer einen Programmpunkt übernommen hat, steht auch in der Datenauskunft der Person unter „Programm“ – mehr dazu unter [Was passiert mit meinen Daten](/daten/#programm).

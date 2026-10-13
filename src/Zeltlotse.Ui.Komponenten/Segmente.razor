@@ -1,0 +1,29 @@
+@attribute [NurInteraktiv]
+@* Segmente (EXPERIENCE.md → Component Patterns „Segmente“, „Material-Status“; ELKW elkw-segments, Story 3-2): eine Gruppe mit Legende als
+   aria-label, je Option ein Knopf mit aria-pressed am gewählten Wert. Ein Tipp meldet den Wert über Gewaehlt; der gewählte Wert löst nichts
+   aus. Deaktiviert (z. B. während einer Übertragung) sind alle Knöpfe gesperrt. *@
+<div class="elkw-segments" role="group" aria-label="@Legende">
+    @foreach (var option in Optionen)
+    {
+        <button type="button" aria-pressed="@(option.Wert == Wert ? "true" : "false")" disabled="@Deaktiviert" @onclick="@(() => TippAsync(option))">@option.Text</button>
+    }
+</div>
+
+@code {
+    /// <summary>Beschreibt die Gruppe für Screenreader, z. B. „Status von Seile“.</summary>
+    [Parameter, EditorRequired] public string Legende { get; set; } = "";
+
+    /// <summary>2 bis 6 Optionen.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<AuswahlOption> Optionen { get; set; } = [];
+
+    /// <summary>Der gewählte Wert oder <c>null</c>.</summary>
+    [Parameter] public string? Wert { get; set; }
+
+    /// <summary>Wird mit dem Wert der getippten Option ausgelöst, außer sie ist schon gewählt.</summary>
+    [Parameter] public EventCallback<string> Gewaehlt { get; set; }
+
+    [Parameter] public bool Deaktiviert { get; set; }
+
+    private Task TippAsync(AuswahlOption option) =>
+        Deaktiviert || option.Wert == Wert ? Task.CompletedTask : Gewaehlt.InvokeAsync(option.Wert);
+}
