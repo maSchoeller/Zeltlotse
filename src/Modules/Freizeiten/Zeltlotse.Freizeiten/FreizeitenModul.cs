@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Freizeiten.Anmeldungen;
 using Zeltlotse.Freizeiten.Anmeldungen.Entscheiden;
 using Zeltlotse.Freizeiten.Contracts.Dokumente;
+using Zeltlotse.Freizeiten.Contracts.Namen;
+using Zeltlotse.Freizeiten.Contracts.Personen;
 using Zeltlotse.Freizeiten.Contracts.Rollen;
 using Zeltlotse.Freizeiten.Contracts.Team;
 using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
@@ -43,6 +45,9 @@ public static class FreizeitenModul
         // Story 2-9: Team und Dokumente für das Schutzkonzept (Pfeil Sicherheit → Freizeiten).
         services.AddScoped<IFreizeitTeamLesen, FreizeitTeamLesen>();
         services.AddScoped<IFreizeitDokumenteLesen, FreizeitDokumenteLesen>();
+        // Story 2-10: Zugehörigkeit einer Person und Namen der Freizeiten für das Vorfall-Protokoll (Pfeil Sicherheit → Freizeiten).
+        services.AddScoped<IFreizeitPersonenLesen, FreizeitPersonenLesen>();
+        services.AddScoped<IFreizeitNamenLesen, FreizeitNamenLesen>();
         services.AddScoped<IFreizeitEndenLesen, FreizeitEndenLesen>();
         services.AddScoped<IBestaetigteTeilnehmende, BestaetigteTeilnehmendeZaehlen>();
         services.VerschicktMail<AnmeldungEntschiedenMail, AnmeldungEntschiedenMailAufbau>();

@@ -14,7 +14,7 @@
    (Frage → Antwort, nur lesend), „Freizeitpass sichtbar ab Bestätigung der Anmeldung.“ oder „Einsicht beendet am TT.MM.JJJJ.“. Darunter
    die Card „Team-Notizen“ (neueste zuerst, Löschen mit Inline-Bestätigung, Formular „Neue Notiz“); sie hängt an der Anmeldung, die die
    Seite über die Personenliste findet, und fehlt ohne Anmeldung (abgesagt). Ohne die erlaubte Aktion „freizeitpaesse-sehen“ oder bei
-   403/404 → „Diese Seite ist nicht verfügbar.“ *@
+   403/404 → „Diese Seite ist nicht verfügbar.“ Story 2-10: unter dem Zurück-Link der Link „Vorfall-Protokoll“ der Person. *@
 <PageTitle>Freizeitpass – Zeltlotse</PageTitle>
 
 @if (_nichtVerfuegbar)
@@ -25,6 +25,8 @@ else
 {
     <h1>@(_pass is null ? "Freizeitpass" : Anzeige.Name(_pass.Vorname, _pass.Nachname))</h1>
     <p><a href="@($"freizeiten/{FreizeitId}/freizeitpaesse")">Zurück zu den Freizeitpässen</a></p>
+    @* Story 2-10: das Vorfall-Protokoll der Person (Leitung und Team). *@
+    <p><a href="@($"freizeiten/{FreizeitId}/vorfall/{PersonId}")">Vorfall-Protokoll</a></p>
 
     @if (_aktionFehler)
     {

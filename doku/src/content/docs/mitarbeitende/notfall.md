@@ -30,6 +30,8 @@ Auf der Startseite der Freizeit führt der Knopf **Sicherheitskette** in jeder P
 
 ![Sicherheitskette am Laptop mit Suchfeld, den Schritten und „Wen anrufen“: Notruf 112, Leitung Jonas Hüttner und Miriam Zeltner mit Telefon, Ansprechperson am Heimatort Petra Heimann (Gemeindebüro) mit Telefon](../../../assets/screenshots/sicherheitskette-laptop.png)
 
+Zwischen „Was jetzt zu tun ist“ und „Wen anrufen“ steht die Card **Vorfall-Protokoll**: „Betroffene Person oben suchen und im Freizeitpass „Vorfall-Protokoll“ wählen. Jeder Eintrag ist sofort für die Leitung sichtbar.“ Wie das Protokoll funktioniert, steht unter [Vorfall-Protokoll führen](/mitarbeitende/vorfall-protokoll/).
+
 Hat die Leitung die Sicherheitskette noch nicht eingerichtet, steht oben „Hinweis: Die Sicherheitskette ist noch nicht eingerichtet.“ Suchfeld, die Namen der Leitung und „Notruf 112“ stehen trotzdem da. Wie die Leitung die Kette einrichtet, steht unter [Sicherheitskette einrichten](/leitung/sicherheitskette/).
 
 ## Schnellsuche: den Freizeitpass in zwei Schritten öffnen

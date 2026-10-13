@@ -6,7 +6,8 @@
    Organisation (FreizeitenKarten); mit „nachweise-pruefen“ der Weg zur Prüfliste, mit „nachweis-richtlinie-verwalten“ die
    Richtlinie für Nachweise (Autosave je Zelle), mit „loeschfristen-verwalten“ die Löschfristen (Autosave, NFR-5); nur mit der erlaubten
    Aktion „org-rollen-vergeben“ (AD-29) die Rollen, die offenen Einladungen und das Formular „Person einladen“. Die
-   Oberfläche entscheidet nur über „erlaubt“, nie über die Rollen. 403/404 → „Diese Seite ist nicht verfügbar.“ *@
+   Oberfläche entscheidet nur über „erlaubt“, nie über die Rollen. Story 2-10: mit „vorfall-archiv-sehen“ die Card „Vorfall-Notizen“
+   mit dem Weg ins Archiv. 403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>@(_organisation?.Name ?? "Organisation") – Zeltlotse</PageTitle>
 
 @if (_nichtVerfuegbar)
@@ -51,6 +52,15 @@ else
         <Card Titel="Org-Dokumente">
             <p>Dokumente der Organisation, etwa eine Hausordnung, binden Freizeiten ein, ohne sie zu kopieren.</p>
             <p><Knopf Art="KnopfArt.Outline" Href="@($"organisationen/{OrgId}/dokumente")" Ansichtswechsel="true">Org-Dokumente öffnen</Knopf></p>
+        </Card>
+    }
+
+    @if (Darf(Aktionsschluessel.VorfallArchivSehen))
+    {
+        @* Story 2-10: das Archiv der Vorfall-Notizen abgeschlossener Freizeiten. *@
+        <Card Titel="Vorfall-Notizen">
+            <p>Nach dem Abschluss einer Freizeit liegen ihre Vorfall-Notizen hier, bis die Frist für Freizeit-Daten abläuft.</p>
+            <p><Knopf Art="KnopfArt.Outline" Href="@($"organisationen/{OrgId}/vorfall-archiv")" Ansichtswechsel="true">Archiv öffnen</Knopf></p>
         </Card>
     }
 

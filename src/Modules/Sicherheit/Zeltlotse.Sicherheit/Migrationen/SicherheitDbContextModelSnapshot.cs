@@ -225,6 +225,49 @@ namespace Zeltlotse.Sicherheit.Migrationen
                     b.ToTable("sicherheitskette", "sicherheit");
                 });
 
+            modelBuilder.Entity("Zeltlotse.Sicherheit.Vorfaelle.VorfallEintrag", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ArchiviertAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<short>("Art")
+                        .HasColumnType("smallint");
+
+                    b.Property<DateTimeOffset>("ErfasstAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("Text")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<Guid>("VerfasstVon")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("VerfasstVon");
+
+                    b.HasIndex("FreizeitId", "PersonId");
+
+                    b.ToTable("vorfall_eintrag", "sicherheit");
+                });
+
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.Zustellung", b =>
                 {
                     b.HasOne("Zeltlotse.SharedKernel.Outbox.OutboxNachricht", null)

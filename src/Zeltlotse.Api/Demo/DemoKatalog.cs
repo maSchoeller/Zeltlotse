@@ -111,6 +111,20 @@ internal static class DemoKatalog
     public const string Schutzkonzept = "Schutzkonzept Jugendwerk Musterstadt";
 
     /// <summary>
+    /// Story 2-10: drei Einträge im Vorfall-Protokoll zu Mia Probst in der Demo-Freizeit, in dieser Reihenfolge angelegt (feste Kennungen,
+    /// damit das Einspielen idempotent bleibt). Archiviert ist nichts.
+    /// </summary>
+    public static IReadOnlyList<(Guid Id, string VerfasserMail, Zeltlotse.Api.Contracts.Sicherheit.VorfallArt Art, string Text)> Vorfaelle { get; } =
+    [
+        (Guid.Parse("0199e8a0-0000-7000-8000-00000000f001"), "lea.feuerstein@example.org", Zeltlotse.Api.Contracts.Sicherheit.VorfallArt.Geschehen,
+            "Beim Geländespiel am linken Knie geschnitten. Wunde gereinigt und verbunden."),
+        (Guid.Parse("0199e8a0-0000-7000-8000-00000000f002"), "lea.feuerstein@example.org", Zeltlotse.Api.Contracts.Sicherheit.VorfallArt.Entnahme,
+            "2 Pflaster, 1 sterile Kompresse"),
+        (Guid.Parse("0199e8a0-0000-7000-8000-00000000f003"), "jonas.huettner@example.org", Zeltlotse.Api.Contracts.Sicherheit.VorfallArt.Medikament,
+            "Kühlpack, kein Medikament"),
+    ];
+
+    /// <summary>
     /// Jonas' Nachweise (Story 1-5): Art, Ausstellungsdatum und eine kleine erfundene Demo-Datei. Ohne Präventionsschulung, damit
     /// „Nachweis hinzufügen“ in der Doku sichtbar bleibt.
     /// </summary>

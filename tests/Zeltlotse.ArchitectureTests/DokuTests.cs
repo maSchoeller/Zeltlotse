@@ -69,6 +69,7 @@ public sealed class DokuTests
                 "Seite mitarbeitende/dokumente.md fehlt.", "Seite org-admin/org-dokumente.md fehlt.", "Seite eltern/elterninfo.md fehlt.",
                 "Seite mitarbeitende/notfall.md fehlt.", "Seite leitung/sicherheitskette.md fehlt.",
                 "Seite mitarbeitende/schutzkonzept.md fehlt.", "Seite leitung/schutzkonzept.md fehlt.",
+                "Seite mitarbeitende/vorfall-protokoll.md fehlt.", "Seite leitung/vorfall-notizen.md fehlt.", "Seite org-admin/vorfall-archiv.md fehlt.",
             ],
             fehlend);
     }

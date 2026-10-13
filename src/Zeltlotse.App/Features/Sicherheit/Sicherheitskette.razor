@@ -11,7 +11,8 @@
    Freizeitpass), ohne Einrichtung der Hinweis, Card „Was jetzt zu tun ist“ (ein Schritt je Zeile, nummeriert) und Card „Wen anrufen“ mit
    „Notruf 112“, der Leitung (Namen immer, Telefon, wenn eingerichtet) und der Ansprechperson am Heimatort (mit Telefon).
    Kontext, Freizeit, Personenliste und Kette laden parallel. Kontext, Freizeit oder Kette nicht verfügbar → „Diese Seite ist nicht
-   verfügbar.“; scheitert nur die Personenliste, entfällt nur die Suche. Vorfall-Protokoll (2-10) und Offline (V6) kommen später. *@
+   verfügbar.“; scheitert nur die Personenliste, entfällt nur die Suche. Story 2-10: Vor „Wen anrufen“ zeigt die Card „Vorfall-Protokoll“
+   den Weg dorthin (betroffene Person suchen, im Freizeitpass „Vorfall-Protokoll“). Offline (V6) kommt später. *@
 <PageTitle>Sicherheitskette – Zeltlotse</PageTitle>
 
 @if (_nichtVerfuegbar)
@@ -57,6 +58,9 @@ else
                 </ol>
             </Card>
         }
+        <Card Titel="Vorfall-Protokoll">
+            <p>Betroffene Person oben suchen und im Freizeitpass „Vorfall-Protokoll“ wählen. Jeder Eintrag ist sofort für die Leitung sichtbar.</p>
+        </Card>
         <Card Titel="Wen anrufen">
             <p><TelefonLink Nummer="112" Text="Notruf 112" /></p>
             <p>@LeitungZeile</p>

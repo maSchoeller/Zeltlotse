@@ -1,0 +1,67 @@
+@page "/organisationen/{OrgId:guid}/vorfall-archiv"
+@using Zeltlotse.Api.Contracts.Sicherheit
+@inject SicherheitApiClient SicherheitApi
+@* Archiv der Vorfall-Notizen (Story 2-10, FR-31, AD-16) für Org-Admins: Nach dem Abschluss einer Freizeit liegen ihre Vorfall-Notizen hier,
+   je Freizeit eine Card mit den Einträgen (neueste oben), bis der Lösch-Lauf sie nach der Frist für Freizeit-Daten entfernt. Ohne
+   archivierte Einträge der Leer-Zustand. 403/404 → „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>Archiv der Vorfall-Notizen – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Organisation</Dachzeile>
+    <h1>Archiv der Vorfall-Notizen</h1>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+    else if (_archiv is null)
+    {
+        <Ladezustand />
+    }
+    else if (_archiv.Count == 0)
+    {
+        <LeerZustand Satz="Noch keine archivierten Vorfall-Notizen." />
+    }
+    else
+    {
+        @foreach (var freizeit in _archiv)
+        {
+            <Card Titel="@freizeit.Name">
+                <VorfallNotizen Eintraege="freizeit.Eintraege" />
+            </Card>
+        }
+    }
+    <p><a href="@($"organisationen/{OrgId}")">Zurück zur Organisation</a></p>
+}
+
+@code {
+    private List<VorfallArchivFreizeit>? _archiv;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+
+    [Parameter] public Guid OrgId { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _archiv = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        try
+        {
+            _archiv = await SicherheitApi.VorfallArchivLadenAsync(OrgId);
+            _nichtVerfuegbar = _archiv is null;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+}

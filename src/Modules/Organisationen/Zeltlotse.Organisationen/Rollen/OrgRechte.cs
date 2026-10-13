@@ -35,6 +35,12 @@ internal static class OrgRechte
     /// <summary>Story 2-7: Org-Dokumente sehen, hochladen und entfernen (FR-43).</summary>
     public static readonly OrgRolleArt[] Dokumente = [OrgRolleArt.OrgAdmin];
 
+    /// <summary>
+    /// Story 2-10: das Archiv der Vorfall-Notizen sehen (CAP-17, FR-31). Den Endpunkt besitzt Sicherheit; dort steht dieselbe Liste
+    /// (<c>SicherheitRechte.Archiv</c>), ein Test hält beide gleich.
+    /// </summary>
+    public static readonly OrgRolleArt[] VorfallArchiv = [OrgRolleArt.OrgAdmin];
+
     public static IReadOnlyList<string> Erlaubt(IReadOnlyCollection<OrgRolleArt> rollen)
     {
         var erlaubt = new List<string>();
@@ -61,6 +67,11 @@ internal static class OrgRechte
         if (rollen.Any(Dokumente.Contains))
         {
             erlaubt.Add(Aktionsschluessel.OrgDokumenteVerwalten);
+        }
+
+        if (rollen.Any(VorfallArchiv.Contains))
+        {
+            erlaubt.Add(Aktionsschluessel.VorfallArchivSehen);
         }
 
         return erlaubt;

@@ -15,6 +15,7 @@ sidebar:
 - **Aufgaben-Vorlagen** und **Org-Dokumente** pflegen – Org-Dokumente binden die Freizeiten ein, ohne sie zu kopieren, siehe [Org-Dokumente](/org-admin/org-dokumente/),
 - **Richtlinien** festlegen: welche Nachweise Pflicht sind und wie lange sie gelten (siehe [Richtlinie für Nachweise](/org-admin/nachweis-richtlinie/)), wie lange das Freigabefenster dauert und nach welchen Fristen Daten gelöscht werden (siehe [Löschfristen](/org-admin/loeschfristen/)),
 - **Nachweise prüfen** auf Ebene der Organisation, für alle, die in einer Freizeit der Organisation mitarbeiten,
+- die **Vorfall-Notizen abgeschlossener Freizeiten** im Archiv der Organisation sehen – siehe [Archiv der Vorfall-Notizen](/org-admin/vorfall-archiv/),
 - weitere Org-Admins und den **Org-Überblick** ernennen – per Einladung, siehe [Rollen vergeben](/org-admin/rollen-vergeben/).
 
 ## Org-Überblick
@@ -27,4 +28,4 @@ Wie jede Person sieht auch der Org-Admin im Zugriffsprotokoll, wer Einsicht in d
 
 ## Keine Einsicht in Freizeit-Inhalte
 
-Org-Admin und Org-Überblick sehen **keine Inhalte einer Freizeit** – keine Teilnehmenden, keine Freizeitpässe, keine Finanzen –, außer in Freizeiten, in denen sie selbst mitarbeiten.
+Org-Admin und Org-Überblick sehen **keine Inhalte einer Freizeit** – keine Teilnehmenden, keine Freizeitpässe, keine Finanzen –, außer in Freizeiten, in denen sie selbst mitarbeiten. Einzige Ausnahme: Nach dem Abschluss einer Freizeit gehören ihre Vorfall-Notizen der Organisation; der Org-Admin sieht sie im [Archiv der Vorfall-Notizen](/org-admin/vorfall-archiv/). Das Abschließen einer Freizeit kommt mit einer späteren Version; bis dahin bleibt das Archiv leer.

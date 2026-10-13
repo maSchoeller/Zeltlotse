@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Zeltlotse.Freizeiten.Contracts.Events;
 using Zeltlotse.Personen.Contracts.Events;
 using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Datenschutz;
@@ -10,6 +11,7 @@ using Zeltlotse.Sicherheit.Daten;
 using Zeltlotse.Sicherheit.Datenschutz;
 using Zeltlotse.Sicherheit.Schutzkonzept;
 using Zeltlotse.Sicherheit.Sicherheitskette;
+using Zeltlotse.Sicherheit.Vorfaelle;
 
 namespace Zeltlotse.Sicherheit;
 
@@ -25,6 +27,8 @@ public static class SicherheitModul
         services.AddModul<SicherheitDbContext, SicherheitLeseDbContext>(Name, Schema);
         // Story 2-9: Schutzkonzept-Bestätigungen sind Arbeitsdaten der Freizeit (AD-16).
         services.EmpfaengtEreignis<PersonGeloescht, SicherheitPersonLoeschen>();
+        // Story 2-10: Nach dem Abschluss der Freizeit gehören ihre Vorfall-Notizen ins Archiv der Organisation (Tabelle Ereignis-Fluss).
+        services.EmpfaengtEreignis<FreizeitAbgeschlossen, VorfaelleArchivieren>();
         services.AddScoped<IDatenauskunft, SicherheitAuskunft>();
         services.AddScoped<ILoeschlauf, SicherheitLoeschlauf>();
         return services;
@@ -35,6 +39,8 @@ public static class SicherheitModul
     /// <c>/api/freizeiten/{freizeitId}/sicherheit/sicherheitskette</c>, lesen für Leitung und Team, einrichten (Autosave, AD-19) nur Leitung.
     /// Story 2-9: Schutzkonzept unter <c>…/sicherheit/schutzkonzept</c>, lesen und bestätigen (<c>…/gelesen</c>) für Leitung und Team, das
     /// Dokument wählen (Autosave) nur Leitung.
+    /// Story 2-10: Vorfall-Protokoll unter <c>…/sicherheit/vorfaelle</c>, lesen und schreiben für Leitung und Team; das Archiv der
+    /// Vorfall-Notizen unter <c>/api/organisationen/{orgId}/sicherheit/vorfall-archiv</c> nur für Org-Admins.
     /// </summary>
     public static IEndpointRouteBuilder MapSicherheitEndpoints(this IEndpointRouteBuilder api)
     {
@@ -45,6 +51,12 @@ public static class SicherheitModul
         sicherheit.MapGet("/schutzkonzept", SchutzkonzeptLadenEndpunkt.Laden).NurFreizeitRolle(SicherheitRechte.Lesen);
         sicherheit.MapPatch("/schutzkonzept", SchutzkonzeptFeldAendernEndpunkt.Aendern).NurFreizeitRolle(SicherheitRechte.Einrichten);
         sicherheit.MapPost("/schutzkonzept/gelesen", SchutzkonzeptGelesenEndpunkt.Bestaetigen).NurFreizeitRolle(SicherheitRechte.Lesen);
+        // Story 2-10: Vorfall-Protokoll lesen und Einträge anlegen (Leitung und Team).
+        sicherheit.MapGet("/vorfaelle", VorfaelleLadenEndpunkt.Laden).NurFreizeitRolle(SicherheitRechte.Lesen);
+        sicherheit.MapPost("/vorfaelle", VorfallAnlegenEndpunkt.Anlegen).NurFreizeitRolle(SicherheitRechte.Lesen);
+
+        var organisation = api.MapGroup($"/organisationen/{{{Rechtemerkmale.OrgRouteWert}:guid}}/sicherheit");
+        organisation.MapGet("/vorfall-archiv", VorfallArchivEndpunkt.Laden).NurOrgRolle(SicherheitRechte.Archiv);
         return api;
     }
 }

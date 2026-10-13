@@ -6,6 +6,7 @@ using Zeltlotse.SharedKernel.Mandanten;
 using Zeltlotse.Sicherheit.Schutzkonzept;
 using Kette = Zeltlotse.Sicherheit.Sicherheitskette.Sicherheitskette;
 using Konzept = Zeltlotse.Sicherheit.Schutzkonzept.Schutzkonzept;
+using VorfallEintrag = Zeltlotse.Sicherheit.Vorfaelle.VorfallEintrag;
 
 namespace Zeltlotse.Sicherheit.Daten;
 
@@ -22,6 +23,9 @@ internal sealed class SicherheitDbContext(DbContextOptions<SicherheitDbContext> 
     /// <summary>Story 2-9: die Bestätigungen „gelesen“, je (Freizeit, Dokument, Person) höchstens eine.</summary>
     public DbSet<SchutzkonzeptBestaetigung> SchutzkonzeptBestaetigungen => Set<SchutzkonzeptBestaetigung>();
 
+    /// <summary>Story 2-10: die Einträge des Vorfall-Protokolls (unveränderlich, Text verschlüsselt).</summary>
+    public DbSet<VorfallEintrag> VorfallEintraege => Set<VorfallEintrag>();
+
     protected override string Schema => SicherheitModul.Schema;
 
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => SicherheitModell.Konfigurieren(modelBuilder);
@@ -36,6 +40,8 @@ internal sealed class SicherheitLeseDbContext(DbContextOptions<SicherheitLeseDbC
     public DbSet<Konzept> Schutzkonzepte => Set<Konzept>();
 
     public DbSet<SchutzkonzeptBestaetigung> SchutzkonzeptBestaetigungen => Set<SchutzkonzeptBestaetigung>();
+
+    public DbSet<VorfallEintrag> VorfallEintraege => Set<VorfallEintrag>();
 
     protected override string Schema => SicherheitModul.Schema;
 
@@ -77,6 +83,18 @@ internal static class SicherheitModell
             e.HasIndex(b => new { b.FreizeitId, b.DokumentId, b.PersonId }).IsUnique();
             e.HasIndex(b => b.PersonId);
             e.HasIndex(b => b.OrganisationId);
+        });
+        // Story 2-10, FR-31: Vorfall-Protokoll; der Text nur verschlüsselt (bytea über Geschuetzt, AD-14). Die Kennung kommt vom Gerät und
+        // ist eindeutig (AD-18); das Anlegen nutzt den Primärschlüssel (ON CONFLICT).
+        modelBuilder.Entity<VorfallEintrag>(e =>
+        {
+            e.ToTable("vorfall_eintrag");
+            e.Property(v => v.Id).ValueGeneratedNever();
+            e.Property(v => v.Art).HasConversion<short>();
+            e.HasIndex(v => new { v.FreizeitId, v.PersonId });
+            e.HasIndex(v => v.PersonId);
+            e.HasIndex(v => v.VerfasstVon);
+            e.HasIndex(v => v.OrganisationId);
         });
     }
 }

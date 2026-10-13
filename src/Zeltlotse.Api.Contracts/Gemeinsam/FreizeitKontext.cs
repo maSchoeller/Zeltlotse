@@ -100,4 +100,10 @@ public static class Aktionsschluessel
     /// <c>GET /api/organisationen/{orgId}</c>, Story 2-7, FR-43).
     /// </summary>
     public const string OrgDokumenteVerwalten = "org-dokumente-verwalten";
+
+    /// <summary>
+    /// Das Archiv der Vorfall-Notizen abgeschlossener Freizeiten sehen (Org-Admin, in <c>GET /api/organisationen/{orgId}</c>, Story 2-10,
+    /// FR-31).
+    /// </summary>
+    public const string VorfallArchivSehen = "vorfall-archiv-sehen";
 }

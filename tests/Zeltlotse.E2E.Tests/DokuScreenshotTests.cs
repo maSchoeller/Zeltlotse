@@ -316,6 +316,7 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         var demo = tabelle.Filter(new() { HasNotText = "Beispiel" });
         await Assertions.Expect(demo.Nth(0)).ToContainTextAsync("Lea Feuerstein");
         await Assertions.Expect(demo.Nth(3)).ToContainTextAsync("Tobias Wanderer");
+        await Assertions.Expect(seite.Locator("#vorfall-notizen div[id^=vorfall-]")).ToHaveCountAsync(3, new() { Timeout = 60_000 });
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await E2EHilfe.AxeAsync(seite);
 
@@ -331,6 +332,9 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
                 if (link) link.textContent = '4 Freizeitpässe unvollständig';
             }
             """);
+
+        // Story 2-10: die Card „Vorfall-Notizen“ mit den drei Demo-Einträgen; ihre Zeitpunkte hängen vom Einspielen ab, im Bild stehen feste.
+        await VorfallZeitenFestAsync(seite.Locator("#vorfall-notizen div[id^=vorfall-] a"));
 
         // Das Bild zeigt das Cockpit: am Laptop ab „Anmeldungen“ (mit den Warnhinweisen), am Handy ab „Warnhinweise“.
         var ziel = seite.Locator(".elkw-card").Filter(new()
@@ -1373,6 +1377,115 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await card.EvaluateAsync("karte => karte.scrollIntoView({ block: 'start' })");
 
         await BildAsync(seite, "schutzkonzept-einrichten", geraet);
+    }
+
+    // ---------- Story 2-10: Vorfall-Protokoll und Vorfall-Notizen ----------
+
+    /// <summary>Feste Zeitpunkte für die drei Demo-Einträge (neueste oben); die echten hängen vom Tag des Einspielens ab.</summary>
+    private static readonly string[] VorfallZeiten = ["12.10.2026 16:45", "12.10.2026 16:32", "12.10.2026 16:30"];
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Vorfall_Protokoll(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        // Lea (Team) öffnet über „Freizeitpässe“ den Pass von Mia und dort „Vorfall-Protokoll“; nur lesend.
+        await FreizeitpaesseAsync(seite);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Mia Probst" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Mia Probst", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Vorfall-Protokoll", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Vorfall-Protokoll", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator(".elkw-kicker")).ToHaveTextAsync("Notfall");
+        await Assertions.Expect(seite.GetByText("Mia Probst", new() { Exact = true })).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByText("Jeder Eintrag ist sofort für die Leitung sichtbar.")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        foreach (var feld in new[] { "Was ist passiert?", "Medikament gegeben (welches, wie viel)", "Aus dem Erste-Hilfe-Kasten entnommen" })
+        {
+            await Assertions.Expect(seite.GetByLabel(feld, new() { Exact = true })).ToBeVisibleAsync();
+        }
+
+        var eintraege = seite.Locator(".elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = "Protokoll", Exact = true }) })
+            .Locator("div[id^=vorfall-]");
+        await Assertions.Expect(eintraege).ToHaveCountAsync(3);
+        await Assertions.Expect(eintraege.Nth(0)).ToContainTextAsync("Medikament gegeben");
+        await Assertions.Expect(eintraege.Nth(0)).ToContainTextAsync("Kühlpack, kein Medikament");
+        await Assertions.Expect(eintraege.Nth(0)).ToContainTextAsync("von Jonas Hüttner");
+        await Assertions.Expect(eintraege.Nth(1)).ToContainTextAsync("2 Pflaster, 1 sterile Kompresse");
+        await Assertions.Expect(eintraege.Nth(2)).ToContainTextAsync("Beim Geländespiel am linken Knie geschnitten.");
+        await Assertions.Expect(eintraege.Nth(2)).ToContainTextAsync("von Lea Feuerstein");
+        await Assertions.Expect(seite.Locator("main button")).ToHaveCountAsync(0);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        await VorfallZeitenFestAsync(eintraege.Locator("strong"));
+        // Am Laptop zeigt das Bild die Card „Protokoll“, am Handy den Anfang mit Hinweis und Feldern.
+        if (geraet == "laptop")
+        {
+            await eintraege.First.EvaluateAsync("eintrag => eintrag.closest('.elkw-card').scrollIntoView({ block: 'start' })");
+        }
+
+        await BildAsync(seite, "vorfall-protokoll", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Vorfall_Notizen(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, DemoMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
+        var card = seite.Locator("#vorfall-notizen");
+        await Assertions.Expect(card.Locator(".elkw-card__title")).ToHaveTextAsync("Vorfall-Notizen", new() { Timeout = 60_000 });
+        var eintraege = card.Locator("div[id^=vorfall-]");
+        await Assertions.Expect(eintraege).ToHaveCountAsync(3);
+        await Assertions.Expect(eintraege.Nth(0).GetByRole(AriaRole.Link)).ToContainTextAsync("Mia Probst");
+        await Assertions.Expect(eintraege.Nth(0)).ToContainTextAsync("Medikament gegeben: Kühlpack, kein Medikament");
+        await Assertions.Expect(eintraege.Nth(1)).ToContainTextAsync("Aus dem Erste-Hilfe-Kasten entnommen: 2 Pflaster, 1 sterile Kompresse");
+        await Assertions.Expect(eintraege.Nth(2)).ToContainTextAsync("Was passiert ist: Beim Geländespiel am linken Knie geschnitten.");
+        await Assertions.Expect(eintraege.Nth(2)).ToContainTextAsync("von Lea Feuerstein");
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        await VorfallZeitenFestAsync(eintraege.Locator("a"));
+        // Gast-Anmeldungen anderer Tests desselben Laufs erscheinen unter der Card; das Bild zeigt nur die Demo-Daten.
+        await GastZeilenAusblendenAsync(seite);
+        await card.EvaluateAsync("karte => karte.scrollIntoView({ block: 'start' })");
+
+        await BildAsync(seite, "vorfall-notizen", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Vorfall_Archiv(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, OrgAdminMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Organisation öffnen" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Jugendwerk Musterstadt", new() { Timeout = 60_000 });
+        var card = seite.Locator(".elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = "Vorfall-Notizen", Exact = true }) });
+        await Assertions.Expect(card).ToContainTextAsync("Nach dem Abschluss einer Freizeit liegen ihre Vorfall-Notizen hier", new() { Timeout = 60_000 });
+        await card.GetByRole(AriaRole.Link, new() { Name = "Archiv öffnen" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Archiv der Vorfall-Notizen", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator(".elkw-kicker")).ToHaveTextAsync("Organisation");
+        // Die Demo-Freizeit ist nicht abgeschlossen: Das Archiv ist leer.
+        await Assertions.Expect(seite.GetByText("Noch keine archivierten Vorfall-Notizen.")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "vorfall-archiv", geraet);
+    }
+
+    /// <summary>Ersetzt in den gefundenen Texten den Zeitpunkt („TT.MM.JJJJ HH:mm“ am Anfang) der Reihe nach durch <see cref="VorfallZeiten"/>.</summary>
+    private static async Task VorfallZeitenFestAsync(ILocator texte)
+    {
+        Assert.Equal(VorfallZeiten.Length, await texte.CountAsync());
+        await texte.EvaluateAllAsync<object?>(
+            "(elemente, zeiten) => elemente.forEach((e, i) => { e.textContent = zeiten[i] + e.textContent.slice(16); })",
+            VorfallZeiten);
     }
 
     /// <summary>Lea (Team) meldet sich an und öffnet die Startseite der Demo-Freizeit.</summary>

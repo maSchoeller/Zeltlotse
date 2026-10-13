@@ -371,6 +371,22 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM sicherheit.schutzkonzept"));
         Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM sicherheit.schutzkonzept_bestaetigung"));
 
+        // Story 2-10: drei Einträge im Vorfall-Protokoll zu Mia (Lea: Geschehen und Entnahme, Jonas: Medikament), neueste oben, nichts archiviert;
+        // je genau eine Zeile auch nach dem zweiten Einspielen.
+        var vorfaelle = (await AnmeldeHelfer.JsonAsync(await leaClient.GetAsync($"/api/freizeiten/{freizeitId}/sicherheit/vorfaelle", Abbruch))).EnumerateArray().ToList();
+        Assert.Equal(
+            [
+                "Mia Probst Medikament Kühlpack, kein Medikament Jonas",
+                "Mia Probst Entnahme 2 Pflaster, 1 sterile Kompresse Lea",
+                "Mia Probst Geschehen Beim Geländespiel am linken Knie geschnitten. Wunde gereinigt und verbunden. Lea",
+            ],
+            vorfaelle.Select(v =>
+                $"{v.GetProperty("vorname").GetString()} {v.GetProperty("nachname").GetString()} {v.GetProperty("art").GetString()} {v.GetProperty("text").GetString()} "
+                + v.GetProperty("verfasserVorname").GetString()));
+        Assert.Equal(DemoKatalog.Vorfaelle.Select(v => v.Id).Reverse(), vorfaelle.Select(v => v.GetProperty("id").GetGuid()));
+        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM sicherheit.vorfall_eintrag"));
+        Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM sicherheit.vorfall_eintrag WHERE \"ArchiviertAm\" IS NOT NULL"));
+
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,
             "SELECT count(*) FROM konten.konto k LEFT JOIN personen.person p ON p.\"Id\" = k.\"PersonId\" WHERE p.\"Id\" IS NULL OR p.\"Vorname\" IS NULL OR p.\"Nachname\" IS NULL"));

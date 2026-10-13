@@ -17,7 +17,7 @@ Mitarbeitende melden sich mit der eigenen Mail-Adresse an, per Login-Link aus de
 - **Kanäle** – Nachrichten im Team und an alle.
 - **Notfall** – über die Notfall-Box auf der Startseite (während der Freizeit) oder den Knopf **Sicherheitskette** die Sicherheitskette öffnen: was jetzt zu tun ist und wen anrufen; mit der Schnellsuche den Freizeitpass der betroffenen Person in zwei Schritten – siehe [Notfall](/mitarbeitende/notfall/).
 - **Schutzkonzept** – das Schutzkonzept der Freizeit lesen, als gelesen bestätigen und sehen, wer im Team es schon gelesen hat – siehe [Schutzkonzept lesen](/mitarbeitende/schutzkonzept/).
-- **Vorfall-Protokoll** – festhalten, was passiert ist, welches Medikament wann gegeben wurde und was aus dem Erste-Hilfe-Kasten entnommen wurde.
+- **Vorfall-Protokoll** – festhalten, was passiert ist, welches Medikament wann gegeben wurde und was aus dem Erste-Hilfe-Kasten entnommen wurde; der Weg führt über den Freizeitpass der betroffenen Person – siehe [Vorfall-Protokoll führen](/mitarbeitende/vorfall-protokoll/).
 - **Dokumente** – Infobrief, Packliste und andere Dateien an der Freizeit ablegen, Org-Dokumente einbinden und festlegen, wer sie sieht – siehe [Dokumente ablegen](/mitarbeitende/dokumente/).
 - **Freizeitpässe** – die Freizeitpässe aller Personen der Freizeit ab der Bestätigung ihrer Anmeldung, nur mit den abgefragten Fragen und nur im Freigabefenster, dazu **Team-Notizen**, die in der Freizeit bleiben – siehe [Freizeitpässe ansehen](/mitarbeitende/freizeitpaesse/).
 

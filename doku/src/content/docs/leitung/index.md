@@ -15,6 +15,7 @@ Die Leitung darf alles, was das [Team](/mitarbeitende/) darf. **Nur die Leitung*
 - die Freizeitseite einrichten (Beschreibung, Ort, Höchstzahl) und die Anmeldelinks teilen und erneuern – siehe [Freizeitseite einrichten](/leitung/freizeitseite-einrichten/),
 - Anmeldungen bestätigen, Absagen eintragen und das Nachrücken bestimmen – siehe [Anmeldungen bestätigen und absagen](/leitung/anmeldungen/),
 - den Anmeldestand und die Warnhinweise im Leitungs-Cockpit sehen – siehe [Leitungs-Cockpit](/leitung/cockpit/),
+- alle Einträge im Vorfall-Protokoll der Freizeit auf einen Blick als Vorfall-Notizen sehen – siehe [Vorfall-Notizen](/leitung/vorfall-notizen/),
 - Erinnerungen auslösen, an fehlende Nachweise – siehe [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/) – und an unvollständige Freizeitpässe – siehe [Leitungs-Cockpit](/leitung/cockpit/#erinnern),
 - den Stand der Nachweise im Team sehen und Nachweise prüfen – siehe [Nachweise prüfen](/leitung/nachweise-pruefen/),
 - festlegen, welche Fragen der Freizeitpass für Teilnehmende und für Mitarbeitende abfragt – siehe [Freizeitpass zusammenstellen](/leitung/freizeitpass-fragen/),

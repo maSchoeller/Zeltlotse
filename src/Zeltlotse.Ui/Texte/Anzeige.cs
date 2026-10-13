@@ -104,6 +104,19 @@ public static class Anzeige
     public static string Datum(DateTimeOffset zeitpunkt) =>
         TimeZoneInfo.ConvertTime(zeitpunkt, Berlin()).ToString("dd.MM.yyyy", Deutsch);
 
+    /// <summary>Story 2-10: Datum und Uhrzeit in Europe/Berlin als „TT.MM.JJJJ HH:mm“.</summary>
+    public static string DatumUhrzeit(DateTimeOffset zeitpunkt) =>
+        TimeZoneInfo.ConvertTime(zeitpunkt, Berlin()).ToString("dd.MM.yyyy HH:mm", Deutsch);
+
+    /// <summary>Story 2-10: die Art eines Eintrags im Vorfall-Protokoll, wie Protokoll, Vorfall-Notizen und Archiv sie nennen.</summary>
+    public static string VorfallArtText(Zeltlotse.Api.Contracts.Sicherheit.VorfallArt art) => art switch
+    {
+        Zeltlotse.Api.Contracts.Sicherheit.VorfallArt.Geschehen => "Was passiert ist",
+        Zeltlotse.Api.Contracts.Sicherheit.VorfallArt.Medikament => "Medikament gegeben",
+        Zeltlotse.Api.Contracts.Sicherheit.VorfallArt.Entnahme => "Aus dem Erste-Hilfe-Kasten entnommen",
+        _ => throw new ArgumentOutOfRangeException(nameof(art), art, null),
+    };
+
     /// <summary>Der Kalendertag eines Zeitpunkts in Europe/Berlin.</summary>
     public static DateOnly Tag(DateTimeOffset zeitpunkt) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(zeitpunkt, Berlin()).DateTime);
 

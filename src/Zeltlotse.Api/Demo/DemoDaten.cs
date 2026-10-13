@@ -32,6 +32,7 @@ using Zeltlotse.Api.Contracts.Sicherheit;
 using Zeltlotse.Sicherheit.Daten;
 using Zeltlotse.Sicherheit.Schutzkonzept;
 using Zeltlotse.Sicherheit.Sicherheitskette;
+using Zeltlotse.Sicherheit.Vorfaelle;
 using EinsichtStatus = Zeltlotse.Personen.Nachweise.EinsichtStatus;
 using NachweisArt = Zeltlotse.Personen.Contracts.Events.NachweisArt;
 
@@ -128,6 +129,7 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await DokumenteAsync(abbruch);
         await SicherheitsketteAsync(abbruch);
         await SchutzkonzeptAsync(abbruch);
+        await VorfaelleAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -715,6 +717,32 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             && await sender.Send(new SchutzkonzeptGelesenCommand(freizeitId, dokumentId.Value, jonas), abbruch) != SchutzkonzeptBestaetigen.Bestaetigt)
         {
             throw new InvalidOperationException("Demo-Schutzkonzept: Jonas' Bestätigung ließ sich nicht speichern.");
+        }
+    }
+
+    /// <summary>
+    /// Story 2-10: die Einträge <see cref="DemoKatalog.Vorfaelle"/> zu Mia im Vorfall-Protokoll der Demo-Freizeit, über den Command des Moduls.
+    /// Idempotent über die festen Kennungen: Eine vorhandene Kennung legt keinen zweiten Eintrag an.
+    /// </summary>
+    private async Task VorfaelleAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var freizeitId = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name)
+            .Select(f => f.Id)
+            .SingleAsync(abbruch);
+        var daniel = (await sender.Send(new KontoSicherstellen("daniel.probst@example.org"), abbruch)).PersonId;
+        var mia = await KindAsync(dienste.GetRequiredService<PersonenLeseDbContext>(), daniel, "Mia", abbruch);
+        foreach (var (id, verfasserMail, art, text) in DemoKatalog.Vorfaelle)
+        {
+            var verfasser = (await sender.Send(new KontoSicherstellen(verfasserMail), abbruch)).PersonId;
+            if (await sender.Send(new VorfallAnlegenCommand(freizeitId, id, mia, verfasser, art, text), abbruch) != VorfallAnlegen.Angelegt)
+            {
+                throw new InvalidOperationException("Demo-Vorfall-Protokoll: Eintrag ließ sich nicht anlegen.");
+            }
         }
     }
 

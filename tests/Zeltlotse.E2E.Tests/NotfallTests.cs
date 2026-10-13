@@ -10,7 +10,8 @@ namespace Zeltlotse.E2E.Tests;
 /// drei Tagen): Andrea (Org-Admin der Demo-Organisation) legt sie an und lädt eine neue Leitung ein, die über den Link aus der Mail
 /// annimmt und die Sicherheitskette per Autosave-PATCH einrichtet; ein Gast meldet über den Anmeldelink dieser Freizeit ein Kind an.
 /// Dann: Startseite mit Notfall-Box und Eintrag „Notfall“, „Notfallhilfe öffnen“ zur Sicherheitskette mit „Notruf 112“ und dem Telefon
-/// der Leitung, die ersten Buchstaben des Kindes in „Betroffene Person suchen“ und der Treffer öffnet den Freizeitpass. Auf jeder Seite
+/// der Leitung, die ersten Buchstaben des Kindes in „Betroffene Person suchen“ und der Treffer öffnet den Freizeitpass; Story 2-10: dort
+/// „Vorfall-Protokoll“, ein Eintrag in „Was ist passiert?“ wird beim Verlassen des Felds gespeichert. Auf jeder Seite
 /// axe ohne Verstoß gegen WCAG 2.2 AA und keine CSP-Meldung in der Konsole.
 /// </summary>
 /// <remarks>
@@ -99,7 +100,26 @@ public sealed class NotfallTests(VeroeffentlichterHost host)
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await AxeAsync(seite);
 
-        // 4. Keine CSP-Meldung.
+        // 4. Story 2-10: Im Pass „Vorfall-Protokoll“ öffnen, „Was ist passiert?“ ausfüllen und das Feld verlassen: Der Eintrag steht ohne
+        //    Senden-Knopf oben im Protokoll, das Feld ist wieder leer.
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Vorfall-Protokoll", Exact = true }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Vorfall-Protokoll", new() { Timeout = 60_000 });
+        var geschehen = seite.GetByLabel("Was ist passiert?", new() { Exact = true });
+        await Assertions.Expect(geschehen).ToBeVisibleAsync(Lange);
+        const string vorfall = "Beim Fußball umgeknickt, Knöchel gekühlt.";
+        await geschehen.FillAsync(vorfall);
+        await geschehen.PressAsync("Tab");
+        var protokoll = seite.Locator(".elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = "Protokoll", Exact = true }) });
+        var neuester = protokoll.Locator("div[id^=vorfall-]").First;
+        await Assertions.Expect(neuester).ToContainTextAsync(vorfall, new() { Timeout = 60_000 });
+        await Assertions.Expect(neuester).ToContainTextAsync("Was passiert ist");
+        await Assertions.Expect(neuester).ToContainTextAsync("von Nora Notfall");
+        await Assertions.Expect(seite.GetByLabel("Was ist passiert?", new() { Exact = true })).ToHaveValueAsync("");
+        await Assertions.Expect(seite.Locator("main button")).ToHaveCountAsync(0);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await AxeAsync(seite);
+
+        // 5. Keine CSP-Meldung.
         OhneCspMeldung(konsole);
     }
 

@@ -1,0 +1,30 @@
+@using Zeltlotse.Api.Contracts.Sicherheit
+@* Vorfall-Notizen (Story 2-10, FR-31): die Einträge des Vorfall-Protokolls als Sicht der Leitung (Startseite) und der Organisation (Archiv),
+   neueste oben. Je Eintrag „<Datum Uhrzeit> · <Vorname Nachname>“ – mit FreizeitId als Link auf das Vorfall-Protokoll der Person –, die
+   Zeile „<Art>: <Text>“ und „von <Name>“. Ein nicht mehr lesbarer Text heißt „Inhalt nicht mehr lesbar.“ *@
+@foreach (var eintrag in Eintraege)
+{
+    <div id="@($"vorfall-{eintrag.Id}")">
+        <p>
+            @if (FreizeitId is { } freizeitId)
+            {
+                <a href="@($"freizeiten/{freizeitId}/vorfall/{eintrag.PersonId}")">@Kopf(eintrag)</a>
+            }
+            else
+            {
+                <strong>@Kopf(eintrag)</strong>
+            }
+        </p>
+        <p>@Anzeige.VorfallArtText(eintrag.Art): @(eintrag.Text ?? VorfallProtokoll.NichtLesbar)</p>
+        <p>von @Anzeige.Name(eintrag.VerfasserVorname, eintrag.VerfasserNachname)</p>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<VorfallEintrag> Eintraege { get; set; } = [];
+
+    /// <summary>Mit Freizeit führt der Kopf jedes Eintrags auf das Vorfall-Protokoll der Person; ohne (Archiv) ist er nur Text.</summary>
+    [Parameter] public Guid? FreizeitId { get; set; }
+
+    private static string Kopf(VorfallEintrag eintrag) => $"{Anzeige.DatumUhrzeit(eintrag.ErfasstAm)} · {Anzeige.Name(eintrag.Vorname, eintrag.Nachname)}";
+}

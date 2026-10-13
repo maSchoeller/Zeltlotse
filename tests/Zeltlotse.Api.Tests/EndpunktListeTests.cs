@@ -241,6 +241,9 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 "GET /api/freizeiten/{freizeitId:guid}/sicherheit/schutzkonzept",
                 "PATCH /api/freizeiten/{freizeitId:guid}/sicherheit/schutzkonzept",
                 "POST /api/freizeiten/{freizeitId:guid}/sicherheit/schutzkonzept/gelesen",
+                // Story 2-10: Vorfall-Protokoll (Sicherheit): lesen und Einträge anlegen für Leitung und Team.
+                "GET /api/freizeiten/{freizeitId:guid}/sicherheit/vorfaelle",
+                "POST /api/freizeiten/{freizeitId:guid}/sicherheit/vorfaelle",
             }.Order(StringComparer.Ordinal),
             freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
         Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));
@@ -260,8 +263,9 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
 
         var mitOrg = endpunkte.Where(e => e.Endpunkt.RoutePattern.Parameters.Any(p => p.Name == Rechtemerkmale.OrgRouteWert)).ToList();
         // Story 1-5: dazu die sieben Prüf-Endpunkte des Org-Admins und die zwei der Nachweis-Richtlinie; Story 1-7: die zwei der Löschfristen.
-        // Story 2-7: die vier Endpunkte der Org-Dokumente.
-        Assert.Equal(22, mitOrg.Count);
+        // Story 2-7: die vier Endpunkte der Org-Dokumente; Story 2-10: das Archiv der Vorfall-Notizen.
+        Assert.Equal(23, mitOrg.Count);
+        Assert.Contains(mitOrg, e => e.Name == "GET /api/organisationen/{orgId:guid}/sicherheit/vorfall-archiv");
         Assert.All(mitOrg, e =>
         {
             Assert.NotNull(e.Endpunkt.Metadata.GetMetadata<NurOrgRolleMetadaten>());

@@ -26,6 +26,9 @@
    Story 2-9: Für alle Rollen lädt die Startseite das Schutzkonzept still mit (scheitert → keine Card). Gibt es eines, das die Person noch
    nicht bestätigt hat, und ist die Freizeit nicht abgeschlossen, steht die Card „Schutzkonzept“ da (kein Cockpit-Warnhinweis); der Knopf
    „Schutzkonzept“ steht in jeder Phase.
+   Story 2-10: Mit „freizeit-einstellungen“ (Leitung) lädt das Cockpit still die Einträge des Vorfall-Protokolls; ab einem Eintrag steht die
+   Card „Vorfall-Notizen“ (neueste oben, je Eintrag ein Link auf das Vorfall-Protokoll der Person). Sie ist kein Warnhinweis und zählt nicht
+   in „Warnhinweise“; das Team sieht und lädt sie nicht.
    403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>@(_freizeit?.Name ?? "Freizeit") – Zeltlotse</PageTitle>
 
@@ -124,6 +127,12 @@ else
             }
         </Card>
     }
+    @if (DarfEinstellungen && _vorfaelle is { Count: > 0 } vorfaelle)
+    {
+        <Card Titel="Vorfall-Notizen" Id="vorfall-notizen">
+            <Zeltlotse.App.Features.Sicherheit.VorfallNotizen Eintraege="vorfaelle" FreizeitId="FreizeitId" />
+        </Card>
+    }
     @if (DarfAnmeldungen && _stand is { Count: > 0 })
     {
         <Card Titel="Freizeitpässe unvollständig" Id="@TabellenAnker">
@@ -166,6 +175,7 @@ else
     private Zeltlotse.Api.Contracts.Sicherheit.Sicherheitskette? _kette;
     private List<PersonenlisteZeile>? _personen;
     private Zeltlotse.Api.Contracts.Sicherheit.Schutzkonzept? _schutzkonzept;
+    private List<Zeltlotse.Api.Contracts.Sicherheit.VorfallEintrag>? _vorfaelle;
     private bool _uebertraegt;
     private string? _meldung;
     private bool _meldungFehler;
@@ -255,6 +265,7 @@ else
         _kette = null;
         _personen = null;
         _schutzkonzept = null;
+        _vorfaelle = null;
         _meldung = null;
         try
         {
@@ -294,9 +305,13 @@ else
         var stand = DarfAnmeldungen ? StandLadenAsync() : Task.FromResult<List<FreizeitpassStandPerson>?>(null);
         var warnungen = DarfNachweise ? WarnungenLadenAsync() : Task.FromResult<int?>(null);
         var kette = DarfEinstellungen ? SicherAsync(() => SicherheitApi.SicherheitsketteLadenAsync(FreizeitId)) : Task.FromResult<Zeltlotse.Api.Contracts.Sicherheit.Sicherheitskette?>(null);
-        await Task.WhenAll(anmeldungen, stand, warnungen, kette, personen, schutzkonzept);
+        // Story 2-10: die Vorfall-Notizen für die Leitung (scheitert → keine Card).
+        var vorfaelle = DarfEinstellungen
+            ? SicherAsync(() => SicherheitApi.VorfaelleLadenAsync(FreizeitId))
+            : Task.FromResult<List<Zeltlotse.Api.Contracts.Sicherheit.VorfallEintrag>?>(null);
+        await Task.WhenAll(anmeldungen, stand, warnungen, kette, personen, schutzkonzept, vorfaelle);
         (_anmeldungen, _stand, _personenMitWarnung, _kette, _personen) = (anmeldungen.Result, stand.Result, warnungen.Result, kette.Result, personen.Result);
-        _schutzkonzept = schutzkonzept.Result;
+        (_schutzkonzept, _vorfaelle) = (schutzkonzept.Result, vorfaelle.Result);
         _cockpitGeladen = true;
     }
 

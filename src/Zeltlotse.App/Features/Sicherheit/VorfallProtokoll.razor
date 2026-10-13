@@ -1,0 +1,238 @@
+@page "/freizeiten/{FreizeitId:guid}/vorfall/{PersonId:guid}"
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Sicherheit
+@using Zeltlotse.Ui.Kontext
+@inject FreizeitKontextDienst Kontext
+@inject FreizeitenApiClient Freizeiten
+@inject SicherheitApiClient SicherheitApi
+@* Vorfall-Protokoll einer Person (CAP-17, FR-31, Story 2-10) für Leitung und Team, erreichbar über den Freizeitpass; die Sicherheitskette
+   zeigt den Weg. Dachzeile „Notfall“, Überschrift und der Name der Person aus der Personenliste (ohne Treffer keine Zeile). Drei mehrzeilige
+   Felder ohne Senden-Knopf: Beim Verlassen eines Felds mit nicht leerem Text entsteht genau ein unveränderlicher Eintrag dieser
+   Art (Kennung vom Gerät je Text, ein erneuter Versuch nutzt dieselbe, AD-18); danach ist das Feld leer, „Gespeichert“ steht
+   darunter, und die Liste lädt neu. Scheitert das
+   Speichern, bleibt der Text im Feld, und die Meldung steht am Feld. Nach dem Abschluss (Phase „gelaufen“) fehlen die Felder. Card
+   „Protokoll“ mit allen Einträgen, neueste oben. Kontext oder Einträge nicht verfügbar → „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>Vorfall-Protokoll – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Notfall</Dachzeile>
+    <h1>Vorfall-Protokoll</h1>
+    @if (_person is not null)
+    {
+        <p>@Anzeige.Name(_person.Vorname, _person.Nachname)</p>
+    }
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+
+    @if (_eintraege is null || _kontext is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @if (_kontext.Phase == Phase.Gelaufen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@AbgeschlossenText</p>
+            </Meldung>
+        }
+        else
+        {
+            <Meldung Titel="Hinweis">
+                <p>Jeder Eintrag ist sofort für die Leitung sichtbar. Einträge lassen sich nicht ändern; eine Korrektur ist ein neuer Eintrag.</p>
+            </Meldung>
+            @foreach (var (art, label, id) in Felder)
+            {
+                <Feld @key="@($"{id}-{_runde[art]}")" Label="@label" Id="@id" Mehrzeilig="true" Zeilen="3" Wert="@_werte[art]" Fehler="@_fehler[art]"
+                      Hinweis="@($"Wird beim Verlassen des Felds gespeichert. Höchstens {VorfallFelder.TextMaximaleLaenge} Zeichen.")"
+                      @oninput="@(e => TextGeaendert(art, e.Value?.ToString()))" @onfocusout="@(() => SpeichernAsync(art))">
+                    <UnterDemFeld>
+                        @if (_gespeichert == art)
+                        {
+                            <SpeicherHinweis Zustand="SpeicherZustand.Gespeichert" />
+                        }
+                    </UnterDemFeld>
+                </Feld>
+            }
+        }
+        <Card Titel="Protokoll">
+            @if (_eintraege.Count == 0)
+            {
+                <LeerZustand Satz="Noch keine Einträge." />
+            }
+            @foreach (var eintrag in _eintraege)
+            {
+                <div id="@($"vorfall-{eintrag.Id}")">
+                    <p><strong>@Anzeige.DatumUhrzeit(eintrag.ErfasstAm) · @Anzeige.VorfallArtText(eintrag.Art)</strong></p>
+                    <p>@(eintrag.Text ?? NichtLesbar)</p>
+                    <p>von @Anzeige.Name(eintrag.VerfasserVorname, eintrag.VerfasserNachname)</p>
+                </div>
+            }
+        </Card>
+    }
+    <p><a href="@($"freizeiten/{FreizeitId}/freizeitpaesse/{PersonId}")">Zum Freizeitpass</a></p>
+}
+
+@code {
+    /// <summary>Text eines Eintrags, dessen Schlüssel vernichtet ist (die Person ist gelöscht).</summary>
+    public const string NichtLesbar = "Inhalt nicht mehr lesbar.";
+
+    private const string AbgeschlossenText = "Diese Freizeit ist abgeschlossen und nur lesbar.";
+
+    /// <summary>Die drei Felder in ihrer Reihenfolge: Art, Beschriftung, Kennung.</summary>
+    private static readonly (VorfallArt Art, string Label, string Id)[] Felder =
+    [
+        (VorfallArt.Geschehen, "Was ist passiert?", "vorfall-geschehen"),
+        (VorfallArt.Medikament, "Medikament gegeben (welches, wie viel)", "vorfall-medikament"),
+        (VorfallArt.Entnahme, "Aus dem Erste-Hilfe-Kasten entnommen", "vorfall-entnahme"),
+    ];
+
+    private readonly Dictionary<VorfallArt, string?> _werte = Felder.ToDictionary(f => f.Art, _ => (string?)null);
+    private readonly Dictionary<VorfallArt, string?> _fehler = Felder.ToDictionary(f => f.Art, _ => (string?)null);
+
+    /// <summary>Je Feld ein Zähler: Nach dem Speichern entsteht das Feld neu und ist sicher leer.</summary>
+    private readonly Dictionary<VorfallArt, int> _runde = Felder.ToDictionary(f => f.Art, _ => 0);
+
+    /// <summary>
+    /// Je Feld die Kennung des noch nicht gespeicherten Texts (AD-18): neu, sobald sich der Text ändert, und erst nach dem Speichern verworfen.
+    /// So schickt ein erneuter Versuch nach einem Fehler dieselbe Kennung, und der Server legt keinen zweiten Eintrag an.
+    /// </summary>
+    private readonly Dictionary<VorfallArt, Guid?> _kennungen = Felder.ToDictionary(f => f.Art, _ => (Guid?)null);
+
+    private readonly HashSet<VorfallArt> _uebertraegt = [];
+    private FreizeitKontext? _kontext;
+    private List<VorfallEintrag>? _eintraege;
+    private PersonenlisteZeile? _person;
+    private VorfallArt? _gespeichert;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    [Parameter] public Guid PersonId { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _eintraege = null;
+        _person = null;
+        _gespeichert = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var eintraege = SicherheitApi.VorfaelleLadenAsync(FreizeitId, PersonId);
+            var personen = PersonenAsync();
+            await Task.WhenAll(kontext, eintraege, personen);
+            (_kontext, _eintraege) = (kontext.Result, eintraege.Result);
+            _person = personen.Result?.FirstOrDefault(p => p.PersonId == PersonId);
+            _nichtVerfuegbar = _kontext is null || _eintraege is null;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>Die Personenliste für den Namen; scheitert sie, fehlt nur die Zeile mit dem Namen.</summary>
+    private async Task<List<PersonenlisteZeile>?> PersonenAsync()
+    {
+        try
+        {
+            return await Freizeiten.PersonenlisteLadenAsync(FreizeitId);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Jede Eingabe merkt den Text; ein geänderter Text bekommt eine neue Kennung.</summary>
+    private void TextGeaendert(VorfallArt art, string? text)
+    {
+        if (text == _werte[art])
+        {
+            return;
+        }
+
+        _werte[art] = text;
+        _kennungen[art] = Guid.CreateVersion7();
+    }
+
+    /// <summary>
+    /// Beim Verlassen des Felds: ein nicht leerer Text wird genau ein Eintrag dieser Art. Nach einem Fehler schickt das erneute Verlassen
+    /// denselben Text mit derselben Kennung. Wurde der Text während der Übertragung weiter geändert, bleibt der neue Text im Feld.
+    /// </summary>
+    private async Task SpeichernAsync(VorfallArt art)
+    {
+        var text = _werte[art];
+        if (string.IsNullOrWhiteSpace(text) || !_uebertraegt.Add(art))
+        {
+            return;
+        }
+
+        var kennung = _kennungen[art] ??= Guid.CreateVersion7();
+        _fehler[art] = null;
+        _gespeichert = null;
+        try
+        {
+            switch (await SicherheitApi.VorfallAnlegenAsync(FreizeitId, new VorfallEintragNeu(kennung, PersonId, art, text)))
+            {
+                case VorfallAnlegenErgebnis.Erfolg:
+                    if (_werte[art] == text)
+                    {
+                        _werte[art] = null;
+                        _kennungen[art] = null;
+                        _runde[art]++;
+                    }
+
+                    _gespeichert = art;
+                    // Scheitert das Neuladen, bleibt die bisherige Liste stehen.
+                    _eintraege = await NeuLadenAsync() ?? _eintraege;
+                    break;
+                case VorfallAnlegenErgebnis.Abgeschlossen:
+                    _fehler[art] = AbgeschlossenText;
+                    break;
+                default:
+                    _fehler[art] = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _fehler[art] = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt.Remove(art);
+        }
+    }
+
+    private async Task<List<VorfallEintrag>?> NeuLadenAsync()
+    {
+        try
+        {
+            return await SicherheitApi.VorfaelleLadenAsync(FreizeitId, PersonId);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            return null;
+        }
+    }
+}
