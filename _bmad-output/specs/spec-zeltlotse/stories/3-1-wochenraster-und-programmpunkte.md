@@ -5,7 +5,7 @@ created: '2026-10-13'
 status: 'done'
 baseline_revision: 'df61f611701587efed2c3445cd82ae2ff348cdc0'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Zeltlotse-2026-10-10/EXPERIENCE.md'
@@ -126,6 +126,36 @@ deferred: []
   - `[false]` `[reject]` (Intent) Doku-Build im Diff nicht belegt — kein Code-Fehler; der Build läuft im Abschluss (Auto Run Result).
   - `[false]` `[reject]` (Intent) Bewusste Umfangsgrenzen — beschreibend, keine Abweichung von CAP-19, FR-34, FR-35.
 
+### 2026-10-13 — Review pass (Folgedurchlauf)
+- verdicts: 26 findings — high 0, medium 1, low 17, false 8, maybe-false 0
+- findings:
+  - `[low]` `[reject]` (Blind) Nach dem Lösch-Lauf legt ein GET die Mahlzeiten neu an — carried: gleiche Stelle und Aussage wie die Edge-Zeile des ersten Durchlaufs; Mahlzeiten tragen keine Personendaten.
+  - `[false]` `[reject]` (Blind) PATCH verlangt ungenutzte `version` — carried: Vertrag aus AD-19, in allen Modulen gleich.
+  - `[low]` `[reject]` (Blind) Uhrzeit einer Mahlzeit lässt sich leeren — die Intent erlaubt Uhrzeit-Änderungen an Mahlzeiten ohne Einschränkung; die Mahlzeit bleibt bestehen und lässt sich wieder mit Uhrzeit versehen; Sperre wäre Zusatzregel ohne Anlass in Spec oder UX.
+  - `[low]` `[reject]` (Blind) Übernommener Punkt bleibt bei Rollenentzug oder Absage blockiert — echt (steht schon unter Restrisiken), aber selten; Behebung bräuchte einen neuen Empfänger oder ein Freigeben durch die Leitung, das FR-35 („Leitung teilt nichts zu“) berührt.
+  - `[low]` `[reject]` (Blind) Datenauskunft nennt die Freizeit nicht — gleiche Form wie die übrigen Module (z. B. `SicherheitAuskunft`: nur Zeitpunkt/Text); Freizeitname bräuchte eine zusätzliche Leseschnittstelle.
+  - `[low]` `[reject]` (Blind) Detailseite lädt den ganzen Raster — kleine Datenmenge (rund 40 Punkte); ein eigener Einzel-GET wäre neue öffentliche Oberfläche ohne spürbaren Nutzen.
+  - `[low]` `[reject]` (Blind) `freizeit-abgeschlossen` während einer Aktion lässt die Oberfläche bearbeitbar — Meldung wird gezeigt, jede weitere Aktion meldet dasselbe; Phasenwechsel mitten in der Sitzung ist selten, neues Laden behebt es.
+  - `[false]` `[reject]` (Blind) Namen über die ganze Personenliste — so in der Intent vorgegeben (Team aus `GET …/personenliste`, AD-2); Endpunkt ist für Leitung und Team ohnehin erlaubt.
+  - `[low]` `[reject]` (Blind) Überschrift der Detailseite nennt den Titel nicht — bewusst so nach dem ersten Durchlauf (veraltete Wiederholung nach Autosave); der Titel steht im ersten Feld; Nachführen bräuchte zusätzliche Zustandslogik.
+  - `[low]` `[reject]` (Blind) Fehlende Tests (Laden nach Lösch-Lauf, Mahlzeit-Uhrzeit leeren, Sekunden im Uhrzeitfeld, viele Reiter) — Verhalten ist jeweils bewusst bzw. abgelehnt (siehe oben); `input type=time` ohne `step` liefert `HH:mm`; Reiter brechen um (Screenshot `wochenraster-handy.png`).
+  - `[low]` `[reject]` (Edge) Löschen auf der Detailseite bei schon gelöschtem Punkt — carried: seltener Gleichzeitigkeitsfall.
+  - `[low]` `[reject]` (Edge) Übernehmen/Abgeben im Raster bei inzwischen gelöschtem Punkt — carried.
+  - `[low]` `[reject]` (Edge) Neues Laden nach Konflikt scheitert (offline) und ersetzt die Konfliktmeldung — es bleibt eine Fehlermeldung sichtbar, der Wert ist nicht gespeichert; eigener try/catch nur für den Offline-Sonderfall.
+  - `[low]` `[reject]` (Edge) `NeuLadenAsync` nach Löschen durch andere zeigt alte Daten — carried.
+  - `[low]` `[reject]` (Edge) `alterWert` in anderer Form („8:00“) ergibt falschen Konflikt — der eigene Client schickt immer den vom Server gelieferten Wert im Format `HH:mm`; nur mit handgebauten Anfragen erreichbar.
+  - `[low]` `[reject]` (Edge) Demo-Daten: abgebrochener Lauf überspringt beim Wiederholen die Übernahme — Demo-Einspielung läuft in Tests und lokal frisch; Nachholen bräuchte zusätzliche Zweige.
+  - `[medium]` `[patch]` (Verification gap) Kein Test, dass gleichzeitige PATCHes auf Titel und Uhrzeit beide gelingen — Test `Gleichzeitige_Aenderungen_an_Titel_und_Uhrzeit_gelingen_beide` in `ProgrammTests.cs` ergänzt (5 Runden, parallel, beide 200, beide Werte gespeichert); grün.
+  - `[false]` `[reject]` (Intent) Platzhalter der gelöschten Person gilt als frei — Speicherung entspricht der Matrix (`PersonId = GeloeschtePerson.Id`); die Freigabe war der Patch des ersten Durchlaufs gegen dauerhaft blockierte Punkte.
+  - `[false]` `[reject]` (Intent) GET legt in Phase `Gelaufen` Mahlzeiten an — die Phasenregel gilt für Benutzer-Commands; Design Notes: `MahlzeitenSicherstellen` ist kein `IBenutzerCommand`, GET liefert weiter.
+  - `[false]` `[reject]` (Intent) Keine 403- und Token-Fälle — carried: die Matrix der Intent schließt beide aus.
+  - `[false]` `[reject]` (Intent) `LeitungsName` additiv um `PersonId` ergänzt — nötig für die in der Intent vorgegebene Namenszuordnung aus `GET /api/freizeiten/{id}`; additive Änderung.
+  - `[false]` `[reject]` (Intent) Neue Bausteine in `Zeltlotse.Ui.Komponenten` — AD-29 verlangt neue Bausteine zuerst in der Bibliothek; die Oberfläche nutzt nur Bausteine von dort.
+  - `[low]` `[reject]` (Intent) Browser-Tests klicken die Abläufe nicht — carried: Klickfluss per bUnit und HTTP abgedeckt.
+  - `[low]` `[patch]` (Intent) Doku nur unter Mitarbeitende, Leitung findet das Programm nicht in ihrem Bereich — Absatz mit Link auf „Programm planen und übernehmen“ in `doku/src/content/docs/leitung/index.md` ergänzt, wie bei Dokumente und Freizeitpässe; Doku-Build fehlerfrei.
+  - `[false]` `[reject]` (Intent) Mahlzeiten werden bei jedem Laden mit zu wenig Mahlzeiten neu angelegt — Mahlzeiten lassen sich über die API nicht löschen (409); fehlende Zeilen entstehen nur durch Eingriffe in die Datenbank, Nachlegen ist dann gewollt.
+  - `[low]` `[patch]` (Intent) `Location` zeigt auf den Raster — carried: Patch des ersten Durchlaufs (Adresse mit GET), nicht erneut bearbeitet.
+
 ## Design Notes
 
 - **Mahlzeiten beim ersten Laden:** Es gibt kein Ereignis `FreizeitAngelegt` (ein neues bräuchte eine Spine-Zeile), und Freizeitdaten sind nach dem Anlegen unveränderlich. Deshalb legt der GET-Endpunkt fehlende Mahlzeiten über den internen Command `MahlzeitenSicherstellen` an (`INSERT … ON CONFLICT DO NOTHING` auf dem eindeutigen Teilindex). Er ist kein `IBenutzerCommand`, gilt also auch in `Gelaufen`. Ergebnis für jede Freizeit, auch für schon bestehende: drei Mahlzeiten je Tag ab dem ersten Öffnen.
@@ -172,3 +202,23 @@ Status: done
 - Hat eine Person einen Punkt übernommen und verliert später ihre Freizeit-Rolle, bleibt der Punkt übernommen; niemand sonst kann ihn abgeben (bei Mahlzeiten ohne Ausweg). Selten, keine Zuteilung durch die Leitung laut FR-35.
 - Das Uhrzeitfeld zeigt im Headless-Chromium der Screenshots ein US-Format („08:00 PM“), wie bei bestehenden Bildern.
 - Nach dem Lösch-Lauf entstehen beim erneuten Öffnen wieder Mahlzeiten (ohne Personendaten).
+
+### Folgedurchlauf 2026-10-13
+
+**Umfang:** Neues Review der ganzen Story (Diff seit `df61f611701587efed2c3445cd82ae2ff348cdc0`) mit vier Ebenen (Blind, Edge Case, Verification Gap, Intent Alignment).
+
+**Geänderte Dateien:**
+- `tests/Zeltlotse.Api.Tests/ProgrammTests.cs` -- neuer Test `Gleichzeitige_Aenderungen_an_Titel_und_Uhrzeit_gelingen_beide` (AD-19 mit Zeilensperre gegen echtes PostgreSQL).
+- `doku/src/content/docs/leitung/index.md` -- Absatz „Programm“ mit Link auf `mitarbeitende/programm/` (gemeinsame Aufgabe von Leitung und Team).
+
+**Review:** 26 Befunde (high 0, medium 1, low 17, false 8). Gepatcht: 1 medium (Gleichzeitigkeitstest PATCH), 1 low (Leitungs-Doku). Zurückgestellt: keine. Abgelehnt: 23, davon 9 aus dem ersten Durchlauf übernommen (carried); Gründe im Review Triage Log.
+
+**Folge-Review empfohlen:** nein. Folgedurchlauf ohne gepatchten high-Befund; gepatcht wurden 1 medium und 1 low, beide ohne Änderung am Produktivcode.
+
+**Verifikation:**
+- `dotnet test --project tests/Zeltlotse.Api.Tests --filter FullyQualifiedName~ProgrammTests` -- 18 von 18 grün (inkl. neuem Test).
+- `dotnet test --project tests/Zeltlotse.ArchitectureTests` -- 133 von 133 grün.
+- `npm run build` in `doku/` -- fehlerfrei, 44 Seiten.
+- Kein Komplettlauf: Produktivcode, Oberfläche und Screenshots unverändert; der vollständige Lauf des ersten Durchlaufs (2011 von 2011 grün) gilt weiter.
+
+**Restrisiken:** wie im ersten Durchlauf (übernommener Punkt bei Rollenentzug blockiert; US-Uhrzeitformat in Screenshots; Mahlzeiten nach Lösch-Lauf).

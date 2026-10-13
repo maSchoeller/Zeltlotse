@@ -184,6 +184,37 @@ public sealed class ProgrammTests(PostgresContainer postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Gleichzeitige_Aenderungen_an_Titel_und_Uhrzeit_gelingen_beide()
+    {
+        var punkt = await NeuAsync("Geländespiel", "2027-08-03", "14:00");
+        var version = punkt.GetProperty("version").GetUInt32();
+        var titel = "Geländespiel";
+        var beginn = "14:00";
+
+        for (var runde = 0; runde < 5; runde++)
+        {
+            // Beide Felder kennen dieselbe Version; jedes ändert ein anderes Feld (AD-19: kein Konflikt).
+            var neuerTitel = $"Geländespiel {runde}";
+            var neuerBeginn = $"14:{runde}0";
+            var antworten = await Task.WhenAll(
+                Task.Run(() => PatchAsync(Id(punkt), Koerper(version, titel, "titel", neuerTitel))),
+                Task.Run(() => PatchAsync(Id(punkt), Koerper(version, beginn, "beginn", neuerBeginn))));
+            foreach (var antwort in antworten)
+            {
+                using (antwort)
+                {
+                    Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
+                }
+            }
+
+            (titel, beginn) = (neuerTitel, neuerBeginn);
+            var gespeichert = Assert.Single(await PunkteAsync(), p => Id(p) == Id(punkt));
+            Assert.Equal((titel, beginn), (Text(gespeichert, "titel"), Text(gespeichert, "beginn")));
+            version = gespeichert.GetProperty("version").GetUInt32();
+        }
+    }
+
+    [Fact]
     public async Task Mahlzeit_Uhrzeit_und_Titel_lassen_sich_aendern()
     {
         var mittag = (await PunkteAsync()).First(p => Text(p, "mahlzeit") == "Mittagessen");
