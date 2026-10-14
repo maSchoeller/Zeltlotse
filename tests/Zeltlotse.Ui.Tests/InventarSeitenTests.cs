@@ -373,9 +373,9 @@ public sealed class InventarSeitenTests : BunitContext
 
     // ---------- Aus dem Inventar am Programmpunkt ----------
 
-    private void Programmpunkt(object inventar)
+    private void Programmpunkt(object inventar, string phase = "InVorbereitung")
     {
-        Kontext();
+        Kontext(phase);
         _server.Bei(HttpMethod.Get, $"/api/freizeiten/{Freizeit}", () => Json(new
         {
             id = Freizeit, name = "Zeltlager Sommer 2027", ersterTag = "2027-08-02", letzterTag = "2027-08-13", phase = "InVorbereitung", freigabeBis = "2027-09-12",
@@ -457,6 +457,19 @@ public sealed class InventarSeitenTests : BunitContext
         Assert.Contains($"\"materialId\":\"{MatSeile}\"", koerper, StringComparison.Ordinal);
         Assert.Contains("\"von\":null,\"bis\":null", koerper, StringComparison.Ordinal);
         Assert.True(_server.Anfragen.Count(a => a.Methode == HttpMethod.Get && a.Pfad == $"/api/freizeiten/{Freizeit}/programm/material") >= 2);
+    }
+
+    [Fact]
+    public void Abgeschlossen_zeigt_am_Material_die_Reservierung_aber_keine_Auswahl_aus_dem_Inventar()
+    {
+        Programmpunkt(InventarMitFahnen(), phase: "Gelaufen");
+
+        var cut = PunktRendern();
+
+        Assert.Contains("Aus dem Inventar: Fahnen", Eintrag(cut, "Fahnen").TextContent, StringComparison.Ordinal);
+        var seile = Eintrag(cut, "Seile");
+        Assert.Null(seile.QuerySelector("fieldset"));
+        Assert.DoesNotContain(seile.QuerySelectorAll("button"), b => b.TextContent == "Reservieren");
     }
 
     [Fact]

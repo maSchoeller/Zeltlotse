@@ -5,13 +5,20 @@ created: '2026-10-13'
 status: 'done'
 baseline_revision: 'efe71c2b3ba59edddcb5aeff916aa5c5446d76c2'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Zeltlotse-2026-10-10/EXPERIENCE.md'
   - '{project-root}/_bmad-output/specs/spec-zeltlotse/stories/3-2-material-am-programmpunkt.md'
 warnings: [oversized]
-deferred: []
+deferred:
+  - summary: >-
+      Die Demo-Einspielung bricht auf frischer Datenbank ab, sobald die festen Demo-Daten (August 2027) in der Phase Gelaufen liegen.
+    evidence: |-
+      DemoKatalog legt Zeltlager und Kinderbibeltage fest auf 02.-13.08.2027 bzw. 10.-12.08.2027. Schreibende Commands prüfen die Phase und liefern danach 409; DemoDaten wirft dann InvalidOperationException (Inventar-Schritt Zeile 937, ebenso die schon bestehenden Material- und Programm-Schritte). Ursache sind die festen Demo-Daten, nicht Story 3-3.
+    location: >-
+      src/Zeltlotse.Api/Demo/DemoKatalog.cs:20-23
+    severity: low
 ---
 
 <intent-contract>
@@ -142,6 +149,44 @@ deferred: []
   - `[low]` `[reject]` (Edge) Status direkt nach dem Reservieren noch „gebraucht“ — in den Design Notes beschrieben (Outbox im Hintergrund); die Card zeigt „Aus dem Inventar“ sofort.
   - `[low]` `[reject]` (Edge) `Anzeige.ZeitraumKurz` statt `Anzeige.Zeitraum` — der Name `Zeitraum` ist schon mit der Langform auf fünf Seiten belegt; Umbenennen würde sie ändern.
 
+### 2026-10-14 — Review pass (Folgedurchlauf)
+- verdicts: 34 findings — high 0, medium 1, low 27, false 6, maybe-false 0
+- findings:
+  - `[low]` `[patch]` (Verification gap) Auswahl „Aus dem Inventar“ am Programmpunkt in Phase Gelaufen ungetestet — bUnit-Test `Abgeschlossen_zeigt_am_Material_die_Reservierung_aber_keine_Auswahl_aus_dem_Inventar` ergänzt (Helfer `Programmpunkt` mit Phase); Gegentest: ohne `&& !NurLesen` schlägt er fehl.
+  - `[low]` `[reject]` (Verification gap, other) carried: Zweite Reservierung für dasselbe Material überschreibt die Kennung — wie im ersten Pass.
+  - `[false]` `[reject]` (Intent) carried: 403 nur auf Org-Routen, keine Token-Fälle — Matrix der Intent schließt beides aus.
+  - `[low]` `[reject]` (Intent) carried: Playwright-Tests lesen nur — Schreibpfade per HTTP, Durchlauf und bUnit.
+  - `[low]` `[reject]` (Intent) carried: Akzeptanzkriterium „Seile“ nicht als ein Test — Teile abgedeckt.
+  - `[low]` `[reject]` (Intent) Leitung bekommt nur einen Absatz mit Link in `leitung/index.md` — Reservieren ist eine gemeinsame Aufgabe von Leitung und Team; die Seite liegt unter `mitarbeitende/` und ist von der Leitung verlinkt, eine zweite Seite würde Text doppeln.
+  - `[false]` `[reject]` (Intent) carried: Test zuerst und Doku-Build im Diff nicht belegbar — beschreibend; Doku-Build lief in diesem Pass erneut fehlerfrei.
+  - `[false]` `[reject]` (Intent) Folgedurchlauf ohne eigenes Delta — ein Folgedurchlauf ist ein Review-Pass auf die erledigte Story; das Delta sind die Patches dieses Passes.
+  - `[low]` `[reject]` (Blind) carried: Mehrere Reservierungen je Material.
+  - `[low]` `[reject]` (Blind) carried: `MaterialId` nach Löschen des Materials verwaist (AD-2).
+  - `[low]` `[reject]` (Blind) carried: `materialId` ungeprüft (AD-2, Design Notes).
+  - `[low]` `[reject]` (Blind) carried: Von/Bis nicht gegen die Freizeittage geprüft — gewollt.
+  - `[low]` `[reject]` (Blind) carried: Demo-Einspielung bei doppelten Bezeichnungen.
+  - `[medium]` `[patch]` (Blind) carried: Leerer Freizeit-Name im Konflikthinweis — im ersten Pass durch den Lösch-Lauf behoben, nicht erneut gepatcht.
+  - `[low]` `[reject]` (Blind) carried: „Artikel löschen“ ohne Übertragungs-Wächter.
+  - `[low]` `[reject]` (Blind) carried: `Material.ReservierungId` in der Oberfläche ungenutzt.
+  - `[low]` `[reject]` (Blind) carried: Aufheben nicht am Material, Material nicht in der Reservierungszeile.
+  - `[low]` `[reject]` (Blind) carried: Ereignis überschreibt von Hand gesetzten Status (Intent-Regel).
+  - `[false]` `[reject]` (Blind) Fehler bei leerem „Von“ steht am Feld Bis — die Intent legt `400` am Feld `bis` fest; `input type=date` liefert keinen unlesbaren Text (carried aus Pass 1).
+  - `[low]` `[reject]` (Blind) Kein CHECK `von <= bis` in der Datenbank, Konfliktabfrage lädt alle Reservierungen der Organisation — Validator und `Reservierung.Anlegen` sichern `von <= bis`, einen anderen Schreibweg gibt es nicht; der Lösch-Lauf begrenzt die Menge auf Freizeiten innerhalb der Frist, bei Organisationsgröße kein spürbarer Aufwand.
+  - `[low]` `[patch]` (Blind) Doku für Org-Admins erklärt nicht, wann Reservierungen vergangener Freizeiten verschwinden — Satz mit Link auf Löschfristen in `org-admin/inventar.md` ergänzt.
+  - `[low]` `[reject]` (Edge) carried: Zweite Reservierung je Material (Material.cs).
+  - `[low]` `[reject]` (Edge) carried: Zweite Reservierung je Material (Reservieren.cs).
+  - `[low]` `[reject]` (Edge) carried: Beliebiger Zeitraum außerhalb der Freizeit.
+  - `[false]` `[reject]` (Edge) carried: Leere Datumsfelder reservieren die ganze Freizeit — so festgelegt.
+  - `[low]` `[reject]` (Edge) carried: Demo-Einspielung bei doppelten Bezeichnungen.
+  - `[low]` `[reject]` (Edge) Demo-Einspielung nach gelöschtem Material oder umbenannter Freizeit — gleiche Abwägung wie doppelte Bezeichnungen: die Demo läuft frisch.
+  - `[low]` `[defer]` (Edge) Demo-Einspielung nach August 2027 (Phase Gelaufen) wirft — Ursache sind die festen Demo-Daten, betrifft auch die bestehenden Material- und Programm-Schritte; in `deferred` aufgenommen.
+  - `[low]` `[reject]` (Edge) carried: „Artikel löschen“ ohne Übertragungs-Wächter.
+  - `[false]` `[reject]` (Edge) `_verwalten` bleibt beim Wechsel der Organisation stehen — schlägt das Laden fehl, bleibt `_artikel` null und die Seite zeigt nur „nicht verfügbar“ bzw. den Fehler; der Wert wird dann nicht gerendert, bei Erfolg neu gesetzt (`OrgInventar.razor:128-149`).
+  - `[low]` `[reject]` (Edge) carried: `MaterialEintrag` nimmt die erste Reservierung (Ursache mehrere Reservierungen je Material).
+  - `[low]` `[reject]` (Edge) PATCH ohne `alterWert` ergibt 409 statt 400 — gleiche Lesart wie `FeldPatch` in Programm (AD-19: fehlender Altwert = leer); abweichendes Verhalten nur in Inventar wäre Speziallogik.
+  - `[low]` `[reject]` (Edge) carried: Status direkt nach dem Reservieren noch „gebraucht“ (Design Notes).
+  - `[low]` `[reject]` (Edge) carried: `Anzeige.ZeitraumKurz` statt `Anzeige.Zeitraum`.
+
 ## Design Notes
 
 - **Material-Verknüpfung über das Ereignis:** Die Reservierung gehört Inventar, der Materialstatus Programm (AD-3). Der Knopf am Material schickt die Reservierung an Inventar mit `materialId`; Programm reagiert nur auf `ReservierungGeaendert` (Spine-Zeile 567, AD-4). Inventar kann `materialId` nicht prüfen (kein Pfeil Inventar → Programm); der Empfänger ignoriert unbekannte oder fremde Kennungen. Da die Outbox im Hintergrund zustellt, kann der Status direkt nach dem Reservieren noch alt sein; die Card zeigt „Aus dem Inventar“ aus der Inventar-Antwort.
@@ -192,3 +237,23 @@ Status: done
 - Mehrere Reservierungen für dasselbe Material (nur per Hand-Anfrage oder gleichzeitigen Tipps) können den Materialstatus nach dem Aufheben der neueren auf „gebraucht“ setzen, obwohl die ältere besteht.
 - Der Materialstatus folgt der Reservierung erst nach Zustellung der Outbox (Sekunden).
 - Wird ein Material gelöscht, behält seine Reservierung die verwaiste `MaterialId` (kein Ereignis von Programm an Inventar, AD-2).
+
+### Folgedurchlauf 2026-10-14
+
+**Zusammenfassung:** Review-Pass auf die erledigte Story mit vier Layern (34 Befunde). Keine Änderung am Produktcode nötig. Ergänzt: ein bUnit-Test für den Programmpunkt in Phase Gelaufen und ein Doku-Satz zu Reservierungen vergangener Freizeiten.
+
+**Dateien:**
+- `tests/Zeltlotse.Ui.Tests/InventarSeitenTests.cs` -- Helfer `Programmpunkt` mit Phase; neuer Test: in Phase Gelaufen zeigt das Material die Reservierung, aber keine Auswahl und keinen Knopf „Reservieren“.
+- `doku/src/content/docs/org-admin/inventar.md` -- Satz zum automatischen Löschen von Reservierungen vergangener Freizeiten nach der Löschfrist, mit Link.
+
+**Review:** Gepatcht in diesem Pass: 2 Einträge low (0 high, 0 medium); ein medium-Befund ist carried und war schon in Pass 1 behoben. Zurückgestellt: 1 (feste Demo-Daten nach August 2027, low, bestand schon vor der Story). Abgelehnt: 30, davon 23 carried aus Pass 1; Gründe im Review Triage Log.
+
+**Folge-Review empfohlen:** nein (kein high gepatcht; die Arbeit ist konvergiert).
+
+**Verifikation:**
+- `dotnet test --project tests/Zeltlotse.Ui.Tests --filter InventarSeitenTests` -- 16/16 grün; Gegentest ohne `&& !NurLesen` in `MaterialEintrag.razor` -- neuer Test rot, danach zurückgesetzt.
+- `dotnet test --project tests/Zeltlotse.ArchitectureTests` -- 133/133 grün.
+- `npm run build` in `doku/` -- fehlerfrei, 47 Seiten.
+- Kein Komplettlauf der Lösung: weder Produktcode noch Demo-Daten noch Oberfläche geändert; der letzte Komplettlauf (2147/2147 inkl. E2E) gilt weiter.
+
+**Restrisiken:** wie oben; dazu die zurückgestellte Demo-Einspielung nach August 2027.

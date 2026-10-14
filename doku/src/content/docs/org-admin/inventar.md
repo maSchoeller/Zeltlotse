@@ -26,7 +26,7 @@ Am Ende der Seite steht für den Org-Admin das Formular **Artikel hinzufügen**:
 
 In jeder Card stehen **Bezeichnung** und **Menge** in Feldern. Zeltlotse speichert beim Verlassen des Felds; darunter steht „Gespeichert“ mit „Rückgängig“. Hat jemand anderes dasselbe Feld inzwischen geändert, steht dort „Inzwischen geändert – neu laden?“. Eine leere Menge heißt: ohne Menge.
 
-**Artikel löschen** klappt eine Rückfrage auf („„Kanus“ löschen?“ – „Ja, löschen“ / „Nein“). Hat eine Freizeit den Artikel noch reserviert, bleibt er stehen, und oben steht „Noch reserviert. Löschen geht erst, wenn keine Freizeit den Artikel mehr reserviert hat.“ So verschwindet keine Reservierung unbemerkt.
+**Artikel löschen** klappt eine Rückfrage auf („„Kanus“ löschen?“ – „Ja, löschen“ / „Nein“). Hat eine Freizeit den Artikel noch reserviert, bleibt er stehen, und oben steht „Noch reserviert. Löschen geht erst, wenn keine Freizeit den Artikel mehr reserviert hat.“ So verschwindet keine Reservierung unbemerkt. Reservierungen einer vergangenen Freizeit löscht Zeltlotse automatisch, sobald die Frist für „Daten einer Freizeit“ abgelaufen ist (siehe [Löschfristen](/org-admin/loeschfristen/)); danach lässt sich der Artikel löschen. Die Artikel selbst bleiben.
 
 ## Reservierungen und Überschneidungen
 
