@@ -36,6 +36,7 @@ Test-Tempo ab 2-3 (Vorgabe von Marvin, 2026-10-12): Story-Sitzungen testen währ
 | 2026-10-13 22:30 | 3-1 | done (mit Folgedurchlauf) | ja (done, keiner mehr) | schnell grün: Build, Architektur 133/133, UI 548/548 / – (Sitzung: 2011 grün) | a4761a8 | Übernommener Programmpunkt bleibt blockiert, wenn die Person ihre Rolle verliert; Screenshots zeigen Uhrzeit im US-Format (→ Korrektur Spracheinstellung Playwright) |
 | 2026-10-13 23:55 | 3-2 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 577/577 / – (Sitzung: 2085 grün) | c46930b | „Bringt mit“ bleibt stehen, wenn die Person ihre Rolle verliert (gleiche Lücke wie 3-1) |
 | 2026-10-14 03:05 | 3-3 | done (mit Folgedurchlauf) | ja (done, keiner mehr) | schnell grün: Build, Architektur 133/133, UI 593/593 / – (Sitzung: 2147 grün) | f6b1891 | Postgres-Testcontainer auf 1 GB Shared Memory gesetzt (voller Lauf scheiterte sonst). Zurückgestellt: Demo-Daten mit festen Daten Aug. 2027 brechen danach auf frischer DB ab |
+| 2026-10-14 04:20 | 3-4 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 608/608 / – | b6e8e3f | Komplettlauf in der Sitzung lief ins Zeitlimit, API-Tests einzeln grün (754) → volle Regression am Epic-Ende maßgeblich. Für 3-8: abgeschlossene Demo-Freizeit anlegen, Screenshot Anschaffungswünsche neu |
 
 ## Entscheidungen im Lauf
 
