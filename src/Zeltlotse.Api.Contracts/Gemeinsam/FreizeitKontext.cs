@@ -124,4 +124,10 @@ public static class Aktionsschluessel
     /// Story 3-5, FR-40).
     /// </summary>
     public const string AufgabenVorlagenVerwalten = "aufgaben-vorlagen-verwalten";
+
+    /// <summary>
+    /// Die Programmbibliothek der Organisation sehen und Einträge entfernen (Org-Admin, in <c>GET /api/organisationen/{orgId}</c>, Story 3-6,
+    /// FR-41).
+    /// </summary>
+    public const string ProgrammbibliothekVerwalten = "programmbibliothek-verwalten";
 }

@@ -56,6 +56,12 @@ internal static class OrgRechte
     /// </summary>
     public static readonly OrgRolleArt[] AufgabenVorlagen = [OrgRolleArt.OrgAdmin];
 
+    /// <summary>
+    /// Story 3-6: die Programmbibliothek sehen und Einträge entfernen (FR-41). Die Endpunkte besitzt Programm; dort steht dieselbe Liste
+    /// (<c>ProgrammRechte.Bibliothek</c>), ein Test hält beide gleich.
+    /// </summary>
+    public static readonly OrgRolleArt[] Programmbibliothek = [OrgRolleArt.OrgAdmin];
+
     public static IReadOnlyList<string> Erlaubt(IReadOnlyCollection<OrgRolleArt> rollen)
     {
         var erlaubt = new List<string>();
@@ -102,6 +108,11 @@ internal static class OrgRechte
         if (rollen.Any(AufgabenVorlagen.Contains))
         {
             erlaubt.Add(Aktionsschluessel.AufgabenVorlagenVerwalten);
+        }
+
+        if (rollen.Any(Programmbibliothek.Contains))
+        {
+            erlaubt.Add(Aktionsschluessel.ProgrammbibliothekVerwalten);
         }
 
         return erlaubt;

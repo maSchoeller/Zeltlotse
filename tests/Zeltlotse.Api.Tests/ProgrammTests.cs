@@ -80,7 +80,7 @@ public sealed class ProgrammTests(PostgresContainer postgres) : IAsyncLifetime
         Assert.Equal(("2027-08-02", "2027-08-13"), (Text(raster, "ersterTag"), Text(raster, "letzterTag")));
         var punkte = raster.GetProperty("punkte").EnumerateArray().ToList();
         Assert.Equal(36, punkte.Count);
-        Assert.Equal(["beginn", "id", "mahlzeit", "meins", "tag", "titel", "uebernommenVon", "version"], Namen(punkte[0]));
+        Assert.Equal(["beginn", "id", "inBibliothek", "mahlzeit", "meins", "tag", "titel", "uebernommenVon", "version"], Namen(punkte[0]));
         Assert.Equal(
             ["2027-08-02 08:00 Frühstück Fruehstueck", "2027-08-02 12:30 Mittagessen Mittagessen", "2027-08-02 18:30 Abendessen Abendessen", "2027-08-03 08:00 Frühstück Fruehstueck"],
             punkte.Take(4).Select(p => $"{Text(p, "tag")} {Text(p, "beginn")} {Text(p, "titel")} {Text(p, "mahlzeit")}"));

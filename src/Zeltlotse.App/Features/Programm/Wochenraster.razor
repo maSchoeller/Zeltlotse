@@ -16,7 +16,7 @@
    ohne Bestätigung (nur für sich selbst). Namen der übernehmenden Personen setzt der Client zusammen (AD-2: Leitung aus der Freizeit, Team
    aus der Personenliste; fehlt ein Name, nur „Übernommen“). Darunter „Programmpunkt anlegen“ (Titel, Tag, Uhrzeit). In der Phase „gelaufen“
    nur lesbar. Kontext oder Raster nicht verfügbar → „Diese Seite ist nicht verfügbar.“; scheitern Freizeit oder Personenliste, fehlen nur
-   die Namen. Story 3-2: Link „Materialliste“ über dem Raster. *@
+   die Namen. Story 3-2: Link „Materialliste“ über dem Raster. Story 3-6: daneben der Link „Programmbibliothek“. *@
 <PageTitle>Programm – Zeltlotse</PageTitle>
 
 @if (_nichtVerfuegbar)
@@ -56,7 +56,7 @@ else
                 <p>@_meldung</p>
             </Meldung>
         }
-        <p><a href="@ProgrammTexte.MaterialZiel(FreizeitId)">Materialliste</a></p>
+        <p><a href="@ProgrammTexte.MaterialZiel(FreizeitId)">Materialliste</a> · <a href="@ProgrammTexte.BibliothekZiel(FreizeitId)">Programmbibliothek</a></p>
         <Reiter NurHandy="true" Bezeichnung="Tage" Eintraege="ReiterEintraege">
             <h2>@Anzeige.TagLang(_tag)</h2>
             @Termine(_tag)

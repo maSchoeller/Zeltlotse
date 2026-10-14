@@ -57,8 +57,17 @@ internal sealed class Programmpunkt : IOrganisationsEigen
     /// <summary>Versionsnummer der Zeile (<c>xmin</c>, AD-19).</summary>
     public uint Version { get; private set; }
 
+    /// <summary>
+    /// Story 3-6: Der Eintrag der Programmbibliothek, als der dieser Punkt abgelegt wurde, sonst <c>null</c>. Wird der Eintrag entfernt, leert der
+    /// Fremdschlüssel die Verknüpfung (ON DELETE SET NULL); sie zeigt also immer auf einen vorhandenen Eintrag.
+    /// </summary>
+    public Guid? BibliotheksEintragId { get; private set; }
+
     /// <summary>Mahlzeiten lassen sich nicht löschen, alle anderen Punkte schon.</summary>
     public bool Loeschbar => Mahlzeit is null;
+
+    /// <summary>Story 3-6: „In Bibliothek ablegen“ verknüpft den Punkt mit seinem Eintrag; ein erneutes Ablegen legt dann nichts Neues an.</summary>
+    public void BibliothekMerken(Guid eintragId) => BibliotheksEintragId = eintragId;
 
     public static Programmpunkt Anlegen(Guid id, Guid organisationId, Guid freizeitId, DateOnly tag, TimeOnly? beginn, string titel) => new()
     {

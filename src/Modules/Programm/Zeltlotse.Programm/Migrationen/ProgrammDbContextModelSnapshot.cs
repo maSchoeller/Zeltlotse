@@ -122,6 +122,29 @@ namespace Zeltlotse.Programm.Migrationen
                     b.ToTable("aufgaben_vorlagen_uebernahme", "programm");
                 });
 
+            modelBuilder.Entity("Zeltlotse.Programm.Bibliothek.BibliotheksEintrag", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AbgelegtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Titel")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.ToTable("bibliotheks_eintrag", "programm");
+                });
+
             modelBuilder.Entity("Zeltlotse.Programm.Materialien.Material", b =>
                 {
                     b.Property<Guid>("Id")
@@ -181,6 +204,9 @@ namespace Zeltlotse.Programm.Migrationen
                     b.Property<TimeOnly?>("Beginn")
                         .HasColumnType("time without time zone");
 
+                    b.Property<Guid?>("BibliotheksEintragId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("FreizeitId")
                         .HasColumnType("uuid");
 
@@ -208,6 +234,8 @@ namespace Zeltlotse.Programm.Migrationen
                         .HasColumnName("xmin");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BibliotheksEintragId");
 
                     b.HasIndex("OrganisationId");
 
@@ -332,6 +360,61 @@ namespace Zeltlotse.Programm.Migrationen
                         .OnDelete(DeleteBehavior.SetNull);
                 });
 
+            modelBuilder.Entity("Zeltlotse.Programm.Bibliothek.BibliotheksEintrag", b =>
+                {
+                    b.OwnsMany("Zeltlotse.Programm.Bibliothek.EintragAufgabe", "Aufgaben", b1 =>
+                        {
+                            b1.Property<Guid>("BibliotheksEintragId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<int>("Phase");
+
+                            b1.Property<string>("Titel")
+                                .IsRequired();
+
+                            b1.HasKey("BibliotheksEintragId", "__synthesizedOrdinal");
+
+                            b1.ToTable("bibliotheks_eintrag", "programm");
+
+                            b1
+                                .ToJson("Aufgaben")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("BibliotheksEintragId");
+                        });
+
+                    b.OwnsMany("Zeltlotse.Programm.Bibliothek.EintragMaterial", "Material", b1 =>
+                        {
+                            b1.Property<Guid>("BibliotheksEintragId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Bezeichnung")
+                                .IsRequired();
+
+                            b1.Property<string>("Menge");
+
+                            b1.HasKey("BibliotheksEintragId", "__synthesizedOrdinal");
+
+                            b1.ToTable("bibliotheks_eintrag", "programm");
+
+                            b1
+                                .ToJson("Material")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("BibliotheksEintragId");
+                        });
+
+                    b.Navigation("Aufgaben");
+
+                    b.Navigation("Material");
+                });
+
             modelBuilder.Entity("Zeltlotse.Programm.Materialien.Material", b =>
                 {
                     b.HasOne("Zeltlotse.Programm.Programme.Programmpunkt", null)
@@ -339,6 +422,14 @@ namespace Zeltlotse.Programm.Migrationen
                         .HasForeignKey("ProgrammpunktId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Zeltlotse.Programm.Programme.Programmpunkt", b =>
+                {
+                    b.HasOne("Zeltlotse.Programm.Bibliothek.BibliotheksEintrag", null)
+                        .WithMany()
+                        .HasForeignKey("BibliotheksEintragId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.Zustellung", b =>

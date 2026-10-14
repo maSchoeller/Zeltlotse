@@ -1,0 +1,42 @@
+@using Zeltlotse.Api.Contracts.Programm
+@* Story 3-6: Ein Eintrag der Programmbibliothek als Card (FR-41): Titel, „Abgelegt am TT.MM.JJJJ“, das Material („Bezeichnung · Menge“) und die
+   Aufgaben („Titel · Phase“), je als Liste; ohne Material „Kein Material.“, ohne Aufgaben „Keine Aufgaben.“. Darunter der Inhalt der Seite, in der
+   Freizeit das Formular „In diese Freizeit übernehmen“, in der Organisation „Aus der Bibliothek entfernen“. *@
+<Card Titel="@Eintrag.Titel">
+    <p>@Anzeige.AbgelegtAm(Eintrag.AbgelegtAm)</p>
+    <h3>Material</h3>
+    @if (Eintrag.Material.Count == 0)
+    {
+        <p>Kein Material.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (var material in Eintrag.Material)
+            {
+                <li>@Anzeige.BibliotheksMaterial(material)</li>
+            }
+        </ul>
+    }
+    <h3>Aufgaben</h3>
+    @if (Eintrag.Aufgaben.Count == 0)
+    {
+        <p>Keine Aufgaben.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (var aufgabe in Eintrag.Aufgaben)
+            {
+                <li>@Anzeige.BibliotheksAufgabe(aufgabe)</li>
+            }
+        </ul>
+    }
+    @ChildContent
+</Card>
+
+@code {
+    [Parameter, EditorRequired] public BibliotheksEintrag Eintrag { get; set; } = null!;
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Inventar.Contracts.Events;
 using Zeltlotse.Personen.Contracts.Events;
 using Zeltlotse.Programm.Aufgaben;
+using Zeltlotse.Programm.Bibliothek;
 using Zeltlotse.Programm.Daten;
 using Zeltlotse.Programm.Datenschutz;
 using Zeltlotse.Programm.Materialien;
@@ -42,7 +43,9 @@ public static class ProgrammModul
     /// Leitung und Team: Liste lesen, am Punkt anlegen, bearbeiten (Autosave), löschen, Status setzen und mitbringen oder nicht (nur für sich
     /// selbst). Story 3-5: Aufgaben der Freizeit unter <c>…/programm/aufgaben</c> für Leitung und Team (lesen mit einmaliger Übernahme der Vorlagen,
     /// anlegen, Autosave, löschen, übernehmen und abgeben nur für sich selbst, erledigt und wieder offen, als Vorlage speichern) und die
-    /// Aufgaben-Vorlagen der Organisation unter <c>/api/organisationen/{orgId}/aufgaben-vorlagen</c> nur für den Org-Admin.
+    /// Aufgaben-Vorlagen der Organisation unter <c>/api/organisationen/{orgId}/aufgaben-vorlagen</c> nur für den Org-Admin. Story 3-6: die
+    /// Programmbibliothek: Programmpunkt ablegen, Bibliothek lesen und Einträge übernehmen unter <c>…/programm</c> für Leitung und Team; die
+    /// Bibliothek der Organisation unter <c>/api/organisationen/{orgId}/programmbibliothek</c> (lesen, Einträge entfernen) nur für den Org-Admin.
     /// </summary>
     public static IEndpointRouteBuilder MapProgrammEndpoints(this IEndpointRouteBuilder api)
     {
@@ -71,11 +74,19 @@ public static class ProgrammModul
         programm.MapPost("/aufgaben/{aufgabeId:guid}/offen", AufgabeUebergangEndpunkt.Offen).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
         programm.MapPost("/aufgaben/{aufgabeId:guid}/vorlage", AufgabeAlsVorlageEndpunkt.Speichern).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
 
+        programm.MapPost("/punkte/{punktId:guid}/bibliothek", ProgrammpunktAblegenEndpunkt.Ablegen).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+        programm.MapGet("/bibliothek", BibliothekLadenEndpunkt.Laden).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+        programm.MapPost("/bibliothek/{eintragId:guid}/uebernehmen", BibliothekUebernehmenEndpunkt.Uebernehmen).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+
         var vorlagen = api.MapGroup($"/organisationen/{{{Rechtemerkmale.OrgRouteWert}:guid}}/aufgaben-vorlagen");
         vorlagen.MapGet("", VorlagenLadenEndpunkt.Laden).NurOrgRolle(ProgrammRechte.Vorlagen);
         vorlagen.MapPost("", VorlageAnlegenEndpunkt.Anlegen).NurOrgRolle(ProgrammRechte.Vorlagen);
         vorlagen.MapPatch("/{vorlageId:guid}", VorlageFeldAendernEndpunkt.Aendern).NurOrgRolle(ProgrammRechte.Vorlagen);
         vorlagen.MapDelete("/{vorlageId:guid}", VorlageLoeschenEndpunkt.Loeschen).NurOrgRolle(ProgrammRechte.Vorlagen);
+
+        var bibliothek = api.MapGroup($"/organisationen/{{{Rechtemerkmale.OrgRouteWert}:guid}}/programmbibliothek");
+        bibliothek.MapGet("", OrgBibliothekLadenEndpunkt.Laden).NurOrgRolle(ProgrammRechte.Bibliothek);
+        bibliothek.MapDelete("/{eintragId:guid}", EintragLoeschenEndpunkt.Loeschen).NurOrgRolle(ProgrammRechte.Bibliothek);
         return api;
     }
 }

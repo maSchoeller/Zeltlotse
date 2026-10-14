@@ -30,6 +30,7 @@ using Zeltlotse.Personen.Nachweise;
 using Zeltlotse.Personen.Profil;
 using Zeltlotse.Personen.Zugriffsprotokoll;
 using Zeltlotse.Programm.Aufgaben;
+using Zeltlotse.Programm.Bibliothek;
 using Zeltlotse.Programm.Daten;
 using Zeltlotse.Programm.Materialien;
 using Zeltlotse.Programm.Programme;
@@ -156,6 +157,7 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await InventarAsync(abbruch);
         await SchaedenAsync(abbruch);
         await AufgabenAsync(abbruch);
+        await BibliothekAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -1021,6 +1023,47 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             {
                 await sender.Send(new AufgabeUebergangCommand(freizeitId, aufgabe.Id, person, AufgabeUebergang.Erledigen), abbruch);
             }
+        }
+    }
+
+    /// <summary>
+    /// Story 3-6: Das Team legt „Lagerfeuer“ und „Geländespiel“ des Zeltlagers in der Programmbibliothek ab (idempotent über die Verknüpfung am
+    /// Punkt), dann die Übernahme von „Lagerfeuer“ in die Kinderbibeltage (nur, wenn es den Titel dort noch nicht gibt); alles über die Commands des
+    /// Moduls Programm.
+    /// </summary>
+    private async Task BibliothekAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var freizeiten = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name || f.Name == DemoKatalog.ZweiteFreizeit.Name)
+            .ToDictionaryAsync(f => f.Name, f => f.Id, abbruch);
+        var zeltlager = freizeiten[DemoKatalog.Freizeit.Name];
+        var lesen = dienste.GetRequiredService<ProgrammLeseDbContext>();
+        var punkte = await lesen.Programmpunkte.Where(p => p.FreizeitId == zeltlager && p.Mahlzeit == null).ToListAsync(abbruch);
+        foreach (var titel in DemoKatalog.Bibliothek)
+        {
+            var punkt = punkte.Single(p => p.Titel == titel);
+            if (punkt.BibliotheksEintragId is null
+                && await sender.Send(new ProgrammpunktAblegenCommand(zeltlager, punkt.Id), abbruch) is not ProgrammpunktAblegen.Abgelegt)
+            {
+                throw new InvalidOperationException($"Demo-Bibliothek: {titel} ließ sich nicht ablegen.");
+            }
+        }
+
+        var (uebernahmeTitel, tag, beginn) = DemoKatalog.BibliotheksUebernahme;
+        var kinderbibeltage = freizeiten[DemoKatalog.ZweiteFreizeit.Name];
+        if (await lesen.Programmpunkte.AnyAsync(p => p.FreizeitId == kinderbibeltage && p.Titel == uebernahmeTitel, abbruch))
+        {
+            return;
+        }
+
+        var eintrag = await lesen.Bibliothek.Where(e => e.Titel == uebernahmeTitel).OrderByDescending(e => e.AbgelegtAm).Select(e => e.Id).FirstAsync(abbruch);
+        if (await sender.Send(new BibliothekUebernehmenCommand(kinderbibeltage, eintrag, tag, beginn), abbruch) is not BibliothekUebernehmen.Uebernommen)
+        {
+            throw new InvalidOperationException($"Demo-Bibliothek: {uebernahmeTitel} ließ sich nicht übernehmen.");
         }
     }
 

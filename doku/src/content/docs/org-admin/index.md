@@ -14,6 +14,7 @@ sidebar:
 - **Inventar** der Organisation pflegen und sehen, welche Freizeit was wann reserviert hat – siehe [Inventar pflegen](/org-admin/inventar/),
 - **Anschaffungswünsche** sehen: nach dem Abschluss einer Freizeit ihre Schäden, Verluste und Entnahmen, und Erledigtes entfernen – siehe [Anschaffungswünsche](/org-admin/anschaffungswuensche/),
 - **Aufgaben-Vorlagen** pflegen: wiederkehrende Aufgaben, die jede neue Freizeit schon in ihren Aufgaben findet – siehe [Aufgaben-Vorlagen](/org-admin/aufgaben-vorlagen/),
+- die **Programmbibliothek** sehen: Programmpunkte, die Teams aus ihren Freizeiten abgelegt haben, und überholte Einträge entfernen – siehe [Programmbibliothek der Organisation](/org-admin/programmbibliothek/),
 - **Org-Dokumente** pflegen – Org-Dokumente binden die Freizeiten ein, ohne sie zu kopieren, siehe [Org-Dokumente](/org-admin/org-dokumente/),
 - **Richtlinien** festlegen: welche Nachweise Pflicht sind und wie lange sie gelten (siehe [Richtlinie für Nachweise](/org-admin/nachweis-richtlinie/)), wie lange das Freigabefenster dauert und nach welchen Fristen Daten gelöscht werden (siehe [Löschfristen](/org-admin/loeschfristen/)),
 - **Nachweise prüfen** auf Ebene der Organisation, für alle, die in einer Freizeit der Organisation mitarbeiten,

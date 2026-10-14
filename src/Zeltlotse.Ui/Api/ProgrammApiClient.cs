@@ -66,6 +66,7 @@ public enum AufgabenUebergang
 /// Autosave von Titel und Uhrzeit übernimmt der Autosave-Baustein mit <see cref="PunktPfad"/>. Story 3-2: das Material an den Programmpunkten;
 /// den Autosave von Bezeichnung und Menge übernimmt der Autosave-Baustein mit <see cref="MaterialPfad"/>. Story 3-5: die Aufgaben einer Freizeit
 /// (Autosave des Titels mit <see cref="AufgabePfad"/>) und die Aufgaben-Vorlagen einer Organisation (Autosave mit <see cref="VorlagePfad"/>).
+/// Story 3-6: die Programmbibliothek (ablegen, lesen und übernehmen in der Freizeit, lesen und entfernen in der Organisation).
 /// </summary>
 public sealed class ProgrammApiClient(HttpClient http)
 {
@@ -335,6 +336,67 @@ public sealed class ProgrammApiClient(HttpClient http)
     {
         using var antwort = await http.DeleteAsync(VorlagePfad(orgId, vorlageId), abbruch);
         return antwort.IsSuccessStatusCode ? ProgrammAktionErgebnis.Erfolg : await FehlerAsync(antwort, abbruch);
+    }
+
+    /// <summary>Story 3-6: <c>POST …/punkte/{punktId}/bibliothek</c> („In Bibliothek ablegen“): mit dem Programmpunkt danach (<c>InBibliothek = true</c>).</summary>
+    public async Task<ProgrammAktion> AblegenAsync(Guid freizeitId, Guid punktId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsync($"{PunktPfad(freizeitId, punktId)}/bibliothek", null, abbruch);
+        return await AktionAsync(antwort, abbruch);
+    }
+
+    /// <summary>Story 3-6: Pfad der Programmbibliothek in einer Freizeit.</summary>
+    public static string BibliothekPfad(Guid freizeitId) => $"{ProgrammPfad(freizeitId)}/bibliothek";
+
+    /// <summary>
+    /// Story 3-6: <c>GET …/programm/bibliothek</c> (Leitung und Team, FR-41): die Einträge der Programmbibliothek der Organisation oder <c>null</c>
+    /// bei <c>403</c>/<c>404</c>.
+    /// </summary>
+    public Task<List<BibliotheksEintrag>?> BibliothekAsync(Guid freizeitId, CancellationToken abbruch = default) =>
+        EintraegeAsync(BibliothekPfad(freizeitId), abbruch);
+
+    /// <summary>
+    /// Story 3-6: <c>POST …/programm/bibliothek/{eintragId}/uebernehmen</c>: übernommen mit dem neuen Programmpunkt, Feldfehler (<c>400</c>, Fehler je
+    /// JSON-Feldname), abgeschlossene Freizeit oder ein anderer Fehler.
+    /// </summary>
+    public async Task<ProgrammAktion> BibliothekUebernehmenAsync(Guid freizeitId, Guid eintragId, BibliotheksUebernahme uebernahme, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync($"{BibliothekPfad(freizeitId)}/{eintragId}/uebernehmen", uebernahme, ApiJson.Optionen, abbruch);
+        if (antwort.StatusCode == HttpStatusCode.BadRequest)
+        {
+            return new ProgrammAktion(ProgrammAktionErgebnis.Fehler, null, await ApiFehler.AlleFeldFehlerAsync(antwort, abbruch));
+        }
+
+        return await AktionAsync(antwort, abbruch);
+    }
+
+    /// <summary>Story 3-6: Pfad der Programmbibliothek einer Organisation.</summary>
+    public static string OrgBibliothekPfad(Guid orgId) => $"/api/organisationen/{orgId}/programmbibliothek";
+
+    /// <summary>
+    /// Story 3-6: <c>GET /api/organisationen/{orgId}/programmbibliothek</c> (Org-Admin): die Einträge oder <c>null</c> bei <c>403</c>/<c>404</c>.
+    /// </summary>
+    public Task<List<BibliotheksEintrag>?> OrgBibliothekAsync(Guid orgId, CancellationToken abbruch = default) =>
+        EintraegeAsync(OrgBibliothekPfad(orgId), abbruch);
+
+    /// <summary>Story 3-6: <c>DELETE …/programmbibliothek/{eintragId}</c>: entfernt oder ein Fehler.</summary>
+    public async Task<ProgrammAktionErgebnis> EintragLoeschenAsync(Guid orgId, Guid eintragId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.DeleteAsync($"{OrgBibliothekPfad(orgId)}/{eintragId}", abbruch);
+        return antwort.IsSuccessStatusCode ? ProgrammAktionErgebnis.Erfolg : await FehlerAsync(antwort, abbruch);
+    }
+
+    private async Task<List<BibliotheksEintrag>?> EintraegeAsync(string pfad, CancellationToken abbruch)
+    {
+        using var antwort = await http.GetAsync(pfad, abbruch);
+        if (antwort.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return await antwort.Content.ReadFromJsonAsync<List<BibliotheksEintrag>>(ApiJson.Optionen, abbruch)
+               ?? throw new HttpRequestException("Leere Antwort beim Laden der Programmbibliothek.");
     }
 
     private static async Task<AufgabeAktion> AufgabeAktionAsync(HttpResponseMessage antwort, CancellationToken abbruch)

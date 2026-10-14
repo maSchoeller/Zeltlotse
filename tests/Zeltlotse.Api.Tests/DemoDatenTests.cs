@@ -411,7 +411,7 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
                 var wer = von == lea ? "Lea" : von == jonas ? "Jonas" : von is null ? "offen" : "?";
                 return $"{p.GetProperty("tag").GetString()} {p.GetProperty("beginn").GetString()} {p.GetProperty("titel").GetString()} {wer} {p.GetProperty("meins").GetBoolean()}";
             }));
-        Assert.Equal(39L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.programmpunkt"));
+        Assert.Equal(39L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.programmpunkt WHERE \"FreizeitId\" = @f", ("f", freizeitId)));
 
         // Story 3-2: fünf Materialien an Geländespiel und Lagerfeuer mit Menge und Status; Miriam bringt die Taschenlampen mit (für Lea nicht
         // „meins“). Nichts doppelt, auch nach dem zweiten Einspielen.
@@ -429,7 +429,7 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
                        + $"{m.GetProperty("status").GetString()} {wer}";
             }));
         Assert.All(material, m => Assert.False(m.GetProperty("meins").GetBoolean()));
-        Assert.Equal(5L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.material"));
+        Assert.Equal(5L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.material WHERE \"FreizeitId\" = @f", ("f", freizeitId)));
 
         // Story 3-3: vier Artikel im Inventar; das Zeltlager hat Fahnen (am Material „Fahnen“ des Geländespiels) und das Großzelt reserviert, die
         // Kinderbibeltage (Leitung Tim) das Großzelt zur gleichen Zeit: Konflikt. Nichts doppelt, auch nach dem zweiten Einspielen.
@@ -486,9 +486,36 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
                 return $"{a.GetProperty("phase").GetString()} {a.GetProperty("titel").GetString()} {wer} {(a.GetProperty("erledigt").GetBoolean() ? "erledigt" : "offen")} "
                        + $"{(a.GetProperty("vorlage").GetBoolean() ? "Vorlage" : "-")} {punkt}";
             }));
-        Assert.Equal(5L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.aufgabe"));
+        Assert.Equal(5L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.aufgabe WHERE \"FreizeitId\" = @f", ("f", freizeitId)));
         Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.aufgaben_vorlage"));
         Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.aufgaben_vorlagen_uebernahme"));
+
+        // Story 3-6: Das Team hat „Lagerfeuer“ und „Geländespiel“ des Zeltlagers in der Programmbibliothek abgelegt (Material und Aufgaben ohne Status
+        // und Personen), Tim hat „Lagerfeuer“ in die Kinderbibeltage übernommen (11.08. um 19:30, Material „gebraucht“, Aufgabe frei). Nichts doppelt,
+        // auch nach dem zweiten Einspielen.
+        var bibliothek = (await AnmeldeHelfer.JsonAsync(await leaClient.GetAsync($"/api/freizeiten/{freizeitId}/programm/bibliothek", Abbruch))).EnumerateArray().ToList();
+        Assert.Equal(
+            [
+                "Geländespiel: Fahnen 8 Stück, Seile 4 × 10 m, Taschenlampen 10 Stück | ",
+                "Lagerfeuer: Feuerholz 2 Kisten, Stockbrot-Teig 3 kg | Waehrend Andacht am Lagerfeuer vorbereiten",
+            ],
+            bibliothek.Select(e =>
+                $"{e.GetProperty("titel").GetString()}: "
+                + string.Join(", ", e.GetProperty("material").EnumerateArray().Select(m => $"{m.GetProperty("bezeichnung").GetString()} {m.GetProperty("menge").GetString()}"))
+                + " | "
+                + string.Join(", ", e.GetProperty("aufgaben").EnumerateArray().Select(a => $"{a.GetProperty("phase").GetString()} {a.GetProperty("titel").GetString()}"))));
+        Assert.Equal(2, punkte.Count(p => p.GetProperty("inBibliothek").GetBoolean()));
+        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.bibliotheks_eintrag"));
+        var kinderbibeltage = await AnmeldeHelfer.WertAsync<Guid>(verbindung, "SELECT \"Id\" FROM freizeiten.freizeit WHERE \"Name\" = 'Kinderbibeltage 2027'");
+        Assert.Equal(
+            ["2027-08-11 19:30 Lagerfeuer frei"],
+            await ZeilenAsync(verbindung, "SELECT \"Tag\"::text || ' ' || to_char(\"Beginn\", 'HH24:MI') || ' ' || \"Titel\" || ' ' || CASE WHEN \"PersonId\" IS NULL AND \"BibliotheksEintragId\" IS NULL THEN 'frei' ELSE '?' END FROM programm.programmpunkt WHERE \"FreizeitId\" = @f", kinderbibeltage));
+        Assert.Equal(
+            ["Feuerholz 2 Kisten 1 -", "Stockbrot-Teig 3 kg 1 -"],
+            await ZeilenAsync(verbindung, "SELECT \"Bezeichnung\" || ' ' || \"Menge\" || ' ' || \"Status\" || ' ' || CASE WHEN \"PersonId\" IS NULL AND \"ReservierungId\" IS NULL THEN '-' ELSE '?' END FROM programm.material WHERE \"FreizeitId\" = @f ORDER BY 1", kinderbibeltage));
+        Assert.Equal(
+            ["Andacht am Lagerfeuer vorbereiten 2 frei offen"],
+            await ZeilenAsync(verbindung, "SELECT \"Titel\" || ' ' || \"Phase\" || ' ' || CASE WHEN \"PersonId\" IS NULL THEN 'frei' ELSE '?' END || ' ' || CASE WHEN \"Erledigt\" THEN 'erledigt' ELSE 'offen' END FROM programm.aufgabe WHERE \"FreizeitId\" = @f AND \"ProgrammpunktId\" IS NOT NULL", kinderbibeltage));
 
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,
@@ -636,5 +663,22 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         }
 
         return mails;
+    }
+
+    /// <summary>Story 3-6: die erste Spalte aller Zeilen einer Abfrage mit dem Parameter <c>@f</c> (rohes SQL nur für Prüfungen im Test).</summary>
+    private static async Task<List<string>> ZeilenAsync(string verbindung, string sql, Guid freizeit)
+    {
+        await using var db = new Npgsql.NpgsqlConnection(verbindung);
+        await db.OpenAsync(Abbruch);
+        await using var befehl = new Npgsql.NpgsqlCommand(sql, db);
+        befehl.Parameters.AddWithValue("f", freizeit);
+        await using var leser = await befehl.ExecuteReaderAsync(Abbruch);
+        var zeilen = new List<string>();
+        while (await leser.ReadAsync(Abbruch))
+        {
+            zeilen.Add(leser.GetString(0));
+        }
+
+        return zeilen;
     }
 }

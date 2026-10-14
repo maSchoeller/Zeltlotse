@@ -47,6 +47,9 @@ internal static class ProgrammTexte
     /// <summary>Story 3-2: die Materialliste der Freizeit.</summary>
     public static string MaterialZiel(Guid freizeitId) => $"freizeiten/{freizeitId}/programm/material";
 
+    /// <summary>Story 3-6: die Programmbibliothek der Organisation, aus der Freizeit geöffnet.</summary>
+    public static string BibliothekZiel(Guid freizeitId) => $"freizeiten/{freizeitId}/programm/bibliothek";
+
     public const string MaterialKonfliktText = "Jemand anderes bringt dieses Material inzwischen mit.";
 
     /// <summary>Story 3-2: „Bringt mit: Miriam Zeltner“, ohne bekannten Namen „Bringt jemand mit“; bringt es niemand mit <c>null</c>.</summary>

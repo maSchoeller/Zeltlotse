@@ -216,6 +216,14 @@ internal static class DemoKatalog
         ("Zeltplatz-Vertrag prüfen", "jonas.huettner@example.org", true),
     ];
 
+    /// <summary>Story 3-6: Programmpunkte des Zeltlagers (Titel), die das Team in der Programmbibliothek der Organisation ablegt.</summary>
+    public static IReadOnlyList<string> Bibliothek { get; } = ["Lagerfeuer", "Geländespiel"];
+
+    /// <summary>
+    /// Story 3-6: Übernahme von „Lagerfeuer“ aus der Programmbibliothek in die Kinderbibeltage (nur, wenn es den Titel dort noch nicht gibt).
+    /// </summary>
+    public static (string Titel, DateOnly Tag, string Beginn) BibliotheksUebernahme { get; } = ("Lagerfeuer", new DateOnly(2027, 8, 11), "19:30");
+
     /// <summary>
     /// Jonas' Nachweise (Story 1-5): Art, Ausstellungsdatum und eine kleine erfundene Demo-Datei. Ohne Präventionsschulung, damit
     /// „Nachweis hinzufügen“ in der Doku sichtbar bleibt.

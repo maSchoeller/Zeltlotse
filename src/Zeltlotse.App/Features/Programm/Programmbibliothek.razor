@@ -1,0 +1,194 @@
+@page "/freizeiten/{FreizeitId:guid}/programm/bibliothek"
+@using System.Globalization
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Programm
+@using Zeltlotse.Ui.Kontext
+@using ApiRaster = Zeltlotse.Api.Contracts.Programm.Wochenraster
+@inject FreizeitKontextDienst Kontext
+@inject ProgrammApiClient ProgrammApi
+@inject NavigationManager Navigation
+@* Programmbibliothek der Freizeit (CAP-24, FR-41, Story 3-6) für Leitung und Team, erreicht über den Link „Programmbibliothek“ im Wochenraster.
+   Dachzeile „Programm“, Überschrift „Programmbibliothek“, je Eintrag der Organisation eine BibliotheksEintragCard und darunter das Formular
+   „In diese Freizeit übernehmen“ mit Tag (nur Tage der Freizeit) und Uhrzeit; danach öffnet sich der neue Programmpunkt. Feldfehler stehen am Feld
+   des Eintrags. Ohne Einträge der Leer-Zustand mit dem Hinweis auf „In Bibliothek ablegen“. In der Phase „gelaufen“ nur lesbar. Kontext, Raster
+   oder Bibliothek nicht verfügbar → „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>Programmbibliothek – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Programm</Dachzeile>
+    <h1>Programmbibliothek</h1>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+
+    @if (_eintraege is null || _kontext is null || _raster is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        <p>Gelungene Programmpunkte der Organisation, mit Material und Aufgaben, aber ohne Personen und Status.</p>
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@ProgrammTexte.AbgeschlossenText</p>
+            </Meldung>
+        }
+        @if (_meldung is not null)
+        {
+            <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                <p>@_meldung</p>
+            </Meldung>
+        }
+        @if (_eintraege.Count == 0)
+        {
+            <LeerZustand Satz="Noch nichts in der Programmbibliothek. Programmpunkte lassen sich an ihrer Seite mit „In Bibliothek ablegen“ hier ablegen." />
+        }
+        @foreach (var eintrag in _eintraege)
+        {
+            <BibliotheksEintragCard @key="eintrag.Id" Eintrag="eintrag">
+                @if (!Abgeschlossen)
+                {
+                    var formular = Formular(eintrag.Id);
+                    <h3>In diese Freizeit übernehmen</h3>
+                    <Formular Absenden="@(() => UebernehmenAsync(eintrag))">
+                        <Feld Label="Tag *" Id="@($"uebernahme-{eintrag.Id}-tag")" Typ="date" Wert="@formular.Tag" Fehler="@formular.TagFehler"
+                              min="@Iso(_raster.ErsterTag)" max="@Iso(_raster.LetzterTag)" @oninput="@(e => formular.Tag = e.Value?.ToString())" />
+                        <Feld Label="Uhrzeit" Id="@($"uebernahme-{eintrag.Id}-beginn")" Typ="time" Wert="@formular.Beginn" Fehler="@formular.BeginnFehler"
+                              Hinweis="Ohne Uhrzeit steht der Programmpunkt am Ende des Tages." @oninput="@(e => formular.Beginn = e.Value?.ToString())" />
+                        <Knopf Typ="submit" Deaktiviert="@_uebertraegt">In diese Freizeit übernehmen</Knopf>
+                    </Formular>
+                    <p>* Pflichtfeld</p>
+                }
+            </BibliotheksEintragCard>
+        }
+    }
+    <p><a href="@($"freizeiten/{FreizeitId}/programm")">Zurück zum Programm</a></p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    private ApiRaster? _raster;
+    private List<BibliotheksEintrag>? _eintraege;
+    private readonly Dictionary<Guid, UebernahmeFormular> _formulare = [];
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private string? _meldung;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    private static string Iso(DateOnly tag) => tag.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    private UebernahmeFormular Formular(Guid eintragId)
+    {
+        if (!_formulare.TryGetValue(eintragId, out var formular))
+        {
+            formular = new UebernahmeFormular();
+            _formulare[eintragId] = formular;
+        }
+
+        return formular;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _raster = null;
+        _eintraege = null;
+        _formulare.Clear();
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var raster = ProgrammApi.LadenAsync(FreizeitId);
+            var eintraege = ProgrammApi.BibliothekAsync(FreizeitId);
+            await Task.WhenAll(kontext, raster, eintraege);
+            if (kontext.Result is null || raster.Result is null || eintraege.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _raster, _eintraege) = (kontext.Result, raster.Result, eintraege.Result);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>„In diese Freizeit übernehmen“: Erfolg öffnet den neuen Programmpunkt; Feldfehler stehen am Feld des Eintrags.</summary>
+    private async Task UebernehmenAsync(BibliotheksEintrag eintrag)
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        var formular = Formular(eintrag.Id);
+        (formular.TagFehler, formular.BeginnFehler, _meldung) = (null, null, null);
+        try
+        {
+            DateOnly? tag = DateOnly.TryParseExact(formular.Tag, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var gewaehlt) ? gewaehlt : null;
+            var beginn = string.IsNullOrWhiteSpace(formular.Beginn) ? null : formular.Beginn;
+            var aktion = await ProgrammApi.BibliothekUebernehmenAsync(FreizeitId, eintrag.Id, new BibliotheksUebernahme(tag, beginn));
+            switch (aktion.Ergebnis)
+            {
+                case ProgrammAktionErgebnis.Erfolg:
+                    Navigation.NavigateTo(ProgrammTexte.DetailZiel(FreizeitId, aktion.Punkt!.Id));
+                    break;
+                case ProgrammAktionErgebnis.Abgeschlossen:
+                    _meldung = ProgrammTexte.AbgeschlossenText;
+                    break;
+                default:
+                    formular.TagFehler = aktion.Feldfehler.GetValueOrDefault(ProgrammpunktFelder.Tag);
+                    formular.BeginnFehler = aktion.Feldfehler.GetValueOrDefault(ProgrammpunktFelder.Beginn);
+                    if (formular.TagFehler is null && formular.BeginnFehler is null)
+                    {
+                        _meldung = AnmeldungAbschluss.FehlerText;
+                    }
+
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    /// <summary>Eingaben und Feldfehler des Übernahme-Formulars eines Eintrags.</summary>
+    private sealed class UebernahmeFormular
+    {
+        public string? Tag { get; set; }
+
+        public string? Beginn { get; set; }
+
+        public string? TagFehler { get; set; }
+
+        public string? BeginnFehler { get; set; }
+    }
+}

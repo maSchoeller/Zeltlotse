@@ -8,7 +8,8 @@
    Aktion „org-rollen-vergeben“ (AD-29) die Rollen, die offenen Einladungen und das Formular „Person einladen“. Die
    Oberfläche entscheidet nur über „erlaubt“, nie über die Rollen. Story 2-10: mit „vorfall-archiv-sehen“ die Card „Vorfall-Notizen“
    mit dem Weg ins Archiv. Story 3-3: mit „inventar-sehen“ (Org-Admin und Org-Überblick) die Card „Inventar“ mit dem Weg zum Inventar. Story 3-5: mit
-   „aufgaben-vorlagen-verwalten“ (Org-Admin) die Card „Aufgaben-Vorlagen“ mit dem Weg zu den Vorlagen.
+   „aufgaben-vorlagen-verwalten“ (Org-Admin) die Card „Aufgaben-Vorlagen“ mit dem Weg zu den Vorlagen. Story 3-6: mit
+   „programmbibliothek-verwalten“ (Org-Admin) die Card „Programmbibliothek“ mit dem Weg zur Bibliothek.
    403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>@(_organisation?.Name ?? "Organisation") – Zeltlotse</PageTitle>
 
@@ -77,6 +78,15 @@ else
         <Card Titel="Aufgaben-Vorlagen">
             <p>Wiederkehrende Aufgaben, die jede neue Freizeit der Organisation schon in ihren Aufgaben findet.</p>
             <p><Knopf Art="KnopfArt.Outline" Href="@($"organisationen/{OrgId}/aufgaben-vorlagen")" Ansichtswechsel="true">Aufgaben-Vorlagen öffnen</Knopf></p>
+        </Card>
+    }
+
+    @if (Darf(Aktionsschluessel.ProgrammbibliothekVerwalten))
+    {
+        @* Story 3-6: Programmpunkte, die Teams aus ihren Freizeiten abgelegt haben. *@
+        <Card Titel="Programmbibliothek">
+            <p>Gelungene Programmpunkte mit Material und Aufgaben, die jede Freizeit der Organisation übernehmen kann.</p>
+            <p><Knopf Art="KnopfArt.Outline" Href="@($"organisationen/{OrgId}/programmbibliothek")" Ansichtswechsel="true">Programmbibliothek öffnen</Knopf></p>
         </Card>
     }
 

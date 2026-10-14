@@ -369,4 +369,15 @@ public static class Anzeige
     /// <summary>Story 3-5: Warnhinweis im Cockpit: „1 Aufgabe ist noch nicht übernommen“, „3 Aufgaben sind noch nicht übernommen“.</summary>
     public static string AufgabenUnbesetzt(int anzahl) =>
         anzahl == 1 ? "1 Aufgabe ist noch nicht übernommen" : $"{anzahl.ToString(Deutsch)} Aufgaben sind noch nicht übernommen";
+
+    /// <summary>Story 3-6: „Abgelegt am 14.10.2026“ (Europe/Berlin) an einem Eintrag der Programmbibliothek.</summary>
+    public static string AbgelegtAm(DateTimeOffset zeitpunkt) => $"Abgelegt am {Datum(zeitpunkt)}";
+
+    /// <summary>Story 3-6: ein Material im Bibliothekseintrag: „Seile · 4 × 10 m“, ohne Menge nur die Bezeichnung.</summary>
+    public static string BibliotheksMaterial(Zeltlotse.Api.Contracts.Programm.BibliotheksMaterial material) =>
+        string.IsNullOrWhiteSpace(material?.Menge) ? material?.Bezeichnung ?? "" : $"{material.Bezeichnung} · {material.Menge}";
+
+    /// <summary>Story 3-6: eine Aufgabe im Bibliothekseintrag: „Fahnen verstecken · Während der Freizeit“.</summary>
+    public static string BibliotheksAufgabe(Zeltlotse.Api.Contracts.Programm.BibliotheksAufgabe aufgabe) =>
+        aufgabe is null ? "" : $"{aufgabe.Titel} · {AufgabenPhase(aufgabe.Phase)}";
 }

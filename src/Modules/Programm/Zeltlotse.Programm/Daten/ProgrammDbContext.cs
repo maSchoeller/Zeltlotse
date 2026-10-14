@@ -4,6 +4,7 @@ using Zeltlotse.Api.Contracts.Programm;
 using Aufgabe = Zeltlotse.Programm.Aufgaben.Aufgabe;
 using AufgabenVorlage = Zeltlotse.Programm.Aufgaben.AufgabenVorlage;
 using AufgabenVorlagenUebernahme = Zeltlotse.Programm.Aufgaben.AufgabenVorlagenUebernahme;
+using BibliotheksEintrag = Zeltlotse.Programm.Bibliothek.BibliotheksEintrag;
 using Material = Zeltlotse.Programm.Materialien.Material;
 using Programmpunkt = Zeltlotse.Programm.Programme.Programmpunkt;
 using Zeltlotse.SharedKernel.Daten;
@@ -30,7 +31,20 @@ internal sealed class ProgrammDbContext(DbContextOptions<ProgrammDbContext> opti
     /// <summary>Story 3-5: je Freizeit, dass ihre Aufgaben die Vorlagen schon übernommen haben.</summary>
     public DbSet<AufgabenVorlagenUebernahme> VorlagenUebernahmen => Set<AufgabenVorlagenUebernahme>();
 
+    /// <summary>Story 3-6: die Einträge der Programmbibliotheken der Organisationen.</summary>
+    public DbSet<BibliotheksEintrag> Bibliothek => Set<BibliotheksEintrag>();
+
     protected override string Schema => ProgrammModul.Schema;
+
+    /// <summary>
+    /// Story 3-6: Lädt einen Eintrag der Programmbibliothek unter dem Mandantenfilter mit Zeilensperre (FOR UPDATE). <c>null</c>, wenn es ihn in
+    /// der Organisation des Mandanten nicht gibt.
+    /// </summary>
+    public async Task<BibliotheksEintrag?> EintragSperrenAsync(Guid eintragId, CancellationToken abbruch) =>
+        (await Bibliothek
+            .FromSql($"SELECT * FROM programm.bibliotheks_eintrag WHERE \"Id\" = {eintragId} FOR UPDATE")
+            .ToListAsync(abbruch))
+        .SingleOrDefault();
 
     /// <summary>
     /// Story 3-5: Lädt eine Aufgabe der Freizeit unter dem Mandantenfilter mit Zeilensperre (FOR UPDATE): Änderungen und Übergänge derselben
@@ -89,6 +103,8 @@ internal sealed class ProgrammLeseDbContext(DbContextOptions<ProgrammLeseDbConte
 
     public DbSet<AufgabenVorlagenUebernahme> VorlagenUebernahmen => Set<AufgabenVorlagenUebernahme>();
 
+    public DbSet<BibliotheksEintrag> Bibliothek => Set<BibliotheksEintrag>();
+
     protected override string Schema => ProgrammModul.Schema;
 
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => ProgrammModell.Konfigurieren(modelBuilder);
@@ -114,6 +130,21 @@ internal static class ProgrammModell
             e.HasIndex(p => new { p.FreizeitId, p.Tag, p.Mahlzeit }).IsUnique().HasFilter("\"Mahlzeit\" IS NOT NULL");
             e.HasIndex(p => p.PersonId);
             e.HasIndex(p => p.OrganisationId);
+            // Story 3-6: Mit dem Eintrag der Bibliothek verschwindet nur die Verknüpfung (wie bei Aufgabe und Vorlage).
+            e.HasOne<BibliotheksEintrag>().WithMany().HasForeignKey(p => p.BibliotheksEintragId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(p => p.BibliotheksEintragId);
+        });
+
+        // Story 3-6, FR-41: Programmbibliothek der Organisation (kein Personenbezug, unveränderlich). Material und Aufgaben sind eine Momentaufnahme
+        // und werden nur als Ganzes gelesen, darum JSON-Spalten.
+        modelBuilder.Entity<BibliotheksEintrag>(e =>
+        {
+            e.ToTable("bibliotheks_eintrag");
+            e.Property(b => b.Id).ValueGeneratedNever();
+            e.Property(b => b.Titel).HasMaxLength(ProgrammpunktFelder.TitelMaximaleLaenge);
+            e.OwnsMany(b => b.Material, m => m.ToJson());
+            e.OwnsMany(b => b.Aufgaben, a => a.ToJson());
+            e.HasIndex(b => b.OrganisationId);
         });
 
         // Story 3-2, FR-36: Material gehört zu genau einem Programmpunkt und verschwindet mit ihm (Fremdschlüssel im eigenen Schema, AD-3).

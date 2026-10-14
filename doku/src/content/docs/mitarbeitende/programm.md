@@ -62,12 +62,16 @@ Unter der Card **Bearbeiten** steht die Card **Material**: was für den Programm
 
 Darunter steht die Card **Aufgaben** mit den Aufgaben, die zu diesem Programmpunkt gehören, und dem Formular **Aufgabe hinzufügen**. Wie Aufgaben funktionieren, steht unter [Aufgaben übernehmen und abhaken](/mitarbeitende/aufgaben/).
 
+## Programmbibliothek
+
+Unter der Card **Aufgaben** (nicht bei Mahlzeiten) steht die Card **Programmbibliothek**: **In Bibliothek ablegen** legt Titel, Material und Aufgaben für andere Freizeiten der Organisation ab. Neben **Materialliste** über dem Wochenraster führt der Link **Programmbibliothek** zu allen abgelegten Programmpunkten; von dort lässt sich jeder an einem Tag dieser Freizeit übernehmen. Wie das geht, steht unter [Programmpunkte ablegen und übernehmen](/mitarbeitende/programmbibliothek/).
+
 ## Nach dem Abschluss
 
 Nach dem Abschluss der Freizeit ist das Programm nur lesbar: Oben steht „Diese Freizeit ist abgeschlossen und nur lesbar.“; die Knöpfe, die Card „Programmpunkt anlegen“ und die Felder zum Bearbeiten fehlen. Die Seite eines Programmpunkts nennt Titel und Uhrzeit dann als Liste.
 
 ## Noch nicht dabei
 
-Dokumente am Programmpunkt, die Programmbibliothek und „Alle informieren?“ nach einer geänderten Uhrzeit kommen mit späteren Versionen. Eine geänderte Uhrzeit teilt Zeltlotse heute niemandem mit.
+Dokumente am Programmpunkt und „Alle informieren?“ nach einer geänderten Uhrzeit kommen mit späteren Versionen. Eine geänderte Uhrzeit teilt Zeltlotse heute niemandem mit.
 
 Wer einen Programmpunkt übernommen hat, steht auch in der Datenauskunft der Person unter „Programm“ – mehr dazu unter [Was passiert mit meinen Daten](/daten/#programm).

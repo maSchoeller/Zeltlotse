@@ -62,7 +62,8 @@ internal static class ProgrammLesen
         punkt.Titel,
         punkt.Mahlzeit,
         punkt.Uebernommen,
-        ich is { } person && punkt.Uebernommen == person);
+        ich is { } person && punkt.Uebernommen == person,
+        punkt.BibliotheksEintragId is not null);
 }
 
 /// <summary>Fehlerantworten <c>409</c> der Programm-Endpunkte mit Problemcode (AD-27).</summary>

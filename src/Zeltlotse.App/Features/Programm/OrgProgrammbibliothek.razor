@@ -1,0 +1,112 @@
+@page "/organisationen/{OrgId:guid}/programmbibliothek"
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Programm
+@inject OrganisationenApiClient Organisationen
+@inject ProgrammApiClient ProgrammApi
+@* Programmbibliothek der Organisation (FR-41, Story 3-6; EXPERIENCE.md → Fläche „Organisation verwalten“), erreicht über die Card
+   „Programmbibliothek“ der Organisation, nur mit „programmbibliothek-verwalten“ (Org-Admin). Dachzeile „Organisation“, Überschrift
+   „Programmbibliothek“, je Eintrag eine BibliotheksEintragCard mit „Aus der Bibliothek entfernen“ per Inline-Bestätigung. Ohne Einträge der Satz,
+   dass das Team gelungene Programmpunkte in seiner Freizeit ablegt. Ohne den Aktionsschlüssel oder bei 403/404 → „Diese Seite ist nicht
+   verfügbar.“ *@
+<PageTitle>Programmbibliothek – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Organisation</Dachzeile>
+    <h1>Programmbibliothek</h1>
+    <p><a href="@($"organisationen/{OrgId}")">Zurück zur Organisation</a></p>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+
+    @if (_eintraege is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        <p>Programmpunkte, die Teams aus ihren Freizeiten abgelegt haben. Jede Freizeit der Organisation kann sie übernehmen.</p>
+        @if (_eintraege.Count == 0)
+        {
+            <LeerZustand Satz="Noch nichts in der Programmbibliothek. Das Team legt gelungene Programmpunkte in seiner Freizeit ab." />
+        }
+        @foreach (var eintrag in _eintraege)
+        {
+            <BibliotheksEintragCard @key="eintrag.Id" Eintrag="eintrag">
+                <InlineBestaetigung AusloeserText="Aus der Bibliothek entfernen" AusloeserArt="KnopfArt.Text"
+                                    Satz="@($"„{eintrag.Titel}“ aus der Bibliothek entfernen?")" JaText="Ja, entfernen" Bestaetigt="@(() => EntfernenAsync(eintrag))" />
+            </BibliotheksEintragCard>
+        }
+    }
+}
+
+@code {
+    private List<BibliotheksEintrag>? _eintraege;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private string? _meldung;
+
+    [Parameter] public Guid OrgId { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _eintraege = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _meldung = null;
+        try
+        {
+            var organisation = await Organisationen.LadenAsync(OrgId);
+            if (organisation is null || !organisation.Erlaubt.Contains(Aktionsschluessel.ProgrammbibliothekVerwalten))
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            var eintraege = await ProgrammApi.OrgBibliothekAsync(OrgId);
+            _nichtVerfuegbar = eintraege is null;
+            _eintraege = eintraege;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    private async Task EntfernenAsync(BibliotheksEintrag eintrag)
+    {
+        (_meldung, _aktionFehler) = (null, false);
+        try
+        {
+            if (await ProgrammApi.EintragLoeschenAsync(OrgId, eintrag.Id) == ProgrammAktionErgebnis.Erfolg)
+            {
+                _eintraege?.RemoveAll(e => e.Id == eintrag.Id);
+            }
+            else
+            {
+                _meldung = AnmeldungAbschluss.FehlerText;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+}

@@ -1604,6 +1604,8 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(seite.GetByLabel("Uhrzeit", new() { Exact = true })).ToHaveValueAsync("20:00");
         // Nur lesend: Jonas löscht nicht, damit der Demo-Stand für die anderen Bilder bleibt.
         await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Programmpunkt löschen" })).ToBeVisibleAsync();
+        // Story 3-6: Das Lagerfeuer steht in der Programmbibliothek.
+        await Assertions.Expect(seite.Locator("#programmbibliothek")).ToContainTextAsync("Steht in der Programmbibliothek der Organisation.");
         await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Zurück zum Programm" })).ToHaveAttributeAsync(
             "href", new System.Text.RegularExpressions.Regex(@"programm\?tag=2027-08-02$"));
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
@@ -1884,6 +1886,68 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
 
         await BildAsync(seite, "aufgaben-vorlagen", geraet);
     }
+
+    // ---------- Story 3-6: Programmbibliothek ----------
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Programmbibliothek(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await ProgrammAsync(seite);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Programmbibliothek", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Programmbibliothek", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("main .elkw-kicker").First).ToHaveTextAsync("Programm");
+        // Das Team hat „Geländespiel“ und „Lagerfeuer“ abgelegt; Material und Aufgaben ohne Status und Personen.
+        await Assertions.Expect(seite.Locator("section.elkw-card h2")).ToHaveTextAsync(["Geländespiel", "Lagerfeuer"], new() { Timeout = 60_000 });
+        var gelaendespiel = seite.Locator("section.elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = "Geländespiel", Exact = true }) });
+        await Assertions.Expect(gelaendespiel.Locator("li")).ToHaveTextAsync(["Fahnen · 8 Stück", "Seile · 4 × 10 m", "Taschenlampen · 10 Stück"]);
+        await Assertions.Expect(gelaendespiel.GetByText("Keine Aufgaben.")).ToBeVisibleAsync();
+        var lagerfeuer = seite.Locator("section.elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = "Lagerfeuer", Exact = true }) });
+        await Assertions.Expect(lagerfeuer.Locator("li")).ToHaveTextAsync(
+            ["Feuerholz · 2 Kisten", "Stockbrot-Teig · 3 kg", "Andacht am Lagerfeuer vorbereiten · Während der Freizeit"]);
+        await Assertions.Expect(gelaendespiel.GetByLabel("Tag *")).ToHaveAttributeAsync("min", "2027-08-02");
+        await Assertions.Expect(gelaendespiel.GetByLabel("Tag *")).ToHaveAttributeAsync("max", "2027-08-13");
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "In diese Freizeit übernehmen" })).ToHaveCountAsync(2);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        // Nur lesend, damit der Demo-Stand für die anderen Bilder bleibt; das Datum des Ablegens hängt vom Einspielen ab und steht im Bild fest.
+        await AbgelegtAmFestAsync(seite);
+        await BildAsync(seite, "programmbibliothek", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Org_Programmbibliothek(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, OrgAdminMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Organisation öffnen" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Jugendwerk Musterstadt", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Programmbibliothek öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Programmbibliothek", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("main .elkw-kicker").First).ToHaveTextAsync("Organisation");
+        await Assertions.Expect(seite.Locator("section.elkw-card h2")).ToHaveTextAsync(["Geländespiel", "Lagerfeuer"], new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Aus der Bibliothek entfernen" })).ToHaveCountAsync(2);
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "In diese Freizeit übernehmen" })).ToHaveCountAsync(0);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        // Nur lesend: Andrea entfernt nichts, damit der Demo-Stand für die anderen Bilder bleibt.
+        await AbgelegtAmFestAsync(seite);
+        await BildAsync(seite, "org-programmbibliothek", geraet);
+    }
+
+    /// <summary>Story 3-6: „Abgelegt am …“ hängt vom Tag des Einspielens ab; im Bild steht ein festes Datum.</summary>
+    private static Task AbgelegtAmFestAsync(IPage seite) =>
+        seite.EvaluateAsync("() => document.querySelectorAll('.elkw-card p').forEach(p => { if (p.textContent.startsWith('Abgelegt am ')) p.textContent = 'Abgelegt am 14.10.2026'; })");
 
     /// <summary>Der Termin mit diesem Titel innerhalb eines Bereichs (ein Tag am Handy oder eine Spalte am Laptop).</summary>
     private static ILocator TerminIn(ILocator bereich, string titel) =>

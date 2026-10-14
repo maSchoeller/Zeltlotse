@@ -29,6 +29,7 @@ public sealed record Wochenraster(DateOnly ErsterTag, DateOnly LetzterTag, IRead
 /// <param name="Mahlzeit">Gesetzt bei den festen Mahlzeiten; sie lassen sich nicht löschen.</param>
 /// <param name="UebernommenVon">Die Person, die den Punkt übernommen hat; den Namen setzt der Client zusammen (AD-2).</param>
 /// <param name="Meins">Die angemeldete Person hat den Punkt übernommen.</param>
+/// <param name="InBibliothek">Story 3-6: Der Punkt ist mit einem noch vorhandenen Eintrag der Programmbibliothek verknüpft (abgelegt).</param>
 public sealed record Programmpunkt(
     Guid Id,
     uint Version,
@@ -37,7 +38,8 @@ public sealed record Programmpunkt(
     string Titel,
     Mahlzeit? Mahlzeit,
     Guid? UebernommenVon,
-    bool Meins);
+    bool Meins,
+    bool InBibliothek = false);
 
 /// <summary>Story 3-1: Körper von <c>POST /api/freizeiten/{freizeitId}/programm/punkte</c>: nur der Titel ist nötig (NS-5), dazu der Tag.</summary>
 /// <param name="Titel">1 bis <see cref="ProgrammpunktFelder.TitelMaximaleLaenge"/> Zeichen; wird getrimmt.</param>
