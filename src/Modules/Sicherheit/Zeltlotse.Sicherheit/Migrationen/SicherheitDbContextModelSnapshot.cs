@@ -11,7 +11,7 @@ using Zeltlotse.Sicherheit.Daten;
 namespace Zeltlotse.Sicherheit.Migrationen
 {
     [DbContext(typeof(SicherheitDbContext))]
-    internal partial class SicherheitDbContextModelSnapshot : ModelSnapshot
+    partial class SicherheitDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -238,6 +238,10 @@ namespace Zeltlotse.Sicherheit.Migrationen
 
                     b.Property<DateTimeOffset>("ErfasstAm")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("Folgenummer")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
 
                     b.Property<Guid>("FreizeitId")
                         .HasColumnType("uuid");

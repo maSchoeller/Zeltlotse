@@ -179,6 +179,16 @@ internal static class DemoKatalog
     ];
 
     /// <summary>
+    /// Story 3-4: Einträge auf der Schadens- und Verlustliste der Demo-Freizeit (je nur, wenn es die Bezeichnung dort noch nicht gibt), angelegt
+    /// wie von der Leitung (Jonas). Den dritten Eintrag „Erste-Hilfe-Kasten“ legt das Ereignis aus Leas Entnahme im Vorfall-Protokoll an.
+    /// </summary>
+    public static IReadOnlyList<(Zeltlotse.Api.Contracts.Inventar.SchadenArt Art, string Bezeichnung)> Schaeden { get; } =
+    [
+        (Zeltlotse.Api.Contracts.Inventar.SchadenArt.Schaden, "Großzelt: Stange verbogen"),
+        (Zeltlotse.Api.Contracts.Inventar.SchadenArt.Verlust, "Taschenlampe"),
+    ];
+
+    /// <summary>
     /// Jonas' Nachweise (Story 1-5): Art, Ausstellungsdatum und eine kleine erfundene Demo-Datei. Ohne Präventionsschulung, damit
     /// „Nachweis hinzufügen“ in der Doku sichtbar bleibt.
     /// </summary>

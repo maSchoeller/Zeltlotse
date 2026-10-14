@@ -63,6 +63,11 @@ else
             <p>Material der Organisation, das Freizeiten für ihren Zeitraum reservieren.</p>
             <p><Knopf Art="KnopfArt.Outline" Href="@($"organisationen/{OrgId}/inventar")" Ansichtswechsel="true">Inventar öffnen</Knopf></p>
         </Card>
+        @* Story 3-4: Schäden und Verluste abgeschlossener Freizeiten als Anschaffungswünsche. *@
+        <Card Titel="Anschaffungswünsche">
+            <p>Nach dem Abschluss einer Freizeit stehen ihre Schäden und Verluste hier, bis sie erledigt sind.</p>
+            <p><Knopf Art="KnopfArt.Outline" Href="@($"organisationen/{OrgId}/anschaffungswuensche")" Ansichtswechsel="true">Anschaffungswünsche öffnen</Knopf></p>
+        </Card>
     }
 
     @if (Darf(Aktionsschluessel.VorfallArchivSehen))

@@ -48,6 +48,6 @@ Bis zum Abschluss der Freizeit lassen sich Einträge schreiben, auch in der Nach
 
 ## Entnahmen und Verlustliste
 
-Was aus dem Erste-Hilfe-Kasten entnommen wurde, steht heute nur im Vorfall-Protokoll. Dass solche Entnahmen auch auf der Verlustliste des Inventars landen, kommt später.
+Was aus dem Erste-Hilfe-Kasten entnommen wurde, setzt Zeltlotse zusätzlich auf die Liste **Schäden & Verluste** der Freizeit, als „Erste-Hilfe-Entnahme · Erste-Hilfe-Kasten“; niemand muss es zweimal eintragen. Leitung und Team sehen dort auch den Text aus dem Vorfall-Protokoll, die Organisation nach dem Abschluss nur „Erste-Hilfe-Kasten“ – siehe [Schäden und Verluste eintragen](/mitarbeitende/schaeden-verluste/#entnahmen-aus-dem-vorfall-protokoll).
 
 Das Vorfall-Protokoll braucht eine Verbindung; offline lässt es sich noch nicht schreiben. Der Text steht nur verschlüsselt in der Datenbank – mehr dazu unter [Was passiert mit meinen Daten](/daten/#vorfall-protokoll).

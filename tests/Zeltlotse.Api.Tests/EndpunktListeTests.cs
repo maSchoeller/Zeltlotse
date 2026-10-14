@@ -265,6 +265,11 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 "GET /api/freizeiten/{freizeitId:guid}/inventar",
                 "POST /api/freizeiten/{freizeitId:guid}/inventar/{artikelId:guid}/reservierungen",
                 "DELETE /api/freizeiten/{freizeitId:guid}/inventar/reservierungen/{reservierungId:guid}",
+                // Story 3-4: Schadens- und Verlustliste (Inventar), alles für Leitung und Team, auch nach dem Abschluss.
+                "GET /api/freizeiten/{freizeitId:guid}/inventar/schaeden",
+                "POST /api/freizeiten/{freizeitId:guid}/inventar/schaeden",
+                "PATCH /api/freizeiten/{freizeitId:guid}/inventar/schaeden/{eintragId:guid}",
+                "DELETE /api/freizeiten/{freizeitId:guid}/inventar/schaeden/{eintragId:guid}",
             }.Order(StringComparer.Ordinal),
             freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
         Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));
@@ -284,8 +289,10 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
 
         var mitOrg = endpunkte.Where(e => e.Endpunkt.RoutePattern.Parameters.Any(p => p.Name == Rechtemerkmale.OrgRouteWert)).ToList();
         // Story 1-5: dazu die sieben Prüf-Endpunkte des Org-Admins und die zwei der Nachweis-Richtlinie; Story 1-7: die zwei der Löschfristen.
-        // Story 2-7: die vier Endpunkte der Org-Dokumente; Story 2-10: das Archiv der Vorfall-Notizen; Story 3-3: die vier des Inventars.
-        Assert.Equal(27, mitOrg.Count);
+        // Story 2-7: die vier Endpunkte der Org-Dokumente; Story 2-10: das Archiv der Vorfall-Notizen; Story 3-3: die vier des Inventars;
+        // Story 3-4: die zwei der Anschaffungswünsche.
+        Assert.Equal(29, mitOrg.Count);
+        Assert.Contains(mitOrg, e => e.Name == "DELETE /api/organisationen/{orgId:guid}/inventar/anschaffungswuensche/{eintragId:guid}");
         Assert.Contains(mitOrg, e => e.Name == "PATCH /api/organisationen/{orgId:guid}/inventar/{artikelId:guid}");
         Assert.Contains(mitOrg, e => e.Name == "GET /api/organisationen/{orgId:guid}/sicherheit/vorfall-archiv");
         Assert.All(mitOrg, e =>

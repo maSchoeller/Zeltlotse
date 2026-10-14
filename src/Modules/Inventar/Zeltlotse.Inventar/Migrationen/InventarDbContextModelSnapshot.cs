@@ -11,7 +11,7 @@ using Zeltlotse.Inventar.Daten;
 namespace Zeltlotse.Inventar.Migrationen
 {
     [DbContext(typeof(InventarDbContext))]
-    internal partial class InventarDbContextModelSnapshot : ModelSnapshot
+    partial class InventarDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -89,6 +89,50 @@ namespace Zeltlotse.Inventar.Migrationen
                     b.HasIndex("OrganisationId");
 
                     b.ToTable("reservierung", "inventar");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Inventar.Schaeden.SchadenVerlust", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Art")
+                        .HasColumnType("smallint");
+
+                    b.Property<string>("Bezeichnung")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTimeOffset>("ErfasstAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid?>("VorfallEintragId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FreizeitId");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("VorfallEintragId")
+                        .IsUnique()
+                        .HasFilter("\"VorfallEintragId\" IS NOT NULL");
+
+                    b.ToTable("schaden_verlust", "inventar");
                 });
 
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.InboxEintrag", b =>

@@ -9,6 +9,7 @@ namespace Zeltlotse.Inventar.Datenschutz;
 /// <summary>
 /// Story 3-3: Täglicher Lösch-Lauf von Inventar (AD-16): die Reservierungen der Freizeiten, deren Daten nach der Frist abgelaufen sind. Sonst
 /// blieben sie ohne Namen der Freizeit stehen, und ihr Artikel ließe sich nie mehr löschen. Die Artikel gehören der Organisation und bleiben.
+/// Story 3-4: ebenso die Einträge ihrer Schadens- und Verlustlisten (auch nicht erledigte Anschaffungswünsche).
 /// </summary>
 internal sealed class InventarLoeschlauf(ISender sender) : ILoeschlauf
 {
@@ -21,7 +22,10 @@ internal sealed class InventarLoeschlauf(ISender sender) : ILoeschlauf
     }
 }
 
-/// <summary>Reservierungen der Freizeiten, deren Daten nach der Frist der Organisation abgelaufen sind, endgültig löschen (ohne Ereignisse).</summary>
+/// <summary>
+/// Reservierungen und Einträge der Schadens- und Verlustliste der Freizeiten, deren Daten nach der Frist der Organisation abgelaufen sind,
+/// endgültig löschen (ohne Ereignisse).
+/// </summary>
 internal sealed record ReservierungenLoeschen(IReadOnlyList<Guid> FreizeitIds) : ICommand, IModulCommand<InventarDbContext>;
 
 internal sealed class ReservierungenLoeschenHandler(InventarDbContext db) : ICommandHandler<ReservierungenLoeschen>
@@ -30,6 +34,7 @@ internal sealed class ReservierungenLoeschenHandler(InventarDbContext db) : ICom
     {
         var freizeiten = command.FreizeitIds.ToList();
         await db.Reservierungen.IgnoreQueryFilters().Where(r => freizeiten.Contains(r.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
+        await db.Schaeden.IgnoreQueryFilters().Where(s => freizeiten.Contains(s.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
         return Unit.Value;
     }
 }

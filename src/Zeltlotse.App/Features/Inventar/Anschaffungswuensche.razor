@@ -1,0 +1,148 @@
+@page "/organisationen/{OrgId:guid}/anschaffungswuensche"
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Inventar
+@inject OrganisationenApiClient Organisationen
+@inject InventarApiClient InventarApi
+@* Anschaffungswünsche der Organisation (CAP-22, FR-38, Story 3-4; EXPERIENCE.md → Nachbereitung, Flächen „Organisation verwalten“,
+   „Org-Überblick“), erreicht über die Card „Anschaffungswünsche“ der Organisation. Nach dem Abschluss einer Freizeit stehen ihre Schäden und
+   Verluste hier: je Freizeit eine Card mit den Einträgen „Art · Bezeichnung · Datum“. Mit „inventar-verwalten“ (Org-Admin) je Eintrag „Erledigt“
+   per Inline-Bestätigung; der Eintrag verschwindet dann ganz. Den Text einer Entnahme aus dem Vorfall-Protokoll sieht die Organisation nicht.
+   Ohne Einträge der Leer-Zustand mit Erklärung. Ohne „inventar-sehen“ oder bei 403/404 → „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>Anschaffungswünsche – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Organisation</Dachzeile>
+    <h1>Anschaffungswünsche</h1>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+
+    @if (_wuensche is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else if (_wuensche.Count == 0)
+    {
+        <LeerZustand Satz="@LeerText" />
+    }
+    else
+    {
+        <p>Was auf abgeschlossenen Freizeiten kaputtgegangen, verloren gegangen oder entnommen worden ist.</p>
+        @foreach (var freizeit in _wuensche)
+        {
+            <Card @key="freizeit.FreizeitId" Titel="@freizeit.Name">
+                <ul>
+                    @foreach (var eintrag in freizeit.Eintraege)
+                    {
+                        <li @key="eintrag.Id">
+                            @Anzeige.SchadenArt(eintrag.Art) · @eintrag.Bezeichnung · @Anzeige.Datum(eintrag.ErfasstAm)
+                            @if (_verwalten)
+                            {
+                                <InlineBestaetigung AusloeserText="Erledigt" AusloeserArt="KnopfArt.Text" Satz="@($"„{eintrag.Bezeichnung}“ als erledigt entfernen?")"
+                                                    JaText="Ja, erledigt" Bestaetigt="@(() => ErledigtAsync(freizeit, eintrag))" />
+                            }
+                        </li>
+                    }
+                </ul>
+            </Card>
+        }
+    }
+    <p><a href="@($"organisationen/{OrgId}")">Zurück zur Organisation</a></p>
+}
+
+@code {
+    /// <summary>Leer-Zustand mit Erklärung.</summary>
+    public const string LeerText = "Noch keine Anschaffungswünsche. Nach dem Abschluss einer Freizeit stehen ihre Schäden und Verluste hier.";
+
+    private List<AnschaffungswunschFreizeit>? _wuensche;
+    private bool _verwalten;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private string? _meldung;
+
+    [Parameter] public Guid OrgId { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _wuensche = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _meldung = null;
+        try
+        {
+            var organisation = await Organisationen.LadenAsync(OrgId);
+            if (organisation is null || !organisation.Erlaubt.Contains(Aktionsschluessel.InventarSehen))
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            _verwalten = organisation.Erlaubt.Contains(Aktionsschluessel.InventarVerwalten);
+            _wuensche = await InventarApi.AnschaffungswuenscheAsync(OrgId);
+            _nichtVerfuegbar = _wuensche is null;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>„Erledigt“: der Eintrag verschwindet, eine leere Freizeit ebenso.</summary>
+    private async Task ErledigtAsync(AnschaffungswunschFreizeit freizeit, SchadenEintrag eintrag)
+    {
+        (_meldung, _aktionFehler) = (null, false);
+        try
+        {
+            if (await InventarApi.ErledigtAsync(OrgId, eintrag.Id) != InventarAktionErgebnis.Erfolg)
+            {
+                _meldung = AnmeldungAbschluss.FehlerText;
+                return;
+            }
+
+            // Nach dem Warten zählt die aktuelle Liste: Ein zweites „Erledigt“ kann die Card inzwischen geändert oder entfernt haben.
+            if (_wuensche is null)
+            {
+                return;
+            }
+
+            var index = _wuensche.FindIndex(w => w.FreizeitId == freizeit.FreizeitId);
+            if (index < 0)
+            {
+                return;
+            }
+
+            var aktuell = _wuensche[index];
+            var rest = aktuell.Eintraege.Where(e => e.Id != eintrag.Id).ToList();
+            if (rest.Count == 0)
+            {
+                _wuensche.RemoveAt(index);
+            }
+            else
+            {
+                _wuensche[index] = aktuell with { Eintraege = rest };
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+}

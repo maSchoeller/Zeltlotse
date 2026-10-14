@@ -1,0 +1,234 @@
+@page "/freizeiten/{FreizeitId:guid}/schaeden"
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Inventar
+@using Zeltlotse.Ui.Kontext
+@inject FreizeitKontextDienst Kontext
+@inject InventarApiClient InventarApi
+@inject SicherheitApiClient SicherheitApi
+@* Schäden & Verluste der Freizeit (CAP-22, FR-32, FR-38, Story 3-4; EXPERIENCE.md → Nachbereitung) für Leitung und Team, erreicht über den Knopf
+   „Schäden & Verluste“ auf der Startseite. Dachzeile „Ablage“, Überschrift „Schäden & Verluste“. Card „Eintragen“ mit der Auswahl der Art (Vorgabe
+   Schaden), dem Feld „Was?“ und dem Knopf „Eintragen“. Card „Liste“: je Eintrag „Art · Bezeichnung“, das Datum, die Bezeichnung als Autosave-Feld
+   (AD-19) und „Entfernen“ per Inline-Bestätigung; kommt der Eintrag aus dem Vorfall-Protokoll (Entnahme), steht darunter „Laut Vorfall-Protokoll:
+   …“ mit dem Text aus dem Protokoll (fehlt er, entfällt die Zeile). Ohne Einträge „Noch nichts eingetragen.“. In der Phase „gelaufen“ bleibt alles
+   beschreibbar; ein Hinweis sagt, dass die Einträge jetzt Anschaffungswünsche an die Organisation sind. Kontext oder Liste nicht verfügbar →
+   „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>Schäden & Verluste – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Ablage</Dachzeile>
+    <h1>Schäden &amp; Verluste</h1>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+
+    @if (_eintraege is null || _kontext is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        <p>Was auf der Freizeit kaputtgeht, verloren geht oder aus dem Erste-Hilfe-Kasten entnommen wird. Nach dem Abschluss der Freizeit sieht die Organisation die Liste als Anschaffungswünsche.</p>
+        @if (_kontext.Phase == Phase.Gelaufen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@AbgeschlossenText</p>
+            </Meldung>
+        }
+        @if (_meldung is not null)
+        {
+            <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                <p>@_meldung</p>
+            </Meldung>
+        }
+
+        <Card Titel="Eintragen">
+            <Formular Absenden="EintragenAsync">
+                <Auswahl Legende="Art" Gruppe="schaden-art" Optionen="ArtOptionen" Wert="@_art" WertGeaendert="@(w => _art = w)" Fehler="@_artFehler"
+                         Deaktiviert="_uebertraegt" />
+                <Feld Label="Was?" Id="schaden-bezeichnung" Wert="@_bezeichnung" Fehler="@_bezeichnungFehler" autocomplete="off"
+                      Hinweis="@($"Zum Beispiel: Taschenlampe, Großzelt: Stange verbogen. Höchstens {SchadenFelder.BezeichnungMaximaleLaenge} Zeichen")"
+                      @oninput="@(e => _bezeichnung = e.Value?.ToString())" />
+                <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Eintragen</Knopf>
+            </Formular>
+        </Card>
+
+        <Card Titel="Liste">
+            @if (_eintraege.Count == 0)
+            {
+                <LeerZustand Satz="Noch nichts eingetragen." />
+            }
+            else
+            {
+                <ul>
+                    @foreach (var eintrag in _eintraege)
+                    {
+                        <li @key="eintrag.Id">
+                            <h3>@Anzeige.SchadenArt(eintrag.Art) · @Titel(eintrag)</h3>
+                            <p>Eingetragen am @Anzeige.Datum(eintrag.ErfasstAm)</p>
+                            <AutosaveFeld Label="Bezeichnung" Id="@($"schaden-{eintrag.Id}-bezeichnung")" Feldname="@SchadenFelder.Bezeichnung"
+                                          Pfad="@InventarApiClient.SchadenPfad(FreizeitId, eintrag.Id)" Wert="@eintrag.Bezeichnung" Version="@eintrag.Version"
+                                          Hinweis="@($"Höchstens {SchadenFelder.BezeichnungMaximaleLaenge} Zeichen")" NeuLaden="LadenAsync"
+                                          Gespeichert="@(w => _titel[eintrag.Id] = w ?? "")" />
+                            @if (eintrag.VorfallEintragId is { } vorfall && _vorfallTexte.GetValueOrDefault(vorfall) is { } text)
+                            {
+                                <p>Laut Vorfall-Protokoll: @text</p>
+                            }
+                            <InlineBestaetigung AusloeserText="Entfernen" AusloeserArt="KnopfArt.Text" Satz="@($"„{Titel(eintrag)}“ entfernen?")"
+                                                JaText="Ja, entfernen" Bestaetigt="@(() => EntfernenAsync(eintrag))" />
+                        </li>
+                    }
+                </ul>
+            }
+        </Card>
+    }
+}
+
+@code {
+    /// <summary>Hinweis in der Phase „gelaufen“.</summary>
+    public const string AbgeschlossenText = "Die Freizeit ist abgeschlossen. Die Einträge sind jetzt Anschaffungswünsche an die Organisation.";
+
+    private static readonly IReadOnlyList<AuswahlOption> ArtOptionen =
+    [
+        .. Enum.GetValues<SchadenArt>().Select(a => new AuswahlOption(a.ToString(), Anzeige.SchadenArt(a))),
+    ];
+
+    private FreizeitKontext? _kontext;
+    private List<SchadenEintrag>? _eintraege;
+    private readonly Dictionary<Guid, string> _titel = [];
+    private Dictionary<Guid, string> _vorfallTexte = [];
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private string? _meldung;
+    private string? _art = nameof(SchadenArt.Schaden);
+    private string? _bezeichnung;
+    private string? _artFehler;
+    private string? _bezeichnungFehler;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    /// <summary>Die Überschrift folgt dem gespeicherten Wert der Bezeichnung.</summary>
+    private string Titel(SchadenEintrag eintrag) => _titel.GetValueOrDefault(eintrag.Id) ?? eintrag.Bezeichnung;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _eintraege = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _meldung = null;
+        try
+        {
+            _kontext = await Kontext.LadenAsync(FreizeitId);
+            if (_kontext is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            await LadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>
+    /// Lädt die Liste (auch „Neu laden“ beim Konflikt im Autosave); 403/404 → nicht verfügbar. Hat ein Eintrag einen Vorfall-Eintrag, kommt der
+    /// Text aus dem Vorfall-Protokoll dazu (AD-2: der Client setzt zusammen); fehlt das Protokoll, bleiben die Einträge ohne Text.
+    /// </summary>
+    private async Task LadenAsync()
+    {
+        var eintraege = await InventarApi.SchaedenAsync(FreizeitId);
+        _nichtVerfuegbar = eintraege is null;
+        _titel.Clear();
+        if (eintraege is null)
+        {
+            _eintraege = null;
+            return;
+        }
+
+        var texte = new Dictionary<Guid, string>();
+        if (eintraege.Any(e => e.VorfallEintragId is not null)
+            && await SicherheitApi.VorfaelleLadenAsync(FreizeitId) is { } vorfaelle)
+        {
+            foreach (var vorfall in vorfaelle.Where(v => v.Text is not null))
+            {
+                texte[vorfall.Id] = vorfall.Text!;
+            }
+        }
+
+        (_eintraege, _vorfallTexte) = (eintraege, texte);
+    }
+
+    /// <summary>„Eintragen“: danach steht der Eintrag oben in der Liste, das Feld ist leer, die Art bleibt.</summary>
+    private async Task EintragenAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        (_artFehler, _bezeichnungFehler, _meldung, _aktionFehler) = (null, null, null, false);
+        try
+        {
+            SchadenArt? art = Enum.TryParse<SchadenArt>(_art, out var gewaehlt) ? gewaehlt : null;
+            var aktion = await InventarApi.SchadenEintragenAsync(FreizeitId, new SchadenNeu(art, _bezeichnung));
+            if (aktion.Ergebnis == InventarAktionErgebnis.Erfolg)
+            {
+                _bezeichnung = null;
+                await LadenAsync();
+                return;
+            }
+
+            _artFehler = aktion.Feldfehler.GetValueOrDefault(SchadenFelder.Art);
+            _bezeichnungFehler = aktion.Feldfehler.GetValueOrDefault(SchadenFelder.Bezeichnung);
+            if (_artFehler is null && _bezeichnungFehler is null)
+            {
+                _meldung = AnmeldungAbschluss.FehlerText;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task EntfernenAsync(SchadenEintrag eintrag)
+    {
+        (_meldung, _aktionFehler) = (null, false);
+        try
+        {
+            if (await InventarApi.SchadenEntfernenAsync(FreizeitId, eintrag.Id) == InventarAktionErgebnis.Erfolg)
+            {
+                _eintraege?.RemoveAll(e => e.Id == eintrag.Id);
+            }
+            else
+            {
+                _meldung = AnmeldungAbschluss.FehlerText;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+}

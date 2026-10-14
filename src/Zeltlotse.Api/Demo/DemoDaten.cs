@@ -16,6 +16,7 @@ using Zeltlotse.Freizeiten.Verwaltung;
 using Zeltlotse.Inventar.Artikel;
 using Zeltlotse.Inventar.Daten;
 using Zeltlotse.Inventar.Reservierungen;
+using Zeltlotse.Inventar.Schaeden;
 using Zeltlotse.Konten.Anmelden;
 using Zeltlotse.Organisationen.Daten;
 using Zeltlotse.Organisationen.Dokumente;
@@ -92,6 +93,9 @@ namespace Zeltlotse.Api.Demo;
 /// aus <see cref="DemoKatalog.Inventar"/> (je nur, wenn es die Bezeichnung noch nicht gibt) und die Reservierungen aus
 /// <see cref="DemoKatalog.Reservierungen"/> (je nur, wenn die Freizeit den Artikel noch nicht reserviert hat); die Fahnen hängen am Material
 /// „Fahnen“ des Geländespiels.
+/// Story 3-4: die Schadens- und Verlustliste der Demo-Freizeit aus <see cref="DemoKatalog.Schaeden"/> (je nur, wenn es die Bezeichnung dort noch nicht
+/// gibt); Leas Entnahme im Vorfall-Protokoll (Story 2-10) setzt über das Ereignis <c>ErsteHilfeEntnommen</c> den Eintrag „Erste-Hilfe-Kasten“ dazu,
+/// sobald der Zustelldienst es zugestellt hat.
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -149,6 +153,7 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await MaterialAsync(abbruch);
         await ZweiteFreizeitAsync(abbruch);
         await InventarAsync(abbruch);
+        await SchaedenAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -936,6 +941,27 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             {
                 throw new InvalidOperationException($"Demo-Inventar: {bezeichnung} ließ sich nicht reservieren.");
             }
+        }
+    }
+
+    /// <summary>Story 3-4: Schäden und Verluste der Demo-Freizeit, über den Command des Moduls Inventar; idempotent nach Bezeichnung.</summary>
+    private async Task SchaedenAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var freizeitId = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name)
+            .Select(f => f.Id)
+            .SingleAsync(abbruch);
+        var vorhanden = await dienste.GetRequiredService<InventarLeseDbContext>().Schaeden
+            .Where(s => s.FreizeitId == freizeitId)
+            .Select(s => s.Bezeichnung)
+            .ToListAsync(abbruch);
+        foreach (var (art, bezeichnung) in DemoKatalog.Schaeden.Where(s => !vorhanden.Contains(s.Bezeichnung)))
+        {
+            await sender.Send(new SchadenEintragenCommand(freizeitId, art, bezeichnung), abbruch);
         }
     }
 

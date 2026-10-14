@@ -118,6 +118,15 @@ public static class Anzeige
         _ => throw new ArgumentOutOfRangeException(nameof(art), art, null),
     };
 
+    /// <summary>Story 3-4: die Art eines Eintrags auf der Schadens- und Verlustliste, wie Freizeit-Seite und Anschaffungswünsche sie nennen.</summary>
+    public static string SchadenArt(Zeltlotse.Api.Contracts.Inventar.SchadenArt art) => art switch
+    {
+        Zeltlotse.Api.Contracts.Inventar.SchadenArt.Schaden => "Schaden",
+        Zeltlotse.Api.Contracts.Inventar.SchadenArt.Verlust => "Verlust",
+        Zeltlotse.Api.Contracts.Inventar.SchadenArt.Entnahme => "Erste-Hilfe-Entnahme",
+        _ => throw new ArgumentOutOfRangeException(nameof(art), art, null),
+    };
+
     /// <summary>Der Kalendertag eines Zeitpunkts in Europe/Berlin.</summary>
     public static DateOnly Tag(DateTimeOffset zeitpunkt) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(zeitpunkt, Berlin()).DateTime);
 

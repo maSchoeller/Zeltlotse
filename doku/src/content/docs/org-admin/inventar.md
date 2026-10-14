@@ -44,4 +44,4 @@ Der Org-Überblick sieht dieselbe Seite mit allen Artikeln, Mengen und Reservier
 
 ## Noch nicht dabei
 
-Schäden, Verluste und Anschaffungswünsche kommen mit einer späteren Version. Den Inhalt einer Kiste einzeln zu erfassen oder die Rückgabe nach der Freizeit abzuhaken, ist nicht geplant.
+Schäden und Verluste hängen nicht an einem Artikel: Leitung und Team tragen sie als Text auf ihrer Liste ein, und nach dem Abschluss der Freizeit stehen sie unter [Anschaffungswünsche](/org-admin/anschaffungswuensche/). Den Inhalt einer Kiste einzeln zu erfassen oder die Rückgabe nach der Freizeit abzuhaken, ist nicht geplant.

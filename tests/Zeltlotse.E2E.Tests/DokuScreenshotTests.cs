@@ -1740,6 +1740,69 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await BildAsync(seite, "inventar", geraet);
     }
 
+    // ---------- Story 3-4: Schäden, Verluste und Anschaffungswünsche ----------
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Schaeden_Verluste(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, DemoMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Schäden & Verluste", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Schäden & Verluste", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("main .elkw-kicker").First).ToHaveTextAsync("Ablage");
+        var liste = seite.Locator("section.elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = "Liste", Exact = true }) });
+        await Assertions.Expect(liste.Locator("h3").First).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        // Den Eintrag aus Leas Entnahme legt der Zustelldienst über das Ereignis an; neu laden, bis er da ist.
+        const string entnahme = "Erste-Hilfe-Entnahme · Erste-Hilfe-Kasten";
+        for (var versuch = 0; versuch < 30 && !(await liste.Locator("h3").AllTextContentsAsync()).Contains(entnahme); versuch++)
+        {
+            await Task.Delay(1000, TestContext.Current.CancellationToken);
+            await seite.ReloadAsync();
+            await Assertions.Expect(liste.Locator("h3").First).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        }
+
+        await Assertions.Expect(liste.Locator("h3")).ToHaveTextAsync(["Verlust · Taschenlampe", "Schaden · Großzelt: Stange verbogen", entnahme]);
+        var kasten = liste.Locator("li").Filter(new() { HasText = entnahme });
+        await Assertions.Expect(kasten).ToContainTextAsync("Laut Vorfall-Protokoll: 2 Pflaster, 1 sterile Kompresse", new() { Timeout = 60_000 });
+        await Assertions.Expect(kasten.GetByRole(AriaRole.Button, new() { Name = "Entfernen" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Radio, new() { Name = "Schaden", Exact = true })).ToBeCheckedAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        // Nur lesend, damit der Demo-Stand für die anderen Bilder bleibt; im Bild steht die Entnahme mit dem Text aus dem Vorfall-Protokoll.
+        await kasten.ScrollIntoViewIfNeededAsync();
+        await BildAsync(seite, "schaeden-verluste", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Org_Anschaffungswuensche(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, OrgAdminMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Organisation öffnen" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Jugendwerk Musterstadt", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Anschaffungswünsche öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Anschaffungswünsche", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("main .elkw-kicker").First).ToHaveTextAsync("Organisation");
+        // Die Demo-Freizeiten sind nicht abgeschlossen (den Abschluss bringt Story 3-8): Das Bild zeigt den Leer-Zustand mit Erklärung.
+        await Assertions.Expect(seite.GetByText("Noch keine Anschaffungswünsche. Nach dem Abschluss einer Freizeit stehen ihre Schäden und Verluste hier."))
+            .ToBeVisibleAsync(new() { Timeout = 60_000 });
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "anschaffungswuensche", geraet);
+    }
+
     /// <summary>Der Termin mit diesem Titel innerhalb eines Bereichs (ein Tag am Handy oder eine Spalte am Laptop).</summary>
     private static ILocator TerminIn(ILocator bereich, string titel) =>
         bereich.Locator(".zl-termin").Filter(new() { Has = bereich.Page.GetByRole(AriaRole.Heading, new() { Name = titel, Exact = true }) });

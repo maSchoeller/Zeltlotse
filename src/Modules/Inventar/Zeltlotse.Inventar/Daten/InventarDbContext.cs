@@ -5,6 +5,7 @@ using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Mandanten;
 using InventarArtikel = Zeltlotse.Inventar.Artikel.InventarArtikel;
 using Reservierung = Zeltlotse.Inventar.Reservierungen.Reservierung;
+using SchadenVerlust = Zeltlotse.Inventar.Schaeden.SchadenVerlust;
 
 namespace Zeltlotse.Inventar.Daten;
 
@@ -17,6 +18,9 @@ internal sealed class InventarDbContext(DbContextOptions<InventarDbContext> opti
 
     /// <summary>Story 3-3: die Reservierungen der Artikel für Freizeiten.</summary>
     public DbSet<Reservierung> Reservierungen => Set<Reservierung>();
+
+    /// <summary>Story 3-4: die Schadens- und Verlustlisten der Freizeiten.</summary>
+    public DbSet<SchadenVerlust> Schaeden => Set<SchadenVerlust>();
 
     protected override string Schema => InventarModul.Schema;
 
@@ -40,6 +44,26 @@ internal sealed class InventarDbContext(DbContextOptions<InventarDbContext> opti
             .ToListAsync(abbruch))
         .SingleOrDefault();
 
+    /// <summary>
+    /// Story 3-4: Lädt einen Eintrag der Schadens- und Verlustliste der Freizeit unter dem Mandantenfilter mit Zeilensperre (FOR UPDATE): Änderungen
+    /// und Entfernen desselben Eintrags laufen nacheinander. <c>null</c>, wenn es ihn in dieser Freizeit nicht gibt.
+    /// </summary>
+    public async Task<SchadenVerlust?> SchadenSperrenAsync(Guid freizeitId, Guid eintragId, CancellationToken abbruch) =>
+        (await Schaeden
+            .FromSql($"SELECT *, xmin FROM inventar.schaden_verlust WHERE \"Id\" = {eintragId} AND \"FreizeitId\" = {freizeitId} FOR UPDATE")
+            .ToListAsync(abbruch))
+        .SingleOrDefault();
+
+    /// <summary>
+    /// Story 3-4: Wie die Sperre oben, aber ohne Freizeit: für „erledigt“ auf der Seite der Organisation (die Freizeit prüft der
+    /// Handler danach über ihre Phase).
+    /// </summary>
+    public async Task<SchadenVerlust?> SchadenSperrenAsync(Guid eintragId, CancellationToken abbruch) =>
+        (await Schaeden
+            .FromSql($"SELECT *, xmin FROM inventar.schaden_verlust WHERE \"Id\" = {eintragId} FOR UPDATE")
+            .ToListAsync(abbruch))
+        .SingleOrDefault();
+
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => InventarModell.Konfigurieren(modelBuilder);
 }
 
@@ -50,6 +74,8 @@ internal sealed class InventarLeseDbContext(DbContextOptions<InventarLeseDbConte
     public DbSet<InventarArtikel> Artikel => Set<InventarArtikel>();
 
     public DbSet<Reservierung> Reservierungen => Set<Reservierung>();
+
+    public DbSet<SchadenVerlust> Schaeden => Set<SchadenVerlust>();
 
     protected override string Schema => InventarModul.Schema;
 
@@ -82,6 +108,19 @@ internal static class InventarModell
             e.HasIndex(r => r.OrganisationId);
             e.HasIndex(r => r.ArtikelId);
             e.HasIndex(r => r.FreizeitId);
+        });
+
+        // Story 3-4, FR-32/FR-38: die Schadens- und Verlustliste der Freizeiten; je Vorfall-Eintrag höchstens ein Eintrag (Empfänger idempotent).
+        modelBuilder.Entity<SchadenVerlust>(e =>
+        {
+            e.ToTable("schaden_verlust");
+            e.Property(s => s.Id).ValueGeneratedNever();
+            e.Property(s => s.Art).HasConversion<short>();
+            e.Property(s => s.Bezeichnung).HasMaxLength(SchadenFelder.BezeichnungMaximaleLaenge);
+            e.Property(s => s.Version).IsRowVersion();
+            e.HasIndex(s => s.OrganisationId);
+            e.HasIndex(s => s.FreizeitId);
+            e.HasIndex(s => s.VorfallEintragId).IsUnique().HasFilter("\"VorfallEintragId\" IS NOT NULL");
         });
     }
 }

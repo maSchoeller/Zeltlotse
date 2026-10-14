@@ -24,7 +24,8 @@ namespace Zeltlotse.Sicherheit.Vorfaelle;
 /// <summary>
 /// Story 2-10: Legt einen Eintrag im Vorfall-Protokoll an (Leitung und Team, FR-31). Der Text wird getrimmt und nur verschlüsselt mit dem
 /// Schlüssel der betroffenen Person gespeichert (AD-14). Gibt es die Kennung in dieser Freizeit schon, bleibt es bei der einen Zeile (AD-18);
-/// in einer anderen Freizeit ist das ein Konflikt. Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
+/// in einer anderen Freizeit ist das ein Konflikt. Eine abgeschlossene Freizeit ist nur lesbar (AD-17). Story 3-4: Eine neue Entnahme geht als
+/// <c>ErsteHilfeEntnommen</c> an Inventar (Schadens- und Verlustliste).
 /// </summary>
 internal sealed record VorfallAnlegenCommand(Guid FreizeitId, Guid Id, Guid PersonId, Guid VerfasstVon, VorfallArt Art, string? Text)
     : ICommand<VorfallAnlegen>, IModulCommand<SicherheitDbContext>, IBenutzerCommand
@@ -118,17 +119,22 @@ internal sealed class VorfallAnlegenHandler(
 
         var eintrag = VorfallEintrag.Anlegen(
             command.Id, organisationId, command.FreizeitId, command.PersonId, command.VerfasstVon, command.Art, text, uhr.GetUtcNow());
+        // Story 3-4: Eine Entnahme meldet ErsteHilfeEntnommen; die Folgenummer danach steht im INSERT.
+        eintrag.ErsteHilfeMelden();
         // Eindeutig je Kennung: Auch zwei gleichzeitige Aufrufe mit derselben Kennung ergeben genau eine Zeile.
         var angelegt = await db.Database.ExecuteSqlAsync(
             $"""
-             INSERT INTO sicherheit.vorfall_eintrag ("Id", "OrganisationId", "FreizeitId", "PersonId", "VerfasstVon", "Art", "Text", "ErfasstAm")
+             INSERT INTO sicherheit.vorfall_eintrag ("Id", "OrganisationId", "FreizeitId", "PersonId", "VerfasstVon", "Art", "Text", "ErfasstAm", "Folgenummer")
              VALUES ({eintrag.Id}, {eintrag.OrganisationId}, {eintrag.FreizeitId}, {eintrag.PersonId}, {eintrag.VerfasstVon}, {(short)eintrag.Art},
-                     {eintrag.Text.AlsBytes()}, {eintrag.ErfasstAm})
+                     {eintrag.Text.AlsBytes()}, {eintrag.ErfasstAm}, {eintrag.Folgenummer})
              ON CONFLICT ("Id") DO NOTHING
              """,
             cancellationToken);
         if (angelegt == 1)
         {
+            // Nur ein frisch angelegter Eintrag kommt unverändert an den DbContext: Die Outbox-Stufe sammelt sein Ereignis genau einmal ein. Doppelt
+            // gesendete Einträge (AD-18) bleiben ohne zweites Ereignis.
+            db.VorfallEintraege.Attach(eintrag);
             return VorfallAnlegen.Angelegt;
         }
 

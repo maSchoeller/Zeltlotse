@@ -453,6 +453,20 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
             "SELECT count(*) FROM freizeiten.freizeit_rolle r JOIN freizeiten.freizeit f ON f.\"Id\" = r.\"FreizeitId\" WHERE f.\"Name\" = 'Kinderbibeltage 2027' AND r.\"Rolle\" = 1 AND r.\"PersonId\" = @p",
             ("p", await AnmeldeHelfer.PersonIdAsync(verbindung, "tim.kroeger@example.org"))));
 
+        // Story 3-4: zwei Einträge auf der Schadens- und Verlustliste der Demo-Freizeit; Leas Entnahme im Vorfall-Protokoll kommt nach der Zustellung
+        // als „Erste-Hilfe-Kasten“ dazu (ohne Text). Nichts doppelt, auch nach dem zweiten Einspielen.
+        await zweiter.OutboxJetztZustellenAsync(Abbruch);
+        var schaeden = (await AnmeldeHelfer.JsonAsync(await leaClient.GetAsync($"/api/freizeiten/{freizeitId}/inventar/schaeden", Abbruch))).EnumerateArray().ToList();
+        // Die Test-Uhr steht still: gleiche Zeitpunkte, darum ohne Reihenfolge verglichen.
+        Assert.Equal(
+            ["Entnahme Erste-Hilfe-Kasten Vorfall", "Schaden Großzelt: Stange verbogen -", "Verlust Taschenlampe -"],
+            schaeden.Select(e => $"{e.GetProperty("art").GetString()} {e.GetProperty("bezeichnung").GetString()} "
+                                 + (e.GetProperty("vorfallEintragId").ValueKind == System.Text.Json.JsonValueKind.Null ? "-" : "Vorfall")).Order(StringComparer.Ordinal));
+        Assert.Equal(
+            Guid.Parse("0199e8a0-0000-7000-8000-00000000f002"),
+            schaeden.Single(e => e.GetProperty("art").GetString() == "Entnahme").GetProperty("vorfallEintragId").GetGuid());
+        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM inventar.schaden_verlust"));
+
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,
             "SELECT count(*) FROM konten.konto k LEFT JOIN personen.person p ON p.\"Id\" = k.\"PersonId\" WHERE p.\"Id\" IS NULL OR p.\"Vorname\" IS NULL OR p.\"Nachname\" IS NULL"));
