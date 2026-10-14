@@ -5,6 +5,7 @@ using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
 using Zeltlotse.Personen.Contracts.Freizeitpass;
 using Zeltlotse.SharedKernel;
 using Zeltlotse.SharedKernel.Mandanten;
+using FunktionsSchalter = Zeltlotse.SharedKernel.Rechte.FunktionsSchalter;
 using RolleArt = Zeltlotse.SharedKernel.Rechte.FreizeitRolle;
 
 namespace Zeltlotse.Freizeiten.Domaene;
@@ -82,6 +83,18 @@ internal sealed class Freizeit : Aggregat, IOrganisationsEigen
 
     /// <summary>Kennungen der Fragen für Mitarbeitende, Form wie <see cref="FragenTeilnehmende"/>.</summary>
     public string[] FragenMitarbeitende { get; private set; } = [];
+
+    /// <summary>
+    /// Story 3-7: Modul Verpflegung (Funktions-Schalter, AD-20); eine neue Freizeit nutzt kein Modul. Geändert nur über
+    /// <see cref="ModulAendern"/>.
+    /// </summary>
+    public bool Verpflegung { get; private set; }
+
+    /// <summary>Story 3-7: Modul Finanzen, Form wie <see cref="Verpflegung"/>.</summary>
+    public bool Finanzen { get; private set; }
+
+    /// <summary>Story 3-7: Modul Teilnehmer-Zugang, Form wie <see cref="Verpflegung"/>.</summary>
+    public bool TeilnehmerZugang { get; private set; }
 
     /// <summary>Versionsprüfung (xmin, AD-19).</summary>
     public uint Version { get; private set; }
@@ -244,6 +257,56 @@ internal sealed class Freizeit : Aggregat, IOrganisationsEigen
 
         return true;
     }
+
+    /// <summary>Story 3-7: ob ein Modul eingeschaltet ist, als <c>"true"</c>/<c>"false"</c> (Form des Autosave-Ankreuzfelds).</summary>
+    public string Modul(ModulFeld feld) => ModulAn(feld) ? "true" : "false";
+
+    /// <summary>Story 3-7: die eingeschalteten Funktions-Schalter in Enum-Reihenfolge (Verpflegung, Finanzen, Teilnehmer-Zugang).</summary>
+    public IReadOnlyList<FunktionsSchalter> Schalter() =>
+    [
+        .. new[] { (Verpflegung, FunktionsSchalter.Verpflegung), (Finanzen, FunktionsSchalter.Finanzen), (TeilnehmerZugang, FunktionsSchalter.TeilnehmerZugang) }
+            .Where(s => s.Item1)
+            .Select(s => s.Item2),
+    ];
+
+    /// <summary>
+    /// Story 3-7: schaltet ein Modul nach der Konfliktregel aus AD-19: Weicht der aktuelle Wert vom mitgeschickten alten Wert ab, bleibt
+    /// alles, wie es ist (<c>false</c>). Nur der Schalter ändert sich; Daten des Moduls bleiben erhalten (AD-20). Die Formprüfung
+    /// (<c>"true"</c>/<c>"false"</c>) hat der Validator erledigt.
+    /// </summary>
+    public bool ModulAendern(ModulFeld feld, string? alterWert, string neuerWert)
+    {
+        if (!string.Equals(Modul(feld), alterWert?.Trim(), StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var an = neuerWert.Trim() == "true";
+        switch (feld)
+        {
+            case ModulFeld.Verpflegung:
+                Verpflegung = an;
+                break;
+            case ModulFeld.Finanzen:
+                Finanzen = an;
+                break;
+            case ModulFeld.TeilnehmerZugang:
+                TeilnehmerZugang = an;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(feld), feld, null);
+        }
+
+        return true;
+    }
+
+    private bool ModulAn(ModulFeld feld) => feld switch
+    {
+        ModulFeld.Verpflegung => Verpflegung,
+        ModulFeld.Finanzen => Finanzen,
+        ModulFeld.TeilnehmerZugang => TeilnehmerZugang,
+        _ => throw new ArgumentOutOfRangeException(nameof(feld), feld, null),
+    };
 
     /// <summary>Story 2-5: die gewählten Kennungen der Zielgruppe einer Anmeldung, in Katalogreihenfolge.</summary>
     public IReadOnlyList<string> FragenFuer(AnmeldeArt art) => art switch

@@ -42,7 +42,7 @@ builder.Services.AddPublicSeiten(sp => sp.GetRequiredService<PublicSeitenDienstK
 builder.Services.AddSingleton(new DbKontextVerzeichnis(builder.Services));
 
 // Genau ein AddMediator, Scoped, Pipeline-Reihenfolge nach AD-27:
-// Validierung -> Inbox (nur Ereignis-Empfänger) -> Transaktion -> Outbox.
+// Funktions-Schalter (nur Benutzer-Commands mit Schalter, Story 3-7) -> Validierung -> Inbox (nur Ereignis-Empfänger) -> Transaktion -> Outbox.
 builder.Services.AddMediator(options =>
 {
     options.Namespace = "Zeltlotse.Api.Mediator";
@@ -63,6 +63,7 @@ builder.Services.AddMediator(options =>
     ];
     options.PipelineBehaviors =
     [
+        typeof(SchalterStufe<,>),
         typeof(ValidierungsStufe<,>),
         typeof(InboxStufe<,>),
         typeof(TransaktionsStufe<,>),

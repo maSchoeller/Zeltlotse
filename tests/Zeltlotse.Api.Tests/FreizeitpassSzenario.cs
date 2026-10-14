@@ -78,9 +78,15 @@ internal sealed class FreizeitpassSzenario : IAsyncDisposable
 
     public string TeilnehmendeZ { get; private set; } = null!;
 
-    public static async Task<FreizeitpassSzenario> AufbauenAsync(PostgresContainer postgres, S3Container? s3 = null)
+    /// <param name="mitTestEndpunkten">Story 3-7: bildet die <see cref="TestEndpunkte"/> ab (z. B. den Endpunkt des Schalters Verpflegung).</param>
+    public static async Task<FreizeitpassSzenario> AufbauenAsync(PostgresContainer postgres, S3Container? s3 = null, bool mitTestEndpunkten = false)
     {
         var szenario = new FreizeitpassSzenario(await postgres.NeueDatenbankAsync());
+        if (mitTestEndpunkten)
+        {
+            szenario.Factory.ZusatzDienste.Add(TestEndpunkte.Registrieren);
+        }
+
         if (s3 is not null)
         {
             // Story 2-7: Dokumente brauchen den Dateispeicher (S3-Container mit eigenem Bucket).

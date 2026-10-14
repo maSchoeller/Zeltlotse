@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Zeltlotse.Api.Contracts.Freizeiten;
 using Zeltlotse.Api.Contracts.Gemeinsam;
+using Zeltlotse.Freizeiten.Contracts.Schalter;
 using Zeltlotse.Freizeiten.Daten;
 using Zeltlotse.Freizeiten.Domaene;
 using Zeltlotse.Freizeiten.Leitung;
@@ -68,13 +69,13 @@ internal static class FreizeitLadenEndpunkt
 
 /// <summary>
 /// <c>GET /api/freizeiten/{freizeitId}/kontext</c> (Leitung, Team, AD-29): Rollen, Phase, Schalter und erlaubte Aktionen aus
-/// derselben Auflösung wie die Rechteprüfung des Hosts. Schalter (3-7) gibt es noch nicht (leer); erlaubt sind die Aktionen aus
-/// <see cref="FreizeitRechte.Erlaubt"/>.
+/// derselben Auflösung wie die Rechteprüfung des Hosts. Story 3-7: die eingeschalteten Schalter aus <see cref="IFreizeitSchalterLesen"/>
+/// (wie Rechteprüfung und Pipeline) in Enum-Reihenfolge; erlaubt sind die Aktionen aus <see cref="FreizeitRechte.Erlaubt"/>.
 /// </summary>
 internal static class FreizeitKontextEndpunkt
 {
     public static async Task<Results<Ok<FreizeitKontext>, NotFound>> Laden(
-        Guid freizeitId, FreizeitenLeseDbContext db, IKontextRollen kontextRollen, TimeProvider uhr, CancellationToken abbruch)
+        Guid freizeitId, FreizeitenLeseDbContext db, IKontextRollen kontextRollen, IFreizeitSchalterLesen schalter, TimeProvider uhr, CancellationToken abbruch)
     {
         var freizeit = await db.Freizeiten.SingleOrDefaultAsync(f => f.Id == freizeitId, abbruch);
         if (freizeit is null)
@@ -83,8 +84,10 @@ internal static class FreizeitKontextEndpunkt
         }
 
         var eigene = (await kontextRollen.FreizeitRollenAsync(freizeitId, abbruch)).Order().ToList();
+        var an = (await schalter.SchalterAsync(freizeitId, abbruch)).Order().ToList();
         return TypedResults.Ok(new FreizeitKontext(
-            freizeit.Id, freizeit.Name, FreizeitRechte.Api(freizeit.Phase(uhr.GetUtcNow())), [.. eigene.Select(FreizeitRechte.Api)], [], FreizeitRechte.Erlaubt(eigene)));
+            freizeit.Id, freizeit.Name, FreizeitRechte.Api(freizeit.Phase(uhr.GetUtcNow())), [.. eigene.Select(FreizeitRechte.Api)],
+            [.. an.Select(FreizeitRechte.Api)], FreizeitRechte.Erlaubt(eigene)));
     }
 }
 

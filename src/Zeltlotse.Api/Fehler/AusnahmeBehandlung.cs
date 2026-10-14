@@ -4,12 +4,14 @@ using Microsoft.AspNetCore.Mvc;
 using Zeltlotse.Api.Auslieferung;
 using Zeltlotse.Api.Contracts.Gemeinsam;
 using Zeltlotse.SharedKernel.Commands;
+using Zeltlotse.SharedKernel.Pipeline;
 
 namespace Zeltlotse.Api.Fehler;
 
 /// <summary>
 /// Fehlerform ProblemDetails (RFC 9457) mit <c>traceId</c> (AD-22, AD-27):
-/// <see cref="ValidierungsAusnahme"/> → <c>400</c> mit Fehlern je JSON-Feldname; jede andere Ausnahme → <c>500</c>,
+/// <see cref="ValidierungsAusnahme"/> → <c>400</c> mit Fehlern je JSON-Feldname; <see cref="SchalterAusAusnahme"/> → <c>404</c> ohne Details
+/// (Story 3-7, AD-20); jede andere Ausnahme → <c>500</c>,
 /// in Antwort und Log nur mit Ausnahmetyp und Trace-ID, nie mit Nachricht oder Stacktrace.
 /// </summary>
 internal sealed partial class AusnahmeBehandlung(IProblemDetailsService problemDetails, ILogger<AusnahmeBehandlung> logger) : IExceptionHandler
@@ -28,6 +30,8 @@ internal sealed partial class AusnahmeBehandlung(IProblemDetailsService problemD
         var problem = ausnahme switch
         {
             ValidierungsAusnahme validierung => Validierungsproblem(validierung),
+            // Story 3-7 (AD-20): wie ein abgeschalteter Endpunkt, ohne Details.
+            SchalterAusAusnahme => new ProblemDetails { Status = StatusCodes.Status404NotFound },
             BadHttpRequestException anfrage => new ProblemDetails
             {
                 Status = anfrage.StatusCode,

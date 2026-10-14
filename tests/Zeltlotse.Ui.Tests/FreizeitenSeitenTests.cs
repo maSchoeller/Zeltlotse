@@ -673,6 +673,91 @@ public sealed class FreizeitenSeitenTests : BunitContext
             cut.FindAll("a").Single(a => a.TextContent == "Einstellungen").GetAttribute("href")));
     }
 
+    // ---------- Story 3-7: Module pro Freizeit ----------
+
+    [Fact]
+    public async Task Client_laedt_die_Module_und_liefert_null_bei_403()
+    {
+        _server.BeiDerReihe(
+            HttpMethod.Get,
+            $"/api/freizeiten/{FreizeitId}/module",
+            () => Json(new { version = 9, verpflegung = true, finanzen = false, teilnehmerZugang = true }),
+            () => new HttpResponseMessage(HttpStatusCode.Forbidden));
+        var client = Services.GetRequiredService<FreizeitenApiClient>();
+
+        var module = await client.ModuleLadenAsync(FreizeitId, Abbruch);
+        var verboten = await client.ModuleLadenAsync(FreizeitId, Abbruch);
+
+        Assert.Equal(new Zeltlotse.Api.Contracts.Freizeiten.FreizeitModule(9, true, false, true), module);
+        Assert.Null(verboten);
+        Assert.Equal($"/api/freizeiten/{FreizeitId}/module", FreizeitenApiClient.ModulePfad(FreizeitId));
+    }
+
+    [Fact]
+    public void Einstellungen_zeigen_nach_den_Anmeldelinks_die_Card_Module_mit_drei_Ankreuzfeldern()
+    {
+        EinstellungenAntworten([Aktionsschluessel.FreizeitEinstellungen]);
+
+        var cut = Render<Einstellungen>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#module")));
+        var titel = cut.FindAll(".elkw-card").Select(c => c.QuerySelector("h2")?.TextContent).ToList();
+        Assert.Equal(titel.IndexOf("Anmeldelinks") + 1, titel.IndexOf("Module"));
+        var card = cut.Find("#module");
+        Assert.Contains(
+            "Abgeschaltete Module erscheinen nirgends in Zeltlotse. Ihre Daten bleiben erhalten und sind nach dem Einschalten wieder da.",
+            card.TextContent, StringComparison.Ordinal);
+        Assert.Equal(
+            ["Verpflegung", "Finanzen", "Teilnehmer-Zugang"],
+            card.QuerySelectorAll("label").Select(l => l.TextContent.Trim()));
+        Assert.Equal(
+            [("verpflegung", true), ("finanzen", false), ("teilnehmerZugang", false)],
+            card.QuerySelectorAll("input[type=checkbox]").Select(i => (i.GetAttribute("name"), i.HasAttribute("checked"))));
+    }
+
+    [Fact]
+    public void Einschalten_speichert_sofort_mit_Version_und_altem_Wert()
+    {
+        EinstellungenAntworten([Aktionsschluessel.FreizeitEinstellungen]);
+        _server.Bei(HttpMethod.Patch, $"/api/freizeiten/{FreizeitId}/module", () => NachgebildeterHandler.Json(HttpStatusCode.OK, """{"version":12,"finanzen":"true"}"""));
+        var cut = Render<Einstellungen>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#modul-finanzen")));
+
+        cut.Find("#modul-finanzen").Change(true);
+
+        cut.WaitForAssertion(() => Assert.Contains("Gespeichert", cut.Find("#module [role=status]").TextContent, StringComparison.Ordinal));
+        Assert.Equal(
+            """{"version":11,"alterWert":"false","finanzen":"true"}""",
+            _server.Anfragen.Last(a => a.Methode == HttpMethod.Patch && a.Pfad == $"/api/freizeiten/{FreizeitId}/module").Koerper);
+    }
+
+    [Fact]
+    public void Module_einer_abgeschlossenen_Freizeit_zeigen_beim_409_den_Hinweis_statt_Konflikt()
+    {
+        EinstellungenAntworten([Aktionsschluessel.FreizeitEinstellungen], phase: "Gelaufen");
+        _server.Bei(HttpMethod.Patch, $"/api/freizeiten/{FreizeitId}/module", () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, "freizeit-abgeschlossen"));
+        var cut = Render<Einstellungen>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#modul-verpflegung")));
+
+        cut.Find("#modul-verpflegung").Change(false);
+
+        cut.WaitForAssertion(() => Assert.Contains("Diese Freizeit ist abgeschlossen und nur lesbar.", cut.Find("#module .elkw-alert--fehler").TextContent, StringComparison.Ordinal));
+        Assert.DoesNotContain("Inzwischen geändert", cut.Markup, StringComparison.Ordinal);
+        Assert.True(cut.Find("#modul-verpflegung").HasAttribute("checked"));
+    }
+
+    [Fact]
+    public void Ohne_Einstellungen_gibt_es_keine_Card_Module_und_keine_Anfrage()
+    {
+        EinstellungenAntworten([Aktionsschluessel.FreizeitpaesseSehen]);
+
+        var cut = Render<Einstellungen>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        cut.WaitForAssertion(() => Assert.Equal("Diese Seite ist nicht verfügbar.", cut.Find("h1").TextContent));
+        Assert.Empty(cut.FindAll("#module"));
+        Assert.DoesNotContain(_server.Anfragen, a => a.Pfad == $"/api/freizeiten/{FreizeitId}/module");
+    }
+
     private static object Einstellungen(bool mitLinks = true) => new
     {
         version = 7,
@@ -700,5 +785,7 @@ public sealed class FreizeitenSeitenTests : BunitContext
             erlaubt,
         }));
         _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitId}/freizeitseite", () => Json(Einstellungen(mitLinks)));
+        // Story 3-7: Module der Freizeit (Verpflegung an).
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitId}/module", () => Json(new { version = 11, verpflegung = true, finanzen = false, teilnehmerZugang = false }));
     }
 }

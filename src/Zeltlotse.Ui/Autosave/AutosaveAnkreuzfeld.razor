@@ -3,11 +3,22 @@
 @inject AutosaveDienst Dienst
 @* Autosave-Baustein für ein Ja/Nein (AD-19, AD-29): gleicher Speicher-Dienst wie AutosaveFeld, Werte "true"/"false". Ein Klick
    speichert sofort. Gespeichert → „Gespeichert · Rückgängig“ (erneuter PATCH mit dem vorigen Wert); 409 → „Inzwischen
-   geändert – neu laden?“; Netzfehler oder 5xx → „Nicht gespeichert.“ mit „Erneut versuchen“, das Kästchen bleibt, wie gewählt. *@
+   geändert – neu laden?“; Netzfehler oder 5xx → „Nicht gespeichert.“ mit „Erneut versuchen“, das Kästchen bleibt, wie gewählt.
+   Story 3-7: Mit KonfliktText zeigt ein 409 wie beim AutosaveFeld eine Fehlermeldung mit diesem Text, und das Kästchen zeigt wieder den
+   gespeicherten Wert. *@
 <Ankreuzfeld Label="@Label" Id="@Id" Name="@Feldname" Wert="@_eingabe" Deaktiviert="@_uebertraegt" @onfocus="Fokus" @onchange="GeaendertAsync">
     <UnterDemFeld>
-        <SpeicherHinweis Zustand="_zustand" MitRueckgaengig="_mitRueckgaengig" Uebertraegt="_uebertraegt"
-                         Rueckgaengig="RueckgaengigAsync" NeuLaden="NeuLaden" ErneutVersuchen="ErneutVersuchenAsync" />
+        @if (_zustand == SpeicherZustand.Konflikt && KonfliktText is not null)
+        {
+            <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                <p>@KonfliktText</p>
+            </Meldung>
+        }
+        else
+        {
+            <SpeicherHinweis Zustand="_zustand" MitRueckgaengig="_mitRueckgaengig" Uebertraegt="_uebertraegt"
+                             Rueckgaengig="RueckgaengigAsync" NeuLaden="NeuLaden" ErneutVersuchen="ErneutVersuchenAsync" />
+        }
     </UnterDemFeld>
 </Ankreuzfeld>
 
@@ -40,6 +51,9 @@
 
     /// <summary>„Neu laden“ beim Konflikt: die Seite lädt die Ressource neu und übergibt Wert und Version.</summary>
     [Parameter] public EventCallback NeuLaden { get; set; }
+
+    /// <summary>Text für eine Antwort <c>409</c> statt „Inzwischen geändert – neu laden?“, z. B. in einer abgeschlossenen Freizeit.</summary>
+    [Parameter] public string? KonfliktText { get; set; }
 
     protected override void OnInitialized() => Dienst.FeldAktiv += AnderesFeldAktiv;
 
@@ -111,6 +125,12 @@
                 break;
             case AutosaveErgebnis.Konflikt:
                 _zustand = SpeicherZustand.Konflikt;
+                // Mit KonfliktText gibt es kein „neu laden“: das Kästchen zeigt wieder den gespeicherten Wert.
+                if (KonfliktText is not null)
+                {
+                    _eingabe = _gespeichert;
+                }
+
                 break;
             default:
                 _zustand = SpeicherZustand.Gescheitert;

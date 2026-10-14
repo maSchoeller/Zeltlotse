@@ -11,6 +11,7 @@ using Zeltlotse.Freizeiten.Domaene;
 using Zeltlotse.Freizeiten.Fragen;
 using Zeltlotse.Freizeiten.Freizeitseite;
 using Zeltlotse.Freizeiten.Leitung;
+using Zeltlotse.Freizeiten.Module;
 using Zeltlotse.Freizeiten.TeamNotizen;
 using Zeltlotse.Freizeiten.Verwaltung;
 using Zeltlotse.Inventar.Artikel;
@@ -144,6 +145,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await FreizeitseiteAsync(abbruch);
         // Story 2-5: Die Fragen-Auswahl kommt vor den Anmeldungen, damit die Freigaben die Fragen tragen.
         await FragenAuswahlAsync(abbruch);
+        // Story 3-7: Module der Demo-Freizeit.
+        await ModuleAsync(abbruch);
         await AnmeldungAsync(abbruch);
         await FreizeitpassAsync(abbruch);
         await TeamNotizAsync(abbruch);
@@ -547,6 +550,26 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
                 && await sender.Send(new FragenAuswahlAendernCommand(freizeit.Id, feld, null, wert), abbruch) is not FragenAenderung.Gespeichert)
             {
                 throw new InvalidOperationException($"Demo-Freizeit: Die Fragen für {feld} ließen sich nicht setzen.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Story 3-7: schaltet die Module aus <see cref="DemoKatalog.Module"/> in der Demo-Freizeit ein, je nur, wenn sie noch aus sind; der
+    /// Teilnehmer-Zugang bleibt aus. Die Kinderbibeltage bleiben ohne Module.
+    /// </summary>
+    private async Task ModuleAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var freizeit = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten.SingleAsync(f => f.Name == DemoKatalog.Freizeit.Name, abbruch);
+        foreach (var feld in DemoKatalog.Module.Where(f => freizeit.Modul(f) == "false"))
+        {
+            if (await sender.Send(new ModulAendernCommand(freizeit.Id, feld, "false", "true"), abbruch) is not ModulAenderung.Gespeichert)
+            {
+                throw new InvalidOperationException($"Demo-Freizeit: Das Modul {feld} ließ sich nicht einschalten.");
             }
         }
     }

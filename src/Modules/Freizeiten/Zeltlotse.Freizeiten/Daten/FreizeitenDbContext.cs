@@ -75,6 +75,10 @@ internal static class FreizeitenModell
             // FR-22: gewählte Fragen-Kennungen je Zielgruppe; eine neue Freizeit fragt nichts ab.
             e.Property(f => f.FragenTeilnehmende).HasColumnType("text[]");
             e.Property(f => f.FragenMitarbeitende).HasColumnType("text[]");
+            // Story 3-7: Funktions-Schalter (AD-20) als drei Spalten; neue und bestehende Freizeiten nutzen kein Modul (false).
+            e.Property(f => f.Verpflegung);
+            e.Property(f => f.Finanzen);
+            e.Property(f => f.TeilnehmerZugang);
             e.Property(f => f.Version).IsRowVersion();
             e.HasIndex(f => f.OrganisationId);
             e.HasMany(f => f.Rollen).WithOne().HasForeignKey(r => r.FreizeitId);

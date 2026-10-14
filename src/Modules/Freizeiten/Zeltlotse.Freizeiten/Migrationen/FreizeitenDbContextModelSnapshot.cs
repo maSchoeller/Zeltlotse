@@ -177,6 +177,9 @@ namespace Zeltlotse.Freizeiten.Migrationen
                     b.Property<DateOnly>("ErsterTag")
                         .HasColumnType("date");
 
+                    b.Property<bool>("Finanzen")
+                        .HasColumnType("boolean");
+
                     b.Property<long>("Folgenummer")
                         .IsConcurrencyToken()
                         .HasColumnType("bigint");
@@ -221,6 +224,12 @@ namespace Zeltlotse.Freizeiten.Migrationen
                     b.Property<string>("Teilnahmebedingungen")
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
+
+                    b.Property<bool>("TeilnehmerZugang")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Verpflegung")
+                        .HasColumnType("boolean");
 
                     b.Property<uint>("Version")
                         .IsConcurrencyToken()

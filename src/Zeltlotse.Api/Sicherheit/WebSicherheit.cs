@@ -30,6 +30,8 @@ internal static class WebSicherheit
         services.AddZugriffsbegrenzung();
         services.AddSitzung();
         services.AddScoped<IKontextRollen, KontextRollen>();
+        // Story 3-7: Schalter der Freizeit einmal pro Anfrage für Rechteprüfung und Pipeline (AD-17, AD-20).
+        services.AddScoped<ISchalterStand, SchalterStand>();
         services.AddScoped<IAngemeldeteMail, AngemeldeteMail>();
 
         // Weitergeleitete Header nur von konfigurierten Proxy-Adressen; die eingebauten Loopback-Vorgaben fallen weg.

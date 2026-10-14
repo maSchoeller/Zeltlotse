@@ -167,6 +167,16 @@ public sealed class FreizeitenApiClient(HttpClient http)
     public Task<FragenAuswahl?> FragenLadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
         LadenAsync<FragenAuswahl>(FragenPfad(freizeitId), abbruch);
 
+    /// <summary>Story 3-7: Pfad der Module der Freizeit, auch für den Autosave-Baustein (<c>PATCH</c>, AD-19, AD-20).</summary>
+    public static string ModulePfad(Guid freizeitId) => $"/api/freizeiten/{freizeitId}/module";
+
+    /// <summary>
+    /// Story 3-7: <c>GET /api/freizeiten/{freizeitId}/module</c> (Leitung, FR-44): die drei Module mit Version oder <c>null</c> bei
+    /// <c>403</c>/<c>404</c>.
+    /// </summary>
+    public Task<FreizeitModule?> ModuleLadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
+        LadenAsync<FreizeitModule>(ModulePfad(freizeitId), abbruch);
+
     /// <summary>
     /// <c>GET /api/freizeiten/{freizeitId}/freizeitseite</c> (Leitung): Beschreibung, Ort, Höchstzahl und die Anmeldelinks oder
     /// <c>null</c> bei <c>403</c>/<c>404</c>.

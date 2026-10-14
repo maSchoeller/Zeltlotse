@@ -276,6 +276,18 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal((DemoKatalog.Fragen.Teilnehmende, DemoKatalog.Fragen.Mitarbeitende), (fragen.GetProperty("teilnehmende").GetString(), fragen.GetProperty("mitarbeitende").GetString()));
         Assert.Equal(DemoKatalog.Fragen.Teilnehmende, string.Join(',', anmeldungen[0].GetProperty("fragen").EnumerateArray().Select(f => f.GetString())));
         Assert.Equal(7L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort"));
+
+        // Story 3-7: Im Zeltlager sind Verpflegung und Finanzen an, der Teilnehmer-Zugang aus (auch nach dem zweiten Einspielen); die
+        // Kinderbibeltage nutzen kein Modul.
+        var module = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/module", Abbruch));
+        Assert.Equal((true, true, false), (module.GetProperty("verpflegung").GetBoolean(), module.GetProperty("finanzen").GetBoolean(), module.GetProperty("teilnehmerZugang").GetBoolean()));
+        var kontextSchalter = (await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/kontext", Abbruch))).GetProperty("schalter");
+        Assert.Equal(["Verpflegung", "Finanzen"], kontextSchalter.EnumerateArray().Select(s => s.GetString()));
+        Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
+            verbindung, "SELECT count(*) FROM freizeiten.freizeit WHERE \"Name\" = @n AND (\"Verpflegung\" OR \"Finanzen\" OR \"TeilnehmerZugang\")",
+            ("n", DemoKatalog.ZweiteFreizeit.Name)));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(
+            verbindung, "SELECT count(*) FROM freizeiten.freizeit WHERE \"Name\" = @n", ("n", DemoKatalog.ZweiteFreizeit.Name)));
         Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort WHERE \"PersonId\" = @e", ("e", emma)));
 
         // Story 2-5: Die Fragen-Auswahl kam vor den Anmeldungen: Emmas Freigabe (eingegangen) und Mias (bestätigt) tragen die Fragen für

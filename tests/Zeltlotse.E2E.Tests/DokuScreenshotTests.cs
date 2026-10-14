@@ -1380,6 +1380,28 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await BildAsync(seite, "schutzkonzept-einrichten", geraet);
     }
 
+    // ---------- Story 3-7: Module pro Freizeit ----------
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Module_Schalten(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await EinstellungenAsync(seite);
+        var card = seite.Locator("#module");
+        await Assertions.Expect(card).ToContainTextAsync("Abgeschaltete Module erscheinen nirgends in Zeltlotse.", new() { Timeout = 60_000 });
+        await Assertions.Expect(card.GetByLabel("Verpflegung")).ToBeCheckedAsync();
+        await Assertions.Expect(card.GetByLabel("Finanzen")).ToBeCheckedAsync();
+        await Assertions.Expect(card.GetByLabel("Teilnehmer-Zugang")).Not.ToBeCheckedAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        await card.EvaluateAsync("karte => karte.scrollIntoView({ block: 'start' })");
+
+        await BildAsync(seite, "module-schalten", geraet);
+    }
+
     // ---------- Story 2-10: Vorfall-Protokoll und Vorfall-Notizen ----------
 
     /// <summary>Feste Zeitpunkte für die drei Demo-Einträge (neueste oben); die echten hängen vom Tag des Einspielens ab.</summary>

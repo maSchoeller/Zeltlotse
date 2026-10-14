@@ -2,6 +2,8 @@ using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.SharedKernel.Commands;
+using Zeltlotse.SharedKernel.Pipeline;
+using Zeltlotse.SharedKernel.Rechte;
 using Zeltlotse.Testing;
 using Zeltlotse.Testmodul.Notizen;
 
@@ -107,10 +109,111 @@ public sealed class PipelineTests(PostgresContainer postgres)
         Assert.Equal(0, await umgebung.RohLesenAsync(db => db.Zustellungen.CountAsync()));
     }
 
+    // ---------- Story 3-7: Funktions-Schalter (AD-20, AD-27) ----------
+
+    private static readonly Guid FreizeitX = Guid.Parse("0199a000-0000-7000-8000-0000000000f1");
+
+    [Fact]
+    public async Task Schalter_aus_lehnt_den_Benutzer_Command_ab_ohne_den_Handler_aufzurufen()
+    {
+        var stand = new FalscherSchalterStand();
+        var handler = new ZaehlenderHandler();
+
+        var ausnahme = await Assert.ThrowsAsync<SchalterAusAusnahme>(
+            async () => await Stufe<SchalterBenutzerNachricht>(stand).Handle(new SchalterBenutzerNachricht(FreizeitX), handler.Weiter, TestContext.Current.CancellationToken));
+
+        Assert.Equal((FreizeitX, FunktionsSchalter.Verpflegung), (ausnahme.FreizeitId, ausnahme.Schalter));
+        Assert.Equal(0, handler.Aufrufe);
+        Assert.Equal([(FreizeitX, FunktionsSchalter.Verpflegung)], stand.Abfragen);
+    }
+
+    [Fact]
+    public async Task Schalter_an_laesst_den_Benutzer_Command_durch()
+    {
+        var stand = new FalscherSchalterStand { An = { (FreizeitX, FunktionsSchalter.Verpflegung) } };
+        var handler = new ZaehlenderHandler();
+
+        var antwort = await Stufe<SchalterBenutzerNachricht>(stand).Handle(new SchalterBenutzerNachricht(FreizeitX), handler.Weiter, TestContext.Current.CancellationToken);
+
+        Assert.Equal((42, 1), (antwort, handler.Aufrufe));
+        Assert.Single(stand.Abfragen);
+    }
+
+    [Fact]
+    public async Task Ereignis_Empfaenger_ohne_IBenutzerCommand_laeuft_bei_ausgeschaltetem_Schalter_ohne_Abfrage_durch()
+    {
+        var stand = new FalscherSchalterStand();
+        var handler = new ZaehlenderHandler();
+
+        var antwort = await Stufe<SchalterEmpfaengerNachricht>(stand).Handle(new SchalterEmpfaengerNachricht(FreizeitX), handler.Weiter, TestContext.Current.CancellationToken);
+
+        Assert.Equal((42, 1), (antwort, handler.Aufrufe));
+        Assert.Empty(stand.Abfragen);
+    }
+
+    [Fact]
+    public async Task Benutzer_Command_ohne_ISchalterCommand_laeuft_ohne_Abfrage_durch()
+    {
+        var stand = new FalscherSchalterStand();
+        var handler = new ZaehlenderHandler();
+
+        var antwort = await Stufe<BenutzerNachrichtOhneSchalter>(stand).Handle(new BenutzerNachrichtOhneSchalter(), handler.Weiter, TestContext.Current.CancellationToken);
+
+        Assert.Equal((42, 1), (antwort, handler.Aufrufe));
+        Assert.Empty(stand.Abfragen);
+    }
+
+    /// <summary>Die Stufe mit dem gefälschten Schalter-Stand als einzigem Dienst.</summary>
+    private static SchalterStufe<TNachricht, int> Stufe<TNachricht>(FalscherSchalterStand stand)
+        where TNachricht : notnull, IMessage => new(stand);
+
     [Theory]
     [InlineData("Text", "text")]
     [InlineData("Adresse.Strasse", "adresse.strasse")]
     [InlineData("Posten[0].Name", "posten[0].name")]
     public void Fehlerschluessel_sind_JSON_Namen_auch_fuer_verschachtelte_Felder(string eigenschaft, string erwartet) =>
         Assert.Equal(erwartet, Pipeline.ValidierungsStufe<NotizAnlegen, Guid>.JsonName(eigenschaft));
+}
+
+/// <summary>Test-Nachricht: Benutzer-Command, der zum Schalter Verpflegung gehört.</summary>
+internal sealed record SchalterBenutzerNachricht(Guid FreizeitId) : IMessage, IBenutzerCommand, ISchalterCommand
+{
+    public FunktionsSchalter Schalter => FunktionsSchalter.Verpflegung;
+}
+
+/// <summary>Test-Nachricht: Ereignis-Empfänger mit Schalter, aber ohne <see cref="IBenutzerCommand"/>.</summary>
+internal sealed record SchalterEmpfaengerNachricht(Guid FreizeitId) : IMessage, ISchalterCommand
+{
+    public FunktionsSchalter Schalter => FunktionsSchalter.Verpflegung;
+}
+
+/// <summary>Test-Nachricht: Benutzer-Command ohne Schalter.</summary>
+internal sealed record BenutzerNachrichtOhneSchalter : IMessage, IBenutzerCommand;
+
+/// <summary>Gefälschter Schalter-Stand: an sind nur die Paare in <see cref="An"/>; merkt sich jede Abfrage. Zugleich der Dienst-Container.</summary>
+internal sealed class FalscherSchalterStand : ISchalterStand, IServiceProvider
+{
+    public HashSet<(Guid FreizeitId, FunktionsSchalter Schalter)> An { get; } = [];
+
+    public List<(Guid FreizeitId, FunktionsSchalter Schalter)> Abfragen { get; } = [];
+
+    public Task<bool> IstAnAsync(Guid freizeitId, FunktionsSchalter schalter, CancellationToken abbruch = default)
+    {
+        Abfragen.Add((freizeitId, schalter));
+        return Task.FromResult(An.Contains((freizeitId, schalter)));
+    }
+
+    public object? GetService(Type serviceType) => serviceType == typeof(ISchalterStand) ? this : null;
+}
+
+/// <summary>Der „Handler“ hinter der Stufe: zählt die Aufrufe und antwortet mit 42.</summary>
+internal sealed class ZaehlenderHandler
+{
+    public int Aufrufe { get; private set; }
+
+    public ValueTask<int> Weiter<TNachricht>(TNachricht nachricht, CancellationToken abbruch)
+    {
+        Aufrufe++;
+        return ValueTask.FromResult(42);
+    }
 }

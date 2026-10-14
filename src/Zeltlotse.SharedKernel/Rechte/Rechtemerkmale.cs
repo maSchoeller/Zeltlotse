@@ -12,7 +12,9 @@ namespace Zeltlotse.SharedKernel.Rechte;
 /// <item>Freizeit aus dem Routenwert <see cref="FreizeitRouteWert"/> unbekannt oder keine eigene Freizeit-Rolle → <c>404</c>;
 /// Rolle vorhanden, aber nicht die verlangte → <c>403</c>. Der Mandant ist die Organisation der Freizeit.</item>
 /// </list>
-/// Org- und Freizeit-Merkmal an demselben Endpunkt sind verboten.
+/// Org- und Freizeit-Merkmal an demselben Endpunkt sind verboten. Story 3-7: <see cref="GehoertZuSchalter{TBuilder}"/> verlangt
+/// <see cref="NurFreizeitRolle{TBuilder}"/>; ist der Schalter für die Freizeit aus, antwortet der Endpunkt nach bestandener Rollenprüfung
+/// mit <c>404</c> (AD-20).
 /// </summary>
 public static class Rechtemerkmale
 {
@@ -50,6 +52,14 @@ public static class Rechtemerkmale
 
         return endpunkt.WithMetadata(new NurFreizeitRolleMetadaten(rollen));
     }
+
+    /// <summary>
+    /// Der Endpunkt gehört zum Funktions-Schalter (AD-20): Ist er für die Freizeit aus der Route aus, antwortet er mit <c>404</c>. Nur
+    /// zusammen mit <see cref="NurFreizeitRolle{TBuilder}"/>; ohne Rolle bleibt es <c>404</c>, mit falscher Rolle <c>403</c>.
+    /// </summary>
+    public static TBuilder GehoertZuSchalter<TBuilder>(this TBuilder endpunkt, FunktionsSchalter schalter)
+        where TBuilder : IEndpointConventionBuilder =>
+        endpunkt.WithMetadata(new GehoertZuSchalterMetadaten(schalter));
 }
 
 /// <summary>Merkmal: Der Endpunkt verlangt einen Global Admin.</summary>
@@ -72,4 +82,10 @@ public sealed class NurOrgRolleMetadaten(IReadOnlyList<OrgRolle> rollen)
 public sealed class NurFreizeitRolleMetadaten(IReadOnlyList<FreizeitRolle> rollen)
 {
     public IReadOnlyList<FreizeitRolle> Rollen { get; } = rollen;
+}
+
+/// <summary>Merkmal: Der Endpunkt gehört zum Funktions-Schalter <see cref="Schalter"/> (AD-20).</summary>
+public sealed class GehoertZuSchalterMetadaten(FunktionsSchalter schalter)
+{
+    public FunktionsSchalter Schalter { get; } = schalter;
 }

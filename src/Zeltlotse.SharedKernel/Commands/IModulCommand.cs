@@ -14,3 +14,14 @@ public interface IModulCommand<TDbContext> : IModulCommandBasis
 
 /// <summary>Merkmal für Commands, die ein Endpunkt auslöst (AD-17, AD-20). Ereignis-Empfänger tragen es nie.</summary>
 public interface IBenutzerCommand;
+
+/// <summary>
+/// Merkmal für Benutzer-Commands, die zu einem Funktions-Schalter der Freizeit gehören (AD-20): Ist er aus, lehnt die Pipeline den Command
+/// ab (<c>404</c>). Gilt nur zusammen mit <see cref="IBenutzerCommand"/>; Ereignis-Empfänger laufen immer.
+/// </summary>
+public interface ISchalterCommand
+{
+    Guid FreizeitId { get; }
+
+    Rechte.FunktionsSchalter Schalter { get; }
+}

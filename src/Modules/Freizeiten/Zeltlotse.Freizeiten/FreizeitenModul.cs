@@ -7,6 +7,7 @@ using Zeltlotse.Freizeiten.Contracts.Dokumente;
 using Zeltlotse.Freizeiten.Contracts.Namen;
 using Zeltlotse.Freizeiten.Contracts.Personen;
 using Zeltlotse.Freizeiten.Contracts.Rollen;
+using Zeltlotse.Freizeiten.Contracts.Schalter;
 using Zeltlotse.Freizeiten.Contracts.Team;
 using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
 using Zeltlotse.Freizeiten.Daten;
@@ -14,6 +15,7 @@ using Zeltlotse.Freizeiten.Datenschutz;
 using Zeltlotse.Freizeiten.Dokumente;
 using Zeltlotse.Freizeiten.Fragen;
 using Zeltlotse.Freizeiten.Freizeitseite;
+using Zeltlotse.Freizeiten.Module;
 using Zeltlotse.Freizeiten.Nachweise;
 using Zeltlotse.Freizeiten.Personenliste;
 using Zeltlotse.Freizeiten.TeamNotizen;
@@ -42,6 +44,8 @@ public static class FreizeitenModul
         services.AddModul<FreizeitenDbContext, FreizeitenLeseDbContext>(Name, Schema);
         services.AddScoped<IFreizeitRollenLesen, FreizeitRollenLesen>();
         services.AddScoped<IFreizeitZeitpunkte, FreizeitZeitpunkteLesen>();
+        // Story 3-7: die Funktions-Schalter für Rechteprüfung, Pipeline und Kontext (AD-20).
+        services.AddScoped<IFreizeitSchalterLesen, FreizeitSchalterLesen>();
         // Story 2-9: Team und Dokumente für das Schutzkonzept (Pfeil Sicherheit → Freizeiten).
         services.AddScoped<IFreizeitTeamLesen, FreizeitTeamLesen>();
         services.AddScoped<IFreizeitDokumenteLesen, FreizeitDokumenteLesen>();
@@ -106,6 +110,9 @@ public static class FreizeitenModul
         // Story 2-4: Fragen-Auswahl des Freizeitpasses je Zielgruppe (FR-22), nur Leitung.
         freizeit.MapGet("/fragen", FragenAuswahlLadenEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Einstellungen);
         freizeit.MapPatch("/fragen", FragenAuswahlAendernEndpunkt.Aendern).NurFreizeitRolle(FreizeitRechte.Einstellungen);
+        // Story 3-7: Module der Freizeit schalten (FR-44, AD-20), nur Leitung.
+        freizeit.MapGet("/module", ModuleLadenEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Einstellungen);
+        freizeit.MapPatch("/module", ModulAendernEndpunkt.Aendern).NurFreizeitRolle(FreizeitRechte.Einstellungen);
         // Story 2-3: Anmeldungen der Leitung (Liste, Bestätigen, Absagen); Statuswechsel als POST je Übergang (AD-19, AD-28).
         freizeit.MapGet("/anmeldungen", AnmeldungenListeEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Anmeldungen);
         freizeit.MapPost("/anmeldungen/{anmeldungId:guid}/bestaetigen", AnmeldungEntscheidenEndpunkt.Bestaetigen).NurFreizeitRolle(FreizeitRechte.Anmeldungen);

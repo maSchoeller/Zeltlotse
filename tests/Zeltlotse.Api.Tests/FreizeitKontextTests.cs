@@ -81,7 +81,7 @@ public sealed class FreizeitKontextTests(PostgresContainer postgres) : IAsyncLif
     }
 
     [Fact]
-    public async Task Kontext_liefert_Rollen_Phase_leere_Schalter_und_fuer_die_Leitung_Nachweise_pruefen()
+    public async Task Kontext_liefert_Rollen_Phase_fuer_eine_neue_Freizeit_keine_Schalter_und_fuer_die_Leitung_Nachweise_pruefen()
     {
         using var antwort = await _miriam.GetAsync($"/api/freizeiten/{_x}/kontext", Abbruch);
 
@@ -92,6 +92,7 @@ public sealed class FreizeitKontextTests(PostgresContainer postgres) : IAsyncLif
         Assert.Equal("X", json.GetProperty("name").GetString());
         Assert.Equal("InVorbereitung", json.GetProperty("phase").GetString());
         Assert.Equal(["Leitung"], json.GetProperty("rollen").EnumerateArray().Select(r => r.GetString()));
+        // Story 3-7: Eine neue Freizeit nutzt kein Modul; die Schalter-Tests stehen in ModuleTests.
         Assert.Empty(json.GetProperty("schalter").EnumerateArray());
         // Story 1-5: die Leitung prüft Nachweise (dieselbe Rollenliste wie die Prüf-Endpunkte); Story 2-1: und pflegt die Einstellungen;
         // Story 2-5: und sieht Freizeitpässe.

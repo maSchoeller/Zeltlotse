@@ -19,10 +19,10 @@ Die Leitung darf alles, was das [Team](/mitarbeitende/) darf. **Nur die Leitung*
 - Erinnerungen auslösen, an fehlende Nachweise – siehe [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/) – und an unvollständige Freizeitpässe – siehe [Leitungs-Cockpit](/leitung/cockpit/#erinnern),
 - den Stand der Nachweise im Team sehen und Nachweise prüfen – siehe [Nachweise prüfen](/leitung/nachweise-pruefen/),
 - festlegen, welche Fragen der Freizeitpass für Teilnehmende und für Mitarbeitende abfragt – siehe [Freizeitpass zusammenstellen](/leitung/freizeitpass-fragen/),
-- festlegen, welche Module (Verpflegung, Finanzen, Teilnehmer-Zugang) die Freizeit nutzt,
+- festlegen, welche Module (Verpflegung, Finanzen, Teilnehmer-Zugang) die Freizeit nutzt – siehe [Module schalten](/leitung/module-schalten/),
 - die Sicherheitskette einrichten (was im Notfall zu tun ist, wen das Team anruft) – siehe [Sicherheitskette einrichten](/leitung/sicherheitskette/),
 - das Schutzkonzept anhängen, also festlegen, welches Dokument der Freizeit es ist – siehe [Schutzkonzept anhängen](/leitung/schutzkonzept/),
-- den Teilnehmer-Zugang per QR-Code an- und abschalten,
+- den Teilnehmer-Zugang per QR-Code an- und abschalten – siehe [Module schalten](/leitung/module-schalten/),
 - die Freizeit abschließen.
 
 ## Dokumente

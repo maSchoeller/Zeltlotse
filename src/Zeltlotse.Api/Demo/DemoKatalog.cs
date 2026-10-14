@@ -26,6 +26,12 @@ internal static class DemoKatalog
         "Die Lagerregeln und die Anweisungen der Mitarbeitenden gelten für alle Teilnehmenden.\nDer Teilnahmebeitrag wird nach der Zusage fällig. Wer krank wird, sagt bei der Leitung ab.");
 
     /// <summary>
+    /// Story 3-7: Module der Demo-Freizeit, die Miriam einschaltet (je nur, wenn noch aus): Verpflegung und Finanzen an, Teilnehmer-Zugang
+    /// bleibt aus. Die zweite Freizeit (Kinderbibeltage) nutzt kein Modul.
+    /// </summary>
+    public static IReadOnlyList<ModulFeld> Module { get; } = [ModulFeld.Verpflegung, ModulFeld.Finanzen];
+
+    /// <summary>
     /// Story 2-2 und 2-3: Anmeldungen der Demo-Freizeit mit Konto, in dieser Reihenfolge. <c>Kind</c> leer heißt: die Person meldet sich
     /// selbst über den Anmeldelink für Mitarbeitende an. Miriam bestätigt die mit <c>Bestaetigt</c>; die anderen bleiben „eingegangen“.
     /// So zeigt die Liste der Leitung alle Status und der Balken „1 von 40“ (Mia; Mitarbeitende zählen nicht).

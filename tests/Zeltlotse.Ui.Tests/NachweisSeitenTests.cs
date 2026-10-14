@@ -152,6 +152,26 @@ public sealed class NachweisSeitenTests : BunitContext
         cut.WaitForAssertion(() => Assert.Contains("Nicht gespeichert.", cut.Find("[role=alert]").TextContent, StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void Autosave_Ankreuzfeld_zeigt_beim_409_den_Konflikttext_als_Fehlermeldung()
+    {
+        // Story 3-7: wie AutosaveFeld und AutosaveAuswahlgruppe, z. B. in einer abgeschlossenen Freizeit.
+        const string pfad = "/api/freizeiten/x/module";
+        _server.Bei(HttpMethod.Patch, pfad, () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, "freizeit-abgeschlossen"));
+        var cut = Render<AutosaveAnkreuzfeld>(ps => ps
+            .Add(p => p.Label, "Verpflegung")
+            .Add(p => p.Feldname, "verpflegung")
+            .Add(p => p.Pfad, pfad)
+            .Add(p => p.Version, 1u)
+            .Add(p => p.KonfliktText, "Diese Freizeit ist abgeschlossen und nur lesbar."));
+
+        cut.Find("input").Change(true);
+
+        cut.WaitForAssertion(() => Assert.Contains("Diese Freizeit ist abgeschlossen und nur lesbar.", cut.Find(".elkw-alert--fehler").TextContent, StringComparison.Ordinal));
+        Assert.DoesNotContain("Inzwischen geändert", cut.Markup, StringComparison.Ordinal);
+        Assert.False(cut.Find("input").HasAttribute("checked"));
+    }
+
     // ---------- Client ----------
 
     [Fact]

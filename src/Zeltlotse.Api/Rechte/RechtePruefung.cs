@@ -18,6 +18,8 @@ namespace Zeltlotse.Api.Rechte;
 /// <item><c>.NurFreizeitRolle(…)</c>: Mandant = Organisation der Freizeit aus dem Routenwert <c>freizeitId</c>; unbekannte
 /// Freizeit oder keine eigene Freizeit-Rolle (auch Org-Admin, Org-Überblick, Global Admin) → <c>404</c>; Rolle vorhanden,
 /// aber nicht die verlangte → <c>403</c>.</item>
+/// <item>Story 3-7: <c>.GehoertZuSchalter(…)</c> (nur mit <c>.NurFreizeitRolle(…)</c>): nach bestandener Rollenprüfung, Schalter für die
+/// Freizeit aus → <c>404</c> (AD-20).</item>
 /// </list>
 /// Den Körper (ProblemDetails) schreiben die Statuscode-Seiten. Kein Modul prüft Rollen selbst.
 /// </summary>
@@ -35,6 +37,12 @@ internal sealed class RechtePruefung(RequestDelegate weiter)
         if (orgMerkmal is not null && freizeitMerkmal is not null)
         {
             throw new InvalidOperationException($"{endpunkt!.DisplayName}: .NurOrgRolle() und .NurFreizeitRolle() an demselben Endpunkt sind verboten.");
+        }
+
+        var schalterMerkmal = endpunkt?.Metadata.GetMetadata<GehoertZuSchalterMetadaten>();
+        if (schalterMerkmal is not null && freizeitMerkmal is null)
+        {
+            throw new InvalidOperationException($"{endpunkt!.DisplayName}: .GehoertZuSchalter() verlangt .NurFreizeitRolle() an demselben Endpunkt.");
         }
 
         var organisationId = Kennung(kontext, Rechtemerkmale.OrgRouteWert);
@@ -81,6 +89,14 @@ internal sealed class RechtePruefung(RequestDelegate weiter)
             if (Status(await Rollen().FreizeitRollenAsync(freizeitId, abbruch), freizeitMerkmal.Rollen) is { } status)
             {
                 kontext.Response.StatusCode = status;
+                return;
+            }
+
+            // AD-20: erst nach bestandener Rollenprüfung, damit die Antwort nichts über Module verrät, die die Person nicht sieht.
+            if (schalterMerkmal is not null
+                && !await kontext.RequestServices.GetRequiredService<ISchalterStand>().IstAnAsync(freizeitId, schalterMerkmal.Schalter, abbruch))
+            {
+                kontext.Response.StatusCode = StatusCodes.Status404NotFound;
                 return;
             }
         }

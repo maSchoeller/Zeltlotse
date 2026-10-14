@@ -13,7 +13,9 @@
    (FR-29, Story 2-8: was jetzt zu tun ist, Telefon der Leitung, Ansprechperson am Heimatort und ihr Telefon) per Autosave, Abschnitt
    „Schutzkonzept“ (FR-30, Story 2-9: welches Dokument der Freizeit es ist, per Autosave, mit Weg zu den Dokumenten und zur Liste, wer
    gelesen hat) und Abschnitt
-   „Anmeldelinks“ mit beiden Links als Text, „Freizeitseite öffnen“ und „Neuen Link erzeugen“ über die Inline-Bestätigung. Ohne
+   „Anmeldelinks“ mit beiden Links als Text, „Freizeitseite öffnen“ und „Neuen Link erzeugen“ über die Inline-Bestätigung, danach
+   Abschnitt „Module“ (FR-44, Story 3-7: Verpflegung, Finanzen und Teilnehmer-Zugang je als Ankreuzfeld per Autosave; Abschalten verbirgt
+   das Modul überall, die Daten bleiben). In einer abgeschlossenen Freizeit zeigt jedes Feld beim Speichern den Hinweis „nur lesbar“. Ohne
    die erlaubte Aktion „freizeit-einstellungen“ oder bei 403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>Einstellungen – Zeltlotse</PageTitle>
 
@@ -148,12 +150,29 @@ else
                 }
             }
         </Card>
+
+        @if (_module is not null)
+        {
+            <Card Titel="Module" Id="module">
+                <p>Abgeschaltete Module erscheinen nirgends in Zeltlotse. Ihre Daten bleiben erhalten und sind nach dem Einschalten wieder da.</p>
+                <AutosaveAnkreuzfeld Label="Verpflegung" Id="modul-verpflegung" Feldname="@ModulFelder.Verpflegung"
+                                     Pfad="@FreizeitenApiClient.ModulePfad(FreizeitId)" Wert="@_module.Verpflegung" Version="@_module.Version"
+                                     NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+                <AutosaveAnkreuzfeld Label="Finanzen" Id="modul-finanzen" Feldname="@ModulFelder.Finanzen"
+                                     Pfad="@FreizeitenApiClient.ModulePfad(FreizeitId)" Wert="@_module.Finanzen" Version="@_module.Version"
+                                     NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+                <AutosaveAnkreuzfeld Label="Teilnehmer-Zugang" Id="modul-teilnehmer-zugang" Feldname="@ModulFelder.TeilnehmerZugang"
+                                     Pfad="@FreizeitenApiClient.ModulePfad(FreizeitId)" Wert="@_module.TeilnehmerZugang" Version="@_module.Version"
+                                     NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+            </Card>
+        }
     }
 }
 
 @code {
     private FreizeitseiteEinstellungen? _einstellungen;
     private FragenAuswahl? _fragen;
+    private FreizeitModule? _module;
     private Zeltlotse.Api.Contracts.Sicherheit.Sicherheitskette? _kette;
     private Zeltlotse.Api.Contracts.Sicherheit.Schutzkonzept? _schutzkonzept;
     private FreizeitDokumente? _dokumente;
@@ -171,6 +190,7 @@ else
     {
         _einstellungen = null;
         _fragen = null;
+        _module = null;
         _kette = null;
         _schutzkonzept = null;
         _dokumente = null;
@@ -190,6 +210,7 @@ else
             _abgeschlossen = kontext.Phase == Phase.Gelaufen;
             _einstellungen = await Freizeiten.FreizeitseiteLadenAsync(FreizeitId);
             _fragen = await Freizeiten.FragenLadenAsync(FreizeitId);
+            _module = await Freizeiten.ModuleLadenAsync(FreizeitId);
             _kette = await SicherheitApi.SicherheitsketteLadenAsync(FreizeitId);
             (_schutzkonzept, _dokumente) = await SchutzkonzeptLadenAsync();
             _nichtVerfuegbar = _einstellungen is null;
@@ -209,6 +230,7 @@ else
         {
             _einstellungen = await Freizeiten.FreizeitseiteLadenAsync(FreizeitId);
             _fragen = await Freizeiten.FragenLadenAsync(FreizeitId);
+            _module = await Freizeiten.ModuleLadenAsync(FreizeitId);
             _kette = await SicherheitApi.SicherheitsketteLadenAsync(FreizeitId);
             (_schutzkonzept, _dokumente) = await SchutzkonzeptLadenAsync();
             _nichtVerfuegbar = _einstellungen is null;

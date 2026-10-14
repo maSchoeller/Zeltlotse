@@ -26,7 +26,8 @@ internal static partial class DokuRegeln
             .Append("org-admin/inventar").Append("mitarbeitende/inventar")
             .Append("mitarbeitende/schaeden-verluste").Append("org-admin/anschaffungswuensche")
             .Append("mitarbeitende/aufgaben").Append("org-admin/aufgaben-vorlagen")
-            .Append("mitarbeitende/programmbibliothek").Append("org-admin/programmbibliothek");
+            .Append("mitarbeitende/programmbibliothek").Append("org-admin/programmbibliothek")
+            .Append("leitung/module-schalten");
 
     public static string DokuSeitenOrdner => Path.Combine(Loesung.Wurzel, "doku", "src", "content", "docs");
 

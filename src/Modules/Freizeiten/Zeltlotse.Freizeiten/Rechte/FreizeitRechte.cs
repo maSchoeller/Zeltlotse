@@ -1,9 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Zeltlotse.Api.Contracts.Gemeinsam;
 using Zeltlotse.Freizeiten.Contracts.Rollen;
+using Zeltlotse.Freizeiten.Contracts.Schalter;
 using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
 using Zeltlotse.Freizeiten.Daten;
 using ApiFreizeitRolle = Zeltlotse.Api.Contracts.Gemeinsam.FreizeitRolle;
+using ApiSchalter = Zeltlotse.Api.Contracts.Gemeinsam.FunktionsSchalter;
+using FunktionsSchalter = Zeltlotse.SharedKernel.Rechte.FunktionsSchalter;
 using OrgRolleArt = Zeltlotse.SharedKernel.Rechte.OrgRolle;
 using RolleArt = Zeltlotse.SharedKernel.Rechte.FreizeitRolle;
 
@@ -35,7 +38,7 @@ internal static class FreizeitRechte
 
     /// <summary>
     /// Einstellungen der Freizeit (EXPERIENCE.md → Fläche „Einstellungen der Freizeit“, nur Leitung): Freizeitseite bearbeiten,
-    /// Anmeldelinks sehen und erneuern (FR-15, FR-16).
+    /// Anmeldelinks sehen und erneuern (FR-15, FR-16); Story 3-7: Module schalten (FR-44).
     /// </summary>
     public static readonly RolleArt[] Einstellungen = [RolleArt.Leitung];
 
@@ -102,6 +105,15 @@ internal static class FreizeitRechte
         _ => throw new ArgumentOutOfRangeException(nameof(phase), phase, null),
     };
 
+    /// <summary>Story 3-7: der serverinterne Schalter als Wert der API (AD-20).</summary>
+    public static ApiSchalter Api(FunktionsSchalter schalter) => schalter switch
+    {
+        FunktionsSchalter.Verpflegung => ApiSchalter.Verpflegung,
+        FunktionsSchalter.Finanzen => ApiSchalter.Finanzen,
+        FunktionsSchalter.TeilnehmerZugang => ApiSchalter.TeilnehmerZugang,
+        _ => throw new ArgumentOutOfRangeException(nameof(schalter), schalter, null),
+    };
+
     public static ApiFreizeitRolle Api(RolleArt rolle) => rolle switch
     {
         RolleArt.Leitung => ApiFreizeitRolle.Leitung,
@@ -160,5 +172,18 @@ internal sealed class FreizeitTageLesen(FreizeitenLeseDbContext db) : IFreizeitT
         return await db.Freizeiten
             .Where(f => ids.Contains(f.Id))
             .ToDictionaryAsync(f => f.Id, f => new FreizeitTage(f.ErsterTag, f.LetzterTag), abbruch);
+    }
+}
+
+/// <summary>
+/// Story 3-7: <see cref="IFreizeitSchalterLesen"/> über den Lese-Kontext unter dem Mandantenfilter; eine unbekannte oder fremde Freizeit
+/// hat keinen Schalter an.
+/// </summary>
+internal sealed class FreizeitSchalterLesen(FreizeitenLeseDbContext db) : IFreizeitSchalterLesen
+{
+    public async Task<IReadOnlyCollection<FunktionsSchalter>> SchalterAsync(Guid freizeitId, CancellationToken abbruch = default)
+    {
+        var freizeit = await db.Freizeiten.SingleOrDefaultAsync(f => f.Id == freizeitId, abbruch);
+        return freizeit?.Schalter() ?? [];
     }
 }

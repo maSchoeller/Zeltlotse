@@ -217,6 +217,9 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 // Story 2-4: Fragen-Auswahl des Freizeitpasses (Leitung).
                 "GET /api/freizeiten/{freizeitId:guid}/fragen",
                 "PATCH /api/freizeiten/{freizeitId:guid}/fragen",
+                // Story 3-7: Module der Freizeit (Leitung).
+                "GET /api/freizeiten/{freizeitId:guid}/module",
+                "PATCH /api/freizeiten/{freizeitId:guid}/module",
                 // Story 2-5: Freizeitpass im Freizeit-Kontext (Personen), Personenliste und Team-Notizen (Freizeiten), Leitung und Team.
                 "GET /api/freizeiten/{freizeitId:guid}/personen/freizeitpass/{personId:guid}",
                 "GET /api/freizeiten/{freizeitId:guid}/personenliste",
@@ -294,6 +297,26 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         Assert.DoesNotContain(
             endpunkte,
             e => e.Endpunkt.Metadata.GetMetadata<NurFreizeitRolleMetadaten>() is not null && e.Endpunkt.Metadata.GetMetadata<NurOrgRolleMetadaten>() is not null);
+    }
+
+    [Fact]
+    public async Task Jeder_Endpunkt_von_Kueche_und_Finanzen_gehoert_zu_seinem_Schalter_und_jeder_Schalter_Endpunkt_prueft_die_Freizeit_Rolle()
+    {
+        var endpunkte = await EndpunkteAsync();
+
+        // Story 3-7 (AD-20): Leitplanke für V4 und V5. Heute gibt es dort noch keine Endpunkte; dann müssen sie den Schalter erklären.
+        foreach (var (bereich, schalter) in new[] { ("kueche", FunktionsSchalter.Verpflegung), ("finanzen", FunktionsSchalter.Finanzen) })
+        {
+            var praefix = $"/api/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/{bereich}";
+            Assert.All(
+                endpunkte.Where(e => e.Pfad == praefix || e.Pfad.StartsWith(praefix + "/", StringComparison.Ordinal)),
+                e => Assert.Equal(schalter, e.Endpunkt.Metadata.GetMetadata<GehoertZuSchalterMetadaten>()?.Schalter));
+        }
+
+        // Ein Schalter ohne Freizeit-Rolle wäre ein Konfigurationsfehler (die Rechteprüfung wirft); kein echter Endpunkt hat ihn.
+        Assert.All(
+            endpunkte.Where(e => e.Endpunkt.Metadata.GetMetadata<GehoertZuSchalterMetadaten>() is not null),
+            e => Assert.NotNull(e.Endpunkt.Metadata.GetMetadata<NurFreizeitRolleMetadaten>()));
     }
 
     [Fact]

@@ -38,6 +38,9 @@ internal sealed class TestEndpunkte : IZusatzEndpunkte
         // AD-30: der 403-Zweig der Freizeit-Rechteprüfung (Leitung an einem Endpunkt nur für das Team).
         api.MapGet($"/test/nur-team/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}", () => TypedResults.Ok(new { ok = true }))
             .NurFreizeitRolle(Zeltlotse.SharedKernel.Rechte.FreizeitRolle.Team);
+        // Story 3-7: Schalter ohne Freizeit-Rolle ist ein Konfigurationsfehler des Endpunkts (500).
+        api.MapGet($"/test/schalter-ohne-rolle/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}", () => TypedResults.Ok(new { ok = true }))
+            .GehoertZuSchalter(Zeltlotse.SharedKernel.Rechte.FunktionsSchalter.Verpflegung);
         api.MapGet("/test/keks-ohne-praefix", (HttpContext kontext) =>
         {
             kontext.Response.Cookies.Append("zeltlotse", "1");
@@ -51,6 +54,22 @@ internal sealed class TestEndpunkte : IZusatzEndpunkte
     {
         app.MapPost("/test/formular", ([FromForm] string? wert) => TypedResults.Ok(new { wert }));
         app.MapGet("/test/status/{code:int}", (int code) => Results.StatusCode(code));
+        // Story 3-7 (AD-20): ein Endpunkt des Schalters Verpflegung für Leitung und Team. Außerhalb der anonymen Test-Gruppe, damit er wie die
+        // echten Endpunkte eine Sitzung verlangt (401).
+        app.MapGet($"/api/test/schalter/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}", () => TypedResults.Ok(new { ok = true }))
+            .RequireAuthorization()
+            .NurFreizeitRolle(Zeltlotse.SharedKernel.Rechte.FreizeitRolle.Leitung, Zeltlotse.SharedKernel.Rechte.FreizeitRolle.Team)
+            .GehoertZuSchalter(Zeltlotse.SharedKernel.Rechte.FunktionsSchalter.Verpflegung);
+        // Story 3-7: Rolle vor Schalter – nur Leitung, Schalter Verpflegung (Team bekommt 403, auch wenn der Schalter aus ist).
+        app.MapGet($"/api/test/schalter-leitung/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}", () => TypedResults.Ok(new { ok = true }))
+            .RequireAuthorization()
+            .NurFreizeitRolle(Zeltlotse.SharedKernel.Rechte.FreizeitRolle.Leitung)
+            .GehoertZuSchalter(Zeltlotse.SharedKernel.Rechte.FunktionsSchalter.Verpflegung);
+        // Story 3-7: die Pipeline lehnt einen Benutzer-Command mit ausgeschaltetem Schalter ab; der Host antwortet 404 ohne Details.
+        app.MapGet($"/api/test/schalter-aus-ausnahme/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}", string (Guid freizeitId) =>
+                throw new Zeltlotse.SharedKernel.Pipeline.SchalterAusAusnahme(freizeitId, Zeltlotse.SharedKernel.Rechte.FunktionsSchalter.Verpflegung))
+            .RequireAuthorization()
+            .NurFreizeitRolle(Zeltlotse.SharedKernel.Rechte.FreizeitRolle.Leitung, Zeltlotse.SharedKernel.Rechte.FreizeitRolle.Team);
     }
 
     public static void Registrieren(IServiceCollection services) => services.AddSingleton<IZusatzEndpunkte, TestEndpunkte>();

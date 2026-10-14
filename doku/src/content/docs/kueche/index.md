@@ -15,4 +15,4 @@ sidebar:
 - **Allergien** – aus den Freizeitpässen sieht die Küche, welche der 14 EU-Hauptallergene in der Freizeit vorkommen.
 - **Restetag** – eine Mahlzeit spontan zur Resteverwertung erklären.
 
-Die Küche gibt es nur, wenn die Leitung das Modul **Verpflegung** für die Freizeit eingeschaltet hat.
+Die Küche gibt es nur, wenn die Leitung das Modul **Verpflegung** für die Freizeit eingeschaltet hat – siehe [Module schalten](/leitung/module-schalten/).
