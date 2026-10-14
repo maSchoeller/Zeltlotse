@@ -33,6 +33,9 @@ public sealed class LeitungsCockpitSeitenTests : BunitContext
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         _server.Bei(HttpMethod.Get, "/api/betrieb/antiforgery", () => NachgebildeterHandler.Json(HttpStatusCode.OK, $$"""{"token":"token-{{++_tokens}}"}"""));
+        // Story 3-5: Die Startseite lädt die Aufgaben mit; ohne Aufgaben weder Zeile noch eigene Aufgaben.
+        _server.Bei(r => r.Method == HttpMethod.Get && r.RequestUri!.AbsolutePath.EndsWith("/programm/aufgaben", StringComparison.Ordinal),
+            _ => Task.FromResult(NachgebildeterHandler.Json(HttpStatusCode.OK, "[]")));
         Services.AddScoped<AppSitzung>();
         Services.AddScoped<ISitzung>(sp => sp.GetRequiredService<AppSitzung>());
         Services.AddScoped(_ => new AntiforgeryHandler { InnerHandler = _server });
@@ -203,6 +206,21 @@ public sealed class LeitungsCockpitSeitenTests : BunitContext
         Assert.Empty(Zeilen(card));
         Assert.Empty(cut.FindAll(".elkw-alert--warnung"));
         Assert.Null(Card(cut, "Freizeitpässe unvollständig"));
+    }
+
+    [Fact]
+    public void Scheitert_der_Abruf_der_Aufgaben_gibt_es_kein_Keine_offenen_Punkte()
+    {
+        // Story 3-5: Alle anderen Abrufe gelingen ohne Zeile; nur die Aufgaben scheitern (500).
+        _server.Bei(r => r.Method == HttpMethod.Get && r.RequestUri!.AbsolutePath == $"/api/freizeiten/{Freizeit}/programm/aufgaben",
+            _ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError)));
+
+        var cut = Startseite(Leitung);
+
+        cut.WaitForAssertion(() => Assert.NotNull(Card(cut, "Warnhinweise")));
+        Assert.Empty(cut.FindAll(".elkw-alert--erfolg"));
+        Assert.DoesNotContain("Keine offenen Punkte.", cut.Markup, StringComparison.Ordinal);
+        Assert.Empty(Zeilen(Card(cut, "Warnhinweise")!));
     }
 
     [Fact]

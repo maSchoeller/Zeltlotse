@@ -7,6 +7,7 @@
 @inject FreizeitenApiClient Freizeiten
 @inject PersonenApiClient Personen
 @inject SicherheitApiClient SicherheitApi
+@inject ProgrammApiClient ProgrammApi
 @* Startseite der Freizeit (FR-45, AD-29): Name, Phase, Zeitraum, eigene Rolle aus dem Freizeit-Kontext, die Leitung und bis
    wann die Freizeit Einsicht in Freizeitpässe hat (Freigabefenster). Der Client setzt die Ansicht aus dem Kontext-Endpunkt
    und dem Endpunkt der Freizeit zusammen (AD-2).
@@ -30,6 +31,10 @@
    Story 2-10: Mit „freizeit-einstellungen“ (Leitung) lädt das Cockpit still die Einträge des Vorfall-Protokolls; ab einem Eintrag steht die
    Card „Vorfall-Notizen“ (neueste oben, je Eintrag ein Link auf das Vorfall-Protokoll der Person). Sie ist kein Warnhinweis und zählt nicht
    in „Warnhinweise“; das Team sieht und lädt sie nicht.
+   Story 3-5: Für alle Rollen lädt die Startseite (nicht nach dem Abschluss) still die Aufgaben: Card „Meine Aufgaben“ mit den eigenen offenen
+   Aufgaben (Titel als Link), „Alle übernommenen Aufgaben sind erledigt.“ oder „Keine Aufgaben übernommen.“ und dem Link „Alle Aufgaben“, während der Freizeit darunter der Kurzlink „Schaden
+   melden“. Im Cockpit der Leitung die Zeile „N Aufgaben sind noch nicht übernommen“ (offen, unbesetzt, Phase höchstens die der Freizeit) mit Link
+   auf die Aufgaben. Scheitert der Abruf, entfallen Card und Zeile. Der Knopf „Aufgaben“ steht nach „Programm“.
    403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>@(_freizeit?.Name ?? "Freizeit") – Zeltlotse</PageTitle>
 
@@ -77,6 +82,33 @@ else
             <p><Knopf Href="@SchutzkonzeptZiel" Ansichtswechsel="true">Schutzkonzept lesen</Knopf></p>
         </Card>
     }
+    @if (_aufgaben is not null)
+    {
+        <Card Titel="Meine Aufgaben" Id="meine-aufgaben">
+            @if (!_aufgaben.Any(a => a.Meins))
+            {
+                <p>Keine Aufgaben übernommen.</p>
+            }
+            else if (MeineOffenen.Count == 0)
+            {
+                <p>Alle übernommenen Aufgaben sind erledigt.</p>
+            }
+            else
+            {
+                <ul>
+                    @foreach (var aufgabe in MeineOffenen)
+                    {
+                        <li @key="aufgabe.Id"><a href="@ProgrammTexte.AufgabeZiel(FreizeitId, aufgabe.Id)">@aufgabe.Titel</a></li>
+                    }
+                </ul>
+            }
+            <p><a href="@ProgrammTexte.AufgabenZiel(FreizeitId)">Alle Aufgaben</a></p>
+            @if (_kontext.Phase == Phase.Laeuft)
+            {
+                <p><a href="@($"freizeiten/{FreizeitId}/schaeden")">Schaden melden</a></p>
+            }
+        </Card>
+    }
     @if (DarfAnmeldungen)
     {
         @if (_anmeldungen is not null)
@@ -114,6 +146,10 @@ else
                     {
                         <li><a href="@($"freizeiten/{FreizeitId}/einstellungen#sicherheitskette")">Sicherheitskette ist noch nicht eingerichtet</a></li>
                     }
+                    @if (AufgabenUnbesetzt > 0)
+                    {
+                        <li><a href="@ProgrammTexte.AufgabenZiel(FreizeitId)">@Anzeige.AufgabenUnbesetzt(AufgabenUnbesetzt)</a></li>
+                    }
                 </ul>
             }
             else if (AlleZeilenGeladen)
@@ -147,6 +183,8 @@ else
     }
     @* Story 3-1: Das Programm (Wochenraster) ist in jeder Phase für Leitung und Team erreichbar; eine Navigation gibt es noch nicht. *@
     <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/programm")" Ansichtswechsel="true">Programm</Knopf></p>
+    @* Story 3-5: Die Aufgaben der Freizeit, in jeder Phase für Leitung und Team. *@
+    <p><Knopf Art="KnopfArt.Outline" Href="@ProgrammTexte.AufgabenZiel(FreizeitId)" Ansichtswechsel="true">Aufgaben</Knopf></p>
     @* Story 3-3: Das Inventar der Organisation mit den Reservierungen dieser Freizeit, in jeder Phase für Leitung und Team. *@
     <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/inventar")" Ansichtswechsel="true">Inventar</Knopf></p>
     @* Story 3-4: Schäden, Verluste und Entnahmen der Freizeit, in jeder Phase für Leitung und Team (nach dem Abschluss Anschaffungswünsche). *@
@@ -183,6 +221,7 @@ else
     private List<PersonenlisteZeile>? _personen;
     private Zeltlotse.Api.Contracts.Sicherheit.Schutzkonzept? _schutzkonzept;
     private List<Zeltlotse.Api.Contracts.Sicherheit.VorfallEintrag>? _vorfaelle;
+    private List<Zeltlotse.Api.Contracts.Programm.Aufgabe>? _aufgaben;
     private bool _uebertraegt;
     private string? _meldung;
     private bool _meldungFehler;
@@ -217,11 +256,20 @@ else
     private const string NotfallSatz = "Was jetzt zu tun ist, wen anrufen und die Freizeitpässe – ein Tipp entfernt.";
 
     /// <summary>Zeilen der Card „Warnhinweise“: je vorhandener Warnart eine.</summary>
-    private int AnzahlZeilen => (_stand is { Count: > 0 } ? 1 : 0) + (_personenMitWarnung is > 0 ? 1 : 0) + (KetteFehlt ? 1 : 0);
+    private int AnzahlZeilen =>
+        (_stand is { Count: > 0 } ? 1 : 0) + (_personenMitWarnung is > 0 ? 1 : 0) + (KetteFehlt ? 1 : 0) + (AufgabenUnbesetzt > 0 ? 1 : 0);
 
-    /// <summary>Alle Abrufe, aus denen Zeilen entstehen können, sind gelungen.</summary>
+    /// <summary>Alle Abrufe, aus denen Zeilen entstehen können, sind gelungen (die Aufgaben nur vor dem Abschluss).</summary>
     private bool AlleZeilenGeladen =>
-        (!DarfAnmeldungen || _stand is not null) && (!DarfNachweise || _personenMitWarnung is not null) && (!DarfEinstellungen || _kette is not null);
+        (!DarfAnmeldungen || _stand is not null) && (!DarfNachweise || _personenMitWarnung is not null) && (!DarfEinstellungen || _kette is not null)
+        && (_kontext!.Phase == Phase.Gelaufen || _aufgaben is not null);
+
+    /// <summary>Story 3-5: offene, unbesetzte Aufgaben bis zur Phase der Freizeit (nicht nach dem Abschluss; ohne Aufgaben 0).</summary>
+    private int AufgabenUnbesetzt =>
+        _aufgaben is null || _kontext is null || _kontext.Phase == Phase.Gelaufen ? 0 : ProgrammTexte.AufgabenUnbesetzt(_aufgaben, _kontext.Phase);
+
+    /// <summary>Story 3-5: eigene, nicht erledigte Aufgaben für die Card „Meine Aufgaben“.</summary>
+    private List<Zeltlotse.Api.Contracts.Programm.Aufgabe> MeineOffenen => [.. (_aufgaben ?? []).Where(a => a.Meins && !a.Erledigt)];
 
     private string Anmeldestand(string titel, AnmeldungArt art)
     {
@@ -273,6 +321,7 @@ else
         _personen = null;
         _schutzkonzept = null;
         _vorfaelle = null;
+        _aufgaben = null;
         _meldung = null;
         try
         {
@@ -300,10 +349,14 @@ else
         var schutzkonzept = _kontext.Phase != Phase.Gelaufen
             ? SicherAsync(() => SicherheitApi.SchutzkonzeptLadenAsync(FreizeitId))
             : Task.FromResult<Zeltlotse.Api.Contracts.Sicherheit.Schutzkonzept?>(null);
+        // Story 3-5: die Aufgaben für „Meine Aufgaben“ und den Warnhinweis (nicht nach dem Abschluss; scheitert → weder Card noch Zeile).
+        var aufgaben = _kontext.Phase != Phase.Gelaufen
+            ? SicherAsync(() => ProgrammApi.AufgabenAsync(FreizeitId))
+            : Task.FromResult<List<Zeltlotse.Api.Contracts.Programm.Aufgabe>?>(null);
         if (!DarfCockpit)
         {
-            await Task.WhenAll(personen, schutzkonzept);
-            (_personen, _schutzkonzept) = (personen.Result, schutzkonzept.Result);
+            await Task.WhenAll(personen, schutzkonzept, aufgaben);
+            (_personen, _schutzkonzept, _aufgaben) = (personen.Result, schutzkonzept.Result, aufgaben.Result);
             return;
         }
 
@@ -316,9 +369,9 @@ else
         var vorfaelle = DarfEinstellungen
             ? SicherAsync(() => SicherheitApi.VorfaelleLadenAsync(FreizeitId))
             : Task.FromResult<List<Zeltlotse.Api.Contracts.Sicherheit.VorfallEintrag>?>(null);
-        await Task.WhenAll(anmeldungen, stand, warnungen, kette, personen, schutzkonzept, vorfaelle);
+        await Task.WhenAll(anmeldungen, stand, warnungen, kette, personen, schutzkonzept, vorfaelle, aufgaben);
         (_anmeldungen, _stand, _personenMitWarnung, _kette, _personen) = (anmeldungen.Result, stand.Result, warnungen.Result, kette.Result, personen.Result);
-        (_schutzkonzept, _vorfaelle) = (schutzkonzept.Result, vorfaelle.Result);
+        (_schutzkonzept, _vorfaelle, _aufgaben) = (schutzkonzept.Result, vorfaelle.Result, aufgaben.Result);
         _cockpitGeladen = true;
     }
 

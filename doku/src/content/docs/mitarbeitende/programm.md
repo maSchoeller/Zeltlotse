@@ -60,12 +60,14 @@ In der Card **Bearbeiten** lassen sich **Titel** und **Uhrzeit** ändern. Zeltlo
 
 Unter der Card **Bearbeiten** steht die Card **Material**: was für den Programmpunkt gebraucht wird, mit Menge, Stand und wer es mitbringt. Über dem Wochenraster führt der Link **Materialliste** zum Material aller Programmpunkte. Wie das geht, steht unter [Material planen und packen](/mitarbeitende/material/).
 
+Darunter steht die Card **Aufgaben** mit den Aufgaben, die zu diesem Programmpunkt gehören, und dem Formular **Aufgabe hinzufügen**. Wie Aufgaben funktionieren, steht unter [Aufgaben übernehmen und abhaken](/mitarbeitende/aufgaben/).
+
 ## Nach dem Abschluss
 
 Nach dem Abschluss der Freizeit ist das Programm nur lesbar: Oben steht „Diese Freizeit ist abgeschlossen und nur lesbar.“; die Knöpfe, die Card „Programmpunkt anlegen“ und die Felder zum Bearbeiten fehlen. Die Seite eines Programmpunkts nennt Titel und Uhrzeit dann als Liste.
 
 ## Noch nicht dabei
 
-Aufgaben, Dokumente am Programmpunkt, die Programmbibliothek und „Alle informieren?“ nach einer geänderten Uhrzeit kommen mit späteren Versionen. Eine geänderte Uhrzeit teilt Zeltlotse heute niemandem mit.
+Dokumente am Programmpunkt, die Programmbibliothek und „Alle informieren?“ nach einer geänderten Uhrzeit kommen mit späteren Versionen. Eine geänderte Uhrzeit teilt Zeltlotse heute niemandem mit.
 
 Wer einen Programmpunkt übernommen hat, steht auch in der Datenauskunft der Person unter „Programm“ – mehr dazu unter [Was passiert mit meinen Daten](/daten/#programm).

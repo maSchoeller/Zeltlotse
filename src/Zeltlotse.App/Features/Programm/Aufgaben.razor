@@ -1,0 +1,235 @@
+@page "/freizeiten/{FreizeitId:guid}/aufgaben"
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Programm
+@using Zeltlotse.Ui.Kontext
+@inject FreizeitKontextDienst Kontext
+@inject FreizeitenApiClient Freizeiten
+@inject ProgrammApiClient ProgrammApi
+@* Aufgaben (CAP-23, FR-39, Story 3-5; EXPERIENCE.md → Fläche „Aufgaben / Meine Aufgaben“) für Leitung und Team, erreicht über den Knopf
+   „Aufgaben“ auf der Startseite. Dachzeile „Planen“, Überschrift „Aufgaben“, Reiter „Alle“ und „Meine Aufgaben“ (?meine=true, die Wahl steht in
+   der Adresse). Je Phase eine Card („Vorbereitung“, „Während der Freizeit“, „Nachbereitung“), leere Cards entfallen; je Aufgabe eine
+   AufgabeZeile. Ohne Aufgaben „Noch keine Aufgaben.“, im Reiter „Meine Aufgaben“ „Keine Aufgaben übernommen.“. Darunter das Formular „Aufgabe
+   anlegen“ (Titel *, Phase, vorbelegt mit der Phase der Freizeit). Beim ersten Öffnen stehen die Vorlagen der Organisation schon drin. In der
+   Phase „gelaufen“ nur lesbar. Kontext oder Aufgaben nicht verfügbar → „Diese Seite ist nicht verfügbar.“; scheitern Freizeit, Personenliste
+   oder Wochenraster, fehlen nur Namen bzw. Titel der Programmpunkte. *@
+<PageTitle>Aufgaben – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Planen</Dachzeile>
+    <h1>Aufgaben</h1>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+
+    @if (_aufgaben is null || _kontext is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@ProgrammTexte.AbgeschlossenText</p>
+            </Meldung>
+        }
+        @if (_meldung is not null)
+        {
+            <Meldung Titel="@(_meldungFehler ? "Fehler" : "Gespeichert")" Art="@(_meldungFehler ? MeldungArt.Fehler : MeldungArt.Erfolg)">
+                <p>@_meldung</p>
+            </Meldung>
+        }
+        <Reiter Bezeichnung="Aufgaben" Eintraege="ReiterEintraege">
+            @if (Sichtbar.Count == 0)
+            {
+                <LeerZustand Satz="@(Meine ? "Keine Aufgaben übernommen." : "Noch keine Aufgaben.")" />
+            }
+            @foreach (var gruppe in Sichtbar.GroupBy(a => a.Phase).OrderBy(g => g.Key))
+            {
+                <Card @key="gruppe.Key" Titel="@Anzeige.AufgabenPhase(gruppe.Key)">
+                    @foreach (var aufgabe in gruppe)
+                    {
+                        <AufgabeZeile @key="aufgabe.Id" FreizeitId="FreizeitId" Aufgabe="aufgabe" Namen="_namen" Punkte="_punkte" NurLesen="Abgeschlossen"
+                                      Geaendert="Geaendert" NeuLaden="NeuLadenAsync" />
+                    }
+                </Card>
+            }
+        </Reiter>
+
+        @if (!Abgeschlossen)
+        {
+            <Card Titel="Aufgabe anlegen" Id="aufgabe-anlegen">
+                <Formular Absenden="AnlegenAsync">
+                    <Feld Label="Titel *" Id="aufgabe-titel" Wert="@_titel" Fehler="@_titelFehler" autocomplete="off"
+                          Hinweis="@($"Höchstens {AufgabenFelder.TitelMaximaleLaenge} Zeichen")" @oninput="@(e => _titel = e.Value?.ToString())" />
+                    <Auswahl Legende="Phase" Gruppe="aufgabe-phase" Optionen="ProgrammTexte.AufgabenPhaseOptionen" Wert="@_phase.ToString()"
+                             Fehler="@_phaseFehler" WertGeaendert="PhaseGewaehlt" Deaktiviert="_uebertraegt" />
+                    <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Aufgabe anlegen</Knopf>
+                </Formular>
+                <p>* Pflichtfeld</p>
+            </Card>
+        }
+    }
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    private List<Aufgabe>? _aufgaben;
+    private IReadOnlyDictionary<Guid, string> _namen = new Dictionary<Guid, string>();
+    private IReadOnlyDictionary<Guid, string> _punkte = new Dictionary<Guid, string>();
+    private Guid? _geladen;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private string? _meldung;
+    private bool _meldungFehler;
+    private string? _titel;
+    private AufgabenPhase _phase = AufgabenPhase.Vorbereitung;
+    private string? _titelFehler;
+    private string? _phaseFehler;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    /// <summary>Reiter „Meine Aufgaben“.</summary>
+    [SupplyParameterFromQuery(Name = "meine")] public bool Meine { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    private List<Aufgabe> Sichtbar => [.. (_aufgaben ?? []).Where(a => !Meine || a.Meins)];
+
+    private IReadOnlyList<ReiterEintrag> ReiterEintraege =>
+    [
+        new("Alle", ProgrammTexte.AufgabenZiel(FreizeitId), !Meine),
+        new("Meine Aufgaben", ProgrammTexte.AufgabenZiel(FreizeitId, meine: true), Meine),
+    ];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Nur der Reiter hat gewechselt: nichts neu laden (die Wahl steht in der Adresse).
+        if (_geladen == FreizeitId && _aufgaben is not null)
+        {
+            return;
+        }
+
+        _kontext = null;
+        _aufgaben = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var aufgaben = ProgrammApi.AufgabenAsync(FreizeitId);
+            var freizeit = Leise(Freizeiten.LadenAsync(FreizeitId));
+            var personen = Leise(Freizeiten.PersonenlisteLadenAsync(FreizeitId));
+            var raster = Leise(ProgrammApi.LadenAsync(FreizeitId));
+            await Task.WhenAll(kontext, aufgaben, freizeit, personen, raster);
+            if (kontext.Result is null || aufgaben.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _aufgaben) = (kontext.Result, aufgaben.Result);
+            _namen = ProgrammTexte.Namen(freizeit.Result, personen.Result);
+            _punkte = (raster.Result?.Punkte ?? []).ToDictionary(p => p.Id, p => p.Titel);
+            _phase = ProgrammTexte.AufgabenPhaseZu(_kontext.Phase);
+            _geladen = FreizeitId;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>Ein Abruf, dessen Scheitern nur Namen oder Titel kostet.</summary>
+    private static async Task<T?> Leise<T>(Task<T?> abruf)
+        where T : class
+    {
+        try
+        {
+            return await abruf;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            return null;
+        }
+    }
+
+    private void Geaendert(Aufgabe aufgabe) => _aufgaben = [.. _aufgaben!.Select(a => a.Id == aufgabe.Id ? aufgabe : a)];
+
+    /// <summary>Beim Konflikt an einer Aufgabe: die Aufgaben neu holen (scheitert das, bleibt die bisherige Liste).</summary>
+    private async Task NeuLadenAsync()
+    {
+        try
+        {
+            _aufgaben = await ProgrammApi.AufgabenAsync(FreizeitId) ?? _aufgaben;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            Fehler(AnmeldungAbschluss.FehlerText);
+        }
+    }
+
+    private void PhaseGewaehlt(string wert) => _phase = Enum.Parse<AufgabenPhase>(wert);
+
+    /// <summary>„Aufgabe anlegen“: danach steht sie in ihrer Phase, das Formular ist leer.</summary>
+    private async Task AnlegenAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        (_titelFehler, _phaseFehler, _meldung) = (null, null, null);
+        try
+        {
+            var aktion = await ProgrammApi.AufgabeAnlegenAsync(FreizeitId, new AufgabeNeu(_titel, _phase, null));
+            switch (aktion.Ergebnis)
+            {
+                case ProgrammAktionErgebnis.Erfolg:
+                    _aufgaben = await ProgrammApi.AufgabenAsync(FreizeitId) ?? [.. _aufgaben!, aktion.Aufgabe!];
+                    (_meldung, _meldungFehler) = ($"Aufgabe „{aktion.Aufgabe!.Titel}“ angelegt.", false);
+                    _titel = null;
+                    break;
+                case ProgrammAktionErgebnis.Abgeschlossen:
+                    Fehler(ProgrammTexte.AbgeschlossenText);
+                    break;
+                default:
+                    _titelFehler = aktion.Feldfehler.GetValueOrDefault(AufgabenFelder.Titel);
+                    _phaseFehler = aktion.Feldfehler.GetValueOrDefault(AufgabenFelder.Phase);
+                    if (_titelFehler is null && _phaseFehler is null)
+                    {
+                        Fehler(AnmeldungAbschluss.FehlerText);
+                    }
+
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            Fehler(AnmeldungAbschluss.FehlerText);
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private void Fehler(string text) => (_meldung, _meldungFehler) = (text, true);
+}

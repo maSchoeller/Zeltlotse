@@ -1599,7 +1599,7 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Programmpunkt", new() { Timeout = 60_000 });
         await Assertions.Expect(seite.Locator(".elkw-kicker")).ToHaveTextAsync("Programm");
         await Assertions.Expect(seite.GetByText("Montag, 2. August 2027", new() { Exact = true })).ToBeVisibleAsync();
-        await Assertions.Expect(seite.Locator(".elkw-status")).ToHaveTextAsync("Übernommen: Lea Feuerstein");
+        await Assertions.Expect(seite.Locator(".elkw-status").First).ToHaveTextAsync("Übernommen: Lea Feuerstein");
         await Assertions.Expect(seite.GetByLabel("Titel", new() { Exact = true })).ToHaveValueAsync("Lagerfeuer");
         await Assertions.Expect(seite.GetByLabel("Uhrzeit", new() { Exact = true })).ToHaveValueAsync("20:00");
         // Nur lesend: Jonas löscht nicht, damit der Demo-Stand für die anderen Bilder bleibt.
@@ -1801,6 +1801,88 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await E2EHilfe.AxeAsync(seite);
 
         await BildAsync(seite, "anschaffungswuensche", geraet);
+    }
+
+    // ---------- Story 3-5: Aufgaben und Aufgaben-Vorlagen ----------
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Aufgaben(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await LeaStartseiteAsync(seite);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Aufgaben", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Aufgaben", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("main .elkw-kicker").First).ToHaveTextAsync("Planen");
+        await Assertions.Expect(seite.Locator(".zl-reiter nav a")).ToHaveTextAsync(["Alle", "Meine Aufgaben"], new() { Timeout = 60_000 });
+        // Die Vorlagen der Organisation stehen schon drin (Zeltplatz-Vertrag, Erste-Hilfe-Kasten, Zeltplatz übergeben), dazu die eigenen Aufgaben.
+        await Assertions.Expect(seite.Locator("section.elkw-card h2")).ToHaveTextAsync(
+            ["Vorbereitung", "Während der Freizeit", "Nachbereitung", "Aufgabe anlegen"], new() { Timeout = 60_000 });
+        var andacht = TerminIn(seite.Locator("main"), "Andacht am Lagerfeuer vorbereiten");
+        await Assertions.Expect(andacht.Locator(".elkw-status")).ToHaveTextAsync("Übernommen: Lea Feuerstein");
+        await Assertions.Expect(andacht.GetByRole(AriaRole.Link, new() { Name = "Am Programmpunkt: Lagerfeuer" })).ToBeVisibleAsync();
+        await Assertions.Expect(andacht.GetByRole(AriaRole.Button, new() { Name = "Abgeben" })).ToBeVisibleAsync();
+        var vertrag = TerminIn(seite.Locator("main"), "Zeltplatz-Vertrag prüfen");
+        await Assertions.Expect(vertrag.Locator(".elkw-status")).ToHaveTextAsync(["Übernommen: Jonas Hüttner", "Erledigt"]);
+        var fotos = TerminIn(seite.Locator("main"), "Fotos sammeln");
+        await Assertions.Expect(fotos.Locator(".elkw-status")).ToHaveTextAsync("Offen");
+        await Assertions.Expect(fotos.GetByRole(AriaRole.Button, new() { Name = "Ich übernehme" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        // Nur lesend, damit der Demo-Stand für die anderen Bilder bleibt.
+        await BildAsync(seite, "aufgaben", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Meine_Aufgaben(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await LeaStartseiteAsync(seite);
+        var card = seite.Locator(".elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = "Meine Aufgaben", Exact = true }) });
+        await Assertions.Expect(card.Locator("li a")).ToHaveTextAsync(
+            ["Erste-Hilfe-Kasten auffüllen", "Andacht am Lagerfeuer vorbereiten"], new() { Timeout = 60_000 });
+        await Assertions.Expect(card.GetByRole(AriaRole.Link, new() { Name = "Alle Aufgaben" })).ToBeVisibleAsync();
+        // Das Team sieht keinen Warnhinweis zu unbesetzten Aufgaben.
+        await Assertions.Expect(seite.GetByText("noch nicht übernommen")).ToHaveCountAsync(0);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await card.ScrollIntoViewIfNeededAsync();
+        await BildAsync(seite, "meine-aufgaben", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Org_Aufgaben_Vorlagen(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, OrgAdminMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Organisation öffnen" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Jugendwerk Musterstadt", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Aufgaben-Vorlagen öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Aufgaben-Vorlagen", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("main .elkw-kicker").First).ToHaveTextAsync("Organisation");
+        await Assertions.Expect(seite.Locator("section.elkw-card h2")).ToHaveTextAsync(
+            ["Vorlage hinzufügen", "Vorbereitung", "Nachbereitung"], new() { Timeout = 60_000 });
+        var vorbereitung = seite.Locator("section.elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = "Vorbereitung", Exact = true }) });
+        await Assertions.Expect(vorbereitung.Locator("input").Nth(0)).ToHaveValueAsync("Erste-Hilfe-Kasten auffüllen");
+        await Assertions.Expect(vorbereitung.Locator("input").Nth(1)).ToHaveValueAsync("Zeltplatz-Vertrag prüfen");
+        await Assertions.Expect(vorbereitung.GetByRole(AriaRole.Button, new() { Name = "Vorlage löschen" })).ToHaveCountAsync(2);
+        await Assertions.Expect(seite.GetByRole(AriaRole.Radio, new() { Name = "Vorbereitung", Exact = true })).ToBeCheckedAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "aufgaben-vorlagen", geraet);
     }
 
     /// <summary>Der Termin mit diesem Titel innerhalb eines Bereichs (ein Tag am Handy oder eine Spalte am Laptop).</summary>

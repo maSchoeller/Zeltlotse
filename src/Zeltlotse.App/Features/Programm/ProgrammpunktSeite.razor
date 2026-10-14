@@ -16,7 +16,9 @@
    „Diese Seite ist nicht verfügbar.“ Story 3-2: Card „Material“ mit dem Material des Punkts (aus der Materialliste gefiltert; Bezeichnung und
    Menge als Autosave-Felder, Status per Segmente, „Ich bringe das mit“, Löschen), ohne Material „Noch kein Material.“, darunter das Formular
    „Material hinzufügen“ (Bezeichnung *, Menge). Story 3-3: Die Seite lädt still das Inventar der Freizeit mit; am Material steht „Aus dem
-   Inventar: …“ oder die Auswahl „Aus dem Inventar“ mit „Reservieren“. Nach dem Reservieren lädt sie Material und Inventar neu. *@
+   Inventar: …“ oder die Auswahl „Aus dem Inventar“ mit „Reservieren“. Nach dem Reservieren lädt sie Material und Inventar neu.
+   Story 3-5: Card „Aufgaben“ mit den Aufgaben des Punkts (AufgabeZeile, ohne Hinweis auf den Punkt), ohne Aufgaben „Noch keine Aufgaben.“, darunter
+   das Formular „Aufgabe hinzufügen“ (nur der Titel; Phase Vorbereitung). Scheitert der Abruf, zeigt die Card nur eine Meldung. *@
 <PageTitle>Programmpunkt – Zeltlotse</PageTitle>
 
 @if (_nichtVerfuegbar)
@@ -118,6 +120,36 @@ else
                 }
             }
         </Card>
+        <Card Titel="Aufgaben" Id="aufgaben">
+            @if (_aufgaben is null)
+            {
+                <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                    <p>@AufgabenFehlenText</p>
+                </Meldung>
+            }
+            else
+            {
+                @foreach (var aufgabe in _aufgaben)
+                {
+                    <AufgabeZeile @key="aufgabe.Id" FreizeitId="FreizeitId" Aufgabe="aufgabe" Namen="_namen" MitProgrammpunkt="false" NurLesen="Abgeschlossen"
+                                  Geaendert="AufgabeGeaendert" NeuLaden="AufgabenNeuLadenAsync" />
+                }
+                @if (_aufgaben.Count == 0)
+                {
+                    <LeerZustand Satz="Noch keine Aufgaben." />
+                }
+                @if (!Abgeschlossen)
+                {
+                    <h3>Aufgabe hinzufügen</h3>
+                    <Formular Absenden="AufgabeAnlegenAsync">
+                        <Feld Label="Titel *" Id="aufgabe-titel" Wert="@_aufgabeTitel" Fehler="@_aufgabeTitelFehler" autocomplete="off"
+                              Hinweis="@($"Höchstens {AufgabenFelder.TitelMaximaleLaenge} Zeichen")" @oninput="@(e => _aufgabeTitel = e.Value?.ToString())" />
+                        <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Aufgabe hinzufügen</Knopf>
+                    </Formular>
+                    <p>* Pflichtfeld</p>
+                }
+            }
+        </Card>
         @if (!Abgeschlossen)
         {
             @if (_punkt.Mahlzeit is null)
@@ -145,6 +177,9 @@ else
     private string? _menge;
     private string? _bezeichnungFehler;
     private string? _mengeFehler;
+    private List<Aufgabe>? _aufgaben = [];
+    private string? _aufgabeTitel;
+    private string? _aufgabeTitelFehler;
 
     [Parameter] public Guid FreizeitId { get; set; }
 
@@ -169,7 +204,9 @@ else
             var personen = Leise(Freizeiten.PersonenlisteLadenAsync(FreizeitId));
             var material = Leise(ProgrammApi.MaterialLadenAsync(FreizeitId));
             var inventar = Leise(InventarApi.FreizeitInventarAsync(FreizeitId));
-            await Task.WhenAll(kontext, raster, freizeit, personen, material, inventar);
+            var aufgaben = Leise(ProgrammApi.AufgabenAsync(FreizeitId));
+            await Task.WhenAll(kontext, raster, freizeit, personen, material, inventar, aufgaben);
+            _aufgaben = AufgabenDesPunkts(aufgaben.Result);
             _inventar = inventar.Result;
             _punkt = raster.Result?.Punkte.FirstOrDefault(p => p.Id == PunktId);
             _materialFehlt = material.Result is null;
@@ -199,6 +236,68 @@ else
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
         {
             _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Story 3-5: Scheitern die Aufgaben (Fehler oder nicht verfügbar), zeigt die Card nur diese Meldung.</summary>
+    public const string AufgabenFehlenText = "Die Aufgaben lassen sich gerade nicht laden.";
+
+    private List<Aufgabe>? AufgabenDesPunkts(List<Aufgabe>? alle) => alle is null ? null : [.. alle.Where(a => a.ProgrammpunktId == PunktId)];
+
+    private void AufgabeGeaendert(Aufgabe aufgabe) => _aufgaben = [.. (_aufgaben ?? []).Select(a => a.Id == aufgabe.Id ? aufgabe : a)];
+
+    /// <summary>Story 3-5: Beim Konflikt an einer Aufgabe die Aufgaben des Punkts neu holen.</summary>
+    private async Task AufgabenNeuLadenAsync()
+    {
+        try
+        {
+            _aufgaben = AufgabenDesPunkts(await ProgrammApi.AufgabenAsync(FreizeitId)) ?? _aufgaben;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Story 3-5: „Aufgabe hinzufügen“ am Programmpunkt (Phase Vorbereitung): danach steht sie in der Card, das Feld ist leer.</summary>
+    private async Task AufgabeAnlegenAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        (_aufgabeTitelFehler, _meldung) = (null, null);
+        try
+        {
+            var aktion = await ProgrammApi.AufgabeAnlegenAsync(FreizeitId, new AufgabeNeu(_aufgabeTitel, AufgabenPhase.Vorbereitung, PunktId));
+            switch (aktion.Ergebnis)
+            {
+                case ProgrammAktionErgebnis.Erfolg:
+                    _aufgaben = [.. _aufgaben ?? [], aktion.Aufgabe!];
+                    _aufgabeTitel = null;
+                    break;
+                case ProgrammAktionErgebnis.Abgeschlossen:
+                    _meldung = ProgrammTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _aufgabeTitelFehler = aktion.Feldfehler.GetValueOrDefault(AufgabenFelder.Titel);
+                    if (_aufgabeTitelFehler is null)
+                    {
+                        _meldung = AnmeldungAbschluss.FehlerText;
+                    }
+
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
         }
     }
 

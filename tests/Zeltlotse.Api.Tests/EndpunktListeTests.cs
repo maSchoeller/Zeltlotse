@@ -270,6 +270,16 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 "POST /api/freizeiten/{freizeitId:guid}/inventar/schaeden",
                 "PATCH /api/freizeiten/{freizeitId:guid}/inventar/schaeden/{eintragId:guid}",
                 "DELETE /api/freizeiten/{freizeitId:guid}/inventar/schaeden/{eintragId:guid}",
+                // Story 3-5: Aufgaben (Programm), alles für Leitung und Team.
+                "GET /api/freizeiten/{freizeitId:guid}/programm/aufgaben",
+                "POST /api/freizeiten/{freizeitId:guid}/programm/aufgaben",
+                "PATCH /api/freizeiten/{freizeitId:guid}/programm/aufgaben/{aufgabeId:guid}",
+                "DELETE /api/freizeiten/{freizeitId:guid}/programm/aufgaben/{aufgabeId:guid}",
+                "POST /api/freizeiten/{freizeitId:guid}/programm/aufgaben/{aufgabeId:guid}/uebernehmen",
+                "POST /api/freizeiten/{freizeitId:guid}/programm/aufgaben/{aufgabeId:guid}/abgeben",
+                "POST /api/freizeiten/{freizeitId:guid}/programm/aufgaben/{aufgabeId:guid}/erledigt",
+                "POST /api/freizeiten/{freizeitId:guid}/programm/aufgaben/{aufgabeId:guid}/offen",
+                "POST /api/freizeiten/{freizeitId:guid}/programm/aufgaben/{aufgabeId:guid}/vorlage",
             }.Order(StringComparer.Ordinal),
             freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
         Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));
@@ -290,8 +300,9 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         var mitOrg = endpunkte.Where(e => e.Endpunkt.RoutePattern.Parameters.Any(p => p.Name == Rechtemerkmale.OrgRouteWert)).ToList();
         // Story 1-5: dazu die sieben Prüf-Endpunkte des Org-Admins und die zwei der Nachweis-Richtlinie; Story 1-7: die zwei der Löschfristen.
         // Story 2-7: die vier Endpunkte der Org-Dokumente; Story 2-10: das Archiv der Vorfall-Notizen; Story 3-3: die vier des Inventars;
-        // Story 3-4: die zwei der Anschaffungswünsche.
-        Assert.Equal(29, mitOrg.Count);
+        // Story 3-4: die zwei der Anschaffungswünsche; Story 3-5: die vier der Aufgaben-Vorlagen.
+        Assert.Equal(33, mitOrg.Count);
+        Assert.Contains(mitOrg, e => e.Name == "PATCH /api/organisationen/{orgId:guid}/aufgaben-vorlagen/{vorlageId:guid}");
         Assert.Contains(mitOrg, e => e.Name == "DELETE /api/organisationen/{orgId:guid}/inventar/anschaffungswuensche/{eintragId:guid}");
         Assert.Contains(mitOrg, e => e.Name == "PATCH /api/organisationen/{orgId:guid}/inventar/{artikelId:guid}");
         Assert.Contains(mitOrg, e => e.Name == "GET /api/organisationen/{orgId:guid}/sicherheit/vorfall-archiv");

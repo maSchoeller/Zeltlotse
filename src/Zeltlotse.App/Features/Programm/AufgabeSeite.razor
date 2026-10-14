@@ -1,0 +1,307 @@
+@page "/freizeiten/{FreizeitId:guid}/aufgaben/{AufgabeId:guid}"
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Programm
+@using Zeltlotse.Ui.Kontext
+@inject FreizeitKontextDienst Kontext
+@inject FreizeitenApiClient Freizeiten
+@inject ProgrammApiClient ProgrammApi
+@inject NavigationManager Navigation
+@* Aufgabe (CAP-23, FR-39, FR-40, Story 3-5) für Leitung und Team, erreicht über den Titel in der Aufgabenliste, am Programmpunkt oder auf der
+   Startseite. Dachzeile „Planen“, Überschrift „Aufgabe“; „Übernommen: …“ bzw. „Offen“, bei einer Aufgabe am Programmpunkt der Link dorthin,
+   „Erledigt“. Knöpfe „Ich übernehme“ bzw. „Abgeben“ (nur für sich selbst) und „Erledigt“ bzw. „Wieder offen“, je ein Tipp. Card „Bearbeiten“ mit
+   dem Titel als Autosave-Feld (AD-19) und der Phase als Auswahl, die sofort speichert (Konflikt → Meldung, die Aufgabe wird neu geladen).
+   „Als Vorlage speichern“ nur, solange die Aufgabe mit keiner Vorlage verknüpft ist; sonst „Steht in den Aufgaben-Vorlagen der Organisation.“
+   Löschen per Inline-Bestätigung. In der Phase „gelaufen“ nur lesbar (Titel und Phase als Liste). Kontext oder Aufgabe nicht verfügbar → „Diese
+   Seite ist nicht verfügbar.“ *@
+<PageTitle>Aufgabe – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Planen</Dachzeile>
+    <h1>Aufgabe</h1>
+    @if (_aufgabe is null || _kontext is null)
+    {
+        @if (_aktionFehler)
+        {
+            <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                <p>@AnmeldungAbschluss.FehlerText</p>
+            </Meldung>
+        }
+        else
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@ProgrammTexte.AbgeschlossenText</p>
+            </Meldung>
+            <DetailsListe Eintraege="@([new DetailsEintrag("Titel", _aufgabe.Titel), new DetailsEintrag("Phase", Anzeige.AufgabenPhase(_aufgabe.Phase))])" />
+        }
+        @if (_meldung is not null)
+        {
+            <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                <p>@_meldung</p>
+            </Meldung>
+        }
+        <p><Status Wort="@ProgrammTexte.AufgabeStatusWort(_aufgabe, _namen)" Art="@(_aufgabe.UebernommenVon is null ? StatusArt.Warnung : StatusArt.Erfolg)" /></p>
+        @if (_aufgabe.Erledigt)
+        {
+            <p><Status Wort="Erledigt" Art="StatusArt.Erfolg" /></p>
+        }
+        @if (_aufgabe.ProgrammpunktId is { } punktId)
+        {
+            <p><a href="@ProgrammTexte.DetailZiel(FreizeitId, punktId)">@(_punkte.GetValueOrDefault(punktId) is { } titel ? $"Am Programmpunkt: {titel}" : "Am Programmpunkt")</a></p>
+        }
+        @if (!Abgeschlossen)
+        {
+            <p>
+                @if (_aufgabe.UebernommenVon is null)
+                {
+                    <Knopf Art="KnopfArt.Outline" Deaktiviert="@_uebertraegt" @onclick="@(() => UebergangAsync(AufgabenUebergang.Uebernehmen))">Ich übernehme</Knopf>
+                }
+                else if (_aufgabe.Meins)
+                {
+                    <Knopf Art="KnopfArt.Outline" Deaktiviert="@_uebertraegt" @onclick="@(() => UebergangAsync(AufgabenUebergang.Abgeben))">Abgeben</Knopf>
+                }
+                @if (_aufgabe.Erledigt)
+                {
+                    <Knopf Art="KnopfArt.Text" Deaktiviert="@_uebertraegt" @onclick="@(() => UebergangAsync(AufgabenUebergang.Offen))">Wieder offen</Knopf>
+                }
+                else
+                {
+                    <Knopf Art="KnopfArt.Outline" Deaktiviert="@_uebertraegt" @onclick="@(() => UebergangAsync(AufgabenUebergang.Erledigt))">Erledigt</Knopf>
+                }
+            </p>
+            <Card Titel="Bearbeiten">
+                @* Titel nur im Feld (Autosave); Wert und Version des Felds wechseln nur beim Laden, damit der Speicher-Hinweis stehen bleibt. *@
+                <AutosaveFeld Label="Titel" Id="aufgabe-titel" Feldname="@AufgabenFelder.Titel" Pfad="@ProgrammApiClient.AufgabePfad(FreizeitId, AufgabeId)"
+                              Wert="@_feldTitel" Version="@_feldVersion" Hinweis="@($"Höchstens {AufgabenFelder.TitelMaximaleLaenge} Zeichen")"
+                              NeuLaden="NeuLadenAsync" Gespeichert="@(w => _aufgabe = _aufgabe! with { Titel = w ?? "" })" />
+                <Auswahl Legende="Phase" Gruppe="aufgabe-phase" Optionen="ProgrammTexte.AufgabenPhaseOptionen" Wert="@_aufgabe.Phase.ToString()"
+                         WertGeaendert="PhaseAendernAsync" Deaktiviert="_uebertraegt" />
+                @if (_phaseGespeichert)
+                {
+                    <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+                        <p>Phase gespeichert.</p>
+                    </Meldung>
+                }
+            </Card>
+            @if (_aufgabe.Vorlage)
+            {
+                <p>Steht in den Aufgaben-Vorlagen der Organisation.</p>
+            }
+            else
+            {
+                <p><Knopf Art="KnopfArt.Outline" Deaktiviert="@_uebertraegt" @onclick="AlsVorlageAsync">Als Vorlage speichern</Knopf></p>
+            }
+            <InlineBestaetigung AusloeserText="Aufgabe löschen" AusloeserArt="KnopfArt.Outline" Satz="Diese Aufgabe löschen?" JaText="Ja, löschen"
+                                Bestaetigt="LoeschenAsync" />
+        }
+        <p><a href="@ProgrammTexte.AufgabenZiel(FreizeitId)">Zurück zu den Aufgaben</a></p>
+    }
+}
+
+@code {
+    public const string PhaseKonfliktText = "Die Phase wurde inzwischen geändert. Die Aufgabe ist neu geladen.";
+
+    private FreizeitKontext? _kontext;
+    private Aufgabe? _aufgabe;
+    private string? _feldTitel;
+    private uint _feldVersion;
+    private IReadOnlyDictionary<Guid, string> _namen = new Dictionary<Guid, string>();
+    private IReadOnlyDictionary<Guid, string> _punkte = new Dictionary<Guid, string>();
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private bool _phaseGespeichert;
+    private string? _meldung;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    [Parameter] public Guid AufgabeId { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _aufgabe = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var aufgaben = ProgrammApi.AufgabenAsync(FreizeitId);
+            var freizeit = Leise(Freizeiten.LadenAsync(FreizeitId));
+            var personen = Leise(Freizeiten.PersonenlisteLadenAsync(FreizeitId));
+            var raster = Leise(ProgrammApi.LadenAsync(FreizeitId));
+            await Task.WhenAll(kontext, aufgaben, freizeit, personen, raster);
+            var aufgabe = aufgaben.Result?.FirstOrDefault(a => a.Id == AufgabeId);
+            if (kontext.Result is null || aufgabe is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            _kontext = kontext.Result;
+            Uebernehmen(aufgabe);
+            _namen = ProgrammTexte.Namen(freizeit.Result, personen.Result);
+            _punkte = (raster.Result?.Punkte ?? []).ToDictionary(p => p.Id, p => p.Titel);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>Die Aufgabe übernehmen, auch Wert und Version des Titelfelds.</summary>
+    private void Uebernehmen(Aufgabe aufgabe) => (_aufgabe, _feldTitel, _feldVersion) = (aufgabe, aufgabe.Titel, aufgabe.Version);
+
+    private static async Task<T?> Leise<T>(Task<T?> abruf)
+        where T : class
+    {
+        try
+        {
+            return await abruf;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            return null;
+        }
+    }
+
+    /// <summary>„Neu laden“ beim Konflikt: die Aufgabe mit Werten und Version neu holen.</summary>
+    private async Task NeuLadenAsync()
+    {
+        try
+        {
+            if ((await ProgrammApi.AufgabenAsync(FreizeitId))?.FirstOrDefault(a => a.Id == AufgabeId) is { } aufgabe)
+            {
+                Uebernehmen(aufgabe);
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Die Phase speichert sofort (PATCH mit der bekannten Phase als altem Wert, AD-19).</summary>
+    private async Task PhaseAendernAsync(string wert)
+    {
+        if (_uebertraegt || _aufgabe is null || !Enum.TryParse<AufgabenPhase>(wert, out var phase) || phase == _aufgabe.Phase)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        (_meldung, _phaseGespeichert) = (null, false);
+        try
+        {
+            var aenderung = await ProgrammApi.AufgabePhaseAendernAsync(FreizeitId, _aufgabe, phase);
+            switch (aenderung.Ergebnis)
+            {
+                case ProgrammAktionErgebnis.Erfolg:
+                    _aufgabe = _aufgabe with { Phase = phase, Version = aenderung.Version };
+                    _phaseGespeichert = true;
+                    break;
+                case ProgrammAktionErgebnis.Konflikt:
+                    _meldung = PhaseKonfliktText;
+                    await NeuLadenAsync();
+                    break;
+                case ProgrammAktionErgebnis.Abgeschlossen:
+                    _meldung = ProgrammTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private Task UebergangAsync(AufgabenUebergang uebergang) =>
+        AktionAsync(() => ProgrammApi.AufgabeUebergangAsync(FreizeitId, AufgabeId, uebergang));
+
+    private Task AlsVorlageAsync() => AktionAsync(() => ProgrammApi.AufgabeAlsVorlageAsync(FreizeitId, AufgabeId));
+
+    /// <summary>Ein Übergang oder „Als Vorlage speichern“: danach der neue Stand (Titel und Phase aus der Antwort, das Titelfeld bleibt).</summary>
+    private async Task AktionAsync(Func<Task<AufgabeAktion>> aktionAusfuehren)
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _meldung = null;
+        try
+        {
+            var aktion = await aktionAusfuehren();
+            switch (aktion.Ergebnis)
+            {
+                case ProgrammAktionErgebnis.Erfolg:
+                    _aufgabe = aktion.Aufgabe;
+                    break;
+                case ProgrammAktionErgebnis.Konflikt:
+                    _meldung = ProgrammTexte.AufgabeKonfliktText;
+                    await NeuLadenAsync();
+                    break;
+                case ProgrammAktionErgebnis.Abgeschlossen:
+                    _meldung = ProgrammTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task LoeschenAsync()
+    {
+        _meldung = null;
+        try
+        {
+            switch (await ProgrammApi.AufgabeLoeschenAsync(FreizeitId, AufgabeId))
+            {
+                case ProgrammAktionErgebnis.Erfolg:
+                    Navigation.NavigateTo(ProgrammTexte.AufgabenZiel(FreizeitId));
+                    break;
+                case ProgrammAktionErgebnis.Abgeschlossen:
+                    _meldung = ProgrammTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+}

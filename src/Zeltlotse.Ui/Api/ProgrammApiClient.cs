@@ -33,10 +33,39 @@ public sealed record MaterialAktion(ProgrammAktionErgebnis Ergebnis, Material? M
     public static MaterialAktion Ohne(ProgrammAktionErgebnis ergebnis) => new(ergebnis, null, new Dictionary<string, string>());
 }
 
+/// <summary>Story 3-5: Ergebnis von Anlegen, Übergängen und „Als Vorlage speichern“ einer Aufgabe; beim Anlegen sonst die Fehler je Feld.</summary>
+public sealed record AufgabeAktion(ProgrammAktionErgebnis Ergebnis, Aufgabe? Aufgabe, IReadOnlyDictionary<string, string> Feldfehler)
+{
+    public static AufgabeAktion Ohne(ProgrammAktionErgebnis ergebnis) => new(ergebnis, null, new Dictionary<string, string>());
+}
+
+/// <summary>Story 3-5: Ergebnis einer Phasenänderung; bei Erfolg die neue Version.</summary>
+public sealed record AufgabePhaseAenderung(ProgrammAktionErgebnis Ergebnis, uint Version);
+
+/// <summary>Story 3-5: Ergebnis von „Vorlage hinzufügen“; bei Erfolg die Vorlage, sonst die Fehler je Feld.</summary>
+public sealed record VorlageAktion(ProgrammAktionErgebnis Ergebnis, AufgabenVorlage? Vorlage, IReadOnlyDictionary<string, string> Feldfehler);
+
+/// <summary>Story 3-5: Statuswechsel einer Aufgabe.</summary>
+public enum AufgabenUebergang
+{
+    /// <summary>„Ich übernehme“ (nur für sich selbst).</summary>
+    Uebernehmen,
+
+    /// <summary>„Abgeben“ (nur die übernehmende Person).</summary>
+    Abgeben,
+
+    /// <summary>„Erledigt“ (jede Person der Freizeit).</summary>
+    Erledigt,
+
+    /// <summary>„Wieder offen“ (jede Person der Freizeit).</summary>
+    Offen,
+}
+
 /// <summary>
 /// Typisierter Client des Moduls Programm (AD-29, handgeschrieben). Story 3-1: der Wochenraster einer Freizeit und ihre Programmpunkte; den
 /// Autosave von Titel und Uhrzeit übernimmt der Autosave-Baustein mit <see cref="PunktPfad"/>. Story 3-2: das Material an den Programmpunkten;
-/// den Autosave von Bezeichnung und Menge übernimmt der Autosave-Baustein mit <see cref="MaterialPfad"/>.
+/// den Autosave von Bezeichnung und Menge übernimmt der Autosave-Baustein mit <see cref="MaterialPfad"/>. Story 3-5: die Aufgaben einer Freizeit
+/// (Autosave des Titels mit <see cref="AufgabePfad"/>) und die Aufgaben-Vorlagen einer Organisation (Autosave mit <see cref="VorlagePfad"/>).
 /// </summary>
 public sealed class ProgrammApiClient(HttpClient http)
 {
@@ -163,6 +192,161 @@ public sealed class ProgrammApiClient(HttpClient http)
     {
         using var antwort = await http.DeleteAsync(MaterialPfad(freizeitId, materialId), abbruch);
         return antwort.IsSuccessStatusCode ? ProgrammAktionErgebnis.Erfolg : await FehlerAsync(antwort, abbruch);
+    }
+
+    /// <summary>Story 3-5: Pfad der Aufgaben einer Freizeit.</summary>
+    public static string AufgabenPfad(Guid freizeitId) => $"{ProgrammPfad(freizeitId)}/aufgaben";
+
+    /// <summary>Story 3-5: Pfad einer Aufgabe, auch für den Autosave-Baustein (<c>PATCH</c>, AD-19).</summary>
+    public static string AufgabePfad(Guid freizeitId, Guid aufgabeId) => $"{AufgabenPfad(freizeitId)}/{aufgabeId}";
+
+    /// <summary>
+    /// Story 3-5: <c>GET …/programm/aufgaben</c> (Leitung und Team, FR-39): alle Aufgaben der Freizeit (beim ersten Laden mit den Vorlagen der
+    /// Organisation) oder <c>null</c> bei <c>403</c>/<c>404</c>.
+    /// </summary>
+    public async Task<List<Aufgabe>?> AufgabenAsync(Guid freizeitId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.GetAsync(AufgabenPfad(freizeitId), abbruch);
+        if (antwort.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return await antwort.Content.ReadFromJsonAsync<List<Aufgabe>>(ApiJson.Optionen, abbruch)
+               ?? throw new HttpRequestException("Leere Antwort beim Laden der Aufgaben.");
+    }
+
+    /// <summary>
+    /// Story 3-5: <c>POST …/programm/aufgaben</c>: angelegt mit der Aufgabe, Feldfehler (<c>400</c>, Fehler je JSON-Feldname), abgeschlossene
+    /// Freizeit oder ein anderer Fehler.
+    /// </summary>
+    public async Task<AufgabeAktion> AufgabeAnlegenAsync(Guid freizeitId, AufgabeNeu aufgabe, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync(AufgabenPfad(freizeitId), aufgabe, ApiJson.Optionen, abbruch);
+        if (antwort.StatusCode == HttpStatusCode.BadRequest)
+        {
+            return new AufgabeAktion(ProgrammAktionErgebnis.Fehler, null, await ApiFehler.AlleFeldFehlerAsync(antwort, abbruch));
+        }
+
+        return await AufgabeAktionAsync(antwort, abbruch);
+    }
+
+    /// <summary>
+    /// Story 3-5: <c>PATCH …/aufgaben/{aufgabeId}</c> mit der Phase (AD-19, alter Wert aus <paramref name="aufgabe"/>): gespeichert mit neuer
+    /// Version, Konflikt (inzwischen geändert), abgeschlossene Freizeit oder ein anderer Fehler.
+    /// </summary>
+    public async Task<AufgabePhaseAenderung> AufgabePhaseAendernAsync(Guid freizeitId, Aufgabe aufgabe, AufgabenPhase phase, CancellationToken abbruch = default)
+    {
+        ArgumentNullException.ThrowIfNull(aufgabe);
+        var koerper = new Dictionary<string, object?>
+        {
+            ["version"] = aufgabe.Version,
+            ["alterWert"] = AufgabenFelder.PhaseText(aufgabe.Phase),
+            [AufgabenFelder.Phase] = AufgabenFelder.PhaseText(phase),
+        };
+        using var anfrage = new HttpRequestMessage(HttpMethod.Patch, AufgabePfad(freizeitId, aufgabe.Id))
+        {
+            Content = JsonContent.Create(koerper, options: ApiJson.Optionen),
+        };
+        using var antwort = await http.SendAsync(anfrage, abbruch);
+        if (!antwort.IsSuccessStatusCode)
+        {
+            return new AufgabePhaseAenderung(await FehlerAsync(antwort, abbruch), aufgabe.Version);
+        }
+
+        using var json = JsonDocument.Parse(await antwort.Content.ReadAsStringAsync(abbruch));
+        return new AufgabePhaseAenderung(ProgrammAktionErgebnis.Erfolg, json.RootElement.GetProperty("version").GetUInt32());
+    }
+
+    /// <summary>Story 3-5: <c>DELETE …/aufgaben/{aufgabeId}</c>: gelöscht, abgeschlossene Freizeit oder ein anderer Fehler.</summary>
+    public async Task<ProgrammAktionErgebnis> AufgabeLoeschenAsync(Guid freizeitId, Guid aufgabeId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.DeleteAsync(AufgabePfad(freizeitId, aufgabeId), abbruch);
+        return antwort.IsSuccessStatusCode ? ProgrammAktionErgebnis.Erfolg : await FehlerAsync(antwort, abbruch);
+    }
+
+    /// <summary>
+    /// Story 3-5: <c>POST …/aufgaben/{aufgabeId}/uebernehmen</c>, <c>…/abgeben</c>, <c>…/erledigt</c> oder <c>…/offen</c>: mit der Aufgabe danach;
+    /// Konflikt, wenn eine andere Person sie übernommen hat.
+    /// </summary>
+    public async Task<AufgabeAktion> AufgabeUebergangAsync(Guid freizeitId, Guid aufgabeId, AufgabenUebergang uebergang, CancellationToken abbruch = default)
+    {
+        var endung = uebergang switch
+        {
+            AufgabenUebergang.Uebernehmen => "uebernehmen",
+            AufgabenUebergang.Abgeben => "abgeben",
+            AufgabenUebergang.Erledigt => "erledigt",
+            AufgabenUebergang.Offen => "offen",
+            _ => throw new ArgumentOutOfRangeException(nameof(uebergang), uebergang, null),
+        };
+        using var antwort = await http.PostAsync($"{AufgabePfad(freizeitId, aufgabeId)}/{endung}", null, abbruch);
+        return await AufgabeAktionAsync(antwort, abbruch);
+    }
+
+    /// <summary>Story 3-5: <c>POST …/aufgaben/{aufgabeId}/vorlage</c> („Als Vorlage speichern“): mit der Aufgabe danach (<c>Vorlage = true</c>).</summary>
+    public async Task<AufgabeAktion> AufgabeAlsVorlageAsync(Guid freizeitId, Guid aufgabeId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsync($"{AufgabePfad(freizeitId, aufgabeId)}/vorlage", null, abbruch);
+        return await AufgabeAktionAsync(antwort, abbruch);
+    }
+
+    /// <summary>Story 3-5: Pfad der Aufgaben-Vorlagen einer Organisation.</summary>
+    public static string VorlagenPfad(Guid orgId) => $"/api/organisationen/{orgId}/aufgaben-vorlagen";
+
+    /// <summary>Story 3-5: Pfad einer Aufgaben-Vorlage, auch für den Autosave-Baustein (<c>PATCH</c>, AD-19).</summary>
+    public static string VorlagePfad(Guid orgId, Guid vorlageId) => $"{VorlagenPfad(orgId)}/{vorlageId}";
+
+    /// <summary>Story 3-5: <c>GET /api/organisationen/{orgId}/aufgaben-vorlagen</c> (Org-Admin): die Vorlagen oder <c>null</c> bei <c>403</c>/<c>404</c>.</summary>
+    public async Task<List<AufgabenVorlage>?> VorlagenAsync(Guid orgId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.GetAsync(VorlagenPfad(orgId), abbruch);
+        if (antwort.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return await antwort.Content.ReadFromJsonAsync<List<AufgabenVorlage>>(ApiJson.Optionen, abbruch)
+               ?? throw new HttpRequestException("Leere Antwort beim Laden der Aufgaben-Vorlagen.");
+    }
+
+    /// <summary>Story 3-5: <c>POST …/aufgaben-vorlagen</c>: angelegt mit der Vorlage, Feldfehler (<c>400</c>) oder ein anderer Fehler.</summary>
+    public async Task<VorlageAktion> VorlageAnlegenAsync(Guid orgId, AufgabenVorlageNeu vorlage, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync(VorlagenPfad(orgId), vorlage, ApiJson.Optionen, abbruch);
+        if (antwort.StatusCode == HttpStatusCode.BadRequest)
+        {
+            return new VorlageAktion(ProgrammAktionErgebnis.Fehler, null, await ApiFehler.AlleFeldFehlerAsync(antwort, abbruch));
+        }
+
+        if (!antwort.IsSuccessStatusCode)
+        {
+            return new VorlageAktion(await FehlerAsync(antwort, abbruch), null, new Dictionary<string, string>());
+        }
+
+        var neu = await antwort.Content.ReadFromJsonAsync<AufgabenVorlage>(ApiJson.Optionen, abbruch)
+                  ?? throw new HttpRequestException("Leere Antwort zur Aufgaben-Vorlage.");
+        return new VorlageAktion(ProgrammAktionErgebnis.Erfolg, neu, new Dictionary<string, string>());
+    }
+
+    /// <summary>Story 3-5: <c>DELETE …/aufgaben-vorlagen/{vorlageId}</c>: gelöscht oder ein Fehler.</summary>
+    public async Task<ProgrammAktionErgebnis> VorlageLoeschenAsync(Guid orgId, Guid vorlageId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.DeleteAsync(VorlagePfad(orgId, vorlageId), abbruch);
+        return antwort.IsSuccessStatusCode ? ProgrammAktionErgebnis.Erfolg : await FehlerAsync(antwort, abbruch);
+    }
+
+    private static async Task<AufgabeAktion> AufgabeAktionAsync(HttpResponseMessage antwort, CancellationToken abbruch)
+    {
+        if (!antwort.IsSuccessStatusCode)
+        {
+            return AufgabeAktion.Ohne(await FehlerAsync(antwort, abbruch));
+        }
+
+        var aufgabe = await antwort.Content.ReadFromJsonAsync<Aufgabe>(ApiJson.Optionen, abbruch)
+                      ?? throw new HttpRequestException("Leere Antwort zur Aufgabe.");
+        return new AufgabeAktion(ProgrammAktionErgebnis.Erfolg, aufgabe, new Dictionary<string, string>());
     }
 
     private static async Task<MaterialAktion> MaterialAktionAsync(HttpResponseMessage antwort, CancellationToken abbruch)

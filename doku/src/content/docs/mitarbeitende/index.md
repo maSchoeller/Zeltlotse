@@ -12,7 +12,8 @@ Mitarbeitende melden sich mit der eigenen Mail-Adresse an, per Login-Link aus de
 
 ## Was das Team in Zeltlotse darf
 
-- **Programm** – Programmpunkte im Wochenraster planen, die Uhrzeit ändern und Programmpunkte mit „Ich übernehme“ selbst übernehmen. Die Leitung teilt nichts zu; Mitarbeitende übernehmen selbst – siehe [Programm planen und übernehmen](/mitarbeitende/programm/). Aufgaben am Programmpunkt kommen später.
+- **Programm** – Programmpunkte im Wochenraster planen, die Uhrzeit ändern und Programmpunkte mit „Ich übernehme“ selbst übernehmen. Die Leitung teilt nichts zu; Mitarbeitende übernehmen selbst – siehe [Programm planen und übernehmen](/mitarbeitende/programm/).
+- **Aufgaben** – die Aufgaben der Freizeit nach Phase sehen, mit „Ich übernehme“ selbst übernehmen, abhaken, am Programmpunkt festhalten und als Vorlage für die nächste Freizeit speichern; die Vorlagen der Organisation stehen schon drin, und die Startseite zeigt die eigenen Aufgaben – siehe [Aufgaben übernehmen und abhaken](/mitarbeitende/aufgaben/).
 - **Material** – am Programmpunkt Material mit Menge festhalten, den Stand von „gebraucht“ bis „eingepackt“ setzen, mit „Ich bringe das mit“ selbst mitbringen und in der Materialliste alles auf einen Blick sehen – siehe [Material planen und packen](/mitarbeitende/material/).
 - **Inventar** – Stücke aus dem Inventar der Organisation für den Zeitraum der Freizeit reservieren, auch direkt am Material eines Programmpunkts, und sehen, wenn eine andere Freizeit dasselbe zur gleichen Zeit braucht – siehe [Material aus dem Inventar reservieren](/mitarbeitende/inventar/).
 - **Schäden & Verluste** – festhalten, was kaputtgeht, verloren geht oder aus dem Erste-Hilfe-Kasten entnommen wird; Entnahmen aus dem Vorfall-Protokoll stehen dort von selbst, und nach dem Abschluss sieht die Organisation die Liste als Anschaffungswünsche – siehe [Schäden und Verluste eintragen](/mitarbeitende/schaeden-verluste/).

@@ -356,4 +356,17 @@ public static class Anzeige
             return TimeZoneInfo.Local;
         }
     }
+
+    /// <summary>Story 3-5: Phase einer Aufgabe: „Vorbereitung“, „Während der Freizeit“, „Nachbereitung“.</summary>
+    public static string AufgabenPhase(Zeltlotse.Api.Contracts.Programm.AufgabenPhase phase) => phase switch
+    {
+        Zeltlotse.Api.Contracts.Programm.AufgabenPhase.Vorbereitung => "Vorbereitung",
+        Zeltlotse.Api.Contracts.Programm.AufgabenPhase.Waehrend => "Während der Freizeit",
+        Zeltlotse.Api.Contracts.Programm.AufgabenPhase.Nachbereitung => "Nachbereitung",
+        _ => phase.ToString(),
+    };
+
+    /// <summary>Story 3-5: Warnhinweis im Cockpit: „1 Aufgabe ist noch nicht übernommen“, „3 Aufgaben sind noch nicht übernommen“.</summary>
+    public static string AufgabenUnbesetzt(int anzahl) =>
+        anzahl == 1 ? "1 Aufgabe ist noch nicht übernommen" : $"{anzahl.ToString(Deutsch)} Aufgaben sind noch nicht übernommen";
 }

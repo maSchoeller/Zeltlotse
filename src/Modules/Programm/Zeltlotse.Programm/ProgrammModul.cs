@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Inventar.Contracts.Events;
 using Zeltlotse.Personen.Contracts.Events;
+using Zeltlotse.Programm.Aufgaben;
 using Zeltlotse.Programm.Daten;
 using Zeltlotse.Programm.Datenschutz;
 using Zeltlotse.Programm.Materialien;
@@ -24,7 +25,8 @@ public static class ProgrammModul
     public static IServiceCollection AddProgrammModul(this IServiceCollection services)
     {
         services.AddModul<ProgrammDbContext, ProgrammLeseDbContext>(Name, Schema);
-        // Story 3-1/3-2: Die Übernahme eines Programmpunkts und das Mitbringen von Material sind Arbeitsdaten der Freizeit (AD-16).
+        // Story 3-1/3-2/3-5: Die Übernahme eines Programmpunkts oder einer Aufgabe und das Mitbringen von Material sind Arbeitsdaten der
+        // Freizeit (AD-16).
         services.EmpfaengtEreignis<PersonGeloescht, ProgrammPersonLoeschen>();
         // Story 3-3: Eine Reservierung im Inventar setzt den Status des verknüpften Materials (Tabelle Ereignis-Fluss).
         services.EmpfaengtEreignis<ReservierungGeaendert, ProgrammReservierungUebernehmen>();
@@ -38,7 +40,9 @@ public static class ProgrammModul
     /// <c>/api/freizeiten/{freizeitId}/programm</c>, alles für Leitung und Team: lesen, anlegen, bearbeiten (Autosave, AD-19), löschen und
     /// übernehmen oder abgeben (nur für sich selbst). Story 3-2: Material an den Programmpunkten unter <c>…/programm/material</c>, ebenfalls für
     /// Leitung und Team: Liste lesen, am Punkt anlegen, bearbeiten (Autosave), löschen, Status setzen und mitbringen oder nicht (nur für sich
-    /// selbst).
+    /// selbst). Story 3-5: Aufgaben der Freizeit unter <c>…/programm/aufgaben</c> für Leitung und Team (lesen mit einmaliger Übernahme der Vorlagen,
+    /// anlegen, Autosave, löschen, übernehmen und abgeben nur für sich selbst, erledigt und wieder offen, als Vorlage speichern) und die
+    /// Aufgaben-Vorlagen der Organisation unter <c>/api/organisationen/{orgId}/aufgaben-vorlagen</c> nur für den Org-Admin.
     /// </summary>
     public static IEndpointRouteBuilder MapProgrammEndpoints(this IEndpointRouteBuilder api)
     {
@@ -56,6 +60,22 @@ public static class ProgrammModul
         programm.MapPost("/material/{materialId:guid}/status", MaterialStatusSetzenEndpunkt.Setzen).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
         programm.MapPost("/material/{materialId:guid}/mitbringen", MaterialMitbringenEndpunkt.Mitbringen).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
         programm.MapPost("/material/{materialId:guid}/nicht-mitbringen", MaterialMitbringenEndpunkt.NichtMitbringen).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+
+        programm.MapGet("/aufgaben", AufgabenLadenEndpunkt.Laden).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+        programm.MapPost("/aufgaben", AufgabeAnlegenEndpunkt.Anlegen).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+        programm.MapPatch("/aufgaben/{aufgabeId:guid}", AufgabeFeldAendernEndpunkt.Aendern).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+        programm.MapDelete("/aufgaben/{aufgabeId:guid}", AufgabeLoeschenEndpunkt.Loeschen).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+        programm.MapPost("/aufgaben/{aufgabeId:guid}/uebernehmen", AufgabeUebergangEndpunkt.Uebernehmen).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+        programm.MapPost("/aufgaben/{aufgabeId:guid}/abgeben", AufgabeUebergangEndpunkt.Abgeben).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+        programm.MapPost("/aufgaben/{aufgabeId:guid}/erledigt", AufgabeUebergangEndpunkt.Erledigt).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+        programm.MapPost("/aufgaben/{aufgabeId:guid}/offen", AufgabeUebergangEndpunkt.Offen).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+        programm.MapPost("/aufgaben/{aufgabeId:guid}/vorlage", AufgabeAlsVorlageEndpunkt.Speichern).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+
+        var vorlagen = api.MapGroup($"/organisationen/{{{Rechtemerkmale.OrgRouteWert}:guid}}/aufgaben-vorlagen");
+        vorlagen.MapGet("", VorlagenLadenEndpunkt.Laden).NurOrgRolle(ProgrammRechte.Vorlagen);
+        vorlagen.MapPost("", VorlageAnlegenEndpunkt.Anlegen).NurOrgRolle(ProgrammRechte.Vorlagen);
+        vorlagen.MapPatch("/{vorlageId:guid}", VorlageFeldAendernEndpunkt.Aendern).NurOrgRolle(ProgrammRechte.Vorlagen);
+        vorlagen.MapDelete("/{vorlageId:guid}", VorlageLoeschenEndpunkt.Loeschen).NurOrgRolle(ProgrammRechte.Vorlagen);
         return api;
     }
 }

@@ -10,8 +10,8 @@ using Zeltlotse.SharedKernel.Ereignisse;
 namespace Zeltlotse.Programm.Datenschutz;
 
 /// <summary>
-/// Story 3-1: Empfänger von <see cref="PersonGeloescht"/> (Tabelle Ereignis-Fluss, AD-16): Die Übernahme eines Programmpunkts und (Story 3-2) das
-/// Mitbringen von Material sind Arbeitsdaten der Freizeit; in allen Organisationen wird die Kennung der Person zum Platzhalter
+/// Story 3-1: Empfänger von <see cref="PersonGeloescht"/> (Tabelle Ereignis-Fluss, AD-16): Die Übernahme eines Programmpunkts, (Story 3-2) das
+/// Mitbringen von Material und (Story 3-5) die Übernahme einer Aufgabe sind Arbeitsdaten der Freizeit; in allen Organisationen wird die Kennung der Person zum Platzhalter
 /// <see cref="GeloeschtePerson.Id"/>. Kein Benutzer-Command.
 /// </summary>
 internal sealed record ProgrammPersonLoeschen(Umschlag Umschlag, Guid PersonId)
@@ -28,6 +28,8 @@ internal sealed class ProgrammPersonLoeschenHandler(ProgrammDbContext db) : ICom
             .ExecuteUpdateAsync(s => s.SetProperty(p => p.PersonId, GeloeschtePerson.Id), cancellationToken);
         await db.Material.IgnoreQueryFilters().Where(m => m.PersonId == command.PersonId)
             .ExecuteUpdateAsync(s => s.SetProperty(m => m.PersonId, GeloeschtePerson.Id), cancellationToken);
+        await db.Aufgaben.IgnoreQueryFilters().Where(a => a.PersonId == command.PersonId)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.PersonId, GeloeschtePerson.Id), cancellationToken);
         return Unit.Value;
     }
 }
@@ -35,7 +37,8 @@ internal sealed class ProgrammPersonLoeschenHandler(ProgrammDbContext db) : ICom
 /// <summary>
 /// Datenauskunft von Programm (AD-16, Story 3-1): Abschnitt „Programm“ mit je übernommenem Programmpunkt der Zeile „Programmpunkt übernommen“
 /// (Tag, Uhrzeit und Titel) und (Story 3-2) je mitgebrachtem Material der Zeile „Bringt Material mit“ (Tag und Titel des Programmpunkts,
-/// Bezeichnung). Ohne Mandantenfilter, nur die Zeilen der Person.
+/// Bezeichnung) sowie (Story 3-5) je übernommener Aufgabe der Zeile „Aufgabe übernommen“ (Titel). Ohne Mandantenfilter, nur die Zeilen der
+/// Person.
 /// </summary>
 internal sealed class ProgrammAuskunft(ProgrammLeseDbContext db) : IDatenauskunft
 {
@@ -55,6 +58,13 @@ internal sealed class ProgrammAuskunft(ProgrammLeseDbContext db) : IDatenauskunf
                 orderby p.Tag, p.Beginn, p.Id, m.Bezeichnung, m.Id
                 select new { p.Tag, p.Titel, m.Bezeichnung })
             .ToListAsync(abbruch);
+        var aufgaben = await db.Aufgaben.IgnoreQueryFilters()
+            .Where(a => a.PersonId == personId)
+            .OrderBy(a => a.Phase)
+            .ThenBy(a => a.Titel)
+            .ThenBy(a => a.Id)
+            .Select(a => a.Titel)
+            .ToListAsync(abbruch);
         return
         [
             new AuskunftAbschnitt(
@@ -66,14 +76,15 @@ internal sealed class ProgrammAuskunft(ProgrammLeseDbContext db) : IDatenauskunf
                             ? $"{AuskunftFormat.Datum(p.Tag)} {ProgrammpunktFelder.UhrzeitText(beginn)}: {p.Titel}"
                             : $"{AuskunftFormat.Datum(p.Tag)}: {p.Titel}")),
                     .. material.Select(m => new AuskunftZeile("Bringt Material mit", $"{AuskunftFormat.Datum(m.Tag)} {m.Titel}: {m.Bezeichnung}")),
+                    .. aufgaben.Select(titel => new AuskunftZeile("Aufgabe übernommen", titel)),
                 ]),
         ];
     }
 }
 
 /// <summary>
-/// Täglicher Lösch-Lauf von Programm (AD-16): die Programmpunkte und (Story 3-2) das Material der Freizeiten, deren Daten nach der Frist
-/// abgelaufen sind.
+/// Täglicher Lösch-Lauf von Programm (AD-16): die Programmpunkte, (Story 3-2) das Material und (Story 3-5) die Aufgaben samt der Zeile zur
+/// Übernahme der Vorlagen der Freizeiten, deren Daten nach der Frist abgelaufen sind. Aufgaben-Vorlagen der Organisation bleiben.
 /// </summary>
 internal sealed class ProgrammLoeschlauf(ISender sender) : ILoeschlauf
 {
@@ -86,7 +97,7 @@ internal sealed class ProgrammLoeschlauf(ISender sender) : ILoeschlauf
     }
 }
 
-/// <summary>Material und Programmpunkte der Freizeiten, deren Daten nach der Frist der Organisation abgelaufen sind, endgültig löschen.</summary>
+/// <summary>Aufgaben, Übernahme-Zeilen, Material und Programmpunkte der Freizeiten, deren Daten nach der Frist der Organisation abgelaufen sind, endgültig löschen.</summary>
 internal sealed record ProgrammpunkteLoeschen(IReadOnlyList<Guid> FreizeitIds) : ICommand, IModulCommand<ProgrammDbContext>;
 
 internal sealed class ProgrammpunkteLoeschenHandler(ProgrammDbContext db) : ICommandHandler<ProgrammpunkteLoeschen>
@@ -94,6 +105,8 @@ internal sealed class ProgrammpunkteLoeschenHandler(ProgrammDbContext db) : ICom
     public async ValueTask<Unit> Handle(ProgrammpunkteLoeschen command, CancellationToken cancellationToken)
     {
         var freizeiten = command.FreizeitIds.ToList();
+        await db.Aufgaben.IgnoreQueryFilters().Where(a => freizeiten.Contains(a.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
+        await db.VorlagenUebernahmen.IgnoreQueryFilters().Where(u => freizeiten.Contains(u.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
         await db.Material.IgnoreQueryFilters().Where(m => freizeiten.Contains(m.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
         await db.Programmpunkte.IgnoreQueryFilters().Where(p => freizeiten.Contains(p.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
         return Unit.Value;

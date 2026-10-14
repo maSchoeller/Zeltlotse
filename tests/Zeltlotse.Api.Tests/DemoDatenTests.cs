@@ -467,6 +467,29 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
             schaeden.Single(e => e.GetProperty("art").GetString() == "Entnahme").GetProperty("vorfallEintragId").GetGuid());
         Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM inventar.schaden_verlust"));
 
+        // Story 3-5: drei Aufgaben-Vorlagen der Organisation, beim Einspielen ins Zeltlager übernommen; dazu „Andacht am Lagerfeuer vorbereiten“ (am
+        // Lagerfeuer, Lea) und „Fotos sammeln“ (offen). Lea hat den Erste-Hilfe-Kasten übernommen, Jonas den Zeltplatz-Vertrag und ihn abgehakt.
+        // Nichts doppelt, auch nach dem zweiten Einspielen.
+        var lagerfeuer = punkte.Single(p => p.GetProperty("titel").GetString() == "Lagerfeuer").GetProperty("id").GetGuid();
+        var aufgaben = (await AnmeldeHelfer.JsonAsync(await leaClient.GetAsync($"/api/freizeiten/{freizeitId}/programm/aufgaben", Abbruch))).EnumerateArray().ToList();
+        Assert.Equal(
+            [
+                "Vorbereitung Erste-Hilfe-Kasten auffüllen Lea offen Vorlage -", "Vorbereitung Zeltplatz-Vertrag prüfen Jonas erledigt Vorlage -",
+                "Waehrend Andacht am Lagerfeuer vorbereiten Lea offen - Lagerfeuer", "Nachbereitung Fotos sammeln - offen - -",
+                "Nachbereitung Zeltplatz besenrein übergeben - offen Vorlage -",
+            ],
+            aufgaben.Select(a =>
+            {
+                var von = a.GetProperty("uebernommenVon").ValueKind == System.Text.Json.JsonValueKind.Null ? null : (Guid?)a.GetProperty("uebernommenVon").GetGuid();
+                var wer = von == lea ? "Lea" : von == jonas ? "Jonas" : von is null ? "-" : "?";
+                var punkt = a.GetProperty("programmpunktId").ValueKind == System.Text.Json.JsonValueKind.Null ? "-" : a.GetProperty("programmpunktId").GetGuid() == lagerfeuer ? "Lagerfeuer" : "?";
+                return $"{a.GetProperty("phase").GetString()} {a.GetProperty("titel").GetString()} {wer} {(a.GetProperty("erledigt").GetBoolean() ? "erledigt" : "offen")} "
+                       + $"{(a.GetProperty("vorlage").GetBoolean() ? "Vorlage" : "-")} {punkt}";
+            }));
+        Assert.Equal(5L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.aufgabe"));
+        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.aufgaben_vorlage"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.aufgaben_vorlagen_uebernahme"));
+
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,
             "SELECT count(*) FROM konten.konto k LEFT JOIN personen.person p ON p.\"Id\" = k.\"PersonId\" WHERE p.\"Id\" IS NULL OR p.\"Vorname\" IS NULL OR p.\"Nachname\" IS NULL"));

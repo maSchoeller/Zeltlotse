@@ -1,0 +1,182 @@
+@page "/organisationen/{OrgId:guid}/aufgaben-vorlagen"
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Programm
+@inject OrganisationenApiClient Organisationen
+@inject ProgrammApiClient ProgrammApi
+@* Aufgaben-Vorlagen der Organisation (FR-40, Story 3-5; EXPERIENCE.md → Fläche „Organisation verwalten“), erreicht über die Card
+   „Aufgaben-Vorlagen“ der Organisation, nur mit „aufgaben-vorlagen-verwalten“ (Org-Admin). Dachzeile „Organisation“, Überschrift
+   „Aufgaben-Vorlagen“, das Formular „Vorlage hinzufügen“ (Titel *, Phase), darunter je Phase eine Card mit dem Titel jeder Vorlage als
+   Autosave-Feld (AD-19) und „Vorlage löschen“ per Inline-Bestätigung. Ohne Vorlagen der Satz, dass neue Freizeiten sie beim ersten Öffnen der
+   Aufgaben übernehmen. Ohne den Aktionsschlüssel oder bei 403/404 → „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>Aufgaben-Vorlagen – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Organisation</Dachzeile>
+    <h1>Aufgaben-Vorlagen</h1>
+    <p><a href="@($"organisationen/{OrgId}")">Zurück zur Organisation</a></p>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+
+    @if (_vorlagen is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        <Card Titel="Vorlage hinzufügen">
+            <Formular Absenden="AnlegenAsync">
+                <Feld Label="Titel *" Id="vorlage-titel" Wert="@_titel" Fehler="@_titelFehler" autocomplete="off"
+                      Hinweis="@($"Höchstens {AufgabenFelder.TitelMaximaleLaenge} Zeichen")" @oninput="@(e => _titel = e.Value?.ToString())" />
+                <Auswahl Legende="Phase" Gruppe="vorlage-phase" Optionen="ProgrammTexte.AufgabenPhaseOptionen" Wert="@_phase.ToString()"
+                         Fehler="@_phaseFehler" WertGeaendert="@(w => _phase = Enum.Parse<AufgabenPhase>(w))" Deaktiviert="_uebertraegt" />
+                <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Vorlage hinzufügen</Knopf>
+            </Formular>
+            <p>* Pflichtfeld</p>
+        </Card>
+
+        @if (_vorlagen.Count == 0)
+        {
+            <LeerZustand Satz="Noch keine Aufgaben-Vorlagen. Neue Freizeiten übernehmen sie beim ersten Öffnen der Aufgaben." />
+        }
+        @foreach (var gruppe in _vorlagen.GroupBy(v => v.Phase).OrderBy(g => g.Key))
+        {
+            <Card @key="gruppe.Key" Titel="@Anzeige.AufgabenPhase(gruppe.Key)">
+                @foreach (var vorlage in gruppe)
+                {
+                    <AutosaveFeld @key="vorlage.Id" Label="Titel" Id="@($"vorlage-{vorlage.Id}-titel")" Feldname="@AufgabenFelder.Titel"
+                                  Pfad="@ProgrammApiClient.VorlagePfad(OrgId, vorlage.Id)" Wert="@vorlage.Titel" Version="@vorlage.Version"
+                                  Hinweis="@($"Höchstens {AufgabenFelder.TitelMaximaleLaenge} Zeichen")" NeuLaden="LadenAsync"
+                                  Gespeichert="@(w => _titelNeu[vorlage.Id] = w ?? "")" />
+                    <InlineBestaetigung @key="(vorlage.Id, 1)" AusloeserText="Vorlage löschen" AusloeserArt="KnopfArt.Text"
+                                        Satz="@($"„{Titel(vorlage)}“ löschen?")" JaText="Ja, löschen" Bestaetigt="@(() => LoeschenAsync(vorlage))" />
+                }
+            </Card>
+        }
+    }
+}
+
+@code {
+    private List<AufgabenVorlage>? _vorlagen;
+    private readonly Dictionary<Guid, string> _titelNeu = [];
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private string? _meldung;
+    private string? _titel;
+    private AufgabenPhase _phase = AufgabenPhase.Vorbereitung;
+    private string? _titelFehler;
+    private string? _phaseFehler;
+
+    [Parameter] public Guid OrgId { get; set; }
+
+    /// <summary>Der Satz der Inline-Bestätigung folgt dem gespeicherten Titel.</summary>
+    private string Titel(AufgabenVorlage vorlage) => _titelNeu.GetValueOrDefault(vorlage.Id) ?? vorlage.Titel;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _vorlagen = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _meldung = null;
+        try
+        {
+            var organisation = await Organisationen.LadenAsync(OrgId);
+            if (organisation is null || !organisation.Erlaubt.Contains(Aktionsschluessel.AufgabenVorlagenVerwalten))
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            await LadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>Lädt die Vorlagen (auch „Neu laden“ beim Konflikt im Autosave); 403/404 → nicht verfügbar.</summary>
+    private async Task LadenAsync()
+    {
+        var vorlagen = await ProgrammApi.VorlagenAsync(OrgId);
+        _nichtVerfuegbar = vorlagen is null;
+        _vorlagen = vorlagen;
+        _titelNeu.Clear();
+    }
+
+    /// <summary>„Vorlage hinzufügen“: danach steht sie in ihrer Phase, das Formular ist leer.</summary>
+    private async Task AnlegenAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        (_titelFehler, _phaseFehler, _meldung, _aktionFehler) = (null, null, null, false);
+        try
+        {
+            var aktion = await ProgrammApi.VorlageAnlegenAsync(OrgId, new AufgabenVorlageNeu(_titel, _phase));
+            if (aktion.Ergebnis == ProgrammAktionErgebnis.Erfolg)
+            {
+                _titel = null;
+                await LadenAsync();
+                return;
+            }
+
+            _titelFehler = aktion.Feldfehler.GetValueOrDefault(AufgabenFelder.Titel);
+            _phaseFehler = aktion.Feldfehler.GetValueOrDefault(AufgabenFelder.Phase);
+            if (_titelFehler is null && _phaseFehler is null)
+            {
+                _meldung = AnmeldungAbschluss.FehlerText;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task LoeschenAsync(AufgabenVorlage vorlage)
+    {
+        (_meldung, _aktionFehler) = (null, false);
+        try
+        {
+            if (await ProgrammApi.VorlageLoeschenAsync(OrgId, vorlage.Id) == ProgrammAktionErgebnis.Erfolg)
+            {
+                _vorlagen?.RemoveAll(v => v.Id == vorlage.Id);
+            }
+            else
+            {
+                _meldung = AnmeldungAbschluss.FehlerText;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+}

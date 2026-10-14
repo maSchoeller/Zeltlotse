@@ -11,7 +11,7 @@ using Zeltlotse.Programm.Daten;
 namespace Zeltlotse.Programm.Migrationen
 {
     [DbContext(typeof(ProgrammDbContext))]
-    internal partial class ProgrammDbContextModelSnapshot : ModelSnapshot
+    partial class ProgrammDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -22,6 +22,105 @@ namespace Zeltlotse.Programm.Migrationen
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Zeltlotse.Programm.Aufgaben.Aufgabe", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Erledigt")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Phase")
+                        .HasColumnType("smallint");
+
+                    b.Property<Guid?>("ProgrammpunktId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Titel")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid?>("VorlageId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FreizeitId");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("ProgrammpunktId");
+
+                    b.HasIndex("VorlageId");
+
+                    b.ToTable("aufgabe", "programm");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Programm.Aufgaben.AufgabenVorlage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<short>("Phase")
+                        .HasColumnType("smallint");
+
+                    b.Property<string>("Titel")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.ToTable("aufgaben_vorlage", "programm");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Programm.Aufgaben.AufgabenVorlagenUebernahme", b =>
+                {
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UebernommenAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("FreizeitId");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.ToTable("aufgaben_vorlagen_uebernahme", "programm");
+                });
 
             modelBuilder.Entity("Zeltlotse.Programm.Materialien.Material", b =>
                 {
@@ -218,6 +317,19 @@ namespace Zeltlotse.Programm.Migrationen
                     b.HasIndex("ErledigtAm", "NaechsterVersuch");
 
                     b.ToTable("outbox_zustellung", "programm");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Programm.Aufgaben.Aufgabe", b =>
+                {
+                    b.HasOne("Zeltlotse.Programm.Programme.Programmpunkt", null)
+                        .WithMany()
+                        .HasForeignKey("ProgrammpunktId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Zeltlotse.Programm.Aufgaben.AufgabenVorlage", null)
+                        .WithMany()
+                        .HasForeignKey("VorlageId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Zeltlotse.Programm.Materialien.Material", b =>

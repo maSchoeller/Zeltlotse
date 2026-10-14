@@ -50,6 +50,12 @@ internal static class OrgRechte
     /// <summary>Story 3-3: das Inventar pflegen (FR-37); gleich mit <c>InventarRechte.OrgVerwalten</c>.</summary>
     public static readonly OrgRolleArt[] InventarVerwalten = [OrgRolleArt.OrgAdmin];
 
+    /// <summary>
+    /// Story 3-5: die Aufgaben-Vorlagen sehen und pflegen (FR-40). Die Endpunkte besitzt Programm; dort steht dieselbe Liste
+    /// (<c>ProgrammRechte.Vorlagen</c>), ein Test hält beide gleich.
+    /// </summary>
+    public static readonly OrgRolleArt[] AufgabenVorlagen = [OrgRolleArt.OrgAdmin];
+
     public static IReadOnlyList<string> Erlaubt(IReadOnlyCollection<OrgRolleArt> rollen)
     {
         var erlaubt = new List<string>();
@@ -91,6 +97,11 @@ internal static class OrgRechte
         if (rollen.Any(InventarVerwalten.Contains))
         {
             erlaubt.Add(Aktionsschluessel.InventarVerwalten);
+        }
+
+        if (rollen.Any(AufgabenVorlagen.Contains))
+        {
+            erlaubt.Add(Aktionsschluessel.AufgabenVorlagenVerwalten);
         }
 
         return erlaubt;

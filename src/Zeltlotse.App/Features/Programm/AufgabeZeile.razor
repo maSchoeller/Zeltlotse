@@ -1,0 +1,111 @@
+@attribute [NurInteraktiv]
+@using Zeltlotse.Api.Contracts.Programm
+@inject ProgrammApiClient ProgrammApi
+@* Eine Aufgabe (Story 3-5, FR-39) als Termin: Titel als Link zur Detailseite, Status „Übernommen: …“ (Erfolg) oder „Offen“ (Warnung). Darunter
+   bei einer Aufgabe am Programmpunkt „Am Programmpunkt: Titel“ als Link (nicht auf der Seite des Programmpunkts selbst), bei einer
+   abgehakten Aufgabe der Status „Erledigt“ und die Knöpfe „Ich übernehme“ bzw. „Abgeben“ (nur für sich selbst; hat sie jemand anderes, kein
+   Knopf) und „Erledigt“ bzw. „Wieder offen“ (jede Person), je ein Tipp ohne Bestätigung. Nur lesbar (Phase „gelaufen“): keine Knöpfe. *@
+<Termin Titel="@Aufgabe.Titel" Href="@ProgrammTexte.AufgabeZiel(FreizeitId, Aufgabe.Id)" StatusWort="@ProgrammTexte.AufgabeStatusWort(Aufgabe, Namen)"
+        StatusArt="@(Aufgabe.UebernommenVon is null ? StatusArt.Warnung : StatusArt.Erfolg)">
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+    @if (MitProgrammpunkt && Aufgabe.ProgrammpunktId is { } punktId)
+    {
+        <p><a href="@ProgrammTexte.DetailZiel(FreizeitId, punktId)">@(Punkte.GetValueOrDefault(punktId) is { } titel ? $"Am Programmpunkt: {titel}" : "Am Programmpunkt")</a></p>
+    }
+    @if (Aufgabe.Erledigt)
+    {
+        <p><Status Wort="Erledigt" Art="StatusArt.Erfolg" /></p>
+    }
+    @if (!NurLesen)
+    {
+        <p>
+            @if (Aufgabe.UebernommenVon is null)
+            {
+                <Knopf Art="KnopfArt.Outline" Deaktiviert="_uebertraegt" @onclick="@(() => UebergangAsync(AufgabenUebergang.Uebernehmen))">Ich übernehme</Knopf>
+            }
+            else if (Aufgabe.Meins)
+            {
+                <Knopf Art="KnopfArt.Outline" Deaktiviert="_uebertraegt" @onclick="@(() => UebergangAsync(AufgabenUebergang.Abgeben))">Abgeben</Knopf>
+            }
+            @if (Aufgabe.Erledigt)
+            {
+                <Knopf Art="KnopfArt.Text" Deaktiviert="_uebertraegt" @onclick="@(() => UebergangAsync(AufgabenUebergang.Offen))">Wieder offen</Knopf>
+            }
+            else
+            {
+                <Knopf Art="KnopfArt.Outline" Deaktiviert="_uebertraegt" @onclick="@(() => UebergangAsync(AufgabenUebergang.Erledigt))">Erledigt</Knopf>
+            }
+        </p>
+    }
+</Termin>
+
+@code {
+    private bool _uebertraegt;
+    private string? _meldung;
+
+    [Parameter, EditorRequired] public Guid FreizeitId { get; set; }
+
+    [Parameter, EditorRequired] public Aufgabe Aufgabe { get; set; } = null!;
+
+    /// <summary>Namen der Leitung und des Teams für „Übernommen: …“.</summary>
+    [Parameter] public IReadOnlyDictionary<Guid, string> Namen { get; set; } = new Dictionary<Guid, string>();
+
+    /// <summary>Titel der Programmpunkte für „Am Programmpunkt: …“; fehlt einer, steht nur „Am Programmpunkt“.</summary>
+    [Parameter] public IReadOnlyDictionary<Guid, string> Punkte { get; set; } = new Dictionary<Guid, string>();
+
+    /// <summary>Den Programmpunkt nennen (nicht auf der Seite des Programmpunkts selbst).</summary>
+    [Parameter] public bool MitProgrammpunkt { get; set; } = true;
+
+    /// <summary>Phase „gelaufen“: nur lesbar.</summary>
+    [Parameter] public bool NurLesen { get; set; }
+
+    /// <summary>Die Aufgabe nach einem Übergang.</summary>
+    [Parameter] public EventCallback<Aufgabe> Geaendert { get; set; }
+
+    /// <summary>Beim Konflikt (jemand anderes hat übernommen): die Seite lädt die Aufgaben neu.</summary>
+    [Parameter] public EventCallback NeuLaden { get; set; }
+
+    private async Task UebergangAsync(AufgabenUebergang uebergang)
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _meldung = null;
+        try
+        {
+            var aktion = await ProgrammApi.AufgabeUebergangAsync(FreizeitId, Aufgabe.Id, uebergang);
+            switch (aktion.Ergebnis)
+            {
+                case ProgrammAktionErgebnis.Erfolg:
+                    await Geaendert.InvokeAsync(aktion.Aufgabe!);
+                    break;
+                case ProgrammAktionErgebnis.Konflikt:
+                    _meldung = ProgrammTexte.AufgabeKonfliktText;
+                    await NeuLaden.InvokeAsync();
+                    break;
+                case ProgrammAktionErgebnis.Abgeschlossen:
+                    _meldung = ProgrammTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

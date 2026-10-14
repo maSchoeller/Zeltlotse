@@ -118,4 +118,10 @@ public static class Aktionsschluessel
     /// Story 3-3, FR-37).
     /// </summary>
     public const string InventarVerwalten = "inventar-verwalten";
+
+    /// <summary>
+    /// Die Aufgaben-Vorlagen der Organisation pflegen: hinzufügen, bearbeiten und löschen (Org-Admin, in <c>GET /api/organisationen/{orgId}</c>,
+    /// Story 3-5, FR-40).
+    /// </summary>
+    public const string AufgabenVorlagenVerwalten = "aufgaben-vorlagen-verwalten";
 }

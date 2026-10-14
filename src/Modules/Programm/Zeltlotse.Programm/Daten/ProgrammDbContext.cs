@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Zeltlotse.Api.Contracts.Programm;
+using Aufgabe = Zeltlotse.Programm.Aufgaben.Aufgabe;
+using AufgabenVorlage = Zeltlotse.Programm.Aufgaben.AufgabenVorlage;
+using AufgabenVorlagenUebernahme = Zeltlotse.Programm.Aufgaben.AufgabenVorlagenUebernahme;
 using Material = Zeltlotse.Programm.Materialien.Material;
 using Programmpunkt = Zeltlotse.Programm.Programme.Programmpunkt;
 using Zeltlotse.SharedKernel.Daten;
@@ -18,7 +21,36 @@ internal sealed class ProgrammDbContext(DbContextOptions<ProgrammDbContext> opti
     /// <summary>Story 3-2: das Material an den Programmpunkten.</summary>
     public DbSet<Material> Material => Set<Material>();
 
+    /// <summary>Story 3-5: die Aufgaben aller Freizeiten.</summary>
+    public DbSet<Aufgabe> Aufgaben => Set<Aufgabe>();
+
+    /// <summary>Story 3-5: die Aufgaben-Vorlagen der Organisationen.</summary>
+    public DbSet<AufgabenVorlage> AufgabenVorlagen => Set<AufgabenVorlage>();
+
+    /// <summary>Story 3-5: je Freizeit, dass ihre Aufgaben die Vorlagen schon übernommen haben.</summary>
+    public DbSet<AufgabenVorlagenUebernahme> VorlagenUebernahmen => Set<AufgabenVorlagenUebernahme>();
+
     protected override string Schema => ProgrammModul.Schema;
+
+    /// <summary>
+    /// Story 3-5: Lädt eine Aufgabe der Freizeit unter dem Mandantenfilter mit Zeilensperre (FOR UPDATE): Änderungen und Übergänge derselben
+    /// Aufgabe laufen nacheinander. <c>null</c>, wenn es sie in dieser Freizeit nicht gibt.
+    /// </summary>
+    public async Task<Aufgabe?> AufgabeSperrenAsync(Guid freizeitId, Guid aufgabeId, CancellationToken abbruch) =>
+        (await Aufgaben
+            .FromSql($"SELECT *, xmin FROM programm.aufgabe WHERE \"Id\" = {aufgabeId} AND \"FreizeitId\" = {freizeitId} FOR UPDATE")
+            .ToListAsync(abbruch))
+        .SingleOrDefault();
+
+    /// <summary>
+    /// Story 3-5: Lädt eine Aufgaben-Vorlage unter dem Mandantenfilter mit Zeilensperre (FOR UPDATE). <c>null</c>, wenn es sie in der
+    /// Organisation des Mandanten nicht gibt.
+    /// </summary>
+    public async Task<AufgabenVorlage?> VorlageSperrenAsync(Guid vorlageId, CancellationToken abbruch) =>
+        (await AufgabenVorlagen
+            .FromSql($"SELECT *, xmin FROM programm.aufgaben_vorlage WHERE \"Id\" = {vorlageId} FOR UPDATE")
+            .ToListAsync(abbruch))
+        .SingleOrDefault();
 
     /// <summary>
     /// Story 3-2: Lädt ein Material der Freizeit unter dem Mandantenfilter mit Zeilensperre (FOR UPDATE): Änderungen, Statuswechsel und
@@ -50,6 +82,12 @@ internal sealed class ProgrammLeseDbContext(DbContextOptions<ProgrammLeseDbConte
     public DbSet<Programmpunkt> Programmpunkte => Set<Programmpunkt>();
 
     public DbSet<Material> Material => Set<Material>();
+
+    public DbSet<Aufgabe> Aufgaben => Set<Aufgabe>();
+
+    public DbSet<AufgabenVorlage> AufgabenVorlagen => Set<AufgabenVorlage>();
+
+    public DbSet<AufgabenVorlagenUebernahme> VorlagenUebernahmen => Set<AufgabenVorlagenUebernahme>();
 
     protected override string Schema => ProgrammModul.Schema;
 
@@ -93,6 +131,44 @@ internal static class ProgrammModell
             e.HasIndex(m => m.ProgrammpunktId);
             e.HasIndex(m => m.PersonId);
             e.HasIndex(m => m.OrganisationId);
+        });
+
+        // Story 3-5, FR-40: Aufgaben-Vorlagen der Organisation (kein Personenbezug).
+        modelBuilder.Entity<AufgabenVorlage>(e =>
+        {
+            e.ToTable("aufgaben_vorlage");
+            e.Property(v => v.Id).ValueGeneratedNever();
+            e.Property(v => v.Titel).HasMaxLength(AufgabenFelder.TitelMaximaleLaenge);
+            e.Property(v => v.Phase).HasConversion<short>();
+            e.Property(v => v.Version).IsRowVersion();
+            e.HasIndex(v => v.OrganisationId);
+        });
+
+        // Story 3-5, FR-39: Aufgaben einer Freizeit. Mit dem Programmpunkt verschwinden sie (wie Material), mit der Vorlage nur die Verknüpfung.
+        modelBuilder.Entity<Aufgabe>(e =>
+        {
+            e.ToTable("aufgabe");
+            e.Property(a => a.Id).ValueGeneratedNever();
+            e.Property(a => a.Titel).HasMaxLength(AufgabenFelder.TitelMaximaleLaenge);
+            e.Property(a => a.Phase).HasConversion<short>();
+            e.Property(a => a.Version).IsRowVersion();
+            e.Ignore(a => a.Uebernommen);
+            e.HasOne<Programmpunkt>().WithMany().HasForeignKey(a => a.ProgrammpunktId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<AufgabenVorlage>().WithMany().HasForeignKey(a => a.VorlageId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(a => a.FreizeitId);
+            e.HasIndex(a => a.ProgrammpunktId);
+            e.HasIndex(a => a.PersonId);
+            e.HasIndex(a => a.VorlageId);
+            e.HasIndex(a => a.OrganisationId);
+        });
+
+        // Story 3-5: Je Freizeit höchstens eine Zeile; das Übernehmen der Vorlagen nutzt den Schlüssel (ON CONFLICT DO NOTHING).
+        modelBuilder.Entity<AufgabenVorlagenUebernahme>(e =>
+        {
+            e.ToTable("aufgaben_vorlagen_uebernahme");
+            e.HasKey(u => u.FreizeitId);
+            e.Property(u => u.FreizeitId).ValueGeneratedNever();
+            e.HasIndex(u => u.OrganisationId);
         });
     }
 }

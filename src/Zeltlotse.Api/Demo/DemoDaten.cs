@@ -29,6 +29,7 @@ using Zeltlotse.Personen.Freizeitpass;
 using Zeltlotse.Personen.Nachweise;
 using Zeltlotse.Personen.Profil;
 using Zeltlotse.Personen.Zugriffsprotokoll;
+using Zeltlotse.Programm.Aufgaben;
 using Zeltlotse.Programm.Daten;
 using Zeltlotse.Programm.Materialien;
 using Zeltlotse.Programm.Programme;
@@ -154,6 +155,7 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await ZweiteFreizeitAsync(abbruch);
         await InventarAsync(abbruch);
         await SchaedenAsync(abbruch);
+        await AufgabenAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -962,6 +964,63 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         foreach (var (art, bezeichnung) in DemoKatalog.Schaeden.Where(s => !vorhanden.Contains(s.Bezeichnung)))
         {
             await sender.Send(new SchadenEintragenCommand(freizeitId, art, bezeichnung), abbruch);
+        }
+    }
+
+    /// <summary>
+    /// Story 3-5: Aufgaben-Vorlagen der Demo-Organisation (wie von Andrea, idempotent nach Titel), dann die Übernahme der Vorlagen ins Zeltlager,
+    /// eigene Aufgaben (idempotent nach Titel) und wer welche Aufgabe übernimmt und abhakt; alles über die Commands des Moduls Programm.
+    /// </summary>
+    private async Task AufgabenAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var lesen = dienste.GetRequiredService<ProgrammLeseDbContext>();
+        var vorlagen = await lesen.AufgabenVorlagen.Select(v => v.Titel).ToListAsync(abbruch);
+        foreach (var (titel, phase) in DemoKatalog.AufgabenVorlagen.Where(v => !vorlagen.Contains(v.Titel)))
+        {
+            await sender.Send(new VorlageAnlegenCommand(titel, phase), abbruch);
+        }
+
+        var freizeitId = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name)
+            .Select(f => f.Id)
+            .SingleAsync(abbruch);
+        await sender.Send(new AufgabenVorlagenUebernehmen(freizeitId), abbruch);
+        var vorhanden = await lesen.Aufgaben.Where(a => a.FreizeitId == freizeitId).Select(a => a.Titel).ToListAsync(abbruch);
+        var punkte = await lesen.Programmpunkte.Where(p => p.FreizeitId == freizeitId && p.Mahlzeit == null).ToDictionaryAsync(p => p.Titel, p => p.Id, abbruch);
+        var uebernahmen = DemoKatalog.AufgabenUebernahmen.ToList();
+        foreach (var (titel, phase, programmpunkt, uebernommenVon) in DemoKatalog.Aufgaben.Where(a => !vorhanden.Contains(a.Titel)))
+        {
+            Guid? punkt = programmpunkt is null ? null : punkte[programmpunkt];
+            if (await sender.Send(new AufgabeAnlegenCommand(freizeitId, titel, phase, punkt), abbruch) is not AufgabeAnlegen.Angelegt)
+            {
+                throw new InvalidOperationException($"Demo-Aufgaben: {titel} ließ sich nicht anlegen.");
+            }
+
+            if (uebernommenVon is not null)
+            {
+                uebernahmen.Add((titel, uebernommenVon, false));
+            }
+        }
+
+        var aufgaben = await lesen.Aufgaben.Where(a => a.FreizeitId == freizeitId).ToListAsync(abbruch);
+        foreach (var (titel, mail, erledigt) in uebernahmen)
+        {
+            var aufgabe = aufgaben.Single(a => a.Titel == titel);
+            var person = (await sender.Send(new KontoSicherstellen(mail), abbruch)).PersonId;
+            if (aufgabe.Uebernommen is null
+                && await sender.Send(new AufgabeUebergangCommand(freizeitId, aufgabe.Id, person, AufgabeUebergang.Uebernehmen), abbruch) is not AufgabeUebergangErgebnis.Erfolg)
+            {
+                throw new InvalidOperationException($"Demo-Aufgaben: {titel} ließ sich nicht übernehmen.");
+            }
+
+            if (erledigt && !aufgabe.Erledigt)
+            {
+                await sender.Send(new AufgabeUebergangCommand(freizeitId, aufgabe.Id, person, AufgabeUebergang.Erledigen), abbruch);
+            }
         }
     }
 

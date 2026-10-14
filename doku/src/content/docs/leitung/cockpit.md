@@ -24,10 +24,11 @@ Die Card **Warnhinweise** sammelt, was noch offen ist, je Art eine Zeile:
 - **„4 Freizeitpässe unvollständig“** – der Link springt zur Tabelle weiter unten.
 - **„Bei 2 Personen im Team fehlen Nachweise oder laufen vor dem Ende der Freizeit ab.“** – mit dem Knopf **Nachweise prüfen** (siehe [Fehlende Nachweise und Erinnerungen](/leitung/nachweise-erinnern/)).
 - **„Sicherheitskette ist noch nicht eingerichtet“** – der Link führt zur Card **Sicherheitskette** in den Einstellungen. Die Zeile verschwindet, sobald die Kette eingerichtet ist (siehe [Sicherheitskette einrichten](/leitung/sicherheitskette/)).
+- **„3 Aufgaben sind noch nicht übernommen“** – der Link führt zu den Aufgaben (siehe [Aufgaben übernehmen und abhaken](/mitarbeitende/aufgaben/)). Gezählt werden Aufgaben, die niemand übernommen und niemand abgehakt hat, und zwar nur die, die jetzt dran sind: vor der Freizeit die der Vorbereitung, während der Freizeit dazu die für die Zeit der Freizeit, danach alle. Nach dem Abschluss gibt es die Zeile nicht mehr.
 
 Gibt es mindestens eine Zeile, steht darüber „Achtung: 2 Punkte sind offen.“, gezählt wird je Zeile. Ist nichts offen, steht dort „Alles erledigt: Keine offenen Punkte.“ Lässt sich ein Teil gerade nicht laden, fehlt seine Zeile, und „Keine offenen Punkte.“ erscheint nicht.
 
-Warnhinweise zu unbesetzten Aufgaben kommen dazu, sobald es Aufgaben in Zeltlotse gibt.
+Vor den Cards des Cockpits steht außerdem die Card **Meine Aufgaben** mit den eigenen offenen Aufgaben; sie sehen Leitung und Team gleichermaßen (siehe [Aufgaben übernehmen und abhaken](/mitarbeitende/aufgaben/#meine-aufgaben)).
 
 ## Unvollständige Freizeitpässe
 

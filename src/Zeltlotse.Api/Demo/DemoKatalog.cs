@@ -188,6 +188,34 @@ internal static class DemoKatalog
         (Zeltlotse.Api.Contracts.Inventar.SchadenArt.Verlust, "Taschenlampe"),
     ];
 
+    /// <summary>Story 3-5: Aufgaben-Vorlagen der Demo-Organisation (je nur, wenn es den Titel dort noch nicht gibt), angelegt wie von Andrea.</summary>
+    public static IReadOnlyList<(string Titel, Zeltlotse.Api.Contracts.Programm.AufgabenPhase Phase)> AufgabenVorlagen { get; } =
+    [
+        ("Zeltplatz-Vertrag prüfen", Zeltlotse.Api.Contracts.Programm.AufgabenPhase.Vorbereitung),
+        ("Erste-Hilfe-Kasten auffüllen", Zeltlotse.Api.Contracts.Programm.AufgabenPhase.Vorbereitung),
+        ("Zeltplatz besenrein übergeben", Zeltlotse.Api.Contracts.Programm.AufgabenPhase.Nachbereitung),
+    ];
+
+    /// <summary>
+    /// Story 3-5: eigene Aufgaben der Demo-Freizeit neben den übernommenen Vorlagen (je nur, wenn es den Titel dort noch nicht gibt), optional am
+    /// Programmpunkt (Titel) und mit der Person, die sie übernommen hat (Mail-Adresse).
+    /// </summary>
+    public static IReadOnlyList<(string Titel, Zeltlotse.Api.Contracts.Programm.AufgabenPhase Phase, string? Programmpunkt, string? UebernommenVon)> Aufgaben { get; } =
+    [
+        ("Andacht am Lagerfeuer vorbereiten", Zeltlotse.Api.Contracts.Programm.AufgabenPhase.Waehrend, "Lagerfeuer", "lea.feuerstein@example.org"),
+        ("Fotos sammeln", Zeltlotse.Api.Contracts.Programm.AufgabenPhase.Nachbereitung, null, null),
+    ];
+
+    /// <summary>
+    /// Story 3-5: Wer welche Aufgabe aus den Vorlagen übernimmt (Mail-Adresse, „Ich übernehme“ führt die Person selbst aus) und ob sie schon
+    /// abgehakt ist: Lea übernimmt den Erste-Hilfe-Kasten, Jonas den Zeltplatz-Vertrag und hakt ihn ab.
+    /// </summary>
+    public static IReadOnlyList<(string Titel, string Person, bool Erledigt)> AufgabenUebernahmen { get; } =
+    [
+        ("Erste-Hilfe-Kasten auffüllen", "lea.feuerstein@example.org", false),
+        ("Zeltplatz-Vertrag prüfen", "jonas.huettner@example.org", true),
+    ];
+
     /// <summary>
     /// Jonas' Nachweise (Story 1-5): Art, Ausstellungsdatum und eine kleine erfundene Demo-Datei. Ohne Präventionsschulung, damit
     /// „Nachweis hinzufügen“ in der Doku sichtbar bleibt.
