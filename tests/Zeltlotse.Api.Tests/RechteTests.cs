@@ -61,24 +61,25 @@ public sealed class RechteTests(PostgresContainer postgres) : IAsyncLifetime
         Assert.Equal("A", json.GetProperty("name").GetString());
         Assert.Equal(["OrgAdmin"], json.GetProperty("rollen").EnumerateArray().Select(r => r.GetString()));
         // Story 1-5: dazu Nachweise prüfen und die Nachweis-Richtlinie verwalten, aus denselben Rollenlisten wie die Endpunkte.
-        // Story 1-7: dazu die Löschfristen verwalten; Story 2-7: die Org-Dokumente; Story 2-10: das Archiv der Vorfall-Notizen.
+        // Story 1-7: dazu die Löschfristen verwalten; Story 2-7: die Org-Dokumente; Story 2-10: das Archiv der Vorfall-Notizen; Story 3-3: das Inventar.
         Assert.Equal(
             [
                 Aktionsschluessel.OrgRollenVergeben, Aktionsschluessel.NachweisePruefen, Aktionsschluessel.NachweisRichtlinieVerwalten, Aktionsschluessel.LoeschfristenVerwalten,
-                Aktionsschluessel.OrgDokumenteVerwalten, Aktionsschluessel.VorfallArchivSehen,
+                Aktionsschluessel.OrgDokumenteVerwalten, Aktionsschluessel.VorfallArchivSehen, Aktionsschluessel.InventarSehen, Aktionsschluessel.InventarVerwalten,
             ],
             json.GetProperty("erlaubt").EnumerateArray().Select(r => r.GetString()));
     }
 
     [Fact]
-    public async Task Org_Ueberblick_liest_die_Organisation_ohne_erlaubte_Aktion()
+    public async Task Org_Ueberblick_liest_die_Organisation_nur_mit_der_erlaubten_Aktion_inventar_sehen()
     {
         using var antwort = await _jonas.GetAsync($"/api/organisationen/{_a}", Abbruch);
 
         Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
         var json = await JsonAsync(antwort);
         Assert.Equal(["OrgUeberblick"], json.GetProperty("rollen").EnumerateArray().Select(r => r.GetString()));
-        Assert.Empty(json.GetProperty("erlaubt").EnumerateArray());
+        // Story 3-3: Org-Überblick sieht das Inventar (NS-13), pflegt es aber nicht.
+        Assert.Equal([Aktionsschluessel.InventarSehen], json.GetProperty("erlaubt").EnumerateArray().Select(r => r.GetString()));
     }
 
     [Fact]

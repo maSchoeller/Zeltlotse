@@ -23,6 +23,74 @@ namespace Zeltlotse.Inventar.Migrationen
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Zeltlotse.Inventar.Artikel.InventarArtikel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Bezeichnung")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Menge")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.ToTable("inventar_artikel", "inventar");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Inventar.Reservierungen.Reservierung", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ArtikelId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Bis")
+                        .HasColumnType("date");
+
+                    b.Property<long>("Folgenummer")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("MaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Von")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArtikelId");
+
+                    b.HasIndex("FreizeitId");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.ToTable("reservierung", "inventar");
+                });
+
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.InboxEintrag", b =>
                 {
                     b.Property<Guid>("EreignisId")
@@ -118,6 +186,15 @@ namespace Zeltlotse.Inventar.Migrationen
                     b.HasIndex("ErledigtAm", "NaechsterVersuch");
 
                     b.ToTable("outbox_zustellung", "inventar");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Inventar.Reservierungen.Reservierung", b =>
+                {
+                    b.HasOne("Zeltlotse.Inventar.Artikel.InventarArtikel", null)
+                        .WithMany()
+                        .HasForeignKey("ArtikelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.Zustellung", b =>

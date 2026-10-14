@@ -7,6 +7,7 @@
 @inject FreizeitKontextDienst Kontext
 @inject FreizeitenApiClient Freizeiten
 @inject ProgrammApiClient ProgrammApi
+@inject InventarApiClient InventarApi
 @inject NavigationManager Navigation
 @* Programmpunkt (CAP-19, FR-34, FR-35, Story 3-1; EXPERIENCE.md → Fläche „Programmpunkt“) für Leitung und Team, erreicht über den Titel im
    Wochenraster. Dachzeile „Programm“, Überschrift „Programmpunkt“ und der Tag (Titel und Uhrzeit nur in den Feldern, nach dem Abschluss als Liste); „Übernommen: …“ mit „Ich übernehme“ bzw. „Abgeben“ (ein Tipp, nur
@@ -14,7 +15,8 @@
    Inline-Bestätigung, nicht bei den festen Mahlzeiten. In der Phase „gelaufen“ nur lesbar. Kontext, Raster oder Punkt nicht verfügbar →
    „Diese Seite ist nicht verfügbar.“ Story 3-2: Card „Material“ mit dem Material des Punkts (aus der Materialliste gefiltert; Bezeichnung und
    Menge als Autosave-Felder, Status per Segmente, „Ich bringe das mit“, Löschen), ohne Material „Noch kein Material.“, darunter das Formular
-   „Material hinzufügen“ (Bezeichnung *, Menge). *@
+   „Material hinzufügen“ (Bezeichnung *, Menge). Story 3-3: Die Seite lädt still das Inventar der Freizeit mit; am Material steht „Aus dem
+   Inventar: …“ oder die Auswahl „Aus dem Inventar“ mit „Reservieren“. Nach dem Reservieren lädt sie Material und Inventar neu. *@
 <PageTitle>Programmpunkt – Zeltlotse</PageTitle>
 
 @if (_nichtVerfuegbar)
@@ -95,7 +97,8 @@ else
                 @foreach (var material in _material)
                 {
                     <MaterialEintrag @key="material.Id" FreizeitId="FreizeitId" Material="material" Namen="_namen" Bearbeiten="true" NurLesen="Abgeschlossen"
-                                     Geaendert="MaterialGeaendert" Geloescht="MaterialGeloescht" NeuLaden="MaterialNeuLadenAsync" />
+                                     Geaendert="MaterialGeaendert" Geloescht="MaterialGeloescht" NeuLaden="MaterialNeuLadenAsync"
+                                     Inventar="_inventar" Reserviert="NachReservierenAsync" />
                 }
                 @if (_material.Count == 0)
                 {
@@ -137,6 +140,7 @@ else
     private string? _meldung;
     private List<Material> _material = [];
     private bool _materialFehlt;
+    private Zeltlotse.Api.Contracts.Inventar.FreizeitInventar? _inventar;
     private string? _bezeichnung;
     private string? _menge;
     private string? _bezeichnungFehler;
@@ -164,7 +168,9 @@ else
             var freizeit = Leise(Freizeiten.LadenAsync(FreizeitId));
             var personen = Leise(Freizeiten.PersonenlisteLadenAsync(FreizeitId));
             var material = Leise(ProgrammApi.MaterialLadenAsync(FreizeitId));
-            await Task.WhenAll(kontext, raster, freizeit, personen, material);
+            var inventar = Leise(InventarApi.FreizeitInventarAsync(FreizeitId));
+            await Task.WhenAll(kontext, raster, freizeit, personen, material, inventar);
+            _inventar = inventar.Result;
             _punkt = raster.Result?.Punkte.FirstOrDefault(p => p.Id == PunktId);
             _materialFehlt = material.Result is null;
             _material = MaterialDesPunkts(material.Result);
@@ -212,6 +218,20 @@ else
         try
         {
             _material = MaterialDesPunkts(await ProgrammApi.MaterialLadenAsync(FreizeitId));
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Story 3-3: Nach „Reservieren“ am Material: Material und Inventar neu holen (der Status folgt, sobald Programm das Ereignis verarbeitet hat).</summary>
+    private async Task NachReservierenAsync()
+    {
+        await MaterialNeuLadenAsync();
+        try
+        {
+            _inventar = await InventarApi.FreizeitInventarAsync(FreizeitId) ?? _inventar;
         }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
         {

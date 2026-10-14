@@ -11,8 +11,11 @@ namespace Zeltlotse.Testing;
 public sealed class PostgresContainer : IAsyncLifetime
 {
     // Jede Test-Factory öffnet eigene Verbindungs-Pools; parallel laufende Testklassen brauchen mehr als die Vorgabe 100.
+    // Docker gibt Containern nur 64 MB Shared Memory; bei vielen parallelen Abfragen scheitert PostgreSQL sonst mit
+    // „could not resize shared memory segment … No space left on device“.
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:18.6")
         .WithCommand("-c", "max_connections=500")
+        .WithCreateParameterModifier(parameter => parameter.HostConfig!.ShmSize = 1024L * 1024 * 1024)
         .Build();
 
     public string VerbindungsZeichenfolge => _container.GetConnectionString();

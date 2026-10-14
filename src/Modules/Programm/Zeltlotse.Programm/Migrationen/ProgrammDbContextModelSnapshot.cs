@@ -49,6 +49,9 @@ namespace Zeltlotse.Programm.Migrationen
                     b.Property<Guid>("ProgrammpunktId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ReservierungId")
+                        .HasColumnType("uuid");
+
                     b.Property<short>("Status")
                         .HasColumnType("smallint");
 

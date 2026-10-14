@@ -46,6 +46,12 @@ internal sealed class Material : IOrganisationsEigen
     /// </summary>
     public Guid? BringtMit => PersonId == GeloeschtePerson.Id ? null : PersonId;
 
+    /// <summary>
+    /// Story 3-3: Die Reservierung im Inventar, über die das Material bereitliegt; nur der Empfänger von <c>ReservierungGeaendert</c> setzt und
+    /// leert sie (<see cref="ReservierungZuordnen"/>, <see cref="ReservierungLoesen"/>).
+    /// </summary>
+    public Guid? ReservierungId { get; private set; }
+
     /// <summary>Versionsnummer der Zeile (<c>xmin</c>, AD-19).</summary>
     public uint Version { get; private set; }
 
@@ -99,6 +105,31 @@ internal sealed class Material : IOrganisationsEigen
 
         PersonId = null;
         return true;
+    }
+
+    /// <summary>
+    /// Story 3-3: Eine Reservierung im Inventar ist für dieses Material entstanden: Zeltlotse merkt sich die Kennung, das Stück liegt im Lager
+    /// bereit (Status „vorhanden“).
+    /// </summary>
+    public void ReservierungZuordnen(Guid reservierungId)
+    {
+        ReservierungId = reservierungId;
+        Status = MaterialStatus.Vorhanden;
+    }
+
+    /// <summary>
+    /// Story 3-3: Die Reservierung ist aufgehoben: Nur wenn es die gemerkte ist, wird die Kennung geleert und das Material wieder „gebraucht“;
+    /// eine andere Kennung ändert nichts.
+    /// </summary>
+    public void ReservierungLoesen(Guid reservierungId)
+    {
+        if (ReservierungId != reservierungId)
+        {
+            return;
+        }
+
+        ReservierungId = null;
+        Status = MaterialStatus.Gebraucht;
     }
 
     /// <summary>Der Wert eines Felds als Text, wie die API ihn liefert.</summary>

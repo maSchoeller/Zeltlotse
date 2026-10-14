@@ -106,4 +106,16 @@ public static class Aktionsschluessel
     /// FR-31).
     /// </summary>
     public const string VorfallArchivSehen = "vorfall-archiv-sehen";
+
+    /// <summary>
+    /// Das Inventar der Organisation mit allen Reservierungen sehen (Org-Admin und Org-Überblick, in <c>GET /api/organisationen/{orgId}</c>,
+    /// Story 3-3, FR-37).
+    /// </summary>
+    public const string InventarSehen = "inventar-sehen";
+
+    /// <summary>
+    /// Das Inventar der Organisation pflegen: Artikel hinzufügen, bearbeiten und löschen (Org-Admin, in <c>GET /api/organisationen/{orgId}</c>,
+    /// Story 3-3, FR-37).
+    /// </summary>
+    public const string InventarVerwalten = "inventar-verwalten";
 }

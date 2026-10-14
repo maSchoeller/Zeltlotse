@@ -1,0 +1,260 @@
+@page "/freizeiten/{FreizeitId:guid}/inventar"
+@using System.Globalization
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Inventar
+@using Zeltlotse.Ui.Kontext
+@using ApiFreizeitInventar = Zeltlotse.Api.Contracts.Inventar.FreizeitInventar
+@inject FreizeitKontextDienst Kontext
+@inject InventarApiClient InventarApi
+@* Inventar in der Freizeit (CAP-21, FR-37, NS-5, Story 3-3; EXPERIENCE.md → Fläche „Inventar“) für Leitung und Team, erreicht über den Knopf
+   „Inventar“ auf der Startseite. Dachzeile „Planen“, Überschrift „Inventar“, je Artikel der Organisation eine Card mit Menge, den eigenen
+   Reservierungen (Zeitraum, „Reservierung aufheben“) und dem Formular „Reservieren“ mit Von und Bis (vorbelegt mit dem ersten und letzten Tag der
+   Freizeit). „Reservierung aufheben“ fragt per Inline-Bestätigung nach (ein verknüpftes Material steht danach wieder auf „gebraucht“). Überschneidet sich eine eigene Reservierung mit einer anderen Freizeit, steht am Artikel die Warnung „Zur gleichen Zeit auch für …
+   reserviert. Absprache mit der anderen Leitung nötig.“; Zeltlotse verhindert nichts. Ohne Artikel „Die Organisation hat noch kein Inventar.“.
+   In der Phase „gelaufen“ nur lesbar. Kontext oder Inventar nicht verfügbar → „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>Inventar – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Planen</Dachzeile>
+    <h1>Inventar</h1>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+
+    @if (_inventar is null || _kontext is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        <p>Stücke aus dem Inventar der Organisation für einen Zeitraum reservieren. Überschneidungen mit anderen Freizeiten klären die Leitungen untereinander.</p>
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@ProgrammTexte.AbgeschlossenText</p>
+            </Meldung>
+        }
+        @if (_meldung is not null)
+        {
+            <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                <p>@_meldung</p>
+            </Meldung>
+        }
+        @if (_inventar.Artikel.Count == 0)
+        {
+            <LeerZustand Satz="Die Organisation hat noch kein Inventar." />
+        }
+        @foreach (var artikel in _inventar.Artikel)
+        {
+            <Card @key="artikel.Id" Titel="@artikel.Bezeichnung">
+                @if (artikel.Menge is not null)
+                {
+                    <p>Menge: @artikel.Menge</p>
+                }
+                @if (KonfliktNamen(artikel) is { Count: > 0 } namen)
+                {
+                    <Meldung Titel="Achtung" Art="MeldungArt.Warnung">
+                        <p>@Anzeige.Konflikt(namen)</p>
+                    </Meldung>
+                }
+                @if (artikel.Reservierungen.Count == 0)
+                {
+                    <p>Für diese Freizeit nicht reserviert.</p>
+                }
+                else
+                {
+                    <h3>Reserviert</h3>
+                    <ul>
+                        @foreach (var reservierung in artikel.Reservierungen)
+                        {
+                            <ReservierungZeile @key="reservierung.Id" Reservierung="reservierung">
+                                @if (!Abgeschlossen)
+                                {
+                                    <InlineBestaetigung AusloeserText="Reservierung aufheben" AusloeserArt="KnopfArt.Text" Satz="Reservierung aufheben?"
+                                                        JaText="Ja, aufheben" Bestaetigt="@(() => AufhebenAsync(reservierung))" />
+                                }
+                            </ReservierungZeile>
+                        }
+                    </ul>
+                }
+                @if (!Abgeschlossen)
+                {
+                    var formular = Formular(artikel.Id);
+                    <h3>Reservieren</h3>
+                    <Formular Absenden="@(() => ReservierenAsync(artikel))">
+                        <Feld Label="Von" Id="@($"reservieren-{artikel.Id}-von")" Typ="date" Wert="@formular.Von"
+                              @oninput="@(e => formular.Von = e.Value?.ToString())" />
+                        <Feld Label="Bis" Id="@($"reservieren-{artikel.Id}-bis")" Typ="date" Wert="@formular.Bis" Fehler="@formular.Fehler"
+                              @oninput="@(e => formular.Bis = e.Value?.ToString())" />
+                        <Knopf Typ="submit" Art="KnopfArt.Outline" Deaktiviert="@_uebertraegt">Reservieren</Knopf>
+                    </Formular>
+                }
+            </Card>
+        }
+    }
+}
+
+@code {
+    private const string Datumsformat = "yyyy-MM-dd";
+
+    private FreizeitKontext? _kontext;
+    private ApiFreizeitInventar? _inventar;
+    private readonly Dictionary<Guid, ReservierenFormular> _formulare = [];
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private string? _meldung;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _inventar = null;
+        _formulare.Clear();
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var inventar = InventarApi.FreizeitInventarAsync(FreizeitId);
+            await Task.WhenAll(kontext, inventar);
+            if (kontext.Result is null || inventar.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _inventar) = (kontext.Result, inventar.Result);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>Die Namen der anderen Freizeiten aus allen eigenen Reservierungen des Artikels, sortiert und ohne Doppelte.</summary>
+    private static List<string> KonfliktNamen(InventarArtikel artikel) =>
+        [.. artikel.Reservierungen.SelectMany(r => r.Konflikte).Distinct().Order(StringComparer.Create(CultureInfo.GetCultureInfo("de-DE"), false))];
+
+    /// <summary>Das Formular eines Artikels, vorbelegt mit dem Zeitraum der Freizeit.</summary>
+    private ReservierenFormular Formular(Guid artikelId)
+    {
+        if (!_formulare.TryGetValue(artikelId, out var formular))
+        {
+            formular = new ReservierenFormular
+            {
+                Von = _inventar!.ErsterTag.ToString(Datumsformat, CultureInfo.InvariantCulture),
+                Bis = _inventar.LetzterTag.ToString(Datumsformat, CultureInfo.InvariantCulture),
+            };
+            _formulare[artikelId] = formular;
+        }
+
+        return formular;
+    }
+
+    private async Task NeuLadenAsync() => _inventar = await InventarApi.FreizeitInventarAsync(FreizeitId) ?? _inventar;
+
+    private async Task ReservierenAsync(InventarArtikel artikel)
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        var formular = Formular(artikel.Id);
+        _uebertraegt = true;
+        (formular.Fehler, _meldung, _aktionFehler) = (null, null, false);
+        try
+        {
+            var aktion = await InventarApi.ReservierenAsync(FreizeitId, artikel.Id, new ReservierungNeu(Tag(formular.Von), Tag(formular.Bis), null));
+            switch (aktion.Ergebnis)
+            {
+                case InventarAktionErgebnis.Erfolg:
+                    await NeuLadenAsync();
+                    break;
+                case InventarAktionErgebnis.Abgeschlossen:
+                    _meldung = ProgrammTexte.AbgeschlossenText;
+                    break;
+                default:
+                    formular.Fehler = aktion.Feldfehler.GetValueOrDefault(InventarFelder.Bis) ?? aktion.Feldfehler.GetValueOrDefault(InventarFelder.Von);
+                    if (formular.Fehler is null)
+                    {
+                        _meldung = AnmeldungAbschluss.FehlerText;
+                    }
+
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task AufhebenAsync(Reservierung reservierung)
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        (_meldung, _aktionFehler) = (null, false);
+        try
+        {
+            switch (await InventarApi.AufhebenAsync(FreizeitId, reservierung.Id))
+            {
+                case InventarAktionErgebnis.Erfolg:
+                    await NeuLadenAsync();
+                    break;
+                case InventarAktionErgebnis.Abgeschlossen:
+                    _meldung = ProgrammTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    /// <summary>Ein Datum aus dem Feld; leer heißt ohne Datum (dann prüft der Server, ob beide fehlen).</summary>
+    private static DateOnly? Tag(string? text) =>
+        DateOnly.TryParseExact(text, Datumsformat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var tag) ? tag : null;
+
+    private sealed class ReservierenFormular
+    {
+        public string? Von { get; set; }
+
+        public string? Bis { get; set; }
+
+        public string? Fehler { get; set; }
+    }
+}

@@ -14,6 +14,7 @@ Mitarbeitende melden sich mit der eigenen Mail-Adresse an, per Login-Link aus de
 
 - **Programm** – Programmpunkte im Wochenraster planen, die Uhrzeit ändern und Programmpunkte mit „Ich übernehme“ selbst übernehmen. Die Leitung teilt nichts zu; Mitarbeitende übernehmen selbst – siehe [Programm planen und übernehmen](/mitarbeitende/programm/). Aufgaben am Programmpunkt kommen später.
 - **Material** – am Programmpunkt Material mit Menge festhalten, den Stand von „gebraucht“ bis „eingepackt“ setzen, mit „Ich bringe das mit“ selbst mitbringen und in der Materialliste alles auf einen Blick sehen – siehe [Material planen und packen](/mitarbeitende/material/).
+- **Inventar** – Stücke aus dem Inventar der Organisation für den Zeitraum der Freizeit reservieren, auch direkt am Material eines Programmpunkts, und sehen, wenn eine andere Freizeit dasselbe zur gleichen Zeit braucht – siehe [Material aus dem Inventar reservieren](/mitarbeitende/inventar/).
 - **Finanzen und Belege** – Belege erfassen und Beiträge als bezahlt abhaken.
 - **Kanäle** – Nachrichten im Team und an alle.
 - **Notfall** – über die Notfall-Box auf der Startseite (während der Freizeit) oder den Knopf **Sicherheitskette** die Sicherheitskette öffnen: was jetzt zu tun ist und wen anrufen; mit der Schnellsuche den Freizeitpass der betroffenen Person in zwei Schritten – siehe [Notfall](/mitarbeitende/notfall/).

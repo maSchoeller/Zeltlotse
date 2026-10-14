@@ -113,7 +113,7 @@ public sealed class MaterialTests(PostgresContainer postgres) : IAsyncLifetime
             ],
             liste.Select(m => $"{Text(m, "tag")} {Text(m, "beginn") ?? "-"} {Text(m, "programmpunkt")} {Text(m, "bezeichnung")} {Text(m, "menge") ?? "-"} {Text(m, "status")}"));
         Assert.Equal(
-            ["beginn", "bezeichnung", "bringtMit", "id", "meins", "menge", "programmpunkt", "programmpunktId", "status", "tag", "version"],
+            ["beginn", "bezeichnung", "bringtMit", "id", "meins", "menge", "programmpunkt", "programmpunktId", "reservierungId", "status", "tag", "version"],
             Namen(liste[0]));
         Assert.Equal(lagerfeuer, liste[0].GetProperty("programmpunktId").GetGuid());
     }

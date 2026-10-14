@@ -44,6 +44,10 @@ Ein Material bringt immer nur eine Person mit. Bringt es schon jemand anderes mi
 
 ![Material am Programmpunkt „Geländespiel“ am Laptop: Felder Bezeichnung und Menge, die vier Stände als Knöpfe und bei den Taschenlampen „Bringt mit: Miriam Zeltner“](../../../assets/screenshots/material-programmpunkt-laptop.png)
 
+## Aus dem Inventar
+
+Auf der Seite des Programmpunkts steht unter einem Material die Auswahl **Aus dem Inventar** mit den Artikeln der Organisation und der Knopf **Reservieren** – solange noch keine Reservierung daran hängt, die Organisation Inventar hat und die Freizeit nicht abgeschlossen ist: Ein Tipp reserviert den gewählten Artikel für den ganzen Zeitraum der Freizeit. Danach steht am Material „Aus dem Inventar:“ mit dem Artikel, und der Stand wechselt auf **vorhanden**. Braucht eine andere Freizeit denselben Artikel zur gleichen Zeit, steht darunter „Zur gleichen Zeit auch für … reserviert. Absprache mit der anderen Leitung nötig.“ Mehr dazu unter [Material aus dem Inventar reservieren](/mitarbeitende/inventar/).
+
 ## Material ändern und löschen
 
 Auf der Seite des Programmpunkts stehen **Bezeichnung** und **Menge** jedes Materials in Feldern. Zeltlotse speichert beim Verlassen des Felds; darunter steht „Gespeichert“ mit „Rückgängig“. Hat jemand anderes dasselbe Feld inzwischen geändert, steht dort „Inzwischen geändert – neu laden?“. Eine leere Menge heißt: ohne Menge.
@@ -68,6 +72,6 @@ Nach dem Abschluss der Freizeit ist das Material nur lesbar: Oben steht „Diese
 
 ## Noch nicht dabei
 
-Material aus dem Inventar der Organisation reservieren, ein Hinweis auf doppelte Reservierungen und eine Druckansicht der Materialliste kommen mit späteren Versionen.
+Eine Druckansicht der Materialliste kommt mit einer späteren Version.
 
 Wer Material mitbringt, steht auch in der Datenauskunft der Person unter „Programm“ – mehr dazu unter [Was passiert mit meinen Daten](/daten/#programm).

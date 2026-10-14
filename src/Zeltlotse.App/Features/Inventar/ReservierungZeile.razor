@@ -1,0 +1,25 @@
+@using Zeltlotse.Api.Contracts.Inventar
+@* Eine Reservierung als Listenpunkt (Story 3-3, FR-37): im Inventar der Organisation „Freizeit · Zeitraum“, in der Freizeit nur der Zeitraum.
+   Hat sie einen Konflikt, steht der Status „Konflikt“ (Warnung, Wort und Quadrat) dahinter. Platz für eine Aktion an Ort und Stelle (z. B.
+   „Reservierung aufheben“). *@
+<li>
+    @Text
+    @if (Reservierung.Konflikte.Count > 0)
+    {
+        @(" ")<Status Wort="Konflikt" Art="StatusArt.Warnung" />
+    }
+    @ChildContent
+</li>
+
+@code {
+    [Parameter, EditorRequired] public Reservierung Reservierung { get; set; } = null!;
+
+    /// <summary>Den Namen der Freizeit voranstellen (Inventar der Organisation).</summary>
+    [Parameter] public bool MitFreizeit { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string Text => MitFreizeit
+        ? $"{Reservierung.Freizeit} · {Anzeige.ZeitraumKurz(Reservierung.Von, Reservierung.Bis)}"
+        : Anzeige.ZeitraumKurz(Reservierung.Von, Reservierung.Bis);
+}

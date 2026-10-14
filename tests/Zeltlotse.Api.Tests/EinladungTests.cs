@@ -165,7 +165,8 @@ public sealed class EinladungTests(PostgresContainer postgres)
 
         var json = await JsonAsync(await andrea.GetAsync($"/api/organisationen/{orgId}", Abbruch));
         Assert.Equal(["OrgUeberblick"], json.GetProperty("rollen").EnumerateArray().Select(r => r.GetString()));
-        Assert.Empty(json.GetProperty("erlaubt").EnumerateArray());
+        // Story 3-3: Org-Überblick sieht nur das Inventar.
+        Assert.Equal(["inventar-sehen"], json.GetProperty("erlaubt").EnumerateArray().Select(r => r.GetString()));
         Assert.False((await JsonAsync(await gerd.GetAsync("/api/organisationen", Abbruch)))[0].GetProperty("eingerichtet").GetBoolean());
     }
 

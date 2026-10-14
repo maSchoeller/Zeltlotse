@@ -57,7 +57,8 @@ internal static class MaterialLesen
         material.Menge,
         material.Status,
         material.BringtMit,
-        ich is { } person && material.BringtMit == person);
+        ich is { } person && material.BringtMit == person,
+        material.ReservierungId);
 }
 
 /// <summary>Texte der Formprüfung, gleich für Anlegen und Bearbeiten.</summary>

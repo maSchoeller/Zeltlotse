@@ -48,6 +48,9 @@ internal sealed class AnmeldeAblauf : IAsyncDisposable
 
     public HttpClient MiriamClient { get; private set; } = null!;
 
+    /// <summary>Story 3-3: Andrea als Org-Admin (Inventar pflegen).</summary>
+    public HttpClient AndreaClient { get; private set; } = null!;
+
     public HttpClient JonasClient { get; private set; } = null!;
 
     public Guid Emma { get; private set; }
@@ -70,6 +73,7 @@ internal sealed class AnmeldeAblauf : IAsyncDisposable
         var gerd = await AngemeldetAsync(Gerd);
         OrgId = (await AntwortAsync<OrganisationAngelegt>(await SendenAsync(gerd, "/api/organisationen", new OrganisationAnlegen("Jugendwerk", Andrea)), HttpStatusCode.Created)).Id;
         var andrea = await AngemeldetAsync(Andrea);
+        AndreaClient = andrea;
         Assert.Equal(HttpStatusCode.OK, (await SendenAsync(andrea, "/api/organisationen/einladungen/annehmen", new EinladungAnnehmen(TokenAus(Andrea, "Einladung zu Zeltlotse")))).StatusCode);
         FreizeitId = (await AntwortAsync<FreizeitAngelegt>(
             await SendenAsync(andrea, $"/api/organisationen/{OrgId}/freizeiten", new FreizeitAnlegen("Zeltlager", new DateOnly(2027, 8, 2), new DateOnly(2027, 8, 13))),
@@ -194,7 +198,8 @@ internal sealed class AnmeldeAblauf : IAsyncDisposable
 
     private string TokenAus(string mail, string betreff) => Factory.Mails.An(mail).Last(m => m.Betreff == betreff).Token;
 
-    private static async Task<HttpResponseMessage> SendenAsync(HttpClient client, string pfad, object? koerper, HttpMethod? methode = null)
+    /// <summary>Sendet mit Antiforgery-Header (Vorgabe <c>POST</c>).</summary>
+    public static async Task<HttpResponseMessage> SendenAsync(HttpClient client, string pfad, object? koerper, HttpMethod? methode = null)
     {
         var token = (await client.GetFromJsonAsync<AntiforgeryAntwort>("/api/betrieb/antiforgery", Abbruch))!.Token;
         using var anfrage = new HttpRequestMessage(methode ?? HttpMethod.Post, pfad) { Content = koerper is null ? null : JsonContent.Create(koerper, koerper.GetType()) };

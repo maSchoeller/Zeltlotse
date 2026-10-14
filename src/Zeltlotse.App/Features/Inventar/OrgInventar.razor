@@ -1,0 +1,221 @@
+@page "/organisationen/{OrgId:guid}/inventar"
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Inventar
+@inject OrganisationenApiClient Organisationen
+@inject InventarApiClient InventarApi
+@* Inventar der Organisation (CAP-21, FR-37, Story 3-3; EXPERIENCE.md → Flächen „Organisation verwalten“, „Org-Überblick“), erreicht über die Card
+   „Inventar“ der Organisation. Überschrift „Inventar“, je Artikel eine Card: mit „inventar-verwalten“ (Org-Admin) Bezeichnung und Menge als
+   Autosave-Felder (AD-19) und „Artikel löschen“ per Inline-Bestätigung, sonst (Org-Überblick) die Menge als Text. Darunter die Reservierungen aller
+   Freizeiten als Liste „Freizeit · Zeitraum“, bei einem Konflikt mit Status „Konflikt“. Ohne Artikel „Noch kein Inventar.“; mit
+   „inventar-verwalten“ am Ende das Formular „Artikel hinzufügen“ (Bezeichnung *, Menge). Ohne „inventar-sehen“ oder bei 403/404 → „Diese Seite
+   ist nicht verfügbar.“ *@
+<PageTitle>Inventar – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <h1>Inventar</h1>
+    <p><a href="@($"organisationen/{OrgId}")">Zurück zur Organisation</a></p>
+    <p>Freizeiten der Organisation reservieren Stücke aus dem Inventar für ihren Zeitraum. Zeltlotse zeigt Überschneidungen, löst sie aber nicht.</p>
+
+    @if (_aktionFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@AnmeldungAbschluss.FehlerText</p>
+        </Meldung>
+    }
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+
+    @if (_artikel is null)
+    {
+        @if (!_aktionFehler)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @if (_artikel.Count == 0)
+        {
+            <LeerZustand Satz="Noch kein Inventar." />
+        }
+        @foreach (var artikel in _artikel)
+        {
+            <Card @key="artikel.Id" Titel="@Titel(artikel)">
+                @if (Verwalten)
+                {
+                    <AutosaveFeld Label="Bezeichnung" Id="@($"artikel-{artikel.Id}-bezeichnung")" Feldname="@InventarFelder.Bezeichnung"
+                                  Pfad="@InventarApiClient.ArtikelPfad(OrgId, artikel.Id)" Wert="@artikel.Bezeichnung" Version="@artikel.Version"
+                                  Hinweis="@($"Höchstens {InventarFelder.BezeichnungMaximaleLaenge} Zeichen")" NeuLaden="LadenAsync"
+                                  Gespeichert="@(w => _titel[artikel.Id] = w ?? "")" />
+                    <AutosaveFeld Label="Menge" Id="@($"artikel-{artikel.Id}-menge")" Feldname="@InventarFelder.Menge"
+                                  Pfad="@InventarApiClient.ArtikelPfad(OrgId, artikel.Id)" Wert="@artikel.Menge" Version="@artikel.Version"
+                                  Hinweis="Freitext, z. B. 8 Stück" NeuLaden="LadenAsync" />
+                }
+                else if (artikel.Menge is not null)
+                {
+                    <p>Menge: @artikel.Menge</p>
+                }
+                @if (artikel.Reservierungen.Count == 0)
+                {
+                    <p>Nicht reserviert.</p>
+                }
+                else
+                {
+                    <h3>Reservierungen</h3>
+                    <ul>
+                        @foreach (var reservierung in artikel.Reservierungen)
+                        {
+                            <ReservierungZeile @key="reservierung.Id" Reservierung="reservierung" MitFreizeit="true" />
+                        }
+                    </ul>
+                }
+                @if (Verwalten)
+                {
+                    <InlineBestaetigung AusloeserText="Artikel löschen" AusloeserArt="KnopfArt.Text" Satz="@($"„{Titel(artikel)}“ löschen?")" JaText="Ja, löschen"
+                                        Bestaetigt="@(() => LoeschenAsync(artikel))" />
+                }
+            </Card>
+        }
+
+        @if (Verwalten)
+        {
+            <Card Titel="Artikel hinzufügen">
+                <Formular Absenden="AnlegenAsync">
+                    <Feld Label="Bezeichnung *" Id="artikel-bezeichnung" Wert="@_bezeichnung" Fehler="@_bezeichnungFehler" autocomplete="off"
+                          Hinweis="@($"Höchstens {InventarFelder.BezeichnungMaximaleLaenge} Zeichen")" @oninput="@(e => _bezeichnung = e.Value?.ToString())" />
+                    <Feld Label="Menge" Id="artikel-menge" Wert="@_menge" Fehler="@_mengeFehler" autocomplete="off" Hinweis="Freitext, z. B. 8 Stück"
+                          @oninput="@(e => _menge = e.Value?.ToString())" />
+                    <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Artikel hinzufügen</Knopf>
+                </Formular>
+                <p>* Pflichtfeld</p>
+            </Card>
+        }
+    }
+}
+
+@code {
+    /// <summary>Ein Artikel mit Reservierungen lässt sich nicht löschen.</summary>
+    public const string NochReserviertText = "Noch reserviert. Löschen geht erst, wenn keine Freizeit den Artikel mehr reserviert hat.";
+
+    private List<InventarArtikel>? _artikel;
+    private readonly Dictionary<Guid, string> _titel = [];
+    private bool _verwalten;
+    private bool _nichtVerfuegbar;
+    private bool _aktionFehler;
+    private bool _uebertraegt;
+    private string? _meldung;
+    private string? _bezeichnung;
+    private string? _menge;
+    private string? _bezeichnungFehler;
+    private string? _mengeFehler;
+
+    [Parameter] public Guid OrgId { get; set; }
+
+    private bool Verwalten => _verwalten;
+
+    /// <summary>Die Überschrift folgt dem gespeicherten Wert der Bezeichnung.</summary>
+    private string Titel(InventarArtikel artikel) => _titel.GetValueOrDefault(artikel.Id) ?? artikel.Bezeichnung;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _artikel = null;
+        _nichtVerfuegbar = false;
+        _aktionFehler = false;
+        _meldung = null;
+        try
+        {
+            var organisation = await Organisationen.LadenAsync(OrgId);
+            if (organisation is null || !organisation.Erlaubt.Contains(Aktionsschluessel.InventarSehen))
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            _verwalten = organisation.Erlaubt.Contains(Aktionsschluessel.InventarVerwalten);
+            await LadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>Lädt das Inventar (auch „Neu laden“ beim Konflikt im Autosave); 403/404 → nicht verfügbar.</summary>
+    private async Task LadenAsync()
+    {
+        var inventar = await InventarApi.OrgInventarAsync(OrgId);
+        _nichtVerfuegbar = inventar is null;
+        _artikel = inventar is null ? null : [.. inventar.Artikel];
+        _titel.Clear();
+    }
+
+    /// <summary>„Artikel hinzufügen“: danach steht er in der Liste, das Formular ist leer.</summary>
+    private async Task AnlegenAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        (_bezeichnungFehler, _mengeFehler, _meldung, _aktionFehler) = (null, null, null, false);
+        try
+        {
+            var aktion = await InventarApi.ArtikelAnlegenAsync(OrgId, new InventarArtikelNeu(_bezeichnung, string.IsNullOrWhiteSpace(_menge) ? null : _menge));
+            if (aktion.Ergebnis == InventarAktionErgebnis.Erfolg)
+            {
+                (_bezeichnung, _menge) = (null, null);
+                await LadenAsync();
+                return;
+            }
+
+            _bezeichnungFehler = aktion.Feldfehler.GetValueOrDefault(InventarFelder.Bezeichnung);
+            _mengeFehler = aktion.Feldfehler.GetValueOrDefault(InventarFelder.Menge);
+            if (_bezeichnungFehler is null && _mengeFehler is null)
+            {
+                _meldung = AnmeldungAbschluss.FehlerText;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task LoeschenAsync(InventarArtikel artikel)
+    {
+        (_meldung, _aktionFehler) = (null, false);
+        try
+        {
+            switch (await InventarApi.ArtikelLoeschenAsync(OrgId, artikel.Id))
+            {
+                case InventarAktionErgebnis.Erfolg:
+                    _artikel?.RemoveAll(a => a.Id == artikel.Id);
+                    break;
+                case InventarAktionErgebnis.Konflikt:
+                    _meldung = NochReserviertText;
+                    break;
+                default:
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+}

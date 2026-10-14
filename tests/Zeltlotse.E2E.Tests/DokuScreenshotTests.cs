@@ -1676,6 +1676,70 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await BildAsync(seite, "materialliste", geraet);
     }
 
+    // ---------- Story 3-3: Inventar und Reservierung ----------
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Org_Inventar(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, OrgAdminMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Organisation öffnen" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Jugendwerk Musterstadt", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Inventar öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Inventar", new() { Timeout = 60_000 });
+        var cards = seite.Locator("section.elkw-card");
+        await Assertions.Expect(cards.Locator("h2")).ToHaveTextAsync(["Fahnen", "Gaskocher", "Großzelt", "Kanus", "Artikel hinzufügen"], new() { Timeout = 60_000 });
+        var grosszelt = cards.Nth(2);
+        await Assertions.Expect(grosszelt.Locator("li")).ToHaveCountAsync(2);
+        await Assertions.Expect(grosszelt.Locator("li").Nth(0)).ToContainTextAsync("Zeltlager Sommer 2027 · 02.08.–13.08.2027");
+        await Assertions.Expect(grosszelt.Locator("li").Nth(1)).ToContainTextAsync("Kinderbibeltage 2027 · 10.08.–12.08.2027");
+        await Assertions.Expect(grosszelt.Locator(".elkw-status")).ToHaveTextAsync(["Konflikt", "Konflikt"]);
+        await Assertions.Expect(grosszelt.GetByLabel("Menge", new() { Exact = true })).ToHaveValueAsync("1 Stück");
+        await Assertions.Expect(grosszelt.GetByRole(AriaRole.Button, new() { Name = "Artikel löschen" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        // Nur lesend, damit der Demo-Stand für die anderen Bilder bleibt; im Bild steht das Großzelt mit dem Konflikt.
+        await grosszelt.ScrollIntoViewIfNeededAsync();
+        await BildAsync(seite, "org-inventar", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Inventar_Reservieren(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, DemoMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Inventar", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Inventar", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("main .elkw-kicker").First).ToHaveTextAsync("Planen");
+        var cards = seite.Locator("section.elkw-card");
+        await Assertions.Expect(cards.Locator("h2")).ToHaveTextAsync(["Fahnen", "Gaskocher", "Großzelt", "Kanus"], new() { Timeout = 60_000 });
+        var grosszelt = cards.Nth(2);
+        await Assertions.Expect(grosszelt.Locator(".elkw-alert--warnung")).ToContainTextAsync(
+            "Zur gleichen Zeit auch für Kinderbibeltage 2027 reserviert. Absprache mit der anderen Leitung nötig.");
+        await Assertions.Expect(grosszelt.Locator("li")).ToContainTextAsync("02.08.–13.08.2027");
+        await Assertions.Expect(grosszelt.GetByRole(AriaRole.Button, new() { Name = "Reservierung aufheben" })).ToBeVisibleAsync();
+        await Assertions.Expect(cards.Nth(1).GetByText("Für diese Freizeit nicht reserviert.")).ToBeVisibleAsync();
+        await Assertions.Expect(cards.Nth(1).GetByLabel("Von", new() { Exact = true })).ToHaveValueAsync("2027-08-02");
+        await Assertions.Expect(cards.Nth(1).GetByLabel("Bis", new() { Exact = true })).ToHaveValueAsync("2027-08-13");
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        // Nur lesend, damit der Demo-Stand für die anderen Bilder bleibt; im Bild steht der Konflikthinweis am Großzelt.
+        await grosszelt.ScrollIntoViewIfNeededAsync();
+        await BildAsync(seite, "inventar", geraet);
+    }
+
     /// <summary>Der Termin mit diesem Titel innerhalb eines Bereichs (ein Tag am Handy oder eine Spalte am Laptop).</summary>
     private static ILocator TerminIn(ILocator bereich, string titel) =>
         bereich.Locator(".zl-termin").Filter(new() { Has = bereich.Page.GetByRole(AriaRole.Heading, new() { Name = titel, Exact = true }) });

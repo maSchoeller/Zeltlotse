@@ -311,6 +311,27 @@ public static class Anzeige
         _ => StatusArt.Offen,
     };
 
+    /// <summary>
+    /// Story 3-3: kurzer Zeitraum einer Reservierung: „02.08.–13.08.2027“; über den Jahreswechsel „30.12.2027–02.01.2028“, ein einzelner Tag
+    /// „03.08.2027“. (<see cref="Zeitraum"/> bleibt die lange Form mit beiden Jahren.)
+    /// </summary>
+    public static string ZeitraumKurz(DateOnly von, DateOnly bis)
+    {
+        if (von == bis)
+        {
+            return Datum(von);
+        }
+
+        return von.Year == bis.Year ? $"{von.ToString("dd.MM.", Deutsch)}–{Datum(bis)}" : $"{Datum(von)}–{Datum(bis)}";
+    }
+
+    /// <summary>
+    /// Story 3-3: Konflikthinweis einer Reservierung (EXPERIENCE.md → State Patterns „Inventar-Konflikt“): „Zur gleichen Zeit auch für
+    /// Kinderbibeltage 2027 reserviert. Absprache mit der anderen Leitung nötig.“; mehrere Freizeiten mit Komma und „und“.
+    /// </summary>
+    public static string Konflikt(IReadOnlyList<string> freizeiten) =>
+        $"Zur gleichen Zeit auch für {Aufzaehlung(freizeiten)} reserviert. Absprache mit der anderen Leitung nötig.";
+
     private static TimeZoneInfo Berlin()
     {
         try

@@ -13,6 +13,9 @@ using Zeltlotse.Freizeiten.Freizeitseite;
 using Zeltlotse.Freizeiten.Leitung;
 using Zeltlotse.Freizeiten.TeamNotizen;
 using Zeltlotse.Freizeiten.Verwaltung;
+using Zeltlotse.Inventar.Artikel;
+using Zeltlotse.Inventar.Daten;
+using Zeltlotse.Inventar.Reservierungen;
 using Zeltlotse.Konten.Anmelden;
 using Zeltlotse.Organisationen.Daten;
 using Zeltlotse.Organisationen.Dokumente;
@@ -85,6 +88,10 @@ namespace Zeltlotse.Api.Demo;
 /// übernehmen je einen selbst (je nur, wenn es den Titel noch nicht gibt).
 /// Story 3-2: Material an Geländespiel und Lagerfeuer aus <see cref="DemoKatalog.Material"/> mit Menge und Status; Miriam bringt die
 /// Taschenlampen mit (je nur, wenn es die Bezeichnung am Programmpunkt noch nicht gibt).
+/// Story 3-3: die zweite Freizeit <see cref="DemoKatalog.ZweiteFreizeit"/> mit Tim als Leitung (nur, wenn es sie noch nicht gibt), das Inventar
+/// aus <see cref="DemoKatalog.Inventar"/> (je nur, wenn es die Bezeichnung noch nicht gibt) und die Reservierungen aus
+/// <see cref="DemoKatalog.Reservierungen"/> (je nur, wenn die Freizeit den Artikel noch nicht reserviert hat); die Fahnen hängen am Material
+/// „Fahnen“ des Geländespiels.
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -140,6 +147,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await VorfaelleAsync(abbruch);
         await ProgrammAsync(abbruch);
         await MaterialAsync(abbruch);
+        await ZweiteFreizeitAsync(abbruch);
+        await InventarAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -851,6 +860,81 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             if (await sender.Send(new MaterialMitbringenCommand(freizeitId, angelegt.Material.Id, person, Mitbringen: true), abbruch) is not MaterialUebergang.Erfolg)
             {
                 throw new InvalidOperationException($"Demo-Material: {bezeichnung} ließ sich nicht mitbringen.");
+            }
+        }
+    }
+
+    /// <summary>Story 3-3: die zweite Freizeit mit Tim als Leitung; nichts, wenn es sie in der Demo-Organisation schon gibt.</summary>
+    private async Task ZweiteFreizeitAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var organisationId = await OrganisationIdAsync(dienste, abbruch);
+        var mandant = dienste.GetRequiredService<MandantenKontext>();
+        mandant.Setzen(organisationId);
+        var (name, beginn, ende) = DemoKatalog.ZweiteFreizeit;
+        if (await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten.AnyAsync(f => f.Name == name, abbruch))
+        {
+            return;
+        }
+
+        var sender = dienste.GetRequiredService<ISender>();
+        var andrea = await sender.Send(new KontoSicherstellen(DemoKatalog.Personen.Single(p => p.Rolle == DemoRolle.OrgAdmin).Mail!), abbruch);
+        var freizeitId = await sender.Send(new FreizeitAnlegenCommand(organisationId, name, beginn, ende, andrea.PersonId), abbruch);
+        foreach (var leitung in DemoKatalog.Personen.Where(p => p.Rolle == DemoRolle.LeitungZweiteFreizeit))
+        {
+            var konto = await sender.Send(new KontoSicherstellen(leitung.Mail!), abbruch);
+            mandant.Setzen(organisationId);
+            var einladung = await sender.Send(new LeitungEinladenCommand(organisationId, freizeitId, leitung.Mail, andrea.PersonId), abbruch);
+            _ = await sender.Send(new LeitungAnnehmenCommand(einladung.Token, leitung.Mail, konto.PersonId), abbruch)
+                ?? throw new InvalidOperationException("Demo-Freizeit: Die Leitungs-Einladung ließ sich nicht annehmen.");
+        }
+    }
+
+    /// <summary>Story 3-3: Inventar und Reservierungen der Demo-Organisation, idempotent nach Bezeichnung bzw. (Freizeit, Artikel).</summary>
+    private async Task InventarAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        var organisationId = await OrganisationIdAsync(dienste, abbruch);
+        dienste.GetRequiredService<MandantenKontext>().Setzen(organisationId);
+        var lesen = dienste.GetRequiredService<InventarLeseDbContext>();
+        var vorhanden = await lesen.Artikel.Select(a => a.Bezeichnung).ToListAsync(abbruch);
+        foreach (var (bezeichnung, menge) in DemoKatalog.Inventar.Where(a => !vorhanden.Contains(a.Bezeichnung)))
+        {
+            await sender.Send(new ArtikelAnlegenCommand(organisationId, bezeichnung, menge), abbruch);
+        }
+
+        var artikel = await lesen.Artikel.ToDictionaryAsync(a => a.Bezeichnung, a => a.Id, abbruch);
+        var namen = DemoKatalog.Reservierungen.Select(r => r.Freizeit).Distinct().ToList();
+        var freizeiten = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => namen.Contains(f.Name))
+            .ToDictionaryAsync(f => f.Name, f => f.Id, abbruch);
+        var reserviert = await lesen.Reservierungen.Select(r => new { r.FreizeitId, r.ArtikelId }).ToListAsync(abbruch);
+        var programm = dienste.GetRequiredService<ProgrammLeseDbContext>();
+        foreach (var (freizeit, bezeichnung, von, bis, material) in DemoKatalog.Reservierungen)
+        {
+            var (freizeitId, artikelId) = (freizeiten[freizeit], artikel[bezeichnung]);
+            if (reserviert.Any(r => r.FreizeitId == freizeitId && r.ArtikelId == artikelId))
+            {
+                continue;
+            }
+
+            Guid? materialId = null;
+            if (material is { } m)
+            {
+                materialId = await (
+                        from x in programm.Material
+                        join p in programm.Programmpunkte on x.ProgrammpunktId equals p.Id
+                        where x.FreizeitId == freizeitId && p.Titel == m.Programmpunkt && x.Bezeichnung == m.Bezeichnung
+                        select x.Id)
+                    .SingleAsync(abbruch);
+            }
+
+            if (await sender.Send(new ReservierenCommand(freizeitId, artikelId, von, bis, materialId), abbruch) is not Reservieren.Angelegt)
+            {
+                throw new InvalidOperationException($"Demo-Inventar: {bezeichnung} ließ sich nicht reservieren.");
             }
         }
     }

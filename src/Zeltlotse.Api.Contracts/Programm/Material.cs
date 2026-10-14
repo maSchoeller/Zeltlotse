@@ -31,6 +31,9 @@ public enum MaterialStatus
 /// <param name="Menge">Freitext, z. B. „4 × 10 m“, oder <c>null</c>.</param>
 /// <param name="BringtMit">Die Person, die das Material mitbringt („Ich bringe das mit“); den Namen setzt der Client zusammen (AD-2).</param>
 /// <param name="Meins">Die angemeldete Person bringt das Material mit.</param>
+/// <param name="ReservierungId">
+/// Story 3-3: Die Reservierung im Inventar, über die das Material bereitliegt (Ereignis <c>ReservierungGeaendert</c>), sonst <c>null</c>.
+/// </param>
 public sealed record Material(
     Guid Id,
     uint Version,
@@ -42,7 +45,8 @@ public sealed record Material(
     string? Menge,
     MaterialStatus Status,
     Guid? BringtMit,
-    bool Meins);
+    bool Meins,
+    Guid? ReservierungId = null);
 
 /// <summary>
 /// Story 3-2: Antwort von <c>GET /api/freizeiten/{freizeitId}/programm/material</c> (Leitung und Team, FR-69): das Material aller Programmpunkte,

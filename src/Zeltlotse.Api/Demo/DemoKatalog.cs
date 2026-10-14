@@ -153,6 +153,32 @@ internal static class DemoKatalog
     ];
 
     /// <summary>
+    /// Story 3-3: zweite Freizeit der Demo-Organisation, damit sich Reservierungen überschneiden können; ohne Anmeldungen, Leitung ist die Person
+    /// mit <see cref="DemoRolle.LeitungZweiteFreizeit"/>. Jonas und Miriam bleiben bei genau einer Freizeit.
+    /// </summary>
+    public static (string Name, DateOnly Beginn, DateOnly Ende) ZweiteFreizeit { get; } = ("Kinderbibeltage 2027", new DateOnly(2027, 8, 10), new DateOnly(2027, 8, 12));
+
+    /// <summary>Story 3-3: Artikel im Inventar der Demo-Organisation (je nur, wenn es die Bezeichnung noch nicht gibt).</summary>
+    public static IReadOnlyList<(string Bezeichnung, string Menge)> Inventar { get; } =
+    [
+        ("Fahnen", "8 Stück"),
+        ("Großzelt", "1 Stück"),
+        ("Kanus", "6 Stück"),
+        ("Gaskocher", "2 Stück"),
+    ];
+
+    /// <summary>
+    /// Story 3-3: Reservierungen (je nur, wenn die Freizeit den Artikel noch nicht reserviert hat): das Zeltlager reserviert die Fahnen für das
+    /// Material „Fahnen“ am Geländespiel und das Großzelt; die Kinderbibeltage reservieren das Großzelt zur gleichen Zeit (Konflikt).
+    /// </summary>
+    public static IReadOnlyList<(string Freizeit, string Artikel, DateOnly Von, DateOnly Bis, (string Programmpunkt, string Bezeichnung)? Material)> Reservierungen { get; } =
+    [
+        ("Zeltlager Sommer 2027", "Fahnen", new DateOnly(2027, 8, 2), new DateOnly(2027, 8, 13), ("Geländespiel", "Fahnen")),
+        ("Zeltlager Sommer 2027", "Großzelt", new DateOnly(2027, 8, 2), new DateOnly(2027, 8, 13), null),
+        ("Kinderbibeltage 2027", "Großzelt", new DateOnly(2027, 8, 10), new DateOnly(2027, 8, 12), null),
+    ];
+
+    /// <summary>
     /// Jonas' Nachweise (Story 1-5): Art, Ausstellungsdatum und eine kleine erfundene Demo-Datei. Ohne Präventionsschulung, damit
     /// „Nachweis hinzufügen“ in der Doku sichtbar bleibt.
     /// </summary>
@@ -177,6 +203,7 @@ internal static class DemoKatalog
         new("Emma", "Muster", DemoRolle.Kind, Mail: null, Familie: "Muster", Geburtsdatum: new DateOnly(2017, 9, 2)),
         new("Daniel", "Probst", DemoRolle.Eltern, "daniel.probst@example.org", Familie: "Probst"),
         new("Mia", "Probst", DemoRolle.Kind, Mail: null, Familie: "Probst", Geburtsdatum: new DateOnly(2016, 5, 21)),
+        new("Tim", "Kröger", DemoRolle.LeitungZweiteFreizeit, "tim.kroeger@example.org"),
     ];
 }
 
@@ -303,6 +330,9 @@ internal enum DemoRolle
     Team,
     Eltern,
     Kind,
+
+    /// <summary>Story 3-3: Leitung der <see cref="DemoKatalog.ZweiteFreizeit"/>, nicht des Zeltlagers.</summary>
+    LeitungZweiteFreizeit,
 }
 
 /// <param name="Mail">Anmelde-Adresse; nur Erwachsene haben eine.</param>

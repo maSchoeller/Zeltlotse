@@ -11,7 +11,7 @@ sidebar:
 ## Was der Org-Admin in Zeltlotse darf
 
 - **Freizeiten anlegen** und die **Leitung einsetzen** – siehe [Freizeit anlegen](/org-admin/freizeit-anlegen/),
-- **Inventar** der Organisation verwalten,
+- **Inventar** der Organisation pflegen und sehen, welche Freizeit was wann reserviert hat – siehe [Inventar pflegen](/org-admin/inventar/),
 - **Aufgaben-Vorlagen** und **Org-Dokumente** pflegen – Org-Dokumente binden die Freizeiten ein, ohne sie zu kopieren, siehe [Org-Dokumente](/org-admin/org-dokumente/),
 - **Richtlinien** festlegen: welche Nachweise Pflicht sind und wie lange sie gelten (siehe [Richtlinie für Nachweise](/org-admin/nachweis-richtlinie/)), wie lange das Freigabefenster dauert und nach welchen Fristen Daten gelöscht werden (siehe [Löschfristen](/org-admin/loeschfristen/)),
 - **Nachweise prüfen** auf Ebene der Organisation, für alle, die in einer Freizeit der Organisation mitarbeiten,
@@ -20,7 +20,7 @@ sidebar:
 
 ## Org-Überblick
 
-Den Org-Überblick haben zum Beispiel Leitungsgremium oder Hauptamt. Er sieht Inventar, Anschaffungswünsche und eine Übersicht der Freizeiten; heute steht auf der Seite der Organisation die Liste der Freizeiten mit Zeitraum und Phase. Auch den Org-Überblick lädt ein Org-Admin ein; eine Person kann beide Rollen haben.
+Den Org-Überblick haben zum Beispiel Leitungsgremium oder Hauptamt. Er sieht Inventar, Anschaffungswünsche und eine Übersicht der Freizeiten; heute stehen auf der Seite der Organisation die Liste der Freizeiten mit Zeitraum und Phase und das Inventar mit allen Reservierungen, nur lesend – siehe [Inventar pflegen](/org-admin/inventar/#org-überblick). Auch den Org-Überblick lädt ein Org-Admin ein; eine Person kann beide Rollen haben.
 
 ## Eigene Daten
 

@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Api.Contracts.Programm;
+using Zeltlotse.Inventar.Contracts.Events;
 using Zeltlotse.Personen.Contracts.Events;
 using Zeltlotse.Programm.Daten;
 using Zeltlotse.Programm.Datenschutz;
@@ -150,6 +151,25 @@ public sealed class MaterialTests(PostgresContainer postgres)
         Assert.Equal("Kletterseile", material.Bezeichnung);
     }
 
+    // ---------- Entität: Reservierung aus dem Inventar (Story 3-3) ----------
+
+    [Fact]
+    public void ReservierungZuordnen_merkt_die_Kennung_und_setzt_vorhanden_Loesen_nur_mit_derselben_Kennung()
+    {
+        var material = Neu();
+        material.StatusSetzen(MaterialStatus.Besorgt);
+        var (reservierung, andere) = (Guid.CreateVersion7(), Guid.CreateVersion7());
+
+        material.ReservierungZuordnen(reservierung);
+        Assert.Equal((reservierung, MaterialStatus.Vorhanden), (material.ReservierungId, material.Status));
+
+        material.ReservierungLoesen(andere);
+        Assert.Equal((reservierung, MaterialStatus.Vorhanden), (material.ReservierungId, material.Status));
+
+        material.ReservierungLoesen(reservierung);
+        Assert.Equal(((Guid?)null, MaterialStatus.Gebraucht), (material.ReservierungId, material.Status));
+    }
+
     // ---------- Formprüfung ----------
 
     [Theory]
@@ -279,6 +299,49 @@ public sealed class MaterialTests(PostgresContainer postgres)
         Assert.Single(personen, p => p == jonas);
         Assert.DoesNotContain(miriam, personen);
     }
+
+    // ---------- Empfänger ReservierungGeaendert (Story 3-3) ----------
+
+    [Fact]
+    public async Task ReservierungGeaendert_setzt_vorhanden_mit_Kennung_und_aufgehoben_wieder_gebraucht_fremde_Freizeit_aendert_nichts()
+    {
+        await using var factory = await FactoryAsync();
+        var org = Guid.CreateVersion7();
+        var material = await MaterialAsync(factory, org, "Fahnen");
+        var reservierung = Guid.CreateVersion7();
+
+        await EmpfangenAsync(factory, org, new ReservierungGeaendert(reservierung, Guid.CreateVersion7(), Guid.CreateVersion7(), material.Id, ReservierungArt.Reserviert));
+        Assert.Equal(((Guid?)null, MaterialStatus.Gebraucht), await StandAsync(factory, org, material.Id));
+
+        await EmpfangenAsync(factory, org, new ReservierungGeaendert(reservierung, material.FreizeitId, Guid.CreateVersion7(), material.Id, ReservierungArt.Reserviert));
+        Assert.Equal(((Guid?)reservierung, MaterialStatus.Vorhanden), await StandAsync(factory, org, material.Id));
+
+        await EmpfangenAsync(factory, org, new ReservierungGeaendert(Guid.CreateVersion7(), material.FreizeitId, Guid.CreateVersion7(), material.Id, ReservierungArt.Aufgehoben));
+        Assert.Equal(((Guid?)reservierung, MaterialStatus.Vorhanden), await StandAsync(factory, org, material.Id));
+
+        await EmpfangenAsync(factory, org, new ReservierungGeaendert(reservierung, material.FreizeitId, Guid.CreateVersion7(), material.Id, ReservierungArt.Aufgehoben));
+        Assert.Equal(((Guid?)null, MaterialStatus.Gebraucht), await StandAsync(factory, org, material.Id));
+
+        // Unbekanntes Material und ein anderer Mandant: nichts geschieht, kein Fehler.
+        await EmpfangenAsync(factory, org, new ReservierungGeaendert(reservierung, material.FreizeitId, Guid.CreateVersion7(), Guid.CreateVersion7(), ReservierungArt.Reserviert));
+        await EmpfangenAsync(factory, Guid.CreateVersion7(), new ReservierungGeaendert(reservierung, material.FreizeitId, Guid.CreateVersion7(), material.Id, ReservierungArt.Reserviert));
+        Assert.Equal(((Guid?)null, MaterialStatus.Gebraucht), await StandAsync(factory, org, material.Id));
+    }
+
+    private static async Task EmpfangenAsync(ZeltlotseApiFactory factory, Guid organisation, ReservierungGeaendert ereignis)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<MandantenKontext>().Setzen(organisation);
+        await scope.ServiceProvider.GetRequiredService<ISender>().Send(
+            ProgrammReservierungUebernehmen.Aus(new Umschlag(Guid.CreateVersion7(), factory.Uhr.GetUtcNow(), organisation, Guid.CreateVersion7(), 1), ereignis), Abbruch);
+    }
+
+    private static Task<(Guid?, MaterialStatus)> StandAsync(ZeltlotseApiFactory factory, Guid organisation, Guid material) =>
+        LesenAsync(factory, organisation, async db =>
+        {
+            var m = await db.Material.SingleAsync(x => x.Id == material, Abbruch);
+            return (m.ReservierungId, m.Status);
+        });
 
     // ---------- Helfer ----------
 

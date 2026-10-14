@@ -41,6 +41,15 @@ internal static class OrgRechte
     /// </summary>
     public static readonly OrgRolleArt[] VorfallArchiv = [OrgRolleArt.OrgAdmin];
 
+    /// <summary>
+    /// Story 3-3: das Inventar mit allen Reservierungen sehen (FR-37). Die Endpunkte besitzt Inventar; dort steht dieselbe Liste
+    /// (<c>InventarRechte.OrgLesen</c>), ein Test hält beide gleich.
+    /// </summary>
+    public static readonly OrgRolleArt[] InventarSehen = [OrgRolleArt.OrgAdmin, OrgRolleArt.OrgUeberblick];
+
+    /// <summary>Story 3-3: das Inventar pflegen (FR-37); gleich mit <c>InventarRechte.OrgVerwalten</c>.</summary>
+    public static readonly OrgRolleArt[] InventarVerwalten = [OrgRolleArt.OrgAdmin];
+
     public static IReadOnlyList<string> Erlaubt(IReadOnlyCollection<OrgRolleArt> rollen)
     {
         var erlaubt = new List<string>();
@@ -72,6 +81,16 @@ internal static class OrgRechte
         if (rollen.Any(VorfallArchiv.Contains))
         {
             erlaubt.Add(Aktionsschluessel.VorfallArchivSehen);
+        }
+
+        if (rollen.Any(InventarSehen.Contains))
+        {
+            erlaubt.Add(Aktionsschluessel.InventarSehen);
+        }
+
+        if (rollen.Any(InventarVerwalten.Contains))
+        {
+            erlaubt.Add(Aktionsschluessel.InventarVerwalten);
         }
 
         return erlaubt;

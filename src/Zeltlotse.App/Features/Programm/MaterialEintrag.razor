@@ -1,10 +1,16 @@
 @attribute [NurInteraktiv]
+@using Zeltlotse.Api.Contracts.Inventar
 @using Zeltlotse.Api.Contracts.Programm
+@using ApiFreizeitInventar = Zeltlotse.Api.Contracts.Inventar.FreizeitInventar
 @inject ProgrammApiClient ProgrammApi
+@inject InventarApiClient InventarApi
 @* Ein Material (Story 3-2, FR-36) als Termin: Bezeichnung als Überschrift, „Bringt mit: …“ als Status (Erfolg). Auf der Detailseite
    (Bearbeiten) Bezeichnung und Menge als Autosave-Felder (AD-19) und Löschen per Inline-Bestätigung, in der Materialliste die Menge als Text.
    Darunter die Segmente des Status und „Ich bringe das mit“ bzw. „Doch nicht mitbringen“ (ein Tipp, nur für sich selbst; bringt es jemand
-   anderes mit, kein Knopf). Nur lesbar (Phase „gelaufen“): Menge als Text und der Status als Wort mit Quadrat. *@
+   anderes mit, kein Knopf). Nur lesbar (Phase „gelaufen“): Menge als Text und der Status als Wort mit Quadrat.
+   Story 3-3, nur mit dem Inventar der Freizeit (Detailseite): Hängt eine Reservierung an diesem Material, steht „Aus dem Inventar: Artikel“ und bei
+   einer Überschneidung die Warnung „Zur gleichen Zeit auch für … reserviert. …“; sonst die Auswahl „Aus dem Inventar“ mit dem Knopf
+   „Reservieren“ (Zeitraum der Freizeit). Danach lädt die Seite Material und Inventar neu. *@
 <Termin Titel="@_titel" StatusWort="@ProgrammTexte.BringtMitWort(Material, Namen)" StatusArt="StatusArt.Erfolg">
     @if (_meldung is not null)
     {
@@ -23,6 +29,22 @@
     else if (Material.Menge is not null)
     {
         <p>Menge: @Material.Menge</p>
+    }
+    @if (Inventar is not null && Reservierung is { } verknuepft)
+    {
+        <p>Aus dem Inventar: @verknuepft.Artikel.Bezeichnung</p>
+        @if (verknuepft.Reservierung.Konflikte.Count > 0)
+        {
+            <Meldung Titel="Achtung" Art="MeldungArt.Warnung">
+                <p>@Anzeige.Konflikt(verknuepft.Reservierung.Konflikte)</p>
+            </Meldung>
+        }
+    }
+    else if (Inventar is { Artikel.Count: > 0 } && !NurLesen)
+    {
+        <Auswahl Legende="Aus dem Inventar" Gruppe="@($"material-{Material.Id}-inventar")" Optionen="InventarOptionen" Wert="@_artikelId"
+                 WertGeaendert="@(w => _artikelId = w)" Deaktiviert="_uebertraegt" />
+        <p><Knopf Art="KnopfArt.Outline" Deaktiviert="@(_uebertraegt || _artikelId is null)" @onclick="ReservierenAsync">Reservieren</Knopf></p>
     }
     @if (NurLesen)
     {
@@ -53,6 +75,7 @@
     private uint _version;
     private bool _uebertraegt;
     private string? _meldung;
+    private string? _artikelId;
 
     [Parameter, EditorRequired] public Guid FreizeitId { get; set; }
 
@@ -76,7 +99,60 @@
     /// <summary>„Neu laden“ beim Konflikt: die Seite lädt das Material neu.</summary>
     [Parameter] public EventCallback NeuLaden { get; set; }
 
+    /// <summary>Story 3-3: das Inventar der Freizeit; ohne (Liste oder nicht ladbar) kein Abschnitt „Aus dem Inventar“.</summary>
+    [Parameter] public ApiFreizeitInventar? Inventar { get; set; }
+
+    /// <summary>Story 3-3: Nach dem Reservieren lädt die Seite Material und Inventar neu.</summary>
+    [Parameter] public EventCallback Reserviert { get; set; }
+
     private string Pfad => ProgrammApiClient.MaterialPfad(FreizeitId, Material.Id);
+
+    /// <summary>
+    /// Die Reservierung des Inventars, die an diesem Material hängt (aus der Antwort des Inventars, damit sie sofort nach dem Reservieren steht,
+    /// auch bevor Programm das Ereignis verarbeitet hat).
+    /// </summary>
+    private (InventarArtikel Artikel, Reservierung Reservierung)? Reservierung =>
+        Inventar?.Artikel.SelectMany(a => a.Reservierungen.Select(r => (a, r))).Where(x => x.r.MaterialId == Material.Id).Select(x => ((InventarArtikel, Reservierung)?)x).FirstOrDefault();
+
+    private IReadOnlyList<AuswahlOption> InventarOptionen =>
+        [.. (Inventar?.Artikel ?? []).Select(a => new AuswahlOption(a.Id.ToString(), a.Menge is null ? a.Bezeichnung : $"{a.Bezeichnung} ({a.Menge})"))];
+
+    /// <summary>„Reservieren“: den gewählten Artikel für den Zeitraum der Freizeit und dieses Material.</summary>
+    private async Task ReservierenAsync()
+    {
+        if (_uebertraegt || !Guid.TryParse(_artikelId, out var artikelId))
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _meldung = null;
+        try
+        {
+            var aktion = await InventarApi.ReservierenAsync(FreizeitId, artikelId, new ReservierungNeu(null, null, Material.Id));
+            switch (aktion.Ergebnis)
+            {
+                case InventarAktionErgebnis.Erfolg:
+                    _artikelId = null;
+                    await Reserviert.InvokeAsync();
+                    break;
+                case InventarAktionErgebnis.Abgeschlossen:
+                    _meldung = ProgrammTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
 
     protected override void OnParametersSet()
     {

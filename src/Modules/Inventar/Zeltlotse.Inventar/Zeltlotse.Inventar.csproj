@@ -8,6 +8,10 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Zeltlotse.SharedKernel\Zeltlotse.SharedKernel.csproj" />
     <ProjectReference Include="..\Zeltlotse.Inventar.Contracts\Zeltlotse.Inventar.Contracts.csproj" />
+    <!-- Pfeile aus AD-2: Inventar liest Freizeiten (Tage, Phase und Namen der Freizeiten) und Organisationen. -->
+    <ProjectReference Include="..\..\Freizeiten\Zeltlotse.Freizeiten.Contracts\Zeltlotse.Freizeiten.Contracts.csproj" />
+    <ProjectReference Include="..\..\Organisationen\Zeltlotse.Organisationen.Contracts\Zeltlotse.Organisationen.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

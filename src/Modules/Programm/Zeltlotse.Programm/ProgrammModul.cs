@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Zeltlotse.Inventar.Contracts.Events;
 using Zeltlotse.Personen.Contracts.Events;
 using Zeltlotse.Programm.Daten;
 using Zeltlotse.Programm.Datenschutz;
@@ -25,6 +26,8 @@ public static class ProgrammModul
         services.AddModul<ProgrammDbContext, ProgrammLeseDbContext>(Name, Schema);
         // Story 3-1/3-2: Die Übernahme eines Programmpunkts und das Mitbringen von Material sind Arbeitsdaten der Freizeit (AD-16).
         services.EmpfaengtEreignis<PersonGeloescht, ProgrammPersonLoeschen>();
+        // Story 3-3: Eine Reservierung im Inventar setzt den Status des verknüpften Materials (Tabelle Ereignis-Fluss).
+        services.EmpfaengtEreignis<ReservierungGeaendert, ProgrammReservierungUebernehmen>();
         services.AddScoped<IDatenauskunft, ProgrammAuskunft>();
         services.AddScoped<ILoeschlauf, ProgrammLoeschlauf>();
         return services;
