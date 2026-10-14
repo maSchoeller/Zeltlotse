@@ -27,7 +27,7 @@ namespace Zeltlotse.Freizeiten.TeamNotizen;
 /// <see cref="TeamNotizAenderung.Abgeschlossen"/> (<c>409</c> mit Code <c>freizeit-abgeschlossen</c>).
 /// </summary>
 internal sealed record TeamNotizAnlegenCommand(Guid FreizeitId, Guid AnmeldungId, Guid VerfasstVon, string? Text)
-    : ICommand<TeamNotizAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand
+    : ICommand<TeamNotizAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand, IFreizeitCommand
 {
     /// <summary>Keinen Notiztext ausgeben (AD-22).</summary>
     public override string ToString() => $"{nameof(TeamNotizAnlegenCommand)}({FreizeitId}, {AnmeldungId})";
@@ -123,7 +123,7 @@ internal static class TeamNotizRegeln
 /// abgeschlossene Freizeit ist nur lesbar (<see cref="TeamNotizAenderung.Abgeschlossen"/>, AD-17).
 /// </summary>
 internal sealed record TeamNotizLoeschenCommand(Guid FreizeitId, Guid AnmeldungId, Guid NotizId)
-    : ICommand<TeamNotizAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand;
+    : ICommand<TeamNotizAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 internal sealed class TeamNotizLoeschenHandler(FreizeitenDbContext db, TimeProvider uhr) : ICommandHandler<TeamNotizLoeschenCommand, TeamNotizAenderung>
 {

@@ -11,11 +11,11 @@ Während einer Freizeit halten Leitung und Team im [Vorfall-Protokoll](/mitarbei
 
 Auf der Seite der Organisation steht für den Org-Admin die Card **Vorfall-Notizen** mit dem Satz „Nach dem Abschluss einer Freizeit liegen ihre Vorfall-Notizen hier, bis die Frist für Freizeit-Daten abläuft.“ Der Knopf **Archiv öffnen** führt zur Seite „Archiv der Vorfall-Notizen“.
 
-Die Seite zeigt je abgeschlossener Freizeit eine Card mit ihrem Namen und den Einträgen, den neuesten oben: Datum, Uhrzeit und betroffene Person, die Art mit dem Text und wer den Eintrag geschrieben hat. Solange keine Freizeit mit Vorfall-Notizen abgeschlossen ist, steht dort „Noch keine archivierten Vorfall-Notizen.“ Das Abschließen einer Freizeit kommt mit einer späteren Version; bis dahin bleibt das Archiv leer.
+Die Seite zeigt je abgeschlossener Freizeit eine Card mit ihrem Namen und den Einträgen, den neuesten oben: Datum, Uhrzeit und betroffene Person, die Art mit dem Text und wer den Eintrag geschrieben hat. Solange keine Freizeit mit Vorfall-Notizen abgeschlossen ist, steht dort „Noch keine archivierten Vorfall-Notizen.“ Wie die Leitung eine Freizeit abschließt, steht unter [Freizeit abschließen](/leitung/freizeit-abschliessen/).
 
-![Archiv der Vorfall-Notizen am Handy: Dachzeile „Organisation“ und „Noch keine archivierten Vorfall-Notizen.“](../../../assets/screenshots/vorfall-archiv-handy.png)
+![Archiv der Vorfall-Notizen am Handy: Dachzeile „Organisation“ und die Card „Pfingstlager 2026“ mit einer Notiz](../../../assets/screenshots/vorfall-archiv-handy.png)
 
-![Archiv der Vorfall-Notizen am Laptop, noch leer](../../../assets/screenshots/vorfall-archiv-laptop.png)
+![Archiv der Vorfall-Notizen am Laptop mit der Notiz aus dem abgeschlossenen Pfingstlager](../../../assets/screenshots/vorfall-archiv-laptop.png)
 
 Das Archiv sehen nur Org-Admins, nicht der Org-Überblick. Laufende Freizeiten erscheinen hier nicht; ihre Notizen sieht nur die Leitung der Freizeit.
 

@@ -23,7 +23,7 @@ namespace Zeltlotse.Freizeiten.Freizeitseite;
 /// Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record FreizeitseiteFeldAendernCommand(Guid FreizeitId, FreizeitseiteFeld Feld, uint Version, string? AlterWert, string? NeuerWert)
-    : ICommand<FreizeitseiteAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand
+    : ICommand<FreizeitseiteAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand, IFreizeitCommand
 {
     /// <summary>Die Werte nicht ausgeben; eine Beschreibung kann Namen enthalten (AD-22).</summary>
     public override string ToString() => $"{nameof(FreizeitseiteFeldAendernCommand)}({FreizeitId}, {Feld})";

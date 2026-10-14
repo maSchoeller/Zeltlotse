@@ -83,7 +83,7 @@ internal sealed class FreizeitpassErinnerung : Aggregat, IOrganisationsEigen
 /// Leitung ist berechtigt, und es geht höchstens eine Mail am Tag hinaus.
 /// </summary>
 internal sealed record FreizeitpassErinnern(Guid OrganisationId, Guid FreizeitId, Guid AnfragendePersonId, Guid? PersonId)
-    : ICommand<ErinnerungErgebnis>, IModulCommand<PersonenDbContext>, IBenutzerCommand;
+    : ICommand<ErinnerungErgebnis>, IModulCommand<PersonenDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 internal sealed class FreizeitpassErinnernValidator : AbstractValidator<FreizeitpassErinnern>
 {

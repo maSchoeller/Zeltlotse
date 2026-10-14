@@ -271,7 +271,8 @@
 .elkw-segments { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 var(--elkw-gap); padding: 0; list-style: none; }
 .elkw-segments button { border: 1px solid var(--elkw-primary); background: var(--elkw-white); color: var(--elkw-text); border-radius: var(--elkw-radius-btn); padding: 0.3rem 0.9rem; font: inherit; cursor: pointer; transition: var(--elkw-transition); }
 .elkw-segments button:hover { background: var(--elkw-neutral-10); }
-.elkw-segments [aria-pressed="true"] { background: var(--elkw-action); border-color: var(--elkw-action); color: var(--elkw-on-action); }
+/* Story 3-8: auch unter dem Mauszeiger bleibt der gewählte Wert lesbar (Kontrast, WCAG 2.2 AA). */
+.elkw-segments [aria-pressed="true"], .elkw-segments [aria-pressed="true"]:hover { background: var(--elkw-action); border-color: var(--elkw-action); color: var(--elkw-on-action); }
 
 @media (max-width: 1023px) { .elkw-grid-wide { grid-template-columns: minmax(0, 1fr); } }
 

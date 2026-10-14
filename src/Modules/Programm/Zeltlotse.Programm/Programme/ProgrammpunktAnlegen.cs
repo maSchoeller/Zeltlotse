@@ -17,7 +17,7 @@ namespace Zeltlotse.Programm.Programme;
 /// Uhrzeit ist freiwillig. Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record ProgrammpunktAnlegenCommand(Guid FreizeitId, string? Titel, DateOnly? Tag, string? Beginn)
-    : ICommand<ProgrammpunktAnlegen>, IModulCommand<ProgrammDbContext>, IBenutzerCommand;
+    : ICommand<ProgrammpunktAnlegen>, IModulCommand<ProgrammDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis von <see cref="ProgrammpunktAnlegenCommand"/>; bei <see cref="Angelegt"/> der verfolgte Punkt (nach dem Speichern mit Version).</summary>
 internal abstract record ProgrammpunktAnlegen

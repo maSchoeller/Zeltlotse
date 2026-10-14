@@ -106,7 +106,11 @@ internal sealed class AutomatischeEinsichtSicherstellenHandler(PersonenDbContext
 /// Einsicht kommt zurück.
 /// </summary>
 internal sealed record EinsichtAnfragenCommand(Guid OrganisationId, Guid? FreizeitId, Guid AnfragendePersonId, Guid? PersonId)
-    : ICommand<EinsichtAnfrageErgebnis>, IModulCommand<PersonenDbContext>, IBenutzerCommand;
+    : ICommand<EinsichtAnfrageErgebnis>, IModulCommand<PersonenDbContext>, IBenutzerCommand, IFreizeitCommand
+{
+    /// <summary>Story 3-8: im Freizeit-Kontext gilt der Schreibschutz nach dem Abschluss (AD-17), im Org-Kontext nicht.</summary>
+    Guid IFreizeitCommand.FreizeitId => FreizeitId ?? Guid.Empty;
+}
 
 /// <summary>Ergebnis einer Anfrage von Hand.</summary>
 internal abstract record EinsichtAnfrageErgebnis

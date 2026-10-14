@@ -9,7 +9,7 @@ namespace Zeltlotse.Programm.Aufgaben;
 
 /// <summary>Story 3-5: Löscht eine Aufgabe (Leitung und Team). Eine abgeschlossene Freizeit ist nur lesbar (AD-17).</summary>
 internal sealed record AufgabeLoeschenCommand(Guid FreizeitId, Guid AufgabeId)
-    : ICommand<AufgabeLoeschen>, IModulCommand<ProgrammDbContext>, IBenutzerCommand;
+    : ICommand<AufgabeLoeschen>, IModulCommand<ProgrammDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis von <see cref="AufgabeLoeschenCommand"/>.</summary>
 internal enum AufgabeLoeschen

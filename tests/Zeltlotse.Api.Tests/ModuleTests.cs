@@ -297,8 +297,12 @@ public sealed class ModuleTests(PostgresContainer postgres) : IAsyncLifetime
         Assert.Equal(Namen(await ProblemAsync(endpunkt)), Namen(problem));
     }
 
+    /// <summary>
+    /// Story 3-8: Reihenfolge nach AD-27 – Validierung, Schreibschutz, Funktions-Schalter, Transaktion und Outbox (die Inbox gilt nur für
+    /// Ereignis-Empfänger).
+    /// </summary>
     [Fact]
-    public void Die_Schalter_Stufe_ist_die_erste_Pipeline_Stufe_fuer_Benutzer_Commands_des_Hosts()
+    public void Die_Schalter_Stufe_folgt_auf_Validierung_und_Schreibschutz_fuer_Benutzer_Commands_des_Hosts()
     {
         // Command und Ergebnis sind intern im Modul; die Stufen löst der generierte Mediator ebenso über GetServices auf.
         var modul = typeof(Zeltlotse.Freizeiten.FreizeitenModul).Assembly;
@@ -308,8 +312,15 @@ public sealed class ModuleTests(PostgresContainer postgres) : IAsyncLifetime
 
         var stufen = scope.ServiceProvider.GetServices(typeof(global::Mediator.IPipelineBehavior<,>).MakeGenericType(command, ergebnis)).ToList();
 
-        Assert.NotEmpty(stufen);
-        Assert.Equal(typeof(Zeltlotse.SharedKernel.Pipeline.SchalterStufe<,>), stufen[0]!.GetType().GetGenericTypeDefinition());
+        Assert.Equal(
+            [
+                typeof(Zeltlotse.SharedKernel.Pipeline.ValidierungsStufe<,>),
+                typeof(Zeltlotse.SharedKernel.Pipeline.SchreibschutzStufe<,>),
+                typeof(Zeltlotse.SharedKernel.Pipeline.SchalterStufe<,>),
+                typeof(Zeltlotse.SharedKernel.Pipeline.TransaktionsStufe<,>),
+                typeof(Zeltlotse.SharedKernel.Pipeline.OutboxStufe<,>),
+            ],
+            stufen.Select(s => s!.GetType().GetGenericTypeDefinition()));
     }
 
     private static string OhneVersion(JsonElement json) =>

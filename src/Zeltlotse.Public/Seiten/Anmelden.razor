@@ -17,7 +17,8 @@
    Sitzung; auf dem Gerät wird nichts gespeichert. Ohne Haken wird nichts angelegt. Drei Formularnamen: anmelden, weiteres-kind,
    weiteres-kind-absenden. Link für Mitarbeitende oder ungültiger Link: Status 404 mit „Dieser Anmeldelink ist nicht mehr gültig.“;
    ungültiger Gast-Link: Status 404 mit „Dieser Link ist nicht mehr gültig.“; Zugriffsbegrenzung: Status 429. Suchmaschinen nehmen
-   die Seite nicht auf (noindex). *@
+   die Seite nicht auf (noindex). Story 3-8: Ist die Freizeit gelaufen (409 freizeit-abgeschlossen beim Absenden), steht statt des Formulars
+   „Diese Freizeit ist zu Ende.“; die Leitung bleibt mit Vornamen sichtbar. *@
 
 @if (_zuViele)
 {
@@ -36,7 +37,19 @@ else if (_seite is not null && !_ungueltig)
     <HeadContent><meta name="robots" content="noindex" /></HeadContent>
     <OeffentlicherRahmen Organisation="@_seite.Organisation">
         <Dachzeile>@_seite.Name · @Anzeige.ZeitraumLang(_seite.ErsterTag, _seite.LetzterTag)</Dachzeile>
-        @if (_eingegangen is { } eingegangen)
+        @if (_zuEnde)
+        {
+            <PageTitle>Anmeldung – @_seite.Name</PageTitle>
+            <h1>Anmeldung</h1>
+            <Meldung Titel="Hinweis">
+                <p>Diese Freizeit ist zu Ende.</p>
+            </Meldung>
+            @if (_seite.Team.Where(t => t.Rolle == Zeltlotse.Api.Contracts.Gemeinsam.FreizeitRolle.Leitung).Select(t => t.Vorname).ToList() is { Count: > 0 } leitung)
+            {
+                <p>Leitung: @string.Join(", ", leitung)</p>
+            }
+        }
+        else if (_eingegangen is { } eingegangen)
         {
             <PageTitle>Anmeldung eingegangen – @_seite.Name</PageTitle>
             <h1>Anmeldung für @eingegangen.KindVorname</h1>
@@ -173,6 +186,7 @@ else if (_seite is not null && !_ungueltig)
     private bool _weiteresKind;
     private bool _zuViele;
     private bool _ungueltig;
+    private bool _zuEnde;
     private string? _hinweis;
 
     [Parameter] public string Token { get; set; } = "";
@@ -381,6 +395,10 @@ else if (_seite is not null && !_ungueltig)
         else if (ergebnis.SchonAngemeldet)
         {
             _hinweis = $"{vorname} ist für diese Freizeit schon angemeldet.";
+        }
+        else if (ergebnis.Abgeschlossen)
+        {
+            _zuEnde = true;
         }
         else if (ergebnis.NichtGefunden)
         {

@@ -6,7 +6,8 @@ using Zeltlotse.SharedKernel.Commands;
 namespace Zeltlotse.Inventar.Schaeden;
 
 /// <summary>Story 3-4: Entfernt einen Eintrag von der Schadens- und Verlustliste der Freizeit (Leitung und Team). Ohne Phasenprüfung (AD-17).</summary>
-internal sealed record SchadenEntfernenCommand(Guid FreizeitId, Guid EintragId) : ICommand<bool>, IModulCommand<InventarDbContext>, IBenutzerCommand;
+[ErlaubtNachAbschluss]
+internal sealed record SchadenEntfernenCommand(Guid FreizeitId, Guid EintragId) : ICommand<bool>, IModulCommand<InventarDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 internal sealed class SchadenEntfernenHandler(InventarDbContext db) : ICommandHandler<SchadenEntfernenCommand, bool>
 {

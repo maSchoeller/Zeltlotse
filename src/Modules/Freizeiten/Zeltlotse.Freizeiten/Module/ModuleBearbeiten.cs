@@ -20,7 +20,7 @@ namespace Zeltlotse.Freizeiten.Module;
 /// keine Daten. Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record ModulAendernCommand(Guid FreizeitId, ModulFeld Feld, string? AlterWert, string? NeuerWert)
-    : ICommand<ModulAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand;
+    : ICommand<ModulAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis einer Änderung; bei <see cref="Gespeichert"/> die verfolgte Freizeit (nach dem Speichern mit neuer Version).</summary>
 internal abstract record ModulAenderung

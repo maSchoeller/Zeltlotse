@@ -18,7 +18,7 @@ namespace Zeltlotse.Inventar.Reservierungen;
 /// der Antwort. Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record ReservierenCommand(Guid FreizeitId, Guid ArtikelId, DateOnly? Von, DateOnly? Bis, Guid? MaterialId)
-    : ICommand<Reservieren>, IModulCommand<InventarDbContext>, IBenutzerCommand;
+    : ICommand<Reservieren>, IModulCommand<InventarDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis von <see cref="ReservierenCommand"/>; bei <see cref="Angelegt"/> die neue Reservierung.</summary>
 internal abstract record Reservieren

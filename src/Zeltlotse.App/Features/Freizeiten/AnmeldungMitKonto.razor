@@ -189,6 +189,11 @@ else
                     ? "Die eigene Anmeldung für diese Freizeit besteht schon."
                     : $"{Name(person)} ist für diese Freizeit schon angemeldet.";
             }
+            else if (ergebnis.Abgeschlossen)
+            {
+                // Story 3-8: Die Freizeit ist gelaufen.
+                _hinweis = "Diese Freizeit ist zu Ende.";
+            }
             else
             {
                 _bestaetigungFehler = ergebnis.Fehler.GetValueOrDefault(AnmeldungFelder.TeilnahmebedingungenBestaetigt);

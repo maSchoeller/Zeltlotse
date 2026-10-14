@@ -484,6 +484,228 @@ public sealed class FreizeitenSeitenTests : BunitContext
         Assert.Empty(cut.FindAll(".elkw-loading"));
     }
 
+    // ---------- Story 3-8: Freizeit abschließen ----------
+
+    private static readonly Guid Fotos = Guid.Parse("0199a000-0000-7000-8000-0000000000c1");
+    private static readonly Guid Zeltplatz = Guid.Parse("0199a000-0000-7000-8000-0000000000c2");
+    private static readonly Guid Andacht = Guid.Parse("0199a000-0000-7000-8000-0000000000c3");
+
+    /// <summary>Kontext und Freizeit „Herbstfreizeit 2026“ in der Phase; mit <paramref name="erlaubt"/> die Rechte, dazu die Aufgaben.</summary>
+    private void AbschlussAntworten(string phase, string[] erlaubt, params object[] aufgaben)
+    {
+        var aktuell = phase;
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitId}/kontext", () =>
+            Json(new { freizeitId = FreizeitId, name = "Herbstfreizeit 2026", phase = aktuell, rollen = new[] { "Leitung" }, schalter = Array.Empty<string>(), erlaubt }));
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitId}", () => Json(new
+        {
+            id = FreizeitId,
+            name = "Herbstfreizeit 2026",
+            ersterTag = "2026-10-03",
+            letzterTag = "2026-10-08",
+            phase = aktuell,
+            freigabeBis = "2026-11-07",
+            leitung = new[] { new { vorname = "Miriam", nachname = "Zeltner" } },
+        }));
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitId}/programm/aufgaben", () => Json(aufgaben));
+        _server.Bei(HttpMethod.Post, $"/api/freizeiten/{FreizeitId}/abschliessen", () =>
+        {
+            aktuell = "Gelaufen";
+            return new HttpResponseMessage(HttpStatusCode.NoContent);
+        });
+    }
+
+    private static object AbschlussAufgabe(Guid id, string titel, bool erledigt = false) =>
+        new { id, version = 1u, titel, phase = "Nachbereitung", programmpunktId = (Guid?)null, uebernommenVon = (Guid?)null, meins = false, erledigt, vorlage = false };
+
+    private static object[] ZweiOffene() =>
+    [
+        AbschlussAufgabe(Fotos, "Fotos sammeln"), AbschlussAufgabe(Zeltplatz, "Zeltplatz besenrein übergeben"),
+        AbschlussAufgabe(Andacht, "Andacht vorbereiten", erledigt: true),
+    ];
+
+    [Fact]
+    public void Texte_fuer_den_Satz_der_Abschluss_Bestaetigung()
+    {
+        Assert.Equal("Freizeit abschließen? Danach ist sie nur lesbar.", Anzeige.AbschlussSatz(0));
+        Assert.Equal("1 Aufgabe offen – trotzdem abschließen?", Anzeige.AbschlussSatz(1));
+        Assert.Equal("2 Aufgaben offen – trotzdem abschließen?", Anzeige.AbschlussSatz(2));
+    }
+
+    [Fact]
+    public async Task Client_schliesst_ab_und_bildet_409_400_und_403_404_ab()
+    {
+        var antworten = new Queue<HttpStatusCode>([HttpStatusCode.NoContent, HttpStatusCode.Conflict, HttpStatusCode.BadRequest, HttpStatusCode.Forbidden, HttpStatusCode.NotFound]);
+        _server.Bei(HttpMethod.Post, $"/api/freizeiten/{FreizeitId}/abschliessen", () => new HttpResponseMessage(antworten.Dequeue()));
+        var client = Services.GetRequiredService<FreizeitenApiClient>();
+
+        var ergebnisse = new List<AbschlussErgebnis>();
+        for (var i = 0; i < 5; i++)
+        {
+            ergebnisse.Add(await client.AbschliessenAsync(FreizeitId, Abbruch));
+        }
+
+        Assert.Equal(
+            [AbschlussErgebnis.Abgeschlossen, AbschlussErgebnis.SchonAbgeschlossen, AbschlussErgebnis.ZuFrueh, AbschlussErgebnis.NichtVerfuegbar, AbschlussErgebnis.NichtVerfuegbar],
+            ergebnisse);
+    }
+
+    [Fact]
+    public void Leitung_schliesst_in_der_Nachbereitung_mit_offenen_Aufgaben_ab_und_sieht_danach_den_Hinweis_ohne_Knopf()
+    {
+        AbschlussAntworten("Nachbereitung", [Aktionsschluessel.FreizeitEinstellungen], ZweiOffene());
+
+        var cut = Render<FreizeitStart>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Abschluss", cut.FindAll(".elkw-card__title").Select(t => t.TextContent)));
+        var card = cut.Find("#abschluss");
+        Assert.Contains("2 Aufgaben sind noch offen:", card.TextContent, StringComparison.Ordinal);
+        Assert.Equal(
+            [("Fotos sammeln", $"freizeiten/{FreizeitId}/aufgaben/{Fotos}"), ("Zeltplatz besenrein übergeben", $"freizeiten/{FreizeitId}/aufgaben/{Zeltplatz}")],
+            card.QuerySelectorAll("li a").Select(a => (a.TextContent, a.GetAttribute("href"))));
+        Assert.Equal($"freizeiten/{FreizeitId}/schaeden", card.QuerySelectorAll("a").Single(a => a.TextContent == "Schäden & Verluste").GetAttribute("href"));
+
+        cut.Find("#abschluss button").Click();
+        Assert.Equal("2 Aufgaben offen – trotzdem abschließen?", cut.Find("#abschluss .zl-bestaetigung__satz").TextContent);
+        Assert.DoesNotContain(_server.Anfragen, a => a.Pfad == $"/api/freizeiten/{FreizeitId}/abschliessen");
+        cut.FindAll("#abschluss button").Single(b => b.TextContent == "Ja, abschließen").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains(FreizeitStart.AbgeschlossenText, cut.Markup, StringComparison.Ordinal));
+        Assert.Single(_server.Anfragen, a => a.Pfad == $"/api/freizeiten/{FreizeitId}/abschliessen" && a.Methode == HttpMethod.Post);
+        Assert.Empty(cut.FindAll("#abschluss"));
+        Assert.DoesNotContain(cut.FindAll("button"), b => b.TextContent == "Freizeit abschließen");
+        Assert.Equal("gelaufen", cut.FindAll(".elkw-status").First().TextContent);
+    }
+
+    [Fact]
+    public void Ohne_offene_Aufgaben_fragt_die_Bestaetigung_nur_nach_dem_Abschluss()
+    {
+        AbschlussAntworten("Nachbereitung", [Aktionsschluessel.FreizeitEinstellungen], AbschlussAufgabe(Andacht, "Andacht vorbereiten", erledigt: true));
+
+        var cut = Render<FreizeitStart>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Alle Aufgaben sind erledigt.", cut.Find("#abschluss").TextContent, StringComparison.Ordinal));
+        cut.Find("#abschluss button").Click();
+        Assert.Equal("Freizeit abschließen? Danach ist sie nur lesbar.", cut.Find("#abschluss .zl-bestaetigung__satz").TextContent);
+    }
+
+    [Fact]
+    public void Team_sieht_die_Card_Abschluss_ohne_Knopf()
+    {
+        AbschlussAntworten("Nachbereitung", [], ZweiOffene());
+
+        var cut = Render<FreizeitStart>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Fotos sammeln", cut.Find("#abschluss").TextContent, StringComparison.Ordinal));
+        Assert.Empty(cut.FindAll("#abschluss button"));
+    }
+
+    [Theory]
+    [InlineData("InVorbereitung")]
+    [InlineData("Laeuft")]
+    public void Vor_dem_Freizeitende_gibt_es_keine_Card_Abschluss_und_keinen_Hinweis(string phase)
+    {
+        AbschlussAntworten(phase, [Aktionsschluessel.FreizeitEinstellungen], ZweiOffene());
+
+        var cut = Render<FreizeitStart>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Meine Aufgaben", cut.FindAll(".elkw-card__title").Select(t => t.TextContent)));
+        Assert.Empty(cut.FindAll("#abschluss"));
+        Assert.DoesNotContain(FreizeitStart.AbgeschlossenText, cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Eine_gelaufene_Freizeit_zeigt_oben_den_Hinweis_und_keine_Card_Abschluss()
+    {
+        AbschlussAntworten("Gelaufen", [Aktionsschluessel.FreizeitEinstellungen]);
+
+        var cut = Render<FreizeitStart>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        cut.WaitForAssertion(() => Assert.Contains(FreizeitStart.AbgeschlossenText, cut.Find(".elkw-alert").TextContent, StringComparison.Ordinal));
+        Assert.Empty(cut.FindAll("#abschluss"));
+    }
+
+    [Fact]
+    public void Abschluss_zu_frueh_zeigt_den_Satz_und_bleibt_in_der_Nachbereitung()
+    {
+        AbschlussAntworten("Nachbereitung", [Aktionsschluessel.FreizeitEinstellungen]);
+        _server.Bei(HttpMethod.Post, $"/api/freizeiten/{FreizeitId}/abschliessen", () =>
+            Feldfehler("""{"status":400,"code":"validierung","errors":{"phase":["Abschließen geht erst nach dem letzten Freizeittag."]}}"""));
+
+        var cut = Render<FreizeitStart>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        cut.WaitForElement("#abschluss button").Click();
+        cut.FindAll("#abschluss button").Single(b => b.TextContent == "Ja, abschließen").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Abschließen geht erst nach dem letzten Freizeittag.", cut.Find("#abschluss .elkw-alert").TextContent, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Schon_abgeschlossen_laedt_neu_und_zeigt_den_Hinweis_ohne_Fehler()
+    {
+        AbschlussAntworten("Nachbereitung", [Aktionsschluessel.FreizeitEinstellungen], ZweiOffene());
+        var kontextAufrufe = 0;
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitId}/kontext", () => Json(new
+        {
+            freizeitId = FreizeitId, name = "Herbstfreizeit 2026", phase = ++kontextAufrufe == 1 ? "Nachbereitung" : "Gelaufen", rollen = new[] { "Leitung" },
+            schalter = Array.Empty<string>(), erlaubt = new[] { Aktionsschluessel.FreizeitEinstellungen },
+        }));
+        _server.Bei(HttpMethod.Post, $"/api/freizeiten/{FreizeitId}/abschliessen", () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, "freizeit-abgeschlossen"));
+
+        var cut = Render<FreizeitStart>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        cut.WaitForElement("#abschluss button").Click();
+        cut.FindAll("#abschluss button").Single(b => b.TextContent == "Ja, abschließen").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains(FreizeitStart.AbgeschlossenText, cut.Markup, StringComparison.Ordinal));
+        Assert.Equal(2, kontextAufrufe);
+        Assert.Empty(cut.FindAll("#abschluss"));
+        Assert.DoesNotContain("Die Freizeit ließ sich nicht abschließen.", cut.Markup, StringComparison.Ordinal);
+        Assert.Empty(cut.FindAll(".elkw-alert--fehler"));
+    }
+
+    [Fact]
+    public void Ohne_geladene_Aufgaben_fragt_die_Bestaetigung_neutral()
+    {
+        AbschlussAntworten("Nachbereitung", [Aktionsschluessel.FreizeitEinstellungen]);
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitId}/programm/aufgaben", () => new HttpResponseMessage(HttpStatusCode.InternalServerError));
+
+        var cut = Render<FreizeitStart>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        cut.WaitForElement("#abschluss button").Click();
+        Assert.Equal(AbschlussCard.AufgabenUnbekannt, cut.Find("#abschluss .zl-bestaetigung__satz").TextContent);
+        Assert.Equal("Offene Aufgaben ließen sich nicht laden – trotzdem abschließen?", AbschlussCard.AufgabenUnbekannt);
+    }
+
+    [Fact]
+    public void Org_Uebersicht_filtert_die_Freizeiten_nach_Phase()
+    {
+        Organisation("OrgUeberblick");
+        Freizeiten(
+            [],
+            Zeltlager(),
+            new { id = Guid.CreateVersion7(), name = "Herbstfreizeit 2026", ersterTag = "2026-10-03", letzterTag = "2026-10-08", phase = "Nachbereitung" },
+            new { id = Guid.CreateVersion7(), name = "Pfingstlager 2026", ersterTag = "2026-05-23", letzterTag = "2026-05-30", phase = "Gelaufen" });
+
+        var cut = Render<OrganisationAnsicht>(ps => ps.Add(p => p.OrgId, OrgId));
+
+        cut.WaitForElement("table");
+        var segmente = cut.Find(".elkw-segments");
+        Assert.Equal("Freizeiten nach Phase", segmente.GetAttribute("aria-label"));
+        Assert.Equal(["Alle", "in Vorbereitung", "läuft", "Nachbereitung", "gelaufen"], segmente.QuerySelectorAll("button").Select(b => b.TextContent));
+        Assert.Equal("true", segmente.QuerySelector("button")!.GetAttribute("aria-pressed"));
+        Assert.Equal(3, cut.FindAll("tbody tr").Count);
+
+        cut.FindAll(".elkw-segments button").Single(b => b.TextContent == "gelaufen").Click();
+
+        Assert.Equal(["Pfingstlager 2026"], cut.FindAll("tbody tr").Select(z => z.QuerySelector("td")!.TextContent.Trim()));
+        Assert.Equal("true", cut.FindAll(".elkw-segments button").Single(b => b.TextContent == "gelaufen").GetAttribute("aria-pressed"));
+
+        cut.FindAll(".elkw-segments button").Single(b => b.TextContent == "läuft").Click();
+
+        Assert.Empty(cut.FindAll("table"));
+        Assert.Equal("Keine Freizeit in dieser Phase.", cut.Find(".elkw-empty p").TextContent);
+    }
+
     // ---------- Story 2-1: Einstellungen, Freizeitseite ----------
 
     [Fact]

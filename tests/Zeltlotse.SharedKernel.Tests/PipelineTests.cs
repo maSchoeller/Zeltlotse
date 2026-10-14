@@ -167,6 +167,90 @@ public sealed class PipelineTests(PostgresContainer postgres)
     private static SchalterStufe<TNachricht, int> Stufe<TNachricht>(FalscherSchalterStand stand)
         where TNachricht : notnull, IMessage => new(stand);
 
+    // ---------- Story 3-8: Schreibschutz nach dem Abschluss (AD-17, AD-27) ----------
+
+    [Fact]
+    public async Task Gelaufen_lehnt_den_Benutzer_Command_der_Freizeit_ab_ohne_den_Handler_aufzurufen()
+    {
+        var stand = new FalscherAbschlussStand { Abgeschlossen = { FreizeitX } };
+        var handler = new ZaehlenderHandler();
+
+        var ausnahme = await Assert.ThrowsAsync<FreizeitAbgeschlossenAusnahme>(
+            async () => await Schreibschutz<FreizeitBenutzerNachricht>(stand).Handle(new FreizeitBenutzerNachricht(FreizeitX), handler.Weiter, TestContext.Current.CancellationToken));
+
+        Assert.Equal(FreizeitX, ausnahme.FreizeitId);
+        Assert.Equal(0, handler.Aufrufe);
+        Assert.Equal([FreizeitX], stand.Abfragen);
+    }
+
+    [Fact]
+    public async Task Nicht_gelaufen_laesst_den_Benutzer_Command_der_Freizeit_durch()
+    {
+        var stand = new FalscherAbschlussStand();
+        var handler = new ZaehlenderHandler();
+
+        var antwort = await Schreibschutz<FreizeitBenutzerNachricht>(stand).Handle(new FreizeitBenutzerNachricht(FreizeitX), handler.Weiter, TestContext.Current.CancellationToken);
+
+        Assert.Equal((42, 1), (antwort, handler.Aufrufe));
+        Assert.Equal([FreizeitX], stand.Abfragen);
+    }
+
+    [Fact]
+    public async Task ErlaubtNachAbschluss_laeuft_bei_gelaufener_Freizeit_ohne_Abfrage_durch()
+    {
+        var stand = new FalscherAbschlussStand { Abgeschlossen = { FreizeitX } };
+        var handler = new ZaehlenderHandler();
+
+        var antwort = await Schreibschutz<ErlaubteNachricht>(stand).Handle(new ErlaubteNachricht(FreizeitX), handler.Weiter, TestContext.Current.CancellationToken);
+
+        Assert.Equal((42, 1), (antwort, handler.Aufrufe));
+        Assert.Empty(stand.Abfragen);
+    }
+
+    [Fact]
+    public async Task Ereignis_Empfaenger_ohne_IBenutzerCommand_laeuft_bei_gelaufener_Freizeit_ohne_Abfrage_durch()
+    {
+        var stand = new FalscherAbschlussStand { Abgeschlossen = { FreizeitX } };
+        var handler = new ZaehlenderHandler();
+
+        var antwort = await Schreibschutz<FreizeitEmpfaengerNachricht>(stand).Handle(new FreizeitEmpfaengerNachricht(FreizeitX), handler.Weiter, TestContext.Current.CancellationToken);
+
+        Assert.Equal((42, 1), (antwort, handler.Aufrufe));
+        Assert.Empty(stand.Abfragen);
+    }
+
+    [Fact]
+    public async Task Benutzer_Command_ohne_IFreizeitCommand_laeuft_ohne_Abfrage_durch()
+    {
+        var stand = new FalscherAbschlussStand { Abgeschlossen = { FreizeitX } };
+        var handler = new ZaehlenderHandler();
+
+        var antwort = await Schreibschutz<BenutzerNachrichtOhneSchalter>(stand).Handle(new BenutzerNachrichtOhneSchalter(), handler.Weiter, TestContext.Current.CancellationToken);
+
+        Assert.Equal((42, 1), (antwort, handler.Aufrufe));
+        Assert.Empty(stand.Abfragen);
+    }
+
+    [Fact]
+    public async Task Leere_Freizeit_Kennung_laeuft_ohne_Abfrage_durch()
+    {
+        var stand = new FalscherAbschlussStand { Abgeschlossen = { Guid.Empty } };
+        var handler = new ZaehlenderHandler();
+
+        var antwort = await Schreibschutz<FreizeitBenutzerNachricht>(stand).Handle(new FreizeitBenutzerNachricht(Guid.Empty), handler.Weiter, TestContext.Current.CancellationToken);
+
+        Assert.Equal((42, 1), (antwort, handler.Aufrufe));
+        Assert.Empty(stand.Abfragen);
+    }
+
+    [Fact]
+    public void Schalter_Commands_sind_Freizeit_Commands() =>
+        Assert.True(typeof(IFreizeitCommand).IsAssignableFrom(typeof(ISchalterCommand)));
+
+    /// <summary>Die Schreibschutz-Stufe mit dem gefälschten Abschluss-Stand als einzigem Dienst.</summary>
+    private static SchreibschutzStufe<TNachricht, int> Schreibschutz<TNachricht>(FalscherAbschlussStand stand)
+        where TNachricht : notnull, IMessage => new(stand);
+
     [Theory]
     [InlineData("Text", "text")]
     [InlineData("Adresse.Strasse", "adresse.strasse")]
@@ -189,6 +273,32 @@ internal sealed record SchalterEmpfaengerNachricht(Guid FreizeitId) : IMessage, 
 
 /// <summary>Test-Nachricht: Benutzer-Command ohne Schalter.</summary>
 internal sealed record BenutzerNachrichtOhneSchalter : IMessage, IBenutzerCommand;
+
+/// <summary>Test-Nachricht: Benutzer-Command einer Freizeit (Story 3-8).</summary>
+internal sealed record FreizeitBenutzerNachricht(Guid FreizeitId) : IMessage, IBenutzerCommand, IFreizeitCommand;
+
+/// <summary>Test-Nachricht: Benutzer-Command einer Freizeit, der nach dem Abschluss erlaubt ist.</summary>
+[ErlaubtNachAbschluss]
+internal sealed record ErlaubteNachricht(Guid FreizeitId) : IMessage, IBenutzerCommand, IFreizeitCommand;
+
+/// <summary>Test-Nachricht: Ereignis-Empfänger einer Freizeit, ohne <see cref="IBenutzerCommand"/>.</summary>
+internal sealed record FreizeitEmpfaengerNachricht(Guid FreizeitId) : IMessage, IFreizeitCommand;
+
+/// <summary>Gefälschter Abschluss-Stand: gelaufen sind nur die Freizeiten in <see cref="Abgeschlossen"/>; merkt sich jede Abfrage.</summary>
+internal sealed class FalscherAbschlussStand : IAbschlussStand, IServiceProvider
+{
+    public HashSet<Guid> Abgeschlossen { get; } = [];
+
+    public List<Guid> Abfragen { get; } = [];
+
+    public Task<bool> IstAbgeschlossenAsync(Guid freizeitId, CancellationToken abbruch = default)
+    {
+        Abfragen.Add(freizeitId);
+        return Task.FromResult(Abgeschlossen.Contains(freizeitId));
+    }
+
+    public object? GetService(Type serviceType) => serviceType == typeof(IAbschlussStand) ? this : null;
+}
 
 /// <summary>Gefälschter Schalter-Stand: an sind nur die Paare in <see cref="An"/>; merkt sich jede Abfrage. Zugleich der Dienst-Container.</summary>
 internal sealed class FalscherSchalterStand : ISchalterStand, IServiceProvider

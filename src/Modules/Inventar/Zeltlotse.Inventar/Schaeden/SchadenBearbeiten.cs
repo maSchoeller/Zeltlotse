@@ -13,8 +13,9 @@ namespace Zeltlotse.Inventar.Schaeden;
 /// Story 3-4: Ändert die Bezeichnung eines Eintrags der Schadens- und Verlustliste (AD-19). Konfliktregel: Weicht der aktuelle Wert vom
 /// mitgeschickten alten Wert ab, ist das Ergebnis <see cref="SchadenAenderung.Konflikt"/>. Ohne Phasenprüfung (AD-17, Anschaffungswünsche).
 /// </summary>
+[ErlaubtNachAbschluss]
 internal sealed record SchadenFeldAendernCommand(Guid FreizeitId, Guid EintragId, SchadenFeld Feld, uint Version, string? AlterWert, string? NeuerWert)
-    : ICommand<SchadenAenderung>, IModulCommand<InventarDbContext>, IBenutzerCommand;
+    : ICommand<SchadenAenderung>, IModulCommand<InventarDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis einer Feldänderung; bei <see cref="Gespeichert"/> der verfolgte Eintrag (nach dem Speichern mit neuer Version).</summary>
 internal abstract record SchadenAenderung

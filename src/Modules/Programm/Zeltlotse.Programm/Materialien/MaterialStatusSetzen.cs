@@ -19,7 +19,7 @@ namespace Zeltlotse.Programm.Materialien;
 /// Wechsel laufen über die Zeilensperre nacheinander, der letzte gewinnt. Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record MaterialStatusSetzenCommand(Guid FreizeitId, Guid MaterialId, MaterialStatus? Status)
-    : ICommand<MaterialUebergang>, IModulCommand<ProgrammDbContext>, IBenutzerCommand;
+    : ICommand<MaterialUebergang>, IModulCommand<ProgrammDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis eines Übergangs am Material; bei <see cref="Erfolg"/> das verfolgte Material (nach dem Speichern mit neuer Version) und sein Punkt.</summary>
 internal abstract record MaterialUebergang

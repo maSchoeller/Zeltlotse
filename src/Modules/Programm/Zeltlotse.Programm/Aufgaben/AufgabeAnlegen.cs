@@ -17,7 +17,7 @@ namespace Zeltlotse.Programm.Aufgaben;
 /// Vorbereitung. Optional hängt sie an einem Programmpunkt derselben Freizeit. Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record AufgabeAnlegenCommand(Guid FreizeitId, string? Titel, AufgabenPhase? Phase, Guid? ProgrammpunktId)
-    : ICommand<AufgabeAnlegen>, IModulCommand<ProgrammDbContext>, IBenutzerCommand;
+    : ICommand<AufgabeAnlegen>, IModulCommand<ProgrammDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis von <see cref="AufgabeAnlegenCommand"/>; bei <see cref="Angelegt"/> die verfolgte Aufgabe (nach dem Speichern mit Version).</summary>
 internal abstract record AufgabeAnlegen

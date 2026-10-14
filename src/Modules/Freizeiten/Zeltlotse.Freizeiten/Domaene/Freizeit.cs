@@ -13,8 +13,9 @@ namespace Zeltlotse.Freizeiten.Domaene;
 /// <summary>
 /// Freizeit (FR-6): Name, Zeitraum und das beim Anlegen festgeschriebene Freigabe-Intervall (FR-24d), dazu die Angaben der
 /// öffentlichen Freizeitseite (FR-15, FR-67), bearbeitet nach AD-19 über <see cref="FeldAendern"/>. Der Abschluss
-/// (<see cref="AbgeschlossenAm"/>) ist nur ein Feld; diese Version setzt ihn nicht. Vergaben der Leitung legen das Ereignis
-/// <see cref="FreizeitRolleGeaendert"/> ab (AD-28); die Freizeit ist der Datensatz im Umschlag.
+/// (<see cref="AbgeschlossenAm"/>) ist der einzige gespeicherte Teil der Phase; ihn setzt nur <see cref="Abschliessen"/> (Story 3-8). Vergaben
+/// der Leitung legen das Ereignis <see cref="FreizeitRolleGeaendert"/> ab, der Abschluss <see cref="FreizeitAbgeschlossen"/> (AD-28); die
+/// Freizeit ist der Datensatz im Umschlag.
 /// </summary>
 internal sealed class Freizeit : Aggregat, IOrganisationsEigen
 {
@@ -315,6 +316,22 @@ internal sealed class Freizeit : Aggregat, IOrganisationsEigen
         AnmeldeArt.Mitarbeitende => FragenMitarbeitende,
         _ => throw new ArgumentOutOfRangeException(nameof(art), art, null),
     };
+
+    /// <summary>
+    /// Story 3-8: Die Leitung schließt die Freizeit ab (AD-17): nur in der Nachbereitung, danach ist sie gelaufen und das Ereignis
+    /// <see cref="FreizeitAbgeschlossen"/> liegt bereit. <c>false</c> in jeder anderen Phase, dann ändert sich nichts.
+    /// </summary>
+    public bool Abschliessen(DateTimeOffset jetzt)
+    {
+        if (Phase(jetzt) != FreizeitPhase.Nachbereitung)
+        {
+            return false;
+        }
+
+        AbgeschlossenAm = jetzt;
+        EreignisAblegen(new FreizeitAbgeschlossen(Id));
+        return true;
+    }
 
     public FreizeitPhase Phase(DateTimeOffset jetzt) => FreizeitZeiten.Phase(ErsterTag, LetzterTag, AbgeschlossenAm, jetzt);
 

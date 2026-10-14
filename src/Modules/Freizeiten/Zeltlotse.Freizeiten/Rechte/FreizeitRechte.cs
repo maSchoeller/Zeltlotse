@@ -38,7 +38,7 @@ internal static class FreizeitRechte
 
     /// <summary>
     /// Einstellungen der Freizeit (EXPERIENCE.md → Fläche „Einstellungen der Freizeit“, nur Leitung): Freizeitseite bearbeiten,
-    /// Anmeldelinks sehen und erneuern (FR-15, FR-16); Story 3-7: Module schalten (FR-44).
+    /// Anmeldelinks sehen und erneuern (FR-15, FR-16); Story 3-7: Module schalten (FR-44); Story 3-8: Freizeit abschließen (CAP-27).
     /// </summary>
     public static readonly RolleArt[] Einstellungen = [RolleArt.Leitung];
 

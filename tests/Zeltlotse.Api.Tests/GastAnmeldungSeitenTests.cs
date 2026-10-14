@@ -326,6 +326,22 @@ public sealed partial class GastAnmeldungSeitenTests(PostgresContainer postgres)
         Assert.Contains("Dieser Link ist nicht mehr gültig.", await HtmlAsync(ungueltig), StringComparison.Ordinal);
     }
 
+    /// <summary>Story 3-8: Ist die Freizeit gelaufen, zeigt das Absenden „Diese Freizeit ist zu Ende.“ statt des Formulars und legt nichts an.</summary>
+    [Fact]
+    public async Task Nach_dem_Abschluss_zeigt_das_Absenden_Diese_Freizeit_ist_zu_Ende_und_legt_nichts_an()
+    {
+        await AusfuehrenAsync(_verbindung, "UPDATE freizeiten.freizeit SET \"AbgeschlossenAm\" = now() WHERE \"Id\" = @f", ("f", _x));
+
+        using var antwort = await AbsendenAsync($"/freizeit/{_tn}/anmelden", "anmelden", Gast("Lina", "2016-04-01", Lina));
+
+        Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
+        var html = await HtmlAsync(antwort);
+        Assert.Contains("Diese Freizeit ist zu Ende.", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Anmeldung für Lina", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Anmeldung absenden", html, StringComparison.Ordinal);
+        Assert.Equal(0L, await WertAsync<long>(_verbindung, "SELECT count(*) FROM freizeiten.anmeldung"));
+    }
+
     [Fact]
     public async Task Doppelanmeldung_ueber_die_Seite_zeigt_den_Hinweis_mit_dem_Vornamen_und_legt_nichts_an()
     {

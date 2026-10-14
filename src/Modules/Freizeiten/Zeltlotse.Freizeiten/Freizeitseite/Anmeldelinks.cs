@@ -54,7 +54,7 @@ internal static class AnmeldelinkErzeugen
 /// Freizeit von vor Story 2-1), entsteht er. Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record AnmeldelinkErneuernCommand(Guid FreizeitId, LinkArt Art)
-    : ICommand<AnmeldelinkErneuerung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand;
+    : ICommand<AnmeldelinkErneuerung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis von <see cref="AnmeldelinkErneuernCommand"/>; bei <see cref="Erneuert"/> das neue Token.</summary>
 internal abstract record AnmeldelinkErneuerung

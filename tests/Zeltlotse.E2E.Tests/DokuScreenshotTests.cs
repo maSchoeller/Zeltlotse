@@ -874,7 +874,7 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         var seite = await kontext.NewPageAsync();
 
         await E2EHilfe.PerLinkAnmeldenAsync(seite, host, PruefMail);
-        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await FreizeitOeffnenAsync(seite, DemoFreizeitName);
         await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
         await seite.GetByRole(AriaRole.Link, new() { Name = "Einstellungen" }).ClickAsync(new() { Timeout = 60_000 });
         await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Einstellungen", new() { Timeout = 60_000 });
@@ -1494,10 +1494,15 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await card.GetByRole(AriaRole.Link, new() { Name = "Archiv öffnen" }).ClickAsync();
         await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Archiv der Vorfall-Notizen", new() { Timeout = 60_000 });
         await Assertions.Expect(seite.Locator(".elkw-kicker")).ToHaveTextAsync("Organisation");
-        // Die Demo-Freizeit ist nicht abgeschlossen: Das Archiv ist leer.
-        await Assertions.Expect(seite.GetByText("Noch keine archivierten Vorfall-Notizen.")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        // Story 3-8: Das Pfingstlager ist abgeschlossen; seine Vorfall-Notiz liegt im Archiv.
+        var pfingstlager = seite.Locator(".elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = "Pfingstlager 2026", Exact = true }) });
+        await Assertions.Expect(pfingstlager).ToContainTextAsync("Was passiert ist: Beim Zeltabbau an der Hand geschnitten.", new() { Timeout = 60_000 });
+        await Assertions.Expect(pfingstlager).ToContainTextAsync("Miriam Zeltner");
+        await Assertions.Expect(seite.GetByText("Noch keine archivierten Vorfall-Notizen.")).ToHaveCountAsync(0);
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await E2EHilfe.AxeAsync(seite);
+        // Der Zeitpunkt der Notiz ist der des Einspielens: im Bild fest.
+        await pfingstlager.Locator("strong").EvaluateAllAsync<object?>("elemente => elemente.forEach(e => { e.textContent = '29.05.2026 18:20' + e.textContent.slice(16); })");
 
         await BildAsync(seite, "vorfall-archiv", geraet);
     }
@@ -1818,13 +1823,116 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
 
         await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Anschaffungswünsche", new() { Timeout = 60_000 });
         await Assertions.Expect(seite.Locator("main .elkw-kicker").First).ToHaveTextAsync("Organisation");
-        // Die Demo-Freizeiten sind nicht abgeschlossen (den Abschluss bringt Story 3-8): Das Bild zeigt den Leer-Zustand mit Erklärung.
-        await Assertions.Expect(seite.GetByText("Noch keine Anschaffungswünsche. Nach dem Abschluss einer Freizeit stehen ihre Schäden und Verluste hier."))
-            .ToBeVisibleAsync(new() { Timeout = 60_000 });
+        // Story 3-8: Das Pfingstlager ist abgeschlossen; seine Schäden und Verluste sind Anschaffungswünsche (nur lesend, nichts wird erledigt).
+        var pfingstlager = seite.Locator(".elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = "Pfingstlager 2026", Exact = true }) });
+        var eintraege = pfingstlager.Locator("li");
+        await Assertions.Expect(eintraege).ToHaveCountAsync(2, new() { Timeout = 60_000 });
+        await Assertions.Expect(pfingstlager).ToContainTextAsync("Schaden · Kochtopf: Henkel abgebrochen");
+        await Assertions.Expect(pfingstlager).ToContainTextAsync("Verlust · Zeltheringe (12 Stück)");
+        await Assertions.Expect(pfingstlager.GetByRole(AriaRole.Button, new() { Name = "Erledigt" })).ToHaveCountAsync(2);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        // Das Datum der Einträge ist das des Einspielens: im Bild fest.
+        await eintraege.EvaluateAllAsync<object?>(
+            "elemente => elemente.forEach(e => { for (const k of e.childNodes) { if (k.nodeType === 3) { k.textContent = k.textContent.replace(/\\d{2}\\.\\d{2}\\.\\d{4}/, '30.05.2026'); } } })");
+
+        await BildAsync(seite, "anschaffungswuensche", geraet);
+    }
+
+    // ---------- Story 3-8: Freizeit abschließen ----------
+
+    /// <summary>Name der Demo-Freizeit „Zeltlager Sommer 2027“.</summary>
+    private const string DemoFreizeitName = "Zeltlager Sommer 2027";
+
+    /// <summary>
+    /// Öffnet auf der Startseite die Freizeit mit diesem Namen. Seit Story 3-8 ist Miriam Leitung dreier Freizeiten (Zeltlager, Herbstfreizeit,
+    /// Pfingstlager); jede Card hat ihr eigenes „Freizeit öffnen“.
+    /// </summary>
+    private static async Task FreizeitOeffnenAsync(IPage seite, string name)
+    {
+        var card = seite.Locator(".elkw-card").Filter(new() { HasText = name });
+        await card.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync(name, new() { Timeout = 60_000 });
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Freizeit_Abschliessen(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, PruefMail);
+        await FreizeitOeffnenAsync(seite, "Herbstfreizeit 2026");
+        await Assertions.Expect(seite.Locator("main .elkw-status").First).ToHaveTextAsync("Nachbereitung");
+        var card = seite.Locator("#abschluss");
+        await Assertions.Expect(card.Locator(".elkw-card__title")).ToHaveTextAsync("Abschluss", new() { Timeout = 60_000 });
+        await Assertions.Expect(card).ToContainTextAsync("2 Aufgaben sind noch offen:", new() { Timeout = 60_000 });
+        await Assertions.Expect(card.Locator("li a")).ToHaveTextAsync(["Abrechnung bei der Organisation abgeben", "Fotos an die Familien schicken"]);
+        await Assertions.Expect(card.GetByRole(AriaRole.Link, new() { Name = "Schäden & Verluste" })).ToBeVisibleAsync();
+
+        // Nur die Inline-Bestätigung aufklappen; „Ja, abschließen“ bleibt ungetippt, damit der Demo-Stand für die anderen Bilder bleibt.
+        await card.GetByRole(AriaRole.Button, new() { Name = "Freizeit abschließen" }).ClickAsync();
+        await Assertions.Expect(card.Locator(".zl-bestaetigung__satz")).ToHaveTextAsync("2 Aufgaben offen – trotzdem abschließen?");
+        await Assertions.Expect(card.GetByRole(AriaRole.Button, new() { Name = "Ja, abschließen" })).ToBeVisibleAsync();
+        await Assertions.Expect(card.GetByRole(AriaRole.Button, new() { Name = "Nein" })).ToBeFocusedAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        await card.EvaluateAsync("karte => karte.scrollIntoView({ block: 'start' })");
+
+        await BildAsync(seite, "freizeit-abschliessen", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Freizeit_Gelaufen(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, PruefMail);
+        await FreizeitOeffnenAsync(seite, "Pfingstlager 2026");
+        await Assertions.Expect(seite.GetByText("Diese Freizeit ist abgeschlossen und nur lesbar.")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("main .elkw-status").First).ToHaveTextAsync("gelaufen");
+        await Assertions.Expect(seite.Locator("#abschluss")).ToHaveCountAsync(0);
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Freizeit abschließen" })).ToHaveCountAsync(0);
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Schäden & Verluste" })).ToBeVisibleAsync(new() { Timeout = 60_000 });
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await E2EHilfe.AxeAsync(seite);
 
-        await BildAsync(seite, "anschaffungswuensche", geraet);
+        await BildAsync(seite, "freizeit-gelaufen", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Org_Freizeiten_Filter(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await E2EHilfe.PerLinkAnmeldenAsync(seite, host, OrgAdminMail);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Organisation öffnen" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Jugendwerk Musterstadt", new() { Timeout = 60_000 });
+        var card = seite.Locator(".elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = "Freizeiten", Exact = true }) });
+        // Andere Tests desselben Laufs legen weitere Freizeiten an; geprüft werden die vier der Demo-Daten.
+        foreach (var name in new[] { "Zeltlager Sommer 2027", "Kinderbibeltage 2027", "Herbstfreizeit 2026", "Pfingstlager 2026" })
+        {
+            await Assertions.Expect(card.Locator("tbody tr").Filter(new() { HasText = name })).ToHaveCountAsync(1, new() { Timeout = 60_000 });
+        }
+
+        var filter = card.GetByRole(AriaRole.Group, new() { Name = "Freizeiten nach Phase" });
+        await Assertions.Expect(filter.GetByRole(AriaRole.Button)).ToHaveTextAsync(["Alle", "in Vorbereitung", "läuft", "Nachbereitung", "gelaufen"]);
+
+        await filter.GetByRole(AriaRole.Button, new() { Name = "gelaufen", Exact = true }).ClickAsync();
+
+        await Assertions.Expect(card.Locator("tbody tr")).ToHaveCountAsync(1);
+        await Assertions.Expect(card.Locator("tbody tr")).ToContainTextAsync("Pfingstlager 2026");
+        await Assertions.Expect(filter.GetByRole(AriaRole.Button, new() { Name = "gelaufen", Exact = true })).ToHaveAttributeAsync("aria-pressed", "true");
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        await card.EvaluateAsync("karte => karte.scrollIntoView({ block: 'start' })");
+
+        await BildAsync(seite, "freizeiten-filter", geraet);
     }
 
     // ---------- Story 3-5: Aufgaben und Aufgaben-Vorlagen ----------
@@ -2050,7 +2158,7 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
     private async Task AnmeldungenAsync(IPage seite)
     {
         await E2EHilfe.PerLinkAnmeldenAsync(seite, host, PruefMail);
-        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await FreizeitOeffnenAsync(seite, DemoFreizeitName);
         await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
         await seite.GetByRole(AriaRole.Link, new() { Name = "Anmeldungen", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
         await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Anmeldungen", new() { Timeout = 60_000 });
@@ -2121,7 +2229,7 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
     private async Task<ILocator> PruefListeAsync(IPage seite)
     {
         await E2EHilfe.PerLinkAnmeldenAsync(seite, host, PruefMail);
-        await seite.GetByRole(AriaRole.Link, new() { Name = "Freizeit öffnen" }).ClickAsync(new() { Timeout = 60_000 });
+        await FreizeitOeffnenAsync(seite, DemoFreizeitName);
         await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Zeltlager Sommer 2027", new() { Timeout = 60_000 });
         await seite.GetByRole(AriaRole.Link, new() { Name = "Nachweise prüfen" }).ClickAsync(new() { Timeout = 60_000 });
         await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Nachweise prüfen", new() { Timeout = 60_000 });

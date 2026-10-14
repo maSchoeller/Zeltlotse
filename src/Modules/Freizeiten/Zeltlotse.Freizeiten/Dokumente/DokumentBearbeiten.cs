@@ -67,7 +67,7 @@ internal static class DokumentSchritte
 /// Endpunkt am Inhalt geprüft.
 /// </summary>
 internal sealed record DokumentHochladenCommand(Guid FreizeitId, string? Dateiname, DokumentSichtbarkeit Sichtbarkeit, byte[] Inhalt, DateiArt Art)
-    : ICommand<DokumentAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand
+    : ICommand<DokumentAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand, IFreizeitCommand
 {
     /// <summary>Weder Dateiname noch Inhalt ausgeben (AD-22).</summary>
     public override string ToString() => $"{nameof(DokumentHochladenCommand)}({FreizeitId}, {Sichtbarkeit})";
@@ -98,7 +98,7 @@ internal sealed class DokumentHochladenHandler(FreizeitenDbContext db, IDateiSpe
 /// Weicht der aktuelle Wert desselben Felds vom mitgeschickten alten Wert ab, ist das Ergebnis <see cref="DokumentAenderung.Konflikt"/>.
 /// </summary>
 internal sealed record DokumentFeldAendernCommand(Guid FreizeitId, Guid DokumentId, DokumentFeld Feld, uint Version, string? AlterWert, string? NeuerWert)
-    : ICommand<DokumentAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand
+    : ICommand<DokumentAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand, IFreizeitCommand
 {
     /// <summary>Keine Werte ausgeben (AD-22).</summary>
     public override string ToString() => $"{nameof(DokumentFeldAendernCommand)}({FreizeitId}, {DokumentId}, {Feld})";
@@ -164,7 +164,7 @@ internal sealed class DokumentFeldAendernHandler(FreizeitenDbContext db, TimePro
 /// die Datei gelöscht; bei einer Einbindung bleibt das Org-Dokument unberührt.
 /// </summary>
 internal sealed record DokumentEntfernenCommand(Guid FreizeitId, Guid DokumentId)
-    : ICommand<DokumentAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand;
+    : ICommand<DokumentAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 internal sealed class DokumentEntfernenHandler(FreizeitenDbContext db, IDateiSpeicher speicher, TimeProvider uhr)
     : ICommandHandler<DokumentEntfernenCommand, DokumentAenderung>
@@ -198,7 +198,7 @@ internal sealed class DokumentEntfernenHandler(FreizeitenDbContext db, IDateiSpe
 /// eingebunden <see cref="DokumentAenderung.SchonEingebunden"/>. Gleichzeitige Einbindungen desselben Dokuments laufen nacheinander.
 /// </summary>
 internal sealed record DokumentEinbindenCommand(Guid FreizeitId, Guid? OrgDokumentId)
-    : ICommand<DokumentAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand;
+    : ICommand<DokumentAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 internal sealed class DokumentEinbindenValidator : AbstractValidator<DokumentEinbindenCommand>
 {

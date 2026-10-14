@@ -14,7 +14,7 @@ namespace Zeltlotse.Programm.Materialien;
 /// nacheinander laufen: genau einer gewinnt. Der Status bleibt dabei, wie er ist. Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record MaterialMitbringenCommand(Guid FreizeitId, Guid MaterialId, Guid PersonId, bool Mitbringen)
-    : ICommand<MaterialUebergang>, IModulCommand<ProgrammDbContext>, IBenutzerCommand
+    : ICommand<MaterialUebergang>, IModulCommand<ProgrammDbContext>, IBenutzerCommand, IFreizeitCommand
 {
     /// <summary>Keine Personenkennung ausgeben (AD-22).</summary>
     public override string ToString() => $"{nameof(MaterialMitbringenCommand)}({FreizeitId}, {MaterialId}, {Mitbringen})";

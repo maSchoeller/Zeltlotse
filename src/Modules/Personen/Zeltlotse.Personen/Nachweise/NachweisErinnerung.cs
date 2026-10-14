@@ -77,7 +77,7 @@ internal sealed class NachweisErinnerung : Aggregat, IOrganisationsEigen
 /// (eine vorhandene bleibt unverändert), speichert die Erinnerung und merkt die Mail vor.
 /// </summary>
 internal sealed record NachweisErinnern(Guid OrganisationId, Guid FreizeitId, Guid AnfragendePersonId, Guid? PersonId)
-    : ICommand<ErinnerungErgebnis>, IModulCommand<PersonenDbContext>, IBenutzerCommand;
+    : ICommand<ErinnerungErgebnis>, IModulCommand<PersonenDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis von <see cref="NachweisErinnern"/>.</summary>
 internal abstract record ErinnerungErgebnis

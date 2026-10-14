@@ -1,9 +1,11 @@
 using Mediator;
 using Microsoft.EntityFrameworkCore;
+using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
 using Zeltlotse.Freizeiten.Daten;
 using Zeltlotse.Freizeiten.Domaene;
 using Zeltlotse.SharedKernel.Commands;
 using Zeltlotse.SharedKernel.Mandanten;
+using Zeltlotse.SharedKernel.Pipeline;
 using Zeltlotse.SharedKernel.Sicherheitsprotokoll;
 using Zeltlotse.SharedKernel.Zugangslinks;
 
@@ -12,7 +14,8 @@ namespace Zeltlotse.Freizeiten.Leitung;
 /// <summary>
 /// Nimmt eine Leitungs-Einladung an (AD-11, FR-6): Token gültig, offen, nicht abgelaufen und die Mail-Adresse des
 /// angemeldeten Kontos (<paramref name="KontoMail"/>, vom Endpunkt aus der Sitzung) gleich der Einladungs-Mail. Dann wird die
-/// Person Leitung der Freizeit der Einladung (<see cref="Freizeit.LeitungEinsetzen"/>). <c>null</c> in jedem anderen Fall;
+/// Person Leitung der Freizeit der Einladung (<see cref="Freizeit.LeitungEinsetzen"/>). Ist die Freizeit gelaufen, wirft er
+/// <c>FreizeitAbgeschlossenAusnahme</c> (<c>409 freizeit-abgeschlossen</c>, Story 3-8). <c>null</c> in jedem anderen Fall;
 /// die Einladung bleibt dann unverändert, und <c>LinkEinloesungFehlgeschlagen</c> steht im Sicherheitsprotokoll.
 /// </summary>
 /// <remarks>
@@ -49,9 +52,15 @@ internal sealed class LeitungAnnehmenHandler(FreizeitenDbContext db, MandantenKo
         }
 
         mandant.Setzen(einladung.OrganisationId);
-        einladung.Annehmen(jetzt);
-
         var freizeit = await LeitungSperre.FreizeitAsync(db.Freizeiten, einladung.FreizeitId, einladung.OrganisationId, cancellationToken);
+        // Story 3-8 (AD-17): Das Command trägt keine Freizeit-Kennung (sie kommt aus dem Token), darum prüft der Handler selbst. Die
+        // Ausnahme endet in 409 freizeit-abgeschlossen; die Transaktion schreibt nichts.
+        if (freizeit.Phase(jetzt) == FreizeitPhase.Gelaufen)
+        {
+            throw new FreizeitAbgeschlossenAusnahme(freizeit.Id);
+        }
+
+        einladung.Annehmen(jetzt);
         await db.Rollen.Where(r => r.FreizeitId == freizeit.Id).LoadAsync(cancellationToken);
         freizeit.LeitungEinsetzen(command.PersonId, jetzt);
 

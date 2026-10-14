@@ -16,7 +16,7 @@ namespace Zeltlotse.Programm.Aufgaben;
 /// mitgeschickten alten Wert ab, ist das Ergebnis <see cref="AufgabeAenderung.Konflikt"/>. Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record AufgabeFeldAendernCommand(Guid FreizeitId, Guid AufgabeId, AufgabeFeld Feld, uint Version, string? AlterWert, string? NeuerWert)
-    : ICommand<AufgabeAenderung>, IModulCommand<ProgrammDbContext>, IBenutzerCommand;
+    : ICommand<AufgabeAenderung>, IModulCommand<ProgrammDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis einer Feldänderung; bei <see cref="Gespeichert"/> die verfolgte Aufgabe (nach dem Speichern mit neuer Version).</summary>
 internal abstract record AufgabeAenderung

@@ -21,7 +21,7 @@ namespace Zeltlotse.Sicherheit.Sicherheitskette;
 /// <see cref="SicherheitsketteAenderung.Konflikt"/>. Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record SicherheitsketteFeldAendernCommand(Guid FreizeitId, SicherheitsketteFeld Feld, uint Version, string? AlterWert, string? NeuerWert)
-    : ICommand<SicherheitsketteAenderung>, IModulCommand<SicherheitDbContext>, IBenutzerCommand
+    : ICommand<SicherheitsketteAenderung>, IModulCommand<SicherheitDbContext>, IBenutzerCommand, IFreizeitCommand
 {
     /// <summary>Die Werte nicht ausgeben; Name und Telefon am Heimatort sind Angaben zu Menschen (AD-22).</summary>
     public override string ToString() => $"{nameof(SicherheitsketteFeldAendernCommand)}({FreizeitId}, {Feld})";

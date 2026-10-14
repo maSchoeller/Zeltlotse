@@ -75,6 +75,7 @@ public sealed class DokuTests
                 "Seite mitarbeitende/schaeden-verluste.md fehlt.", "Seite org-admin/anschaffungswuensche.md fehlt.",
                 "Seite mitarbeitende/aufgaben.md fehlt.", "Seite org-admin/aufgaben-vorlagen.md fehlt.",
                 "Seite mitarbeitende/programmbibliothek.md fehlt.", "Seite org-admin/programmbibliothek.md fehlt.", "Seite leitung/module-schalten.md fehlt.",
+                "Seite leitung/freizeit-abschliessen.md fehlt.",
             ],
             fehlend);
     }

@@ -18,7 +18,11 @@ namespace Zeltlotse.Personen.Nachweise;
 /// <see cref="PruefungUebernahme.NichtFreigegeben"/>. Mandant aus der Route.
 /// </summary>
 internal sealed record EinsichtPruefungUebernehmen(Guid? FreizeitId, Guid AnfragendePersonId, Guid EinsichtId)
-    : ICommand<PruefungUebernahme>, IModulCommand<PersonenDbContext>, IBenutzerCommand;
+    : ICommand<PruefungUebernahme>, IModulCommand<PersonenDbContext>, IBenutzerCommand, IFreizeitCommand
+{
+    /// <summary>Story 3-8: im Freizeit-Kontext gilt der Schreibschutz nach dem Abschluss (AD-17), im Org-Kontext nicht.</summary>
+    Guid IFreizeitCommand.FreizeitId => FreizeitId ?? Guid.Empty;
+}
 
 /// <summary>Ergebnis der Übernahme.</summary>
 internal abstract record PruefungUebernahme

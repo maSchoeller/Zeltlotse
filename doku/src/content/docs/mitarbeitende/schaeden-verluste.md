@@ -40,4 +40,4 @@ Der Text bleibt dabei im Vorfall-Protokoll und nur dort verschlüsselt gespeiche
 
 ## Nach dem Abschluss
 
-Schließt die Leitung die Freizeit ab, steht oben „Die Freizeit ist abgeschlossen. Die Einträge sind jetzt Anschaffungswünsche an die Organisation.“ Die Liste bleibt beschreibbar: Wer noch etwas vergessen hat, trägt es nach, und die Organisation sieht es sofort. Was die Organisation als erledigt markiert, verschwindet auch hier. Das Abschließen einer Freizeit kommt mit einer späteren Version.
+Schließt die Leitung die Freizeit ab, steht oben „Die Freizeit ist abgeschlossen. Die Einträge sind jetzt Anschaffungswünsche an die Organisation.“ Die Liste bleibt beschreibbar: Wer noch etwas vergessen hat, trägt es nach, und die Organisation sieht es sofort. Was die Organisation als erledigt markiert, verschwindet auch hier. Wie die Leitung die Freizeit abschließt, steht unter [Freizeit abschließen](/leitung/freizeit-abschliessen/).

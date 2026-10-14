@@ -20,7 +20,7 @@ internal enum Uebergang
 /// genau eine gewinnt. Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record ProgrammpunktUebergangCommand(Guid FreizeitId, Guid PunktId, Guid PersonId, Uebergang Uebergang)
-    : ICommand<ProgrammpunktUebergang>, IModulCommand<ProgrammDbContext>, IBenutzerCommand
+    : ICommand<ProgrammpunktUebergang>, IModulCommand<ProgrammDbContext>, IBenutzerCommand, IFreizeitCommand
 {
     /// <summary>Keine Personenkennung ausgeben (AD-22).</summary>
     public override string ToString() => $"{nameof(ProgrammpunktUebergangCommand)}({FreizeitId}, {PunktId}, {Uebergang})";

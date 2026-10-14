@@ -26,7 +26,7 @@ namespace Zeltlotse.Sicherheit.Schutzkonzept;
 /// lesbar (AD-17).
 /// </summary>
 internal sealed record SchutzkonzeptFeldAendernCommand(Guid FreizeitId, SchutzkonzeptFeld Feld, uint Version, Guid? AlterWert, Guid? NeuerWert)
-    : ICommand<SchutzkonzeptAenderung>, IModulCommand<SicherheitDbContext>, IBenutzerCommand;
+    : ICommand<SchutzkonzeptAenderung>, IModulCommand<SicherheitDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis der Feldänderung; bei <see cref="Gespeichert"/> das verfolgte Schutzkonzept (nach dem Speichern mit neuer Version).</summary>
 internal abstract record SchutzkonzeptAenderung
@@ -109,7 +109,7 @@ internal sealed class SchutzkonzeptFeldAendernHandler(
 /// zweite Bestätigung legt keine zweite Zeile an.
 /// </summary>
 internal sealed record SchutzkonzeptGelesenCommand(Guid FreizeitId, Guid DokumentId, Guid PersonId)
-    : ICommand<SchutzkonzeptBestaetigen>, IModulCommand<SicherheitDbContext>, IBenutzerCommand
+    : ICommand<SchutzkonzeptBestaetigen>, IModulCommand<SicherheitDbContext>, IBenutzerCommand, IFreizeitCommand
 {
     /// <summary>Keine Personenkennung ausgeben (AD-22).</summary>
     public override string ToString() => $"{nameof(SchutzkonzeptGelesenCommand)}({FreizeitId})";

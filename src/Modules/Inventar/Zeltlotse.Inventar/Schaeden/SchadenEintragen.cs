@@ -13,8 +13,9 @@ namespace Zeltlotse.Inventar.Schaeden;
 /// Story 3-4: Trägt einen Schaden, einen Verlust oder eine Entnahme auf der Schadens- und Verlustliste der Freizeit ein (Leitung und Team, FR-38).
 /// Ohne Phasenprüfung: Nach dem Abschluss sind die Einträge Anschaffungswünsche, die beschreibbar bleiben (AD-17).
 /// </summary>
+[ErlaubtNachAbschluss]
 internal sealed record SchadenEintragenCommand(Guid FreizeitId, SchadenArt? Art, string? Bezeichnung)
-    : ICommand<SchadenVerlust>, IModulCommand<InventarDbContext>, IBenutzerCommand;
+    : ICommand<SchadenVerlust>, IModulCommand<InventarDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 internal sealed class SchadenEintragenValidator : AbstractValidator<SchadenEintragenCommand>
 {

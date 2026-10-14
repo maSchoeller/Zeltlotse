@@ -28,7 +28,7 @@ namespace Zeltlotse.Sicherheit.Vorfaelle;
 /// <c>ErsteHilfeEntnommen</c> an Inventar (Schadens- und Verlustliste).
 /// </summary>
 internal sealed record VorfallAnlegenCommand(Guid FreizeitId, Guid Id, Guid PersonId, Guid VerfasstVon, VorfallArt Art, string? Text)
-    : ICommand<VorfallAnlegen>, IModulCommand<SicherheitDbContext>, IBenutzerCommand
+    : ICommand<VorfallAnlegen>, IModulCommand<SicherheitDbContext>, IBenutzerCommand, IFreizeitCommand
 {
     /// <summary>Keinen Text und keine Personenkennung ausgeben (AD-22).</summary>
     public override string ToString() => $"{nameof(VorfallAnlegenCommand)}({FreizeitId}, {Id}, {Art})";

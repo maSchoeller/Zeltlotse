@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Zeltlotse.Freizeiten.Abschluss;
 using Zeltlotse.Freizeiten.Anmeldungen;
 using Zeltlotse.Freizeiten.Anmeldungen.Entscheiden;
 using Zeltlotse.Freizeiten.Contracts.Dokumente;
@@ -113,6 +114,8 @@ public static class FreizeitenModul
         // Story 3-7: Module der Freizeit schalten (FR-44, AD-20), nur Leitung.
         freizeit.MapGet("/module", ModuleLadenEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Einstellungen);
         freizeit.MapPatch("/module", ModulAendernEndpunkt.Aendern).NurFreizeitRolle(FreizeitRechte.Einstellungen);
+        // Story 3-8: Freizeit abschließen (AD-17, CAP-27), nur Leitung; Übergang als POST (AD-19, AD-28).
+        freizeit.MapPost("/abschliessen", FreizeitAbschliessenEndpunkt.Abschliessen).NurFreizeitRolle(FreizeitRechte.Einstellungen);
         // Story 2-3: Anmeldungen der Leitung (Liste, Bestätigen, Absagen); Statuswechsel als POST je Übergang (AD-19, AD-28).
         freizeit.MapGet("/anmeldungen", AnmeldungenListeEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Anmeldungen);
         freizeit.MapPost("/anmeldungen/{anmeldungId:guid}/bestaetigen", AnmeldungEntscheidenEndpunkt.Bestaetigen).NurFreizeitRolle(FreizeitRechte.Anmeldungen);

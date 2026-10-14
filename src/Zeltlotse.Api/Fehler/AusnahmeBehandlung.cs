@@ -11,7 +11,8 @@ namespace Zeltlotse.Api.Fehler;
 /// <summary>
 /// Fehlerform ProblemDetails (RFC 9457) mit <c>traceId</c> (AD-22, AD-27):
 /// <see cref="ValidierungsAusnahme"/> → <c>400</c> mit Fehlern je JSON-Feldname; <see cref="SchalterAusAusnahme"/> → <c>404</c> ohne Details
-/// (Story 3-7, AD-20); jede andere Ausnahme → <c>500</c>,
+/// (Story 3-7, AD-20); <see cref="FreizeitAbgeschlossenAusnahme"/> → <c>409</c> mit Code <c>freizeit-abgeschlossen</c> (Story 3-8, AD-17); jede
+/// andere Ausnahme → <c>500</c>,
 /// in Antwort und Log nur mit Ausnahmetyp und Trace-ID, nie mit Nachricht oder Stacktrace.
 /// </summary>
 internal sealed partial class AusnahmeBehandlung(IProblemDetailsService problemDetails, ILogger<AusnahmeBehandlung> logger) : IExceptionHandler
@@ -32,6 +33,13 @@ internal sealed partial class AusnahmeBehandlung(IProblemDetailsService problemD
             ValidierungsAusnahme validierung => Validierungsproblem(validierung),
             // Story 3-7 (AD-20): wie ein abgeschalteter Endpunkt, ohne Details.
             SchalterAusAusnahme => new ProblemDetails { Status = StatusCodes.Status404NotFound },
+            // Story 3-8 (AD-17): wie die Prüfungen der Handler, gleiche Antwort.
+            FreizeitAbgeschlossenAusnahme abgeschlossen => new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = abgeschlossen.Message,
+                Extensions = { [Problemcodes.Feld] = Problemcodes.FreizeitAbgeschlossen },
+            },
             BadHttpRequestException anfrage => new ProblemDetails
             {
                 Status = anfrage.StatusCode,

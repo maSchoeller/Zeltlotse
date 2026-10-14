@@ -130,23 +130,25 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.org_einladung"));
 
         // Story 1-3: eine Freizeit „Zeltlager Sommer 2027“ in der Demo-Organisation, Jonas und Miriam als Leitung; nichts doppelt.
-        // Story 3-3: dazu die zweite Freizeit „Kinderbibeltage 2027“ (unten).
-        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.freizeit"));
+        // Story 3-3: dazu die zweite Freizeit „Kinderbibeltage 2027“ (unten). Story 3-8: dazu Herbstfreizeit und Pfingstlager (unten).
+        Assert.Equal(4L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.freizeit"));
         Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,
             "SELECT count(*) FROM freizeiten.freizeit WHERE \"Name\" = 'Zeltlager Sommer 2027' AND \"ErsterTag\" = '2027-08-02' AND \"LetzterTag\" = '2027-08-13' AND \"FreigabeIntervallTage\" = 30 AND \"OrganisationId\" = (SELECT \"Id\" FROM organisationen.organisation)"));
         var leitung = new[] { await AnmeldeHelfer.PersonIdAsync(verbindung, "jonas.huettner@example.org"), await AnmeldeHelfer.PersonIdAsync(verbindung, "miriam.zeltner@example.org") };
-        // Story 2-3: dazu Lea als Team (bestätigte Mitarbeit). Story 3-3: dazu Tim als Leitung der Kinderbibeltage.
-        Assert.Equal(4L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.freizeit_rolle"));
+        // Story 2-3: dazu Lea als Team (bestätigte Mitarbeit). Story 3-3: dazu Tim als Leitung der Kinderbibeltage. Story 3-8: dazu Miriam als
+        // Leitung von Herbstfreizeit und Pfingstlager.
+        Assert.Equal(6L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.freizeit_rolle"));
         Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.freizeit_rolle WHERE \"Rolle\" = 2 AND \"PersonId\" = @p", ("p", await AnmeldeHelfer.PersonIdAsync(verbindung, "lea.feuerstein@example.org"))));
-        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.freizeit_rolle WHERE \"Rolle\" = 1 AND \"PersonId\" = ANY(@p)", ("p", leitung)));
-        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.leitungs_einladung WHERE \"Status\" = 2"));
-        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.leitungs_einladung"));
+        Assert.Equal(4L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.freizeit_rolle WHERE \"Rolle\" = 1 AND \"PersonId\" = ANY(@p)", ("p", leitung)));
+        Assert.Equal(5L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.leitungs_einladung WHERE \"Status\" = 2"));
+        Assert.Equal(5L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.leitungs_einladung"));
         // Zwei Rollenvergaben (Story 1-3), Emmas Anmeldung (Story 2-2) und Story 2-3: drei weitere Anmeldungen, zwei Bestätigungen mit je
-        // einem Mail-Auftrag und Leas Rolle Team; Story 3-3: Tims Rolle Leitung.
-        Assert.Equal(12L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.outbox"));
+        // einem Mail-Auftrag und Leas Rolle Team; Story 3-3: Tims Rolle Leitung; Story 3-8: zwei Rollenvergaben an Miriam und der Abschluss des
+        // Pfingstlagers.
+        Assert.Equal(15L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.outbox"));
         await zweiter.OutboxJetztZustellenAsync(Abbruch);
-        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeit_rolle WHERE \"Rolle\" = 1 AND \"PersonId\" = ANY(@p)", ("p", leitung)));
+        Assert.Equal(4L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeit_rolle WHERE \"Rolle\" = 1 AND \"PersonId\" = ANY(@p)", ("p", leitung)));
 
         // Story 1-4: zwei Familien mit je einem Elternteil (Katrin, Daniel) und drei Kinder; Paul ist volljährig; nichts doppelt.
         Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.familie"));
@@ -227,8 +229,8 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
             "SELECT count(*) FROM freizeiten.freizeit WHERE \"Ort\" = @ort AND \"Beschreibung\" = @beschreibung AND \"HoechstzahlTeilnehmende\" = 40",
             ("ort", DemoKatalog.Freizeit.Ort), ("beschreibung", DemoKatalog.Freizeit.Beschreibung)));
         Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.anmeldelink WHERE \"FreizeitId\" = @f", ("f", freizeitId)));
-        // Story 3-3: die zweite Freizeit hat ihre eigenen zwei Anmeldelinks.
-        Assert.Equal(4L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.anmeldelink"));
+        // Story 3-3: die zweite Freizeit hat ihre eigenen zwei Anmeldelinks; Story 3-8: ebenso Herbstfreizeit und Pfingstlager.
+        Assert.Equal(8L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.anmeldelink"));
         var einstellungen = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/freizeitseite", Abbruch));
         var teilnehmendenLink = einstellungen.GetProperty("anmeldelinks")[0].GetProperty("adresse").GetString()!;
         var seite = await AnmeldeHelfer.JsonAsync(await zweiterClient.GetAsync($"/api/freizeiten/oeffentlich/{teilnehmendenLink[(teilnehmendenLink.LastIndexOf('/') + 1)..]}", Abbruch));
@@ -408,8 +410,9 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
                 $"{v.GetProperty("vorname").GetString()} {v.GetProperty("nachname").GetString()} {v.GetProperty("art").GetString()} {v.GetProperty("text").GetString()} "
                 + v.GetProperty("verfasserVorname").GetString()));
         Assert.Equal(DemoKatalog.Vorfaelle.Select(v => v.Id).Reverse(), vorfaelle.Select(v => v.GetProperty("id").GetGuid()));
-        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM sicherheit.vorfall_eintrag"));
-        Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM sicherheit.vorfall_eintrag WHERE \"ArchiviertAm\" IS NOT NULL"));
+        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM sicherheit.vorfall_eintrag WHERE \"FreizeitId\" = @f", ("f", freizeitId)));
+        Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
+            verbindung, "SELECT count(*) FROM sicherheit.vorfall_eintrag WHERE \"FreizeitId\" = @f AND \"ArchiviertAm\" IS NOT NULL", ("f", freizeitId)));
 
         // Story 3-1: 36 Mahlzeiten (12 Tage) und die drei Programmpunkte aus dem Katalog; Lea hat das Lagerfeuer übernommen, Jonas das
         // Geländespiel. Nichts doppelt, auch nach dem zweiten Einspielen.
@@ -477,7 +480,7 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal(
             Guid.Parse("0199e8a0-0000-7000-8000-00000000f002"),
             schaeden.Single(e => e.GetProperty("art").GetString() == "Entnahme").GetProperty("vorfallEintragId").GetGuid());
-        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM inventar.schaden_verlust"));
+        Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM inventar.schaden_verlust WHERE \"FreizeitId\" = @f", ("f", freizeitId)));
 
         // Story 3-5: drei Aufgaben-Vorlagen der Organisation, beim Einspielen ins Zeltlager übernommen; dazu „Andacht am Lagerfeuer vorbereiten“ (am
         // Lagerfeuer, Lea) und „Fotos sammeln“ (offen). Lea hat den Erste-Hilfe-Kasten übernommen, Jonas den Zeltplatz-Vertrag und ihn abgehakt.
@@ -500,7 +503,8 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
             }));
         Assert.Equal(5L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.aufgabe WHERE \"FreizeitId\" = @f", ("f", freizeitId)));
         Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.aufgaben_vorlage"));
-        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.aufgaben_vorlagen_uebernahme"));
+        // Story 3-8: dazu die Übernahme in die Herbstfreizeit.
+        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.aufgaben_vorlagen_uebernahme"));
 
         // Story 3-6: Das Team hat „Lagerfeuer“ und „Geländespiel“ des Zeltlagers in der Programmbibliothek abgelegt (Material und Aufgaben ohne Status
         // und Personen), Tim hat „Lagerfeuer“ in die Kinderbibeltage übernommen (11.08. um 19:30, Material „gebraucht“, Aufgabe frei). Nichts doppelt,
@@ -528,6 +532,35 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal(
             ["Andacht am Lagerfeuer vorbereiten 2 frei offen"],
             await ZeilenAsync(verbindung, "SELECT \"Titel\" || ' ' || \"Phase\" || ' ' || CASE WHEN \"PersonId\" IS NULL THEN 'frei' ELSE '?' END || ' ' || CASE WHEN \"Erledigt\" THEN 'erledigt' ELSE 'offen' END FROM programm.aufgabe WHERE \"FreizeitId\" = @f AND \"ProgrammpunktId\" IS NOT NULL", kinderbibeltage));
+
+        // Story 3-8: Herbstfreizeit (03.–08.10.2026) und Pfingstlager (23.–30.05.2026) mit Miriam als Leitung. Die Herbstfreizeit hat zwei offene
+        // Aufgaben der Nachbereitung; das Pfingstlager ist abgeschlossen, mit zwei Schäden und Verlusten und einer archivierten Vorfall-Notiz. Nichts
+        // doppelt, auch nach dem zweiten Einspielen (der Abschluss bleibt beim ersten Zeitpunkt).
+        var herbst = await AnmeldeHelfer.WertAsync<Guid>(
+            verbindung, "SELECT \"Id\" FROM freizeiten.freizeit WHERE \"Name\" = 'Herbstfreizeit 2026' AND \"ErsterTag\" = '2026-10-03' AND \"LetzterTag\" = '2026-10-08' AND \"AbgeschlossenAm\" IS NULL");
+        var pfingsten = await AnmeldeHelfer.WertAsync<Guid>(
+            verbindung, "SELECT \"Id\" FROM freizeiten.freizeit WHERE \"Name\" = 'Pfingstlager 2026' AND \"ErsterTag\" = '2026-05-23' AND \"LetzterTag\" = '2026-05-30' AND \"AbgeschlossenAm\" IS NOT NULL");
+        foreach (var vergangen in new[] { herbst, pfingsten })
+        {
+            Assert.Equal(
+                [miriam],
+                await AnmeldeHelfer.WertAsync<Guid[]>(verbindung, "SELECT array_agg(\"PersonId\") FROM freizeiten.freizeit_rolle WHERE \"FreizeitId\" = @f", ("f", vergangen)));
+        }
+
+        Assert.Equal(
+            [
+                "Abrechnung bei der Organisation abgeben 3 offen", "Erste-Hilfe-Kasten auffüllen 1 erledigt", "Fotos an die Familien schicken 3 offen",
+                "Zeltplatz besenrein übergeben 3 erledigt", "Zeltplatz-Vertrag prüfen 1 erledigt",
+            ],
+            (await ZeilenAsync(verbindung, "SELECT \"Titel\" || ' ' || \"Phase\" || ' ' || CASE WHEN \"Erledigt\" THEN 'erledigt' ELSE 'offen' END FROM programm.aufgabe WHERE \"FreizeitId\" = @f", herbst)).Order(StringComparer.Ordinal));
+        Assert.Equal(
+            ["1 Kochtopf: Henkel abgebrochen", "2 Zeltheringe (12 Stück)"],
+            await ZeilenAsync(verbindung, "SELECT \"Art\" || ' ' || \"Bezeichnung\" FROM inventar.schaden_verlust WHERE \"FreizeitId\" = @f ORDER BY 1", pfingsten));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(
+            verbindung, "SELECT count(*) FROM sicherheit.vorfall_eintrag WHERE \"FreizeitId\" = @f AND \"Id\" = @v AND \"PersonId\" = @p AND \"ArchiviertAm\" IS NOT NULL",
+            ("f", pfingsten), ("v", DemoKatalog.PfingstlagerVorfall.Id), ("p", miriam)));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(
+            verbindung, "SELECT count(*) FROM freizeiten.outbox WHERE \"Typ\" LIKE '%.FreizeitAbgeschlossen' AND \"Inhalt\"->>'freizeitId' = @f", ("f", pfingsten.ToString())));
 
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(
             verbindung,

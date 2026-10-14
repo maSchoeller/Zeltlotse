@@ -366,6 +366,17 @@ public static class Anzeige
         _ => phase.ToString(),
     };
 
+    /// <summary>
+    /// Story 3-8: Satz der Inline-Bestätigung „Freizeit abschließen“: ohne offene Aufgaben „Freizeit abschließen? Danach ist sie nur lesbar.“,
+    /// sonst „1 Aufgabe offen – trotzdem abschließen?“ bzw. „2 Aufgaben offen – trotzdem abschließen?“.
+    /// </summary>
+    public static string AbschlussSatz(int offeneAufgaben) => offeneAufgaben switch
+    {
+        <= 0 => "Freizeit abschließen? Danach ist sie nur lesbar.",
+        1 => "1 Aufgabe offen – trotzdem abschließen?",
+        _ => $"{offeneAufgaben.ToString(Deutsch)} Aufgaben offen – trotzdem abschließen?",
+    };
+
     /// <summary>Story 3-5: Warnhinweis im Cockpit: „1 Aufgabe ist noch nicht übernommen“, „3 Aufgaben sind noch nicht übernommen“.</summary>
     public static string AufgabenUnbesetzt(int anzahl) =>
         anzahl == 1 ? "1 Aufgabe ist noch nicht übernommen" : $"{anzahl.ToString(Deutsch)} Aufgaben sind noch nicht übernommen";

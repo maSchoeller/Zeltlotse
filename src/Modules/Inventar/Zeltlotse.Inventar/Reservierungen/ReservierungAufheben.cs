@@ -11,7 +11,7 @@ namespace Zeltlotse.Inventar.Reservierungen;
 /// bevor die Zeile verschwindet. Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record ReservierungAufhebenCommand(Guid FreizeitId, Guid ReservierungId)
-    : ICommand<ReservierungAufheben>, IModulCommand<InventarDbContext>, IBenutzerCommand;
+    : ICommand<ReservierungAufheben>, IModulCommand<InventarDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis von <see cref="ReservierungAufhebenCommand"/>.</summary>
 internal enum ReservierungAufheben

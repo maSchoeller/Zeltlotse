@@ -60,7 +60,7 @@ Leitung und Team halten im [Vorfall-Protokoll](/mitarbeitende/vorfall-protokoll/
 
 - **Verschlüsselt mit dem Schlüssel der betroffenen Person.** Der Text steht nur verschlüsselt in der Datenbank. Einträge lassen sich nicht ändern; eine Korrektur ist ein neuer Eintrag.
 - **Wer sie sieht:** Leitung und Team der Freizeit; die Leitung sieht alle Einträge auf ihrer Startseite als [Vorfall-Notizen](/leitung/vorfall-notizen/). Die betroffene Person (oder ihre Eltern) bekommt sie in ihrer **Datenauskunft** im Abschnitt „Vorfall-Protokoll“ mit Art, Zeitpunkt und Text; wer einen Eintrag geschrieben hat, sieht dort nur „Eintrag verfasst“ mit dem Zeitpunkt.
-- **Archiv nach dem Abschluss:** Wird die Freizeit abgeschlossen, legt Zeltlotse ihre Einträge ins [Archiv der Organisation](/org-admin/vorfall-archiv/); dort sehen Org-Admins sie. Das Abschließen einer Freizeit kommt mit einer späteren Version; bis dahin bleibt das Archiv leer.
+- **Archiv nach dem Abschluss:** Wird die Freizeit abgeschlossen, legt Zeltlotse ihre Einträge ins [Archiv der Organisation](/org-admin/vorfall-archiv/); dort sehen Org-Admins sie. Die Leitung schließt die Freizeit in der Nachbereitung ab (siehe [Freizeit abschließen](/leitung/freizeit-abschliessen/)).
 - **Löschen:** Mit der Frist für Freizeit-Daten löscht Zeltlotse die Einträge endgültig. Löscht eine Person ihr Konto, bleiben die Einträge über sie und von ihr stehen, aber ohne Namen („Gelöschte Person“); der Text über sie ist mit ihrem vernichteten Schlüssel nicht mehr lesbar.
 
 ## Programm

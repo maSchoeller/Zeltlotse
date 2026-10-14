@@ -15,7 +15,7 @@ namespace Zeltlotse.Freizeiten.Leitung;
 /// derselben Mail-Adresse für dieselbe Freizeit. Läuft im Mandanten-Kontext der Organisation (AD-6).
 /// </summary>
 internal sealed record LeitungEinladenCommand(Guid OrganisationId, Guid FreizeitId, string? Mail, Guid EingeladenVon)
-    : ICommand<NeueLeitungsEinladung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand
+    : ICommand<NeueLeitungsEinladung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand, IFreizeitCommand
 {
     /// <summary>Nie die Mail-Adresse ausgeben (AD-22).</summary>
     public override string ToString() => $"{nameof(LeitungEinladenCommand)}({FreizeitId})";

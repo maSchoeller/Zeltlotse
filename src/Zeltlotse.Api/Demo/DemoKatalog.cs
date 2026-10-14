@@ -231,6 +231,37 @@ internal static class DemoKatalog
     public static (string Titel, DateOnly Tag, string Beginn) BibliotheksUebernahme { get; } = ("Lagerfeuer", new DateOnly(2027, 8, 11), "19:30");
 
     /// <summary>
+    /// Story 3-8: zwei vergangene Freizeiten der Demo-Organisation mit festen Daten (der Host läuft mit der Systemuhr; feste Daten halten die
+    /// Phasen und die Bilder der Doku stabil), Leitung ist <see cref="LeitungVergangen"/>. Die Herbstfreizeit bleibt in der Nachbereitung, mit
+    /// <see cref="HerbstfreizeitAufgaben"/> als offenen Aufgaben; das Pfingstlager hat Schäden und Verluste sowie eine Vorfall-Notiz und ist
+    /// abgeschlossen. Ein Team gibt es dort nicht: Team entsteht nur über die Anmeldung mit dem Anmeldelink, und der gilt nur bis Freizeitende.
+    /// </summary>
+    public static (string Name, DateOnly Beginn, DateOnly Ende) Herbstfreizeit { get; } = ("Herbstfreizeit 2026", new DateOnly(2026, 10, 3), new DateOnly(2026, 10, 8));
+
+    /// <summary>Story 3-8: siehe <see cref="Herbstfreizeit"/>.</summary>
+    public static (string Name, DateOnly Beginn, DateOnly Ende) Pfingstlager { get; } = ("Pfingstlager 2026", new DateOnly(2026, 5, 23), new DateOnly(2026, 5, 30));
+
+    /// <summary>Story 3-8: Leitung der beiden vergangenen Freizeiten.</summary>
+    public const string LeitungVergangen = "miriam.zeltner@example.org";
+
+    /// <summary>Story 3-8: zwei offene Aufgaben der Nachbereitung in der Herbstfreizeit (je nur, wenn es den Titel dort noch nicht gibt).</summary>
+    public static IReadOnlyList<string> HerbstfreizeitAufgaben { get; } = ["Fotos an die Familien schicken", "Abrechnung bei der Organisation abgeben"];
+
+    /// <summary>Story 3-8: Schäden und Verluste des Pfingstlagers; nach dem Abschluss sind sie Anschaffungswünsche der Organisation.</summary>
+    public static IReadOnlyList<(Zeltlotse.Api.Contracts.Inventar.SchadenArt Art, string Bezeichnung)> PfingstlagerSchaeden { get; } =
+    [
+        (Zeltlotse.Api.Contracts.Inventar.SchadenArt.Schaden, "Kochtopf: Henkel abgebrochen"),
+        (Zeltlotse.Api.Contracts.Inventar.SchadenArt.Verlust, "Zeltheringe (12 Stück)"),
+    ];
+
+    /// <summary>
+    /// Story 3-8: Vorfall-Notiz im Pfingstlager (feste Kennung, damit das Einspielen idempotent bleibt). Betroffen ist die Leitung selbst, denn
+    /// sonst gehört dort niemand zur Freizeit; nach dem Abschluss steht sie im Archiv der Organisation.
+    /// </summary>
+    public static (Guid Id, string Text) PfingstlagerVorfall { get; } =
+        (Guid.Parse("0199e8a0-0000-7000-8000-00000000f101"), "Beim Zeltabbau an der Hand geschnitten. Wunde gereinigt und verbunden.");
+
+    /// <summary>
     /// Jonas' Nachweise (Story 1-5): Art, Ausstellungsdatum und eine kleine erfundene Demo-Datei. Ohne Präventionsschulung, damit
     /// „Nachweis hinzufügen“ in der Doku sichtbar bleibt.
     /// </summary>

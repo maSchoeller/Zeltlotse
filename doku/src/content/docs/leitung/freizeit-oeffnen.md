@@ -64,7 +64,7 @@ Zeltlotse leitet die Phase aus dem Zeitraum und der Uhrzeit ab; die Tagesgrenzen
 | **Nachbereitung** | nach dem Ende des letzten Tages, bis die Leitung die Freizeit abschließt |
 | **gelaufen** | nach dem Abschluss durch die Leitung |
 
-Das Abschließen einer Freizeit kommt in einer späteren Version.
+In der Nachbereitung schließt die Leitung die Freizeit über die Card **Abschluss** auf der Startseite ab – siehe [Freizeit abschließen](/leitung/freizeit-abschliessen/).
 
 ## Freigabefenster
 

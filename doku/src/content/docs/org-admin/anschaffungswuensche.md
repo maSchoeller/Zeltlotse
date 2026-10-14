@@ -11,13 +11,13 @@ Was auf einer Freizeit kaputtgegangen, verloren gegangen oder aus dem Erste-Hilf
 
 Auf der Seite der Organisation steht die Card **Anschaffungswünsche** mit dem Satz „Nach dem Abschluss einer Freizeit stehen ihre Schäden und Verluste hier, bis sie erledigt sind.“ Der Knopf **Anschaffungswünsche öffnen** führt zur Seite „Anschaffungswünsche“; über der Überschrift steht „Organisation“. Die Card sehen der **Org-Admin** und der **Org-Überblick**.
 
-Je abgeschlossener Freizeit steht eine Card mit ihrem Namen, die Freizeit mit dem neuesten Eintrag oben. Darin steht je Eintrag eine Zeile aus Art, Text und Datum, zum Beispiel „Verlust · Taschenlampe · 04.08.2027“. Entnahmen aus dem Vorfall-Protokoll heißen „Erste-Hilfe-Entnahme · Erste-Hilfe-Kasten“; was genau entnommen wurde, bleibt im Vorfall-Protokoll der Freizeit, und die Organisation sieht weder diesen Text noch Namen.
+Je abgeschlossener Freizeit steht eine Card mit ihrem Namen, die Freizeit mit dem neuesten Eintrag oben. Darin steht je Eintrag eine Zeile aus Art, Text und Datum, zum Beispiel „Verlust · Zeltheringe (12 Stück) · 30.05.2026“. Entnahmen aus dem Vorfall-Protokoll heißen „Erste-Hilfe-Entnahme · Erste-Hilfe-Kasten“; was genau entnommen wurde, bleibt im Vorfall-Protokoll der Freizeit, und die Organisation sieht weder diesen Text noch Namen.
 
-Einträge von Freizeiten, die noch nicht abgeschlossen sind, stehen hier nicht. Gibt es noch keine, steht dort „Noch keine Anschaffungswünsche. Nach dem Abschluss einer Freizeit stehen ihre Schäden und Verluste hier.“ Das Abschließen einer Freizeit kommt mit einer späteren Version; bis dahin bleibt die Seite leer.
+Einträge von Freizeiten, die noch nicht abgeschlossen sind, stehen hier nicht. Gibt es noch keine, steht dort „Noch keine Anschaffungswünsche. Nach dem Abschluss einer Freizeit stehen ihre Schäden und Verluste hier.“ Wie die Leitung eine Freizeit abschließt, steht unter [Freizeit abschließen](/leitung/freizeit-abschliessen/).
 
-![Anschaffungswünsche am Handy: Dachzeile „Organisation“, Überschrift „Anschaffungswünsche“ und der Satz „Noch keine Anschaffungswünsche. Nach dem Abschluss einer Freizeit stehen ihre Schäden und Verluste hier.“](../../../assets/screenshots/anschaffungswuensche-handy.png)
+![Anschaffungswünsche am Handy: Dachzeile „Organisation“, Überschrift „Anschaffungswünsche“ und die Card „Pfingstlager 2026“ mit „Schaden · Kochtopf: Henkel abgebrochen“ und „Verlust · Zeltheringe (12 Stück)“, je mit „Erledigt“](../../../assets/screenshots/anschaffungswuensche-handy.png)
 
-![Anschaffungswünsche am Laptop: die leere Seite mit der Erklärung und dem Link „Zurück zur Organisation“](../../../assets/screenshots/anschaffungswuensche-laptop.png)
+![Anschaffungswünsche am Laptop: die Card des abgeschlossenen Pfingstlagers mit zwei Einträgen und dem Link „Zurück zur Organisation“](../../../assets/screenshots/anschaffungswuensche-laptop.png)
 
 ## Erledigt
 

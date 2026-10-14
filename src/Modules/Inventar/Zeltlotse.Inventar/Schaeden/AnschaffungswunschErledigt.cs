@@ -10,6 +10,7 @@ namespace Zeltlotse.Inventar.Schaeden;
 /// Story 3-4: Ein Anschaffungswunsch ist erledigt (Org-Admin, FR-38): Der Eintrag verschwindet, auch von der Liste der Freizeit. Nur Einträge
 /// abgeschlossener Freizeiten sind Anschaffungswünsche; alle anderen gehören noch der Freizeit.
 /// </summary>
+[ErlaubtNachAbschluss]
 internal sealed record AnschaffungswunschErledigtCommand(Guid EintragId) : ICommand<bool>, IModulCommand<InventarDbContext>, IBenutzerCommand;
 
 internal sealed class AnschaffungswunschErledigtHandler(InventarDbContext db, IFreizeitZeitpunkte zeitpunkte)

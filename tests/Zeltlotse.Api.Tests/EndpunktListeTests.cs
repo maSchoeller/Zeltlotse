@@ -220,6 +220,8 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 // Story 3-7: Module der Freizeit (Leitung).
                 "GET /api/freizeiten/{freizeitId:guid}/module",
                 "PATCH /api/freizeiten/{freizeitId:guid}/module",
+                // Story 3-8: Freizeit abschließen (Leitung).
+                "POST /api/freizeiten/{freizeitId:guid}/abschliessen",
                 // Story 2-5: Freizeitpass im Freizeit-Kontext (Personen), Personenliste und Team-Notizen (Freizeiten), Leitung und Team.
                 "GET /api/freizeiten/{freizeitId:guid}/personen/freizeitpass/{personId:guid}",
                 "GET /api/freizeiten/{freizeitId:guid}/personenliste",

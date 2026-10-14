@@ -32,6 +32,8 @@ internal static class WebSicherheit
         services.AddScoped<IKontextRollen, KontextRollen>();
         // Story 3-7: Schalter der Freizeit einmal pro Anfrage für Rechteprüfung und Pipeline (AD-17, AD-20).
         services.AddScoped<ISchalterStand, SchalterStand>();
+        // Story 3-8: Abschluss der Freizeit einmal pro Anfrage für die Schreibschutz-Stufe der Pipeline (AD-17).
+        services.AddScoped<IAbschlussStand, AbschlussStand>();
         services.AddScoped<IAngemeldeteMail, AngemeldeteMail>();
 
         // Weitergeleitete Header nur von konfigurierten Proxy-Adressen; die eingebauten Loopback-Vorgaben fallen weg.

@@ -16,7 +16,7 @@ namespace Zeltlotse.Programm.Programme;
 /// Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record ProgrammpunktFeldAendernCommand(Guid FreizeitId, Guid PunktId, ProgrammpunktFeld Feld, uint Version, string? AlterWert, string? NeuerWert)
-    : ICommand<ProgrammpunktAenderung>, IModulCommand<ProgrammDbContext>, IBenutzerCommand;
+    : ICommand<ProgrammpunktAenderung>, IModulCommand<ProgrammDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis einer Feldänderung; bei <see cref="Gespeichert"/> der verfolgte Punkt (nach dem Speichern mit neuer Version).</summary>
 internal abstract record ProgrammpunktAenderung

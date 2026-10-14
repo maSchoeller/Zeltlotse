@@ -205,6 +205,22 @@ public sealed class FreizeitAnmeldungSeitenTests : BunitContext
             cut.FindAll("a").Single(a => a.TextContent.Contains("Freizeitpass für Jonas ausfüllen", StringComparison.Ordinal)).GetAttribute("href")));
     }
 
+    /// <summary>Story 3-8: Die Freizeit ist gelaufen (409 freizeit-abgeschlossen): Hinweis „Diese Freizeit ist zu Ende.“, kein „schon angemeldet“.</summary>
+    [Fact]
+    public void Abgeschlossene_Freizeit_zeigt_Diese_Freizeit_ist_zu_Ende()
+    {
+        Freizeitseite("Mitarbeitende");
+        _server.Bei(HttpMethod.Post, "/api/ich/anmeldungen", () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, "freizeit-abgeschlossen"));
+        var cut = Seite();
+
+        cut.Find("input[type=checkbox]").Change(true);
+        cut.Find("form").Submit();
+
+        cut.WaitForAssertion(() => Assert.Contains("Diese Freizeit ist zu Ende.", cut.Markup, StringComparison.Ordinal));
+        Assert.DoesNotContain("besteht schon", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Anmeldung eingegangen", cut.Markup, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Doppelt_angemeldet_zeigt_den_Hinweis_mit_dem_Vornamen()
     {

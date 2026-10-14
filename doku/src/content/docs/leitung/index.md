@@ -23,7 +23,7 @@ Die Leitung darf alles, was das [Team](/mitarbeitende/) darf. **Nur die Leitung*
 - die Sicherheitskette einrichten (was im Notfall zu tun ist, wen das Team anruft) – siehe [Sicherheitskette einrichten](/leitung/sicherheitskette/),
 - das Schutzkonzept anhängen, also festlegen, welches Dokument der Freizeit es ist – siehe [Schutzkonzept anhängen](/leitung/schutzkonzept/),
 - den Teilnehmer-Zugang per QR-Code an- und abschalten – siehe [Module schalten](/leitung/module-schalten/),
-- die Freizeit abschließen.
+- die Freizeit abschließen – siehe [Freizeit abschließen](/leitung/freizeit-abschliessen/).
 
 ## Dokumente
 

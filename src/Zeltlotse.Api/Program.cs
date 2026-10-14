@@ -41,8 +41,9 @@ builder.Services.AddMailVersand();
 builder.Services.AddPublicSeiten(sp => sp.GetRequiredService<PublicSeitenDienstKennung>().Geheimnis);
 builder.Services.AddSingleton(new DbKontextVerzeichnis(builder.Services));
 
-// Genau ein AddMediator, Scoped, Pipeline-Reihenfolge nach AD-27:
-// Funktions-Schalter (nur Benutzer-Commands mit Schalter, Story 3-7) -> Validierung -> Inbox (nur Ereignis-Empfänger) -> Transaktion -> Outbox.
+// Genau ein AddMediator, Scoped, Pipeline-Reihenfolge nach AD-27 (Story 3-8): Validierung -> Schreibschutz (nur Benutzer-Commands einer
+// gelaufenen Freizeit) -> Funktions-Schalter (nur Benutzer-Commands mit Schalter, Story 3-7) -> Inbox (nur Ereignis-Empfänger) -> Transaktion
+// -> Outbox.
 builder.Services.AddMediator(options =>
 {
     options.Namespace = "Zeltlotse.Api.Mediator";
@@ -63,8 +64,9 @@ builder.Services.AddMediator(options =>
     ];
     options.PipelineBehaviors =
     [
-        typeof(SchalterStufe<,>),
         typeof(ValidierungsStufe<,>),
+        typeof(SchreibschutzStufe<,>),
+        typeof(SchalterStufe<,>),
         typeof(InboxStufe<,>),
         typeof(TransaktionsStufe<,>),
         typeof(OutboxStufe<,>),

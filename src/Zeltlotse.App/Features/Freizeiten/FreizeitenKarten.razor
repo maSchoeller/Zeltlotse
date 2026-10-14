@@ -4,7 +4,9 @@
 @inject FreizeitenApiClient Freizeiten
 @* Freizeiten auf der Seite der Organisation (FR-6): Card „Freizeiten“ für jede Org-Rolle (nur Name, Zeitraum, Phase); der
    Name führt nur mit der erlaubten Aktion „leitung-einsetzen“ zur Verwaltung, die Card „Freizeit anlegen“ gibt es nur mit
-   „freizeiten-anlegen“ (AD-29). Antwortet der Server mit 403/404, bleibt der Bereich leer. *@
+   „freizeiten-anlegen“ (AD-29). Antwortet der Server mit 403/404, bleibt der Bereich leer.
+   Story 3-8: Über der Tabelle filtern Segmente „Alle · in Vorbereitung · läuft · Nachbereitung · gelaufen“ die Liste im Client (gelaufene
+   Freizeiten lassen sich so ausblenden); ohne Treffer „Keine Freizeit in dieser Phase.“ *@
 @if (_aktionFehler)
 {
     <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
@@ -21,7 +23,15 @@
         }
         else
         {
-            <Datentabelle TZeile="FreizeitZeile" Beschriftung="Freizeiten" Spalten="Spalten" Zeilen="_liste.Freizeiten" />
+            <Segmente Legende="Freizeiten nach Phase" Optionen="PhasenFilter" Wert="@_filter" Gewaehlt="@(wert => _filter = wert)" />
+            @if (Gefiltert.Count == 0)
+            {
+                <LeerZustand Satz="Keine Freizeit in dieser Phase." />
+            }
+            else
+            {
+                <Datentabelle TZeile="FreizeitZeile" Beschriftung="Freizeiten" Spalten="Spalten" Zeilen="Gefiltert" />
+            }
         }
     </Card>
 
@@ -48,7 +58,15 @@
 }
 
 @code {
+    /// <summary>Story 3-8: Wert der Option „Alle“ im Phasen-Filter.</summary>
+    private const string Alle = "alle";
+
+    /// <summary>Story 3-8: „Alle“ und je Phase eine Option, in der Reihenfolge der Phasen.</summary>
+    private static readonly IReadOnlyList<AuswahlOption> PhasenFilter =
+        [new(Alle, "Alle"), .. Enum.GetValues<Phase>().Select(p => new AuswahlOption(p.ToString(), Anzeige.Phase(p)))];
+
     private FreizeitenListe? _liste;
+    private string _filter = Alle;
     private bool _aktionFehler;
     private bool _uebertraegt;
     private bool _gespeichert;
@@ -69,6 +87,10 @@
         new("Zeitraum", f => @<text>@Anzeige.Zeitraum(f.ErsterTag, f.LetzterTag)</text>),
         new("Phase", f => @<Status Wort="@Anzeige.Phase(f.Phase)" Art="@Anzeige.PhaseArt(f.Phase)" />),
     ];
+
+    /// <summary>Story 3-8: die Freizeiten der gewählten Phase (bei „Alle“ jede).</summary>
+    private List<FreizeitZeile> Gefiltert =>
+        [.. (_liste?.Freizeiten ?? []).Where(f => _filter == Alle || f.Phase.ToString() == _filter)];
 
     private bool Darf(string schluessel) => _liste?.Erlaubt.Contains(schluessel) == true;
 

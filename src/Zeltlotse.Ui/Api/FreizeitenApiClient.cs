@@ -16,9 +16,23 @@ public sealed record AnmeldelinkErneuernErgebnis(Anmeldelink? Link, bool Abgesch
 
 /// <summary>
 /// Ergebnis der Anmelde-Aufrufe (<see cref="FreizeitenApiClient.GastAnmeldenAsync"/>, <see cref="FreizeitenApiClient.AnmeldenAsync"/>):
-/// die Kennung der Anmeldung, die Fehler an den Feldern (<c>400</c>), nicht (mehr) gültig (<c>404</c>) oder schon angemeldet (<c>409</c>).
+/// die Kennung der Anmeldung, die Fehler an den Feldern (<c>400</c>), nicht (mehr) gültig (<c>404</c>), schon angemeldet (<c>409</c> mit
+/// <c>konflikt</c>) oder, seit Story 3-8, die Freizeit ist zu Ende (<c>409</c> mit <c>freizeit-abgeschlossen</c>).
 /// </summary>
-public sealed record AnmeldungErgebnis(Guid? AnmeldungId, IReadOnlyDictionary<string, string> Fehler, bool NichtGefunden, bool SchonAngemeldet);
+public sealed record AnmeldungErgebnis(
+    Guid? AnmeldungId, IReadOnlyDictionary<string, string> Fehler, bool NichtGefunden, bool SchonAngemeldet, bool Abgeschlossen = false);
+
+/// <summary>
+/// Story 3-8: Ergebnis von <see cref="FreizeitenApiClient.AbschliessenAsync"/>: abgeschlossen (<c>204</c>), schon abgeschlossen (<c>409</c>),
+/// noch vor dem Freizeitende (<c>400</c>) oder nicht (mehr) verfügbar (<c>403</c>/<c>404</c>).
+/// </summary>
+public enum AbschlussErgebnis
+{
+    Abgeschlossen,
+    SchonAbgeschlossen,
+    ZuFrueh,
+    NichtVerfuegbar,
+}
 
 /// <summary>
 /// Ergebnis von <see cref="FreizeitenApiClient.BestaetigenAsync"/> und <see cref="FreizeitenApiClient.AbsagenAsync"/>: entschieden
@@ -267,6 +281,24 @@ public sealed class FreizeitenApiClient(HttpClient http)
     public Task<AnmeldungenUebersicht?> AnmeldungenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
         LadenAsync<AnmeldungenUebersicht>($"/api/freizeiten/{freizeitId}/anmeldungen", abbruch);
 
+    /// <summary>Story 3-8: <c>POST /api/freizeiten/{freizeitId}/abschliessen</c> (Leitung, AD-17).</summary>
+    public async Task<AbschlussErgebnis> AbschliessenAsync(Guid freizeitId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsync($"/api/freizeiten/{freizeitId}/abschliessen", content: null, abbruch);
+        switch (antwort.StatusCode)
+        {
+            case HttpStatusCode.Forbidden or HttpStatusCode.NotFound:
+                return AbschlussErgebnis.NichtVerfuegbar;
+            case HttpStatusCode.Conflict:
+                return AbschlussErgebnis.SchonAbgeschlossen;
+            case HttpStatusCode.BadRequest:
+                return AbschlussErgebnis.ZuFrueh;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return AbschlussErgebnis.Abgeschlossen;
+    }
+
     /// <summary><c>POST /api/freizeiten/{freizeitId}/anmeldungen/{anmeldungId}/bestaetigen</c> (Leitung, FR-20).</summary>
     public Task<EntscheidungErgebnis> BestaetigenAsync(Guid freizeitId, Guid anmeldungId, CancellationToken abbruch = default) =>
         EntscheidenAsync($"/api/freizeiten/{freizeitId}/anmeldungen/{anmeldungId}/bestaetigen", abbruch);
@@ -453,10 +485,16 @@ public sealed class FreizeitenApiClient(HttpClient http)
             return new AnmeldungErgebnis(null, fehler, NichtGefunden: false, SchonAngemeldet: false);
         }
 
-        if (antwort.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Conflict)
+        if (antwort.StatusCode == HttpStatusCode.NotFound)
         {
-            return new AnmeldungErgebnis(
-                null, new Dictionary<string, string>(), NichtGefunden: antwort.StatusCode == HttpStatusCode.NotFound, SchonAngemeldet: antwort.StatusCode == HttpStatusCode.Conflict);
+            return new AnmeldungErgebnis(null, new Dictionary<string, string>(), NichtGefunden: true, SchonAngemeldet: false);
+        }
+
+        if (antwort.StatusCode == HttpStatusCode.Conflict)
+        {
+            // Story 3-8: Der Code unterscheidet „schon angemeldet“ und „Freizeit zu Ende“.
+            var abgeschlossen = await ApiFehler.CodeAsync(antwort, abbruch) == Problemcodes.FreizeitAbgeschlossen;
+            return new AnmeldungErgebnis(null, new Dictionary<string, string>(), NichtGefunden: false, SchonAngemeldet: !abgeschlossen, Abgeschlossen: abgeschlossen);
         }
 
         antwort.EnsureSuccessStatusCode();

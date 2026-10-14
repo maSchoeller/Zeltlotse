@@ -24,7 +24,7 @@ namespace Zeltlotse.Programm.Bibliothek;
 /// erneut abgelegt werden kann. Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record BibliothekUebernehmenCommand(Guid FreizeitId, Guid EintragId, DateOnly? Tag, string? Beginn)
-    : ICommand<BibliothekUebernehmen>, IModulCommand<ProgrammDbContext>, IBenutzerCommand;
+    : ICommand<BibliothekUebernehmen>, IModulCommand<ProgrammDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis von <see cref="BibliothekUebernehmenCommand"/>; bei <see cref="Uebernommen"/> der neue Punkt (nach dem Speichern mit Version).</summary>
 internal abstract record BibliothekUebernehmen

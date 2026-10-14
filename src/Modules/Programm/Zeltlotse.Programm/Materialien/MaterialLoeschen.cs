@@ -9,7 +9,7 @@ namespace Zeltlotse.Programm.Materialien;
 
 /// <summary>Story 3-2: Löscht ein Material (Leitung und Team). Eine abgeschlossene Freizeit ist nur lesbar (AD-17).</summary>
 internal sealed record MaterialLoeschenCommand(Guid FreizeitId, Guid MaterialId)
-    : ICommand<MaterialLoeschen>, IModulCommand<ProgrammDbContext>, IBenutzerCommand;
+    : ICommand<MaterialLoeschen>, IModulCommand<ProgrammDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis von <see cref="MaterialLoeschenCommand"/>.</summary>
 internal enum MaterialLoeschen

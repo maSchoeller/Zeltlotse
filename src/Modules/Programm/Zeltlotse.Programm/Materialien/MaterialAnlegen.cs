@@ -19,7 +19,7 @@ namespace Zeltlotse.Programm.Materialien;
 /// Menge ist freiwillig. Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record MaterialAnlegenCommand(Guid FreizeitId, Guid PunktId, string? Bezeichnung, string? Menge)
-    : ICommand<MaterialAnlegen>, IModulCommand<ProgrammDbContext>, IBenutzerCommand;
+    : ICommand<MaterialAnlegen>, IModulCommand<ProgrammDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis von <see cref="MaterialAnlegenCommand"/>; bei <see cref="Angelegt"/> das verfolgte Material (nach dem Speichern mit Version) und sein Punkt.</summary>
 internal abstract record MaterialAnlegen

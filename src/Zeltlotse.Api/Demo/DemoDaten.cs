@@ -3,6 +3,7 @@ using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Zeltlotse.Api.Contracts.Personen;
 using Zeltlotse.Api.Contracts.Freizeiten;
+using Zeltlotse.Freizeiten.Abschluss;
 using Zeltlotse.Freizeiten.Anmeldungen;
 using Zeltlotse.Freizeiten.Anmeldungen.Entscheiden;
 using Zeltlotse.Freizeiten.Daten;
@@ -99,6 +100,9 @@ namespace Zeltlotse.Api.Demo;
 /// Story 3-4: die Schadens- und Verlustliste der Demo-Freizeit aus <see cref="DemoKatalog.Schaeden"/> (je nur, wenn es die Bezeichnung dort noch nicht
 /// gibt); Leas Entnahme im Vorfall-Protokoll (Story 2-10) setzt über das Ereignis <c>ErsteHilfeEntnommen</c> den Eintrag „Erste-Hilfe-Kasten“ dazu,
 /// sobald der Zustelldienst es zugestellt hat.
+/// Story 3-8: die vergangenen Freizeiten <see cref="DemoKatalog.Herbstfreizeit"/> (Nachbereitung, zwei offene Aufgaben, die Vorlagen-Aufgaben
+/// abgehakt) und <see cref="DemoKatalog.Pfingstlager"/> (Schäden, Verluste und eine Vorfall-Notiz, per <c>FreizeitAbschliessenCommand</c> abgeschlossen) mit
+/// Miriam als Leitung; die Outbox ist danach zugestellt, die Vorfall-Notiz also archiviert.
 /// </remarks>
 internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceScopeFactory scopes, ILogger<DemoDaten> logger)
 {
@@ -161,6 +165,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await SchaedenAsync(abbruch);
         await AufgabenAsync(abbruch);
         await BibliothekAsync(abbruch);
+        // Story 3-8: zwei vergangene Freizeiten, das Pfingstlager abgeschlossen.
+        await VergangeneFreizeitenAsync(abbruch);
 
         Interlocked.Increment(ref _einspielungen);
         Eingespielt(DemoKatalog.Personen.Count, neu);
@@ -1088,6 +1094,94 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         {
             throw new InvalidOperationException($"Demo-Bibliothek: {uebernahmeTitel} ließ sich nicht übernehmen.");
         }
+    }
+
+    /// <summary>
+    /// Story 3-8: Herbstfreizeit und Pfingstlager mit Miriam als Leitung (je nur, wenn es die Freizeit noch nicht gibt), die offenen Aufgaben der
+    /// Herbstfreizeit, Schäden, Verluste und Vorfall-Notiz des Pfingstlagers (je nur, wenn sie fehlen) und der Abschluss des Pfingstlagers (nur,
+    /// solange es nicht gelaufen ist); alles über die Commands der Module. Die Outbox ist danach zugestellt (Archiv der Vorfall-Notiz).
+    /// </summary>
+    private async Task VergangeneFreizeitenAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        var organisationId = await OrganisationIdAsync(dienste, abbruch);
+        var mandant = dienste.GetRequiredService<MandantenKontext>();
+        mandant.Setzen(organisationId);
+        var andrea = await sender.Send(new KontoSicherstellen(DemoKatalog.Personen.Single(p => p.Rolle == DemoRolle.OrgAdmin).Mail!), abbruch);
+        var miriam = await sender.Send(new KontoSicherstellen(DemoKatalog.LeitungVergangen), abbruch);
+        var lesen = dienste.GetRequiredService<FreizeitenLeseDbContext>();
+
+        async Task<Guid> FreizeitAsync((string Name, DateOnly Beginn, DateOnly Ende) freizeit)
+        {
+            if (await lesen.Freizeiten.Where(f => f.Name == freizeit.Name).Select(f => (Guid?)f.Id).SingleOrDefaultAsync(abbruch) is { } vorhanden)
+            {
+                return vorhanden;
+            }
+
+            var id = await sender.Send(new FreizeitAnlegenCommand(organisationId, freizeit.Name, freizeit.Beginn, freizeit.Ende, andrea.PersonId), abbruch);
+            mandant.Setzen(organisationId);
+            var einladung = await sender.Send(new LeitungEinladenCommand(organisationId, id, DemoKatalog.LeitungVergangen, andrea.PersonId), abbruch);
+            _ = await sender.Send(new LeitungAnnehmenCommand(einladung.Token, DemoKatalog.LeitungVergangen, miriam.PersonId), abbruch)
+                ?? throw new InvalidOperationException("Demo-Freizeit: Die Leitungs-Einladung ließ sich nicht annehmen.");
+            return id;
+        }
+
+        var herbst = await FreizeitAsync(DemoKatalog.Herbstfreizeit);
+        // Hat jemand die Herbstfreizeit in der laufenden Demo abgeschlossen, bleibt sie so: Aufgaben ließen sich dann nicht mehr anlegen.
+        if (!await lesen.Freizeiten.AnyAsync(f => f.Id == herbst && f.AbgeschlossenAm != null, abbruch))
+        {
+            // Die Vorlagen der Organisation kommen beim ersten Öffnen ohnehin in die Freizeit; in der Demo sind sie abgehakt, offen bleiben nur
+            // die beiden eigenen Aufgaben der Nachbereitung.
+            await sender.Send(new AufgabenVorlagenUebernehmen(herbst), abbruch);
+            var programm = dienste.GetRequiredService<ProgrammLeseDbContext>();
+            var aufgaben = await programm.Aufgaben.Where(a => a.FreizeitId == herbst).Select(a => a.Titel).ToListAsync(abbruch);
+            foreach (var titel in DemoKatalog.HerbstfreizeitAufgaben.Where(t => !aufgaben.Contains(t)))
+            {
+                if (await sender.Send(new AufgabeAnlegenCommand(herbst, titel, Api.Contracts.Programm.AufgabenPhase.Nachbereitung, null), abbruch) is not AufgabeAnlegen.Angelegt)
+                {
+                    throw new InvalidOperationException($"Demo-Aufgaben: {titel} ließ sich nicht anlegen.");
+                }
+            }
+
+            foreach (var vorlage in await programm.Aufgaben.Where(a => a.FreizeitId == herbst && a.VorlageId != null && !a.Erledigt).Select(a => a.Id).ToListAsync(abbruch))
+            {
+                if (await sender.Send(new AufgabeUebergangCommand(herbst, vorlage, miriam.PersonId, AufgabeUebergang.Erledigen), abbruch) is not AufgabeUebergangErgebnis.Erfolg)
+                {
+                    throw new InvalidOperationException("Demo-Aufgaben: Eine Vorlage der Herbstfreizeit ließ sich nicht abhaken.");
+                }
+            }
+        }
+
+        var pfingsten = await FreizeitAsync(DemoKatalog.Pfingstlager);
+        if (await lesen.Freizeiten.AnyAsync(f => f.Id == pfingsten && f.AbgeschlossenAm != null, abbruch))
+        {
+            return;
+        }
+
+        var schaeden = await dienste.GetRequiredService<InventarLeseDbContext>().Schaeden
+            .Where(s => s.FreizeitId == pfingsten)
+            .Select(s => s.Bezeichnung)
+            .ToListAsync(abbruch);
+        foreach (var (art, bezeichnung) in DemoKatalog.PfingstlagerSchaeden.Where(s => !schaeden.Contains(s.Bezeichnung)))
+        {
+            await sender.Send(new SchadenEintragenCommand(pfingsten, art, bezeichnung), abbruch);
+        }
+
+        var (vorfallId, text) = DemoKatalog.PfingstlagerVorfall;
+        if (await sender.Send(new VorfallAnlegenCommand(pfingsten, vorfallId, miriam.PersonId, miriam.PersonId, VorfallArt.Geschehen, text), abbruch)
+            != VorfallAnlegen.Angelegt)
+        {
+            throw new InvalidOperationException("Demo-Vorfall-Protokoll: Eintrag im Pfingstlager ließ sich nicht anlegen.");
+        }
+
+        if (await sender.Send(new FreizeitAbschliessenCommand(pfingsten), abbruch) != FreizeitAbschluss.Abgeschlossen)
+        {
+            throw new InvalidOperationException("Demo-Freizeit: Das Pfingstlager ließ sich nicht abschließen.");
+        }
+
+        await dienste.GetRequiredService<IOutboxZustellung>().AllesZustellenAsync(abbruch);
     }
 
     private static Task<Guid> OrganisationIdAsync(IServiceProvider dienste, CancellationToken abbruch) =>

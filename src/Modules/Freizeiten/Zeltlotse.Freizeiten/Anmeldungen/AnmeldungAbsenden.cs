@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Zeltlotse.Api.Contracts.Freizeiten;
 using Zeltlotse.Api.Contracts.Gemeinsam;
+using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
 using Zeltlotse.Freizeiten.Daten;
 using Zeltlotse.Freizeiten.Domaene;
 using Zeltlotse.Freizeiten.Freizeitseite;
@@ -42,6 +43,12 @@ internal abstract record AnmeldungErgebnis
 
     /// <summary>Die Person ist für diese Freizeit schon angemeldet: <c>409</c> mit Code <c>konflikt</c>.</summary>
     public sealed record SchonAngemeldet : AnmeldungErgebnis;
+
+    /// <summary>
+    /// Story 3-8: Die Freizeit ist gelaufen (AD-17): <c>409</c> mit Code <c>freizeit-abgeschlossen</c>. Die Anmelde-Commands tragen keine
+    /// Freizeit-Kennung (sie kommt aus dem Token), deshalb prüft der Handler selbst.
+    /// </summary>
+    public sealed record Abgeschlossen : AnmeldungErgebnis;
 }
 
 /// <summary>Die Bestätigung der Teilnahmebedingungen ist Pflicht (FR-19); Fehlerschlüssel <c>teilnahmebedingungenBestaetigt</c>.</summary>
@@ -63,12 +70,17 @@ internal static class AnmeldeSchritte
         DbSet<DomaeneAnmeldung> anmeldungen, Freizeit freizeit, LinkArt art, Guid personId, TimeProvider uhr, string? mail, DateTimeOffset gastGueltigBis,
         CancellationToken abbruch)
     {
+        var jetzt = uhr.GetUtcNow();
+        if (freizeit.Phase(jetzt) == FreizeitPhase.Gelaufen)
+        {
+            return new AnmeldungErgebnis.Abgeschlossen();
+        }
+
         if (await anmeldungen.AnyAsync(a => a.FreizeitId == freizeit.Id && a.PersonId == personId, abbruch))
         {
             return new AnmeldungErgebnis.SchonAngemeldet();
         }
 
-        var jetzt = uhr.GetUtcNow();
         var freigabeBis = freizeit.Zeitpunkte(jetzt).FreigabeGueltigBis;
         var anmeldung = DomaeneAnmeldung.Eingehen(
             Kennung.Neu(uhr), freizeit.OrganisationId, freizeit.Id, personId, Art(art), jetzt, freigabeBis, freizeit.FragenFuer(Art(art)));
@@ -195,12 +207,16 @@ internal static class AnmeldungAntworten
         statusCode: StatusCodes.Status409Conflict,
         title: "Die Person ist für diese Freizeit schon angemeldet.",
         extensions: new Dictionary<string, object?> { [Problemcodes.Feld] = Problemcodes.Konflikt });
+
+    /// <summary>Story 3-8: Die Freizeit ist gelaufen.</summary>
+    public static ProblemHttpResult Abgeschlossen() => FreizeitseiteProbleme.Abgeschlossen();
 }
 
 /// <summary>
 /// <c>POST /api/freizeiten/oeffentlich/{token}/anmeldungen</c> (anonym, zugriffsbegrenzt): <c>201 {anmeldungId}</c> und die
 /// Eingangsmail mit dem Gast-Link an den Elternteil (selbst angefordert, direkt nach dem Command, weil das Token nicht in die
-/// Outbox darf, AD-13); Haken fehlt <c>400</c>; Link, Gast-Token oder Kind ungültig <c>404</c>; schon angemeldet <c>409</c>.
+/// Outbox darf, AD-13); Haken fehlt <c>400</c>; Link, Gast-Token oder Kind ungültig <c>404</c>; schon angemeldet <c>409 konflikt</c>;
+/// Freizeit gelaufen <c>409 freizeit-abgeschlossen</c> (Story 3-8).
 /// </summary>
 internal static class GastAnmeldenEndpunkt
 {
@@ -220,6 +236,8 @@ internal static class GastAnmeldenEndpunkt
                 return TypedResults.Created((string?)null, new AnmeldungAngelegt(angelegt.AnmeldungId));
             case AnmeldungErgebnis.SchonAngemeldet:
                 return AnmeldungAntworten.SchonAngemeldet();
+            case AnmeldungErgebnis.Abgeschlossen:
+                return AnmeldungAntworten.Abgeschlossen();
             default:
                 return TypedResults.NotFound();
         }
@@ -228,7 +246,8 @@ internal static class GastAnmeldenEndpunkt
 
 /// <summary>
 /// <c>POST /api/ich/anmeldungen</c> (AD-26): <c>201 {anmeldungId}</c>, keine Mail; <c>personId</c> leer heißt die angemeldete
-/// Person selbst. Haken fehlt <c>400</c>; Link ungültig oder fremde Person <c>404</c>; schon angemeldet <c>409</c>.
+/// Person selbst. Haken fehlt <c>400</c>; Link ungültig oder fremde Person <c>404</c>; schon angemeldet <c>409 konflikt</c>; Freizeit gelaufen
+/// <c>409 freizeit-abgeschlossen</c> (Story 3-8).
 /// </summary>
 internal static class AnmeldenMitKontoEndpunkt
 {
@@ -242,6 +261,7 @@ internal static class AnmeldenMitKontoEndpunkt
         {
             AnmeldungErgebnis.Angelegt angelegt => TypedResults.Created((string?)null, new AnmeldungAngelegt(angelegt.AnmeldungId)),
             AnmeldungErgebnis.SchonAngemeldet => AnmeldungAntworten.SchonAngemeldet(),
+            AnmeldungErgebnis.Abgeschlossen => AnmeldungAntworten.Abgeschlossen(),
             _ => TypedResults.NotFound(),
         };
     }

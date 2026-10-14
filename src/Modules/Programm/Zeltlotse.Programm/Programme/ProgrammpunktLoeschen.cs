@@ -11,7 +11,7 @@ namespace Zeltlotse.Programm.Programme;
 /// nur lesbar (AD-17).
 /// </summary>
 internal sealed record ProgrammpunktLoeschenCommand(Guid FreizeitId, Guid PunktId)
-    : ICommand<ProgrammpunktLoeschen>, IModulCommand<ProgrammDbContext>, IBenutzerCommand;
+    : ICommand<ProgrammpunktLoeschen>, IModulCommand<ProgrammDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis von <see cref="ProgrammpunktLoeschenCommand"/>.</summary>
 internal enum ProgrammpunktLoeschen

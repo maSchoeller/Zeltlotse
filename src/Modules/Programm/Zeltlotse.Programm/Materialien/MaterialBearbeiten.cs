@@ -17,7 +17,7 @@ namespace Zeltlotse.Programm.Materialien;
 /// abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record MaterialFeldAendernCommand(Guid FreizeitId, Guid MaterialId, MaterialFeld Feld, uint Version, string? AlterWert, string? NeuerWert)
-    : ICommand<MaterialAenderung>, IModulCommand<ProgrammDbContext>, IBenutzerCommand;
+    : ICommand<MaterialAenderung>, IModulCommand<ProgrammDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis einer Feldänderung; bei <see cref="Gespeichert"/> das verfolgte Material (nach dem Speichern mit neuer Version).</summary>
 internal abstract record MaterialAenderung

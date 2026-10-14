@@ -17,7 +17,7 @@ namespace Zeltlotse.Programm.Bibliothek;
 /// abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record ProgrammpunktAblegenCommand(Guid FreizeitId, Guid PunktId)
-    : ICommand<ProgrammpunktAblegen>, IModulCommand<ProgrammDbContext>, IBenutzerCommand;
+    : ICommand<ProgrammpunktAblegen>, IModulCommand<ProgrammDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis von <see cref="ProgrammpunktAblegenCommand"/>; bei <see cref="Abgelegt"/> der verknüpfte Punkt.</summary>
 internal abstract record ProgrammpunktAblegen

@@ -21,7 +21,7 @@ namespace Zeltlotse.Freizeiten.Fragen;
 /// Ergebnis <see cref="FragenAenderung.Konflikt"/>. Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record FragenAuswahlAendernCommand(Guid FreizeitId, FragenFeld Feld, string? AlterWert, string? NeuerWert)
-    : ICommand<FragenAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand;
+    : ICommand<FragenAenderung>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 /// <summary>Ergebnis einer Änderung; bei <see cref="Gespeichert"/> die verfolgte Freizeit (nach dem Speichern mit neuer Version).</summary>
 internal abstract record FragenAenderung

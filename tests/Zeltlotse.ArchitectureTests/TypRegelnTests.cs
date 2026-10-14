@@ -44,6 +44,45 @@ public sealed class TypRegelnTests
         Assert.Empty(verstoesse);
     }
 
+    /// <summary>
+    /// Story 3-8 (AD-17): Jeder Benutzer-Command mit einer Eigenschaft <c>Guid FreizeitId</c> oder <c>Guid? FreizeitId</c> trägt <see cref="IFreizeitCommand"/>, damit die
+    /// Schreibschutz-Stufe ihn nach dem Abschluss ablehnt. So entstehen bei künftigen Commands keine Lücken.
+    /// </summary>
+    [Fact]
+    public void Jeder_Benutzer_Command_mit_FreizeitId_traegt_IFreizeitCommand()
+    {
+        var verstoesse = Loesung.ModulAssemblies
+            .SelectMany(AlleTypen)
+            .Where(t => IstCommand(t) && typeof(IBenutzerCommand).IsAssignableFrom(t))
+            .Where(t => t.GetProperty("FreizeitId", BindingFlags.Public | BindingFlags.Instance)?.PropertyType is { } typ && (typ == typeof(Guid) || typ == typeof(Guid?)))
+            .Where(t => !typeof(IFreizeitCommand).IsAssignableFrom(t))
+            .Select(t => t.FullName)
+            .ToList();
+
+        Assert.Empty(verstoesse);
+    }
+
+    /// <summary>Story 3-8 (AD-17): <see cref="ErlaubtNachAbschlussAttribute"/> steht nur an den Anschaffungswünschen in Inventar (Finanzen folgt).</summary>
+    [Fact]
+    public void ErlaubtNachAbschluss_steht_nur_an_Schaeden_und_Anschaffungswuenschen()
+    {
+        var erlaubt = Loesung.ModulAssemblies
+            .SelectMany(AlleTypen)
+            .Where(t => t.IsDefined(typeof(ErlaubtNachAbschlussAttribute), inherit: false))
+            .Select(t => t.FullName!)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        Assert.Equal(
+            [
+                "Zeltlotse.Inventar.Schaeden.AnschaffungswunschErledigtCommand",
+                "Zeltlotse.Inventar.Schaeden.SchadenEintragenCommand",
+                "Zeltlotse.Inventar.Schaeden.SchadenEntfernenCommand",
+                "Zeltlotse.Inventar.Schaeden.SchadenFeldAendernCommand",
+            ],
+            erlaubt);
+    }
+
     [Fact]
     public void Testmodul_enthaelt_Commands_damit_die_Regeln_greifen()
     {

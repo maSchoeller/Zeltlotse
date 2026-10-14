@@ -35,6 +35,9 @@
    Aufgaben (Titel als Link), „Alle übernommenen Aufgaben sind erledigt.“ oder „Keine Aufgaben übernommen.“ und dem Link „Alle Aufgaben“, während der Freizeit darunter der Kurzlink „Schaden
    melden“. Im Cockpit der Leitung die Zeile „N Aufgaben sind noch nicht übernommen“ (offen, unbesetzt, Phase höchstens die der Freizeit) mit Link
    auf die Aufgaben. Scheitert der Abruf, entfallen Card und Zeile. Der Knopf „Aufgaben“ steht nach „Programm“.
+   Story 3-8: In der Nachbereitung steht für alle Rollen die Card „Abschluss“ (AbschlussCard: offene Aufgaben, „Schäden & Verluste“, für die
+   Leitung „Freizeit abschließen“ als Inline-Bestätigung); nach dem Abschluss lädt die Seite neu. Ist die Freizeit gelaufen, steht direkt unter
+   der Überschrift der Hinweis „Diese Freizeit ist abgeschlossen und nur lesbar.“
    403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>@(_freizeit?.Name ?? "Freizeit") – Zeltlotse</PageTitle>
 
@@ -59,6 +62,12 @@ else if (_freizeit is null || _kontext is null)
 else
 {
     <h1>@_freizeit.Name</h1>
+    @if (_kontext.Phase == Phase.Gelaufen)
+    {
+        <Meldung Titel="Hinweis">
+            <p>@AbgeschlossenText</p>
+        </Meldung>
+    }
     @if (_kontext.Phase == Phase.Laeuft)
     {
         <NotfallBox Satz="@NotfallSatz" Ziel="@NotfallZiel" />
@@ -81,6 +90,10 @@ else
             <p>Das Schutzkonzept ist noch nicht als gelesen bestätigt.</p>
             <p><Knopf Href="@SchutzkonzeptZiel" Ansichtswechsel="true">Schutzkonzept lesen</Knopf></p>
         </Card>
+    }
+    @if (_kontext.Phase == Phase.Nachbereitung)
+    {
+        <AbschlussCard FreizeitId="FreizeitId" Aufgaben="_aufgaben" DarfAbschliessen="DarfEinstellungen" Abgeschlossen="OnParametersSetAsync" />
     }
     @if (_aufgaben is not null)
     {
@@ -206,6 +219,9 @@ else
 }
 
 @code {
+    /// <summary>Story 3-8: Hinweis oben auf der Startseite einer gelaufenen Freizeit.</summary>
+    public const string AbgeschlossenText = "Diese Freizeit ist abgeschlossen und nur lesbar.";
+
     /// <summary>Sprungziel der Tabelle „Freizeitpässe unvollständig“ für den Link in den Warnhinweisen.</summary>
     private const string TabellenAnker = "freizeitpaesse-offen";
 

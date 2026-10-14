@@ -32,7 +32,7 @@ internal enum EntscheidungErgebnis
 /// Bestätigte Mitarbeitende werden Team der Freizeit, eine Absage entzieht diese Rolle wieder; eine Leitung bleibt Leitung.
 /// </summary>
 internal sealed record AnmeldungEntscheiden(Guid FreizeitId, Guid AnmeldungId, Entscheidung Entscheidung)
-    : ICommand<EntscheidungErgebnis>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand;
+    : ICommand<EntscheidungErgebnis>, IModulCommand<FreizeitenDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 internal sealed class AnmeldungEntscheidenHandler(FreizeitenDbContext db, TimeProvider uhr) : ICommandHandler<AnmeldungEntscheiden, EntscheidungErgebnis>
 {

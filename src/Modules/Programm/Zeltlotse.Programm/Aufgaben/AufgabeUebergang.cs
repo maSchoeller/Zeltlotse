@@ -23,7 +23,7 @@ internal enum AufgabeUebergang
 /// Wieder offen darf jede Person der Freizeit, auch wiederholt; die Übernahme bleibt. Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record AufgabeUebergangCommand(Guid FreizeitId, Guid AufgabeId, Guid PersonId, AufgabeUebergang Uebergang)
-    : ICommand<AufgabeUebergangErgebnis>, IModulCommand<ProgrammDbContext>, IBenutzerCommand
+    : ICommand<AufgabeUebergangErgebnis>, IModulCommand<ProgrammDbContext>, IBenutzerCommand, IFreizeitCommand
 {
     /// <summary>Keine Personenkennung ausgeben (AD-22).</summary>
     public override string ToString() => $"{nameof(AufgabeUebergangCommand)}({FreizeitId}, {AufgabeId}, {Uebergang})";

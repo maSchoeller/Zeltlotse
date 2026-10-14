@@ -23,4 +23,4 @@ Die Card ist **kein Warnhinweis**: Sie zählt nicht zu den offenen Punkten unter
 
 ## Nach dem Abschluss: Archiv der Organisation
 
-Wird die Freizeit abgeschlossen, legt Zeltlotse ihre Vorfall-Notizen ins **Archiv der Organisation**. Dort sehen Org-Admins sie, bis die Frist für Freizeit-Daten abläuft; danach löscht Zeltlotse sie endgültig – siehe [Archiv der Vorfall-Notizen](/org-admin/vorfall-archiv/). Das Abschließen einer Freizeit kommt mit einer späteren Version; bis dahin bleibt das Archiv leer.
+Wird die Freizeit abgeschlossen, legt Zeltlotse ihre Vorfall-Notizen ins **Archiv der Organisation**. Dort sehen Org-Admins sie, bis die Frist für Freizeit-Daten abläuft; danach löscht Zeltlotse sie endgültig – siehe [Archiv der Vorfall-Notizen](/org-admin/vorfall-archiv/). Wie die Leitung die Freizeit abschließt, steht unter [Freizeit abschließen](/leitung/freizeit-abschliessen/).

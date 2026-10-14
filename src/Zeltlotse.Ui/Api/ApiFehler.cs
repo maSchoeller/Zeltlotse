@@ -38,6 +38,24 @@ internal static class ApiFehler
         return ergebnis;
     }
 
+    /// <summary>Story 3-8: der Problemcode einer ProblemDetails-Antwort (<c>code</c>) oder <c>null</c>.</summary>
+    public static async Task<string?> CodeAsync(HttpResponseMessage antwort, CancellationToken abbruch)
+    {
+        try
+        {
+            using var problem = JsonDocument.Parse(await antwort.Content.ReadAsStringAsync(abbruch));
+            return problem.RootElement.ValueKind == JsonValueKind.Object
+                   && problem.RootElement.TryGetProperty(Zeltlotse.Api.Contracts.Gemeinsam.Problemcodes.Feld, out var code)
+                   && code.ValueKind == JsonValueKind.String
+                ? code.GetString()
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     /// <summary>Die erste Meldung zum Feld oder <c>null</c>, wenn die Antwort keinen Fehler für dieses Feld trägt.</summary>
     public static async Task<string?> FeldFehlerAsync(HttpResponseMessage antwort, string feld, CancellationToken abbruch)
     {

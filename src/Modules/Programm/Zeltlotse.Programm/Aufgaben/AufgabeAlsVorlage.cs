@@ -14,7 +14,7 @@ namespace Zeltlotse.Programm.Aufgaben;
 /// die Zeilensperre an der Aufgabe lässt einen Doppeltipp nacheinander laufen. Eine abgeschlossene Freizeit ist nur lesbar (AD-17).
 /// </summary>
 internal sealed record AufgabeAlsVorlageCommand(Guid FreizeitId, Guid AufgabeId)
-    : ICommand<AufgabeUebergangErgebnis>, IModulCommand<ProgrammDbContext>, IBenutzerCommand;
+    : ICommand<AufgabeUebergangErgebnis>, IModulCommand<ProgrammDbContext>, IBenutzerCommand, IFreizeitCommand;
 
 internal sealed class AufgabeAlsVorlageHandler(ProgrammDbContext db, IFreizeitZeitpunkte zeitpunkte, TimeProvider uhr)
     : ICommandHandler<AufgabeAlsVorlageCommand, AufgabeUebergangErgebnis>
