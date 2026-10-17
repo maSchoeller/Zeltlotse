@@ -41,6 +41,7 @@ Test-Tempo ab 2-3 (Vorgabe von Marvin, 2026-10-12): Story-Sitzungen testen währ
 | 2026-10-14 07:16 | 3-6 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 642/642 / – | 29c02b4 | Datenschutz prüfen: Freitext-Titel in der Bibliothek können Namen enthalten und überdauern die Löschfrist (in der Doku erwähnt). Neue Cards nicht im Screenshot sichtbar |
 | 2026-10-14 09:48 | 3-7 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 133/133, UI 648/648 / – (Sitzung: Api 808, E2E 155 grün) | fe9f7c7 | Modulschalter erst über Test-Endpunkte belegt; Küche (4-x), Finanzen (5-x) und Teilnehmer-Zugang (6-4) müssen ihn nutzen |
 | 2026-10-17 08:35 | 3-8 | done (Erstdurchlauf) | Folgedurchlauf abgebrochen | – | 68d70a0 | Folgedurchlauf am 14.10. 12:10 sofort abgebrochen: Wochenlimit des Claude-Kontos erreicht (Reset 17.10. 4 Uhr). Lauf stand bis 17.10. still; Spec-Status zurückgesetzt, Folgedurchlauf neu gestartet |
+| 2026-10-17 11:45 | 3-8 | done (mit Folgedurchlauf) | ja (done, keiner mehr) | voll (Ende Epic 3): 2391/2392, 1 wackliger axe-Kontrasttest (Überblendung) → behoben / grün (55 Seiten) | 95eb818 | Folgedurchlauf: Nachweis-Einsicht nach Abschluss gesperrt, gleichzeitiger Abschluss getestet. Zurückgestellt: Anmeldung parallel zum Abschluss; Demo-Freizeiten ohne Team; Demo-Daten laufen ab ca. Juni 2027 über die Löschfrist |
 
 ## Entscheidungen im Lauf
 
