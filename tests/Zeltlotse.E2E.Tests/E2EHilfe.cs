@@ -76,9 +76,17 @@ internal static class E2EHilfe
         await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync($"Anmeldung für {kind}", new() { Timeout = 60_000 });
     }
 
-    /// <summary>axe ohne Verstoß gegen WCAG 2.2 AA.</summary>
+    /// <summary>
+    /// axe ohne Verstoß gegen WCAG 2.2 AA. Wartet vorher laufende CSS-Transitionen ab (z. B. 0,3 s Farbwechsel eines eben gewählten Segments),
+    /// sonst misst color-contrast unter Last eine Zwischenfarbe; endlose Animationen (Ladeanzeigen) bleiben außen vor.
+    /// </summary>
     public static async Task AxeAsync(IPage seite)
     {
+        await seite.EvaluateAsync("""
+            () => Promise.all(document.getAnimations()
+                .filter(a => a.effect?.getComputedTiming().iterations !== Infinity)
+                .map(a => a.finished.catch(() => {})))
+            """);
         var axe = await seite.RunAxe(new AxeRunOptions { RunOnly = new RunOnlyOptions { Type = "tag", Values = [.. AxeTags] } });
         Assert.True(axe.Violations.Length == 0, $"axe auf {seite.Url}: " + string.Join("; ", axe.Violations.Select(v => $"{v.Id}: {string.Join(", ", v.Nodes.Select(n => string.Join(" ", n.Target)))}")));
     }
