@@ -5,7 +5,7 @@ created: '2026-10-14'
 status: 'done'
 baseline_revision: '2115418f37f142ca0d425dd3735eea1a345133da'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/specs/spec-zeltlotse/stories/3-7-module-pro-freizeit-schalten.md'
@@ -30,6 +30,14 @@ deferred:
       Sperre auf freizeiten.freizeit je Command oder eine Prüfung innerhalb der Transaktion; das ist mehr als eine direkte Korrektur.
     location: >-
       src/Zeltlotse.SharedKernel/Pipeline/SchreibschutzStufe.cs
+    severity: low
+  - summary: >-
+      Anmeldung über den Anmeldelink liest die Phase ohne Zeilensperre und kann parallel zum Abschluss noch eine Anmeldung anlegen.
+    evidence: |-
+      AnmeldeSchritte prüft Phase(jetzt) == Gelaufen ohne FOR UPDATE auf freizeiten.freizeit. Gleiche Ursache wie das Zeitfenster der
+      SchreibschutzStufe; praktisch nur denkbar, wenn der Anmeldelink noch gilt, was nach Freizeitende nicht mehr der Fall ist.
+    location: >-
+      src/Modules/Freizeiten/Zeltlotse.Freizeiten/Anmeldungen/AnmeldungAbsenden.cs
     severity: low
 ---
 
@@ -165,6 +173,45 @@ deferred:
   - `[false]` `[reject]` (Edge) NachweisEntscheiden nach Abschluss nicht gesperrt — die Nachweis-Bestätigung gehört der Organisation und gilt über die Freizeit hinaus (FR-10); sie schreibt nicht in die Freizeit.
   - `[false]` `[reject]` (Edge) „zu Ende“-Pfad tot — zweite Absicherung, siehe oben.
 
+### 2026-10-17 — Review pass (Folgedurchlauf)
+- verdicts: 35 findings — high 0, medium 2, low 26, false 7, maybe-false 0
+- findings:
+  - `[low]` `[defer]` (Blind) Zeitfenster zwischen Schreibschutz-Prüfung und Schreiben, Vorfall nach dem Archivieren bleibt unarchiviert — carried: unverändert, schon als deferred vermerkt.
+  - `[low]` `[reject]` (Blind) Validierung vor dem Schalter verrät abgeschaltete Endpunkte (400 statt 404) — die Reihenfolge schreibt die Spine Z.381 vor; als Restrisiko im Auto Run Result vermerkt, eine Abweichung bräuchte eine Spine-Änderung.
+  - `[low]` `[reject]` (Blind) `AbschlussStand` lässt eine unbekannte Freizeit als „nicht gelaufen“ durch (fail-open) — `RechtePruefung` setzt den Mandanten vor dem Mediator; kein erreichbarer Pfad ohne Mandant gezeigt, Absicherung wäre ein zusätzlicher Zweig.
+  - `[low]` `[reject]` (Blind) Architekturregel erkennt nur Commands mit `FreizeitId` — Folge-Review-Audit aller `IBenutzerCommand` ohne `IFreizeitCommand` gemacht: Freizeit-Bezug haben nur `AnmeldungAbsenden`/`GastAnmeldungAbsenden` und `LeitungAnnehmen` (Handler-Prüfung, HTTP-getestet) sowie `NachweisEntscheiden` und `EinsichtFreigeben` (Daten der Person bzw. Organisation, FR-10). Keine Lücke heute; eine Ausnahmeliste wäre neue Struktur für hypothetische künftige Commands.
+  - `[low]` `[reject]` (Blind) Leitungs-Einladung nach dem Abschluss: Seite zeigt allgemeinen Fehler, kein Sicherheitsprotokoll, Einladungen nicht zurückgezogen — selten (Einladung offen über den Abschluss hinweg), Fix bräuchte einen neuen Zweig in Client und Seite; Protokoll und Aufräumen verlangt die Intention nicht.
+  - `[low]` `[reject]` (Blind) Kein „abgeschlossen von“ und kein Protokolleintrag — die Intention speichert bewusst nur `AbgeschlossenAm`; neues Feld bräuchte eine Migration, die das Spec ausschließt.
+  - `[low]` `[reject]` (Blind) „zu Ende“-Pfad praktisch unerreichbar, Doku nennt den 404-Text — carried: gewollte zweite Absicherung.
+  - `[low]` `[patch]` (Blind) Doku sagt „gelaufene Freizeiten ausblenden“, die Leiste wählt aber genau eine Phase — Satz in `leitung/freizeit-abschliessen.md` korrigiert.
+  - `[false]` `[reject]` (Blind) Client bildet jede 409 auf `SchonAbgeschlossen` und jede 400 auf `ZuFrueh` ab — der Command trägt nur `FreizeitId`; 400 kann nur der Phasen-Fehler sein, 409 nur `freizeit-abgeschlossen` (Stufe oder Handler).
+  - `[low]` `[reject]` (Blind) Fokus geht nach „Ja, abschließen“ verloren — der Hinweis steht in einer `Meldung` mit `role="status"`; gleiches Muster wie bei den übrigen Inline-Bestätigungen, Fokus-Steuerung wäre neue Logik.
+  - `[low]` `[reject]` (Blind) Testabdeckung des Schreibschutzes dünn — carried für Programm, Inventar, Sicherheit und die drei übrigen Ausnahmen; der Teil „Einsicht“ ist unten als Patch umgesetzt.
+  - `[low]` `[reject]` (Blind) Demo: Ergebnis von `SchadenEintragen` ungeprüft, Wiederholung nach Abbruch, Datum im Screenshot überschrieben — carried für die ersten beiden Punkte; das Überschreiben des Datums ist ein schon vorher genutztes Muster der Screenshot-Tests (8 Stellen vor der Story).
+  - `[false]` `[reject]` (Blind) Protokollzeile ohne Testnachweis — das Protokoll führt der Orchestrator; der Nachweis steht im Auto Run Result (2389 grün) und in diesem Durchlauf.
+  - `[low]` `[defer]` (Edge) Zeitfenster Schreibschutz/Transaktion — carried.
+  - `[low]` `[defer]` (Edge) `AnmeldungAbsenden` liest die Phase ohne Zeilensperre, Anmeldung parallel zum Abschluss — gleiche Ursache wie das deferred Zeitfenster; als eigener deferred-Eintrag ergänzt.
+  - `[low]` `[reject]` (Edge) `AbschlussStand` cached „nicht gelaufen“ im selben Scope — carried.
+  - `[false]` `[reject]` (Edge) `EinsichtFreigeben` nach dem Abschluss möglich — schreibt die eigene Freigabe der Person (AD-26, FR-10), nicht die Freizeit; Anfragen und Übernehmen über die Freizeit-Route sind gesperrt (jetzt HTTP-getestet); gleiche Begründung wie beim carried `NachweisEntscheiden`.
+  - `[low]` `[reject]` (Edge) Architekturregel übersieht Commands mit Kind-Id — wie oben (Audit gemacht, keine Lücke).
+  - `[low]` `[reject]` (Edge) Demo-Suche per Name mit `SingleOrDefaultAsync` scheitert bei gleichnamiger Freizeit — dasselbe Muster wie bei allen bisherigen Demo-Freizeiten (`SingleAsync` per Name); unwahrscheinlich.
+  - `[low]` `[reject]` (Edge) Bestätigung des ersten Kindes verschwindet bei 409 für das zweite — nur über den praktisch unerreichbaren „zu Ende“-Pfad.
+  - `[low]` `[patch]` (Edge) Nach dem Anlegen einer Freizeit bei aktivem Phasen-Filter fehlt sie in der Tabelle — `FreizeitenKarten.razor` setzt den Filter nach dem Anlegen auf „Alle“; bUnit-Test zuerst rot, dann grün.
+  - `[low]` `[reject]` (Edge) Fehler beim Neuladen nach dem Abschluss unbehandelt — unwahrscheinlich; Fix wäre ein zusätzlicher Fangzweig.
+  - `[low]` `[defer]` (Edge) Demo-Freizeiten ohne Team Tobias — carried.
+  - `[low]` `[reject]` (Edge) Kontakt der Leitung fehlt in „zu Ende“ — carried.
+  - `[medium]` `[patch]` (Gap) Einsicht-Commands nach dem Abschluss ohne HTTP-Test, Abbildung `Guid? → Guid.Empty` ungeprüft — `Schreibschutz_Einsicht_anfragen_und_pruefen_409_nach_dem_Abschluss` in `Api.Tests/AbschlussTests.cs` ergänzt, grün.
+  - `[low]` `[patch]` (Gap) Kein Test für zwei gleichzeitige Abschlüsse (`FOR UPDATE`) — `Zwei_gleichzeitige_Abschluesse_ein_204_ein_409_und_genau_ein_Ereignis` ergänzt, grün.
+  - `[false]` `[reject]` (Gap) `NachweisEntscheiden` nach dem Abschluss nicht gesperrt — carried.
+  - `[low]` `[reject]` (Gap) `AbschlussStand` fail-open ohne Mandant — wie oben.
+  - `[low]` `[reject]` (Intent a) Token-Commands werden im Handler statt in der Stufe gesperrt — die HTTP-Antwort entspricht der Matrix und ist getestet; Token-Commands tragen keine `FreizeitId` (Design Notes).
+  - `[false]` `[reject]` (Intent b) übrige Seiten zeigen nach dem Abschluss Bearbeiten-Knöpfe — carried.
+  - `[medium]` `[patch]` (Intent c) Nachweis-Commands nach dem Abschluss nicht per HTTP geprüft — gleiche Ursache wie der Gap-Fund, gleicher Test.
+  - `[low]` `[reject]` (Intent d) Ausnahmen außer „Schaden eintragen“ nicht per HTTP — carried.
+  - `[low]` `[reject]` (Intent f) offene Punkte nur Aufgaben — carried.
+  - `[false]` `[reject]` (Intent g) AD-30-Pflichtfälle — 403/404/401 und die Token-Fälle sind per HTTP getestet; der Abschluss-Endpunkt selbst ist kein Token-Endpunkt.
+  - `[false]` `[reject]` (Intent h) Änderungen außerhalb des Wortlauts — stützen die Funktionen und berühren keinen Never-Punkt.
+
 ## Design Notes
 
 - **Marker statt Reflexion:** Die Stufe braucht die FreizeitId. Ein schmales `IFreizeitCommand` (nur `Guid FreizeitId`) ist einfacher als Property-Suche per Reflexion; der Architekturtest hält es vollständig. Commands ohne FreizeitId (z. B. `…(Guid EintragId)`) behalten ihre Handler-Prüfung.
@@ -221,3 +268,41 @@ Status: done
 - Die vergangenen Demo-Freizeiten haben kein Team (deferred).
 - Wegen der festen Daten löscht die 12-Monats-Frist die Daten des Pfingstlagers ab etwa Juni 2027.
 - Validierung läuft jetzt vor dem Schalter: Ein ungültiger Command für ein abgeschaltetes Modul ergibt 400 statt 404, wie es die Spine verlangt.
+
+### Folgedurchlauf 2026-10-17
+
+**Umgesetzt (Review-Patches):**
+- Zwei HTTP-Tests gegen PostgreSQL: Einsicht anfragen und prüfen über die Freizeit-Route nach dem Abschluss → `409 freizeit-abgeschlossen` ohne neue Einsicht; zwei gleichzeitige Abschlüsse → ein `204`, ein `409`, genau ein Ereignis, Zeitpunkt unverändert.
+- Phasen-Filter der Org-Übersicht springt nach dem Anlegen einer Freizeit auf „Alle“, damit die neue Freizeit sichtbar ist (bUnit-Test zuerst rot, dann grün).
+- Doku-Satz zum Filter präzisiert (eine Phase oder alle; nach dem Anlegen wieder „Alle“).
+
+**Geänderte Dateien:**
+- `tests/Zeltlotse.Api.Tests/AbschlussTests.cs`: zwei neue Tests, Klassenkommentar ergänzt.
+- `tests/Zeltlotse.Ui.Tests/FreizeitenSeitenTests.cs`: Test für den Filter nach dem Anlegen.
+- `src/Zeltlotse.App/Features/Freizeiten/FreizeitenKarten.razor`: Filter nach erfolgreichem Anlegen auf „Alle“.
+- `doku/src/content/docs/leitung/freizeit-abschliessen.md`: Satz zum Phasen-Filter.
+
+**Review:** 35 Funde (medium 2, low 26, false 7).
+- Patches: 1 Eintrag medium (Einsicht-Commands nach dem Abschluss ohne HTTP-Test, aus Gap und Intent), 3 low (gleichzeitiger Abschluss, Filter nach dem Anlegen, Doku-Satz).
+- Zurückgestellt: Anmeldung über den Anmeldelink liest die Phase ohne Zeilensperre (neuer deferred-Eintrag, gleiche Ursache wie das schon deferred Zeitfenster).
+- Abgelehnt, Gründe im Triage-Log, unter anderem:
+  - Pipeline-Reihenfolge nach Spine;
+  - Fehlerbild „fail-open“ ohne erreichbaren Pfad;
+  - Ausnahmeliste für Commands ohne `FreizeitId`. Das Audit aller `IBenutzerCommand` ohne `IFreizeitCommand` hat keine Lücke gefunden.
+  - `EinsichtFreigeben` schreibt Daten der Person, nicht der Freizeit.
+  - Fokus-Steuerung entspricht dem Muster der anderen Inline-Bestätigungen.
+
+**Folge-Review empfohlen (false):** Folgedurchlauf ohne gepatchten high-Fund. Gepatcht: 0 high, 1 medium, 3 low. Das im Erstdurchlauf benannte Risiko (Benutzer-Commands ohne `FreizeitId`) ist durch das Audit geklärt.
+
+**Verifikation:**
+- Gezielt:
+  - `AbschlussTests`: 10 von 10 grün;
+  - `FreizeitenSeitenTests`: 50 von 50 grün;
+  - Architekturtests: 135 von 135 grün.
+- Am Ende alle Testprojekte einzeln, zusammen 2392 von 2392 grün:
+  - Api 822, E2E inklusive Doku-Screenshots 161, Ui 662, Architektur 135;
+  - Module: Ablaeufe 10, Freizeiten 93, Inventar 34, Konten 26, Organisationen 58, Personen 153, Programm 91, SharedKernel 111, Sicherheit 36.
+- `npm run build` in `doku/`: fehlerfrei, 55 Seiten.
+- Screenshots pixelweise mit HEAD verglichen. Alle Abweichungen kommen von zufälligen Ports und Tokens oder vom heutigen Datum, deshalb sind alle zurückgesetzt.
+
+**Restrisiken:** wie im Erstdurchlauf, dazu der neue deferred-Eintrag zur Anmeldung ohne Zeilensperre.

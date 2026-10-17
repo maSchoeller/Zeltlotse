@@ -13,8 +13,9 @@ namespace Zeltlotse.Api.Tests;
 
 /// <summary>
 /// Story 3-8, Freizeit abschließen (CAP-27, AD-17, AD-28, AD-30) gegen echtes PostgreSQL: Abschluss durch die Leitung in der Nachbereitung mit
-/// Durchlauf <c>FreizeitAbgeschlossen</c> → Vorfall-Notiz im Archiv, zu früh, doppelt, die Rechte-Matrix und der Schreibschutz der Pipeline
-/// für Benutzer-Commands der gelaufenen Freizeit (Anmeldung entscheiden, Leitung einladen, Anmeldung über den Anmeldelink) samt Ausnahme
+/// Durchlauf <c>FreizeitAbgeschlossen</c> → Vorfall-Notiz im Archiv, zu früh, doppelt (nacheinander und gleichzeitig), die Rechte-Matrix und der
+/// Schreibschutz der Pipeline für Benutzer-Commands der gelaufenen Freizeit (Anmeldung entscheiden, Leitung einladen, Anmeldung über den
+/// Anmeldelink, Einsicht anfragen und prüfen) samt Ausnahme
 /// Schäden und Verluste. Freizeit X „Zeltlager Kapf 2027“ (02.–13.08.2027, Organisation A, Org-Admin Andrea, Leitung Miriam, Team Tobias),
 /// Freizeit Z gehört Organisation B (Org-Admin Lea, Leitung Miriam).
 /// </summary>
@@ -139,6 +140,29 @@ public sealed class AbschlussTests(PostgresContainer postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Zwei_gleichzeitige_Abschluesse_ein_204_ein_409_und_genau_ein_Ereignis()
+    {
+        await UhrAsync(NachbereitungX, (_s.Miriam, FreizeitHelfer.Miriam));
+
+        var antworten = await Task.WhenAll(AbschliessenAsync(), AbschliessenAsync());
+
+        try
+        {
+            Assert.Equal([HttpStatusCode.NoContent, HttpStatusCode.Conflict], antworten.Select(a => a.StatusCode).Order());
+            await AbgeschlossenProblemAsync(antworten.Single(a => a.StatusCode == HttpStatusCode.Conflict));
+            Assert.Equal(NachbereitungX, await AbgeschlossenAmAsync());
+            Assert.Equal(1L, await WertAsync<long>(_s.Verbindung, "SELECT count(*) FROM freizeiten.outbox WHERE \"Typ\" LIKE '%.FreizeitAbgeschlossen'"));
+        }
+        finally
+        {
+            foreach (var antwort in antworten)
+            {
+                antwort.Dispose();
+            }
+        }
+    }
+
+    [Fact]
     public async Task Rechte_Team_403_Org_Rollen_fremde_Organisation_und_unbekannte_Freizeit_404_ohne_Sitzung_401()
     {
         const string ueberblickMail = "vorstand@example.org";
@@ -209,6 +233,23 @@ public sealed class AbschlussTests(PostgresContainer postgres) : IAsyncLifetime
         await AbgeschlossenProblemAsync(mitKonto);
         await AbgeschlossenProblemAsync(alsGast);
         Assert.Equal(1L, await WertAsync<long>(_s.Verbindung, "SELECT count(*) FROM freizeiten.anmeldung WHERE \"FreizeitId\" = @f", ("f", _s.X)));
+    }
+
+    [Fact]
+    public async Task Schreibschutz_Einsicht_anfragen_und_pruefen_409_nach_dem_Abschluss()
+    {
+        // Die beiden Einsicht-Commands tragen FreizeitId als Guid?; auf der Freizeit-Route bildet IFreizeitCommand sie auf die Freizeit ab.
+        await GelaufenPerSqlAsync();
+        var basis = $"/api/freizeiten/{_s.X}/personen/nachweise";
+        const string einsichten = "SELECT count(*) FROM personen.nachweis_einsicht WHERE \"FreizeitId\" = @f";
+        var vorher = await WertAsync<long>(_s.Verbindung, einsichten, ("f", _s.X));
+
+        using var anfragen = await NachweisSzenario.AnfragenAsync(_s.Miriam, basis, _s.TobiasId);
+        using var pruefen = await NachweisSzenario.PruefenAsync(_s.Miriam, basis, Guid.CreateVersion7());
+
+        await AbgeschlossenProblemAsync(anfragen);
+        await AbgeschlossenProblemAsync(pruefen);
+        Assert.Equal(vorher, await WertAsync<long>(_s.Verbindung, einsichten, ("f", _s.X)));
     }
 
     [Fact]

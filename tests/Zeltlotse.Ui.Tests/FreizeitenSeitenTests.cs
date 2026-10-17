@@ -706,6 +706,30 @@ public sealed class FreizeitenSeitenTests : BunitContext
         Assert.Equal("Keine Freizeit in dieser Phase.", cut.Find(".elkw-empty p").TextContent);
     }
 
+    [Fact]
+    public void Nach_dem_Anlegen_steht_der_Phasen_Filter_wieder_auf_Alle_und_die_neue_Freizeit_ist_sichtbar()
+    {
+        Organisation("OrgAdmin");
+        var pfingstlager = new { id = Guid.CreateVersion7(), name = "Pfingstlager 2026", ersterTag = "2026-05-23", letzterTag = "2026-05-30", phase = "Gelaufen" };
+        var listen = 0;
+        _server.Bei(HttpMethod.Get, $"/api/organisationen/{OrgId}/freizeiten", () => ++listen == 1
+            ? Json(new { freizeiten = new object[] { pfingstlager }, erlaubt = new[] { Aktionsschluessel.FreizeitenAnlegen } })
+            : Json(new { freizeiten = new[] { Zeltlager(), pfingstlager }, erlaubt = new[] { Aktionsschluessel.FreizeitenAnlegen } }));
+        _server.Bei(HttpMethod.Post, $"/api/organisationen/{OrgId}/freizeiten", () => Json(new { id = FreizeitId }, HttpStatusCode.Created));
+        var cut = Render<OrganisationAnsicht>(ps => ps.Add(p => p.OrgId, OrgId));
+        cut.WaitForElement("table");
+        cut.FindAll(".elkw-segments button").Single(b => b.TextContent == "gelaufen").Click();
+
+        cut.Find("#freizeit-name").Input("Zeltlager Sommer 2027");
+        cut.Find("#freizeit-erster-tag").Input("2027-08-02");
+        cut.Find("#freizeit-letzter-tag").Input("2027-08-13");
+        cut.Find("#freizeit-anlegen").Submit();
+
+        cut.WaitForAssertion(() => Assert.Equal(2, listen));
+        Assert.Equal("true", cut.FindAll(".elkw-segments button").Single(b => b.TextContent == "Alle").GetAttribute("aria-pressed"));
+        Assert.Equal(["Zeltlager Sommer 2027", "Pfingstlager 2026"], cut.FindAll("tbody tr").Select(z => z.QuerySelector("td")!.TextContent.Trim()));
+    }
+
     // ---------- Story 2-1: Einstellungen, Freizeitseite ----------
 
     [Fact]

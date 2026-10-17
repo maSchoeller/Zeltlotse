@@ -132,6 +132,8 @@
                 _name = null;
                 _ersterTag = null;
                 _letzterTag = null;
+                // Die neue Freizeit soll in der Tabelle stehen, auch wenn vorher eine andere Phase gewählt war.
+                _filter = Alle;
                 await NeuLadenAsync();
             }
         }

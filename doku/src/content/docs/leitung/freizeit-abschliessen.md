@@ -43,7 +43,7 @@ Offene Punkte halten den Abschluss nicht auf: Die Rückfrage warnt nur. Vor dem 
 
 ## Gelaufene Freizeiten in der Organisation
 
-Auf der Seite der Organisation stehen alle Freizeiten in der Card **Freizeiten**. Über der Tabelle wählt eine Leiste die Phase: **Alle**, **in Vorbereitung**, **läuft**, **Nachbereitung** oder **gelaufen**. So lassen sich gelaufene Freizeiten ausblenden oder allein anzeigen. Gibt es in einer Phase keine Freizeit, steht dort „Keine Freizeit in dieser Phase.“
+Auf der Seite der Organisation stehen alle Freizeiten in der Card **Freizeiten**. Über der Tabelle wählt eine Leiste die Phase: **Alle**, **in Vorbereitung**, **läuft**, **Nachbereitung** oder **gelaufen**. So zeigt die Tabelle nur die Freizeiten einer Phase, etwa nur die laufenden oder nur die gelaufenen. **Alle** zeigt wieder jede Freizeit. Nach dem Anlegen einer Freizeit steht die Leiste wieder auf **Alle**. Gibt es in einer Phase keine Freizeit, steht dort „Keine Freizeit in dieser Phase.“
 
 ![Seite der Organisation am Handy: Card „Freizeiten“ mit der Auswahl „gelaufen“ und nur dem Pfingstlager in der Tabelle](../../../assets/screenshots/freizeiten-filter-handy.png)
 
