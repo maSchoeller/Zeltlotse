@@ -292,6 +292,23 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
             verbindung, "SELECT count(*) FROM freizeiten.freizeit WHERE \"Name\" = @n", ("n", DemoKatalog.ZweiteFreizeit.Name)));
         Assert.Equal(3L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort WHERE \"PersonId\" = @e", ("e", emma)));
 
+        // Story 4-1: zwei Rezepte der Küche im Zeltlager, je für 4 Personen mit Zubereitung; Pfannkuchen mit Mehl (Gluten), Milch, Eiern und Salz ohne
+        // Menge, Chili sin Carne mit Sellerie in der Gemüsebrühe. Nichts doppelt, auch nach dem zweiten Einspielen.
+        var rezepte = (await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/kueche/rezepte", Abbruch))).GetProperty("rezepte").EnumerateArray().ToList();
+        Assert.Equal(
+            [$"{DemoKatalog.Rezepte[0].Name} 4 7 sellerie", $"{DemoKatalog.Rezepte[1].Name} 4 4 gluten,eier,milch"],
+            rezepte.Select(r => $"{r.GetProperty("name").GetString()} {r.GetProperty("basisPersonen").GetInt32()} {r.GetProperty("zutaten").GetInt32()} {r.GetProperty("allergene").GetString()}"));
+        var pfannkuchen = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync(
+            $"/api/freizeiten/{freizeitId}/kueche/rezepte/{rezepte[1].GetProperty("id").GetGuid()}", Abbruch));
+        Assert.Equal(DemoKatalog.Rezepte[1].Zubereitung, pfannkuchen.GetProperty("zubereitung").GetString());
+        Assert.Equal(
+            ["Mehl 400 g gluten", "Milch 0.75 l milch", "Eier 4 Stück eier", "Salz - - -"],
+            pfannkuchen.GetProperty("zutaten").EnumerateArray().Select(z =>
+                $"{z.GetProperty("bezeichnung").GetString()} {(z.GetProperty("menge").ValueKind == System.Text.Json.JsonValueKind.Null ? "-" : z.GetProperty("menge").GetRawText())} "
+                + $"{z.GetProperty("einheit").GetString() ?? "-"} {z.GetProperty("allergene").GetString() ?? "-"}"));
+        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.rezept"));
+        Assert.Equal(11L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.zutat"));
+
         // Story 2-5: Die Fragen-Auswahl kam vor den Anmeldungen: Emmas Freigabe (eingegangen) und Mias (bestätigt) tragen die Fragen für
         // Teilnehmende, Leas die für Mitarbeitende. Daniel hat für Mia drei Antworten gespeichert, Lea eine Team-Notiz zu Mia geschrieben
         // (genau eine, auch nach dem zweiten Einspielen, nur verschlüsselt). Emmas Anmeldung nennt „Einsicht bis“.

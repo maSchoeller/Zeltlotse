@@ -133,6 +133,36 @@ public sealed class FreizeitpassSeitenTests : BunitContext
     }
 
     [Fact]
+    public void Autosave_Auswahlgruppe_meldet_jedes_gelungene_Speichern_mit_dem_gespeicherten_Wert_ein_Konflikt_nicht()
+    {
+        const string pfad = "/api/freizeiten/x/kueche/rezepte/r/zutaten/z";
+        _server.BeiDerReihe(
+            HttpMethod.Patch,
+            pfad,
+            () => NachgebildeterHandler.Json(HttpStatusCode.OK, """{"version":5,"wert":"eier,milch"}"""),
+            () => NachgebildeterHandler.Json(HttpStatusCode.OK, """{"version":6,"wert":"milch"}"""),
+            () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, "konflikt"));
+        var gemeldet = new List<string?>();
+        var cut = Render<AutosaveAuswahlgruppe>(ps => ps
+            .Add(p => p.Legende, "Allergene")
+            .Add(p => p.Feldname, "wert")
+            .Add(p => p.Pfad, pfad)
+            .Add(p => p.Optionen, Allergene)
+            .Add(p => p.Wert, "milch")
+            .Add(p => p.Version, 4u)
+            .Add(p => p.Gespeichert, (string? wert) => gemeldet.Add(wert)));
+
+        cut.Find("input[value=eier]").Change(true);
+        cut.WaitForAssertion(() => Assert.Equal(["eier,milch"], gemeldet));
+        cut.FindAll("button").Single(b => b.TextContent == "Rückgängig").Click();
+        cut.WaitForAssertion(() => Assert.Equal(["eier,milch", "milch"], gemeldet));
+        cut.Find("input[value=eier]").Change(true);
+
+        cut.WaitForAssertion(() => Assert.Contains("Inzwischen geändert", cut.Markup, StringComparison.Ordinal));
+        Assert.Equal(["eier,milch", "milch"], gemeldet);
+    }
+
+    [Fact]
     public void Autosave_Auswahlgruppe_mit_Optionsknoepfen_waehlt_genau_einen_Wert_und_ohne_Auswahl_wird_null_gesendet()
     {
         const string pfad = "/api/ich/freizeitpass/x/antworten/schwimmen";

@@ -1,0 +1,341 @@
+@page "/freizeiten/{FreizeitId:guid}/kueche/rezepte/{RezeptId:guid}"
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Kueche
+@using Zeltlotse.Ui.Kontext
+@using ApiRezept = Zeltlotse.Api.Contracts.Kueche.Rezept
+@using ApiZutat = Zeltlotse.Api.Contracts.Kueche.Zutat
+@inject FreizeitKontextDienst Kontext
+@inject KuecheApiClient KuecheApi
+@inject NavigationManager Navigation
+@* Rezept (CAP-28, FR-46, Story 4-1) für Leitung und Team, erreicht über die Rezepte. Dachzeile „Küche“, Überschrift ist der Name. Card „Zutaten“:
+   „Hochgerechnet auf P Personen der Freizeit.“ (bei 0 Personen „Noch niemand bestätigt – Mengen gelten für die Basis.“) und die Datentabelle mit
+   Menge, Einheit, Zutat, Allergenen und der Spalte „Für P Personen“ (die hochgerechnete Menge mit Einheit; ohne Personen entfällt sie). Card
+   „Zubereitung“ als Text. Zum Bearbeiten (nicht nach dem Abschluss) Card „Rezept“ mit Name, Basis-Personenzahl und Zubereitung als Autosave-Felder,
+   je Zutat eine Card mit Bezeichnung, Menge, Einheit, den Allergenen als Kästchen und „Entfernen“ (Inline-Bestätigung), das Formular „Zutat
+   hinzufügen“ und „Rezept löschen“ (Inline-Bestätigung, danach die Rezepte). Nach jedem gespeicherten Feld lädt die Seite das Rezept neu (Tabelle,
+   Überschrift); die Felder behalten dabei ihren Stand mit „Gespeichert · Rückgängig“. In der Phase „gelaufen“ nur lesbar. Kontext oder Rezept nicht
+   verfügbar (auch ohne Verpflegung) → „Diese Seite ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung. *@
+<PageTitle>@(_rezept?.Name ?? "Rezept") – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Küche</Dachzeile>
+    @if (_rezept is null || _felder is null || _kontext is null)
+    {
+        <h1>Rezept</h1>
+        @if (_meldung is not null)
+        {
+            <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                <p>@_meldung</p>
+            </Meldung>
+        }
+        else
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        <h1>@_rezept.Name</h1>
+        <p>@Anzeige.FuerPersonen(_rezept.BasisPersonen)</p>
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@KuecheTexte.AbgeschlossenText</p>
+            </Meldung>
+        }
+        @if (_meldung is not null)
+        {
+            <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                <p>@_meldung</p>
+            </Meldung>
+        }
+
+        <Card Titel="Zutaten" Id="zutaten">
+            <p>@KuecheTexte.Hochgerechnet(_rezept.Personenzahl)</p>
+            @if (_rezept.Zutaten.Count == 0)
+            {
+                <LeerZustand Satz="Noch keine Zutaten." />
+            }
+            else
+            {
+                <Datentabelle TZeile="ApiZutat" Beschriftung="@TabellenTitel" Spalten="Spalten" Zeilen="_rezept.Zutaten" />
+            }
+        </Card>
+        <Card Titel="Zubereitung" Id="zubereitung">
+            @if (_rezept.Zubereitung is { } zubereitung)
+            {
+                @foreach (var absatz in zubereitung.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    <p>@absatz</p>
+                }
+            }
+            else
+            {
+                <p>Noch keine Zubereitung.</p>
+            }
+        </Card>
+
+        @if (!Abgeschlossen)
+        {
+            <Card Titel="Rezept bearbeiten" Id="rezept-bearbeiten">
+                <AutosaveFeld Label="Name" Id="rezept-name" Feldname="@RezeptFelder.Name" Pfad="@Pfad" Wert="@_felder.Name" Version="@_felder.Version"
+                              Hinweis="@($"Höchstens {RezeptFelder.NameMaximaleLaenge} Zeichen")" NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                <AutosaveFeld Label="Basis-Personenzahl" Id="rezept-basis" Feldname="@RezeptFelder.BasisPersonen" Pfad="@Pfad"
+                              Wert="@_felder.BasisPersonen.ToString(System.Globalization.CultureInfo.InvariantCulture)" Version="@_felder.Version"
+                              Hinweis="Für so viele Personen gelten die Mengen, 1 bis 1000" NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                <AutosaveFeld Label="Zubereitung" Id="rezept-zubereitung" Feldname="@RezeptFelder.Zubereitung" Pfad="@Pfad" Mehrzeilig="true"
+                              Wert="@_felder.Zubereitung" Version="@_felder.Version" Hinweis="Freitext ohne Namen von Personen"
+                              NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+            </Card>
+
+            @foreach (var zutat in _felder.Zutaten)
+            {
+                <Card @key="zutat.Id" Titel="@($"Zutat: {Bezeichnung(zutat)}")">
+                    <AutosaveFeld Label="Bezeichnung" Id="@($"zutat-{zutat.Id}-bezeichnung")" Feldname="@ZutatFelder.Bezeichnung" Pfad="@ZutatPfad(zutat)"
+                                  Wert="@zutat.Bezeichnung" Version="@zutat.Version" NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                    <AutosaveFeld Label="Menge" Id="@($"zutat-{zutat.Id}-menge")" Feldname="@ZutatFelder.Menge" Pfad="@ZutatPfad(zutat)"
+                                  Wert="@(zutat.Menge is null ? null : Anzeige.Menge(zutat.Menge))" Version="@zutat.Version"
+                                  Hinweis="@($"Menge {Anzeige.FuerPersonen(_rezept.BasisPersonen)}, leer heißt ohne Menge")"
+                                  NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                    <AutosaveFeld Label="Einheit" Id="@($"zutat-{zutat.Id}-einheit")" Feldname="@ZutatFelder.Einheit" Pfad="@ZutatPfad(zutat)"
+                                  Wert="@zutat.Einheit" Version="@zutat.Version" Hinweis="z. B. g, kg, l oder Stück"
+                                  NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                    <AutosaveAuswahlgruppe Legende="Allergene" Id="@($"zutat-{zutat.Id}-allergene")" Feldname="@ZutatFelder.Allergene" Pfad="@ZutatPfad(zutat)"
+                                           Optionen="KuecheTexte.AllergenOptionen" Wert="@zutat.Allergene" Version="@zutat.Version"
+                                           NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                    <InlineBestaetigung AusloeserText="Entfernen" AusloeserArt="KnopfArt.Outline" Satz="@($"„{Bezeichnung(zutat)}“ entfernen?")"
+                                        JaText="Ja, entfernen" Bestaetigt="@(() => ZutatEntfernenAsync(zutat))" />
+                </Card>
+            }
+
+            <Card Titel="Zutat hinzufügen" Id="zutat-hinzufuegen">
+                <Formular Absenden="ZutatAnlegenAsync">
+                    <Fehleruebersicht Fehler="FehlerListe" />
+                    <Feld Label="Bezeichnung *" Id="zutat-bezeichnung" Wert="@_bezeichnung" Fehler="@_bezeichnungFehler" autocomplete="off"
+                          Hinweis="@($"Höchstens {ZutatFelder.BezeichnungMaximaleLaenge} Zeichen")" @oninput="@(e => _bezeichnung = e.Value?.ToString())" />
+                    <Feld Label="Menge" Id="zutat-menge" Wert="@_menge" Fehler="@_mengeFehler" autocomplete="off" inputmode="decimal"
+                          Hinweis="@($"Menge {Anzeige.FuerPersonen(_rezept.BasisPersonen)}, z. B. 1,5; leer heißt ohne Menge")" @oninput="@(e => _menge = e.Value?.ToString())" />
+                    <Feld Label="Einheit" Id="zutat-einheit" Wert="@_einheit" Fehler="@_einheitFehler" autocomplete="off" Hinweis="z. B. g, kg, l oder Stück"
+                          @oninput="@(e => _einheit = e.Value?.ToString())" />
+                    <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Zutat hinzufügen</Knopf>
+                </Formular>
+                <p>* Pflichtfeld</p>
+            </Card>
+
+            <InlineBestaetigung AusloeserText="Rezept löschen" AusloeserArt="KnopfArt.Outline" Satz="@($"Rezept „{_rezept.Name}“ mit allen Zutaten löschen?")"
+                                JaText="Ja, löschen" Bestaetigt="RezeptLoeschenAsync" />
+        }
+    }
+    <p><a href="@KuecheTexte.RezepteZiel(FreizeitId)">Zurück zu den Rezepten</a></p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    // Der zuletzt geladene Stand für Überschrift und Tabelle.
+    private ApiRezept? _rezept;
+    // Der Stand der Autosave-Felder: nur beim Öffnen, nach „Neu laden“ und nach Hinzufügen oder Entfernen neu, damit ein gespeichertes Feld
+    // „Gespeichert · Rückgängig“ behält, während die Tabelle neu lädt.
+    private ApiRezept? _felder;
+    private bool _nichtVerfuegbar;
+    private bool _uebertraegt;
+    private string? _meldung;
+    private string? _bezeichnung;
+    private string? _menge;
+    private string? _einheit;
+    private string? _bezeichnungFehler;
+    private string? _mengeFehler;
+    private string? _einheitFehler;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    [Parameter] public Guid RezeptId { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    private string Pfad => KuecheApiClient.RezeptPfad(FreizeitId, RezeptId);
+
+    private string ZutatPfad(ApiZutat zutat) => KuecheApiClient.ZutatPfad(FreizeitId, RezeptId, zutat.Id);
+
+    private string TabellenTitel => _rezept!.Personenzahl > 0 ? $"Zutaten {Anzeige.FuerPersonen(_rezept.Personenzahl)}" : "Zutaten";
+
+    /// <summary>Die Bezeichnung aus dem zuletzt geladenen Stand (nach einer Änderung schon neu).</summary>
+    private string Bezeichnung(ApiZutat zutat) => _rezept?.Zutaten.FirstOrDefault(z => z.Id == zutat.Id)?.Bezeichnung ?? zutat.Bezeichnung;
+
+    private IReadOnlyList<Spalte<ApiZutat>> Spalten =>
+    [
+        new("Menge", z => @<text>@Anzeige.Menge(z.Menge)</text>),
+        new("Einheit", z => @<text>@z.Einheit</text>),
+        new("Zutat", z => @<text>@z.Bezeichnung</text>),
+        new("Allergene", z => @<text>@(z.Allergene is null ? "" : Anzeige.Allergene(z.Allergene))</text>),
+        .. _rezept!.Personenzahl > 0
+            ? [new Spalte<ApiZutat>($"F{Anzeige.FuerPersonen(_rezept.Personenzahl)[1..]}", z => @<text>@(z.HochgerechneteMenge is null ? "" : $"{Anzeige.Menge(z.HochgerechneteMenge)} {z.Einheit}".TrimEnd())</text>)]
+            : Array.Empty<Spalte<ApiZutat>>(),
+    ];
+
+    private IReadOnlyList<FeldFehler> FehlerListe =>
+    [
+        .. _bezeichnungFehler is null ? Array.Empty<FeldFehler>() : [new FeldFehler("zutat-bezeichnung", $"Bezeichnung: {_bezeichnungFehler}")],
+        .. _mengeFehler is null ? Array.Empty<FeldFehler>() : [new FeldFehler("zutat-menge", $"Menge: {_mengeFehler}")],
+        .. _einheitFehler is null ? Array.Empty<FeldFehler>() : [new FeldFehler("zutat-einheit", $"Einheit: {_einheitFehler}")],
+    ];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _rezept = null;
+        _felder = null;
+        _nichtVerfuegbar = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var rezept = KuecheApi.RezeptLadenAsync(FreizeitId, RezeptId);
+            await Task.WhenAll(kontext, rezept);
+            if (kontext.Result is null || rezept.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _rezept, _felder) = (kontext.Result, rezept.Result, rezept.Result);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Lädt das Rezept neu; mit <paramref name="felder"/> bekommen auch die Autosave-Felder den neuen Stand.</summary>
+    private async Task LadenAsync(bool felder)
+    {
+        try
+        {
+            if (await KuecheApi.RezeptLadenAsync(FreizeitId, RezeptId) is { } rezept)
+            {
+                _rezept = rezept;
+                if (felder)
+                {
+                    _felder = rezept;
+                }
+            }
+            else
+            {
+                _nichtVerfuegbar = true;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Nach jedem gespeicherten Feld: Tabelle und Überschrift neu (die hochgerechneten Mengen hängen an Menge und Basis).</summary>
+    private Task NachSpeichernAsync(string? _) => LadenAsync(felder: false);
+
+    /// <summary>„Neu laden“ beim Konflikt: alles neu, auch die Felder.</summary>
+    private Task NeuLadenAsync() => LadenAsync(felder: true);
+
+    /// <summary>„Zutat hinzufügen“: danach steht sie in Tabelle und Liste, das Formular ist leer.</summary>
+    private async Task ZutatAnlegenAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        (_bezeichnungFehler, _mengeFehler, _einheitFehler, _meldung) = (null, null, null, null);
+        try
+        {
+            var aktion = await KuecheApi.ZutatAnlegenAsync(FreizeitId, RezeptId, new ZutatNeu(_bezeichnung, _menge, _einheit));
+            switch (aktion.Ergebnis)
+            {
+                case KuecheAktionErgebnis.Erfolg:
+                    (_bezeichnung, _menge, _einheit) = (null, null, null);
+                    await LadenAsync(felder: true);
+                    break;
+                case KuecheAktionErgebnis.Abgeschlossen:
+                    _meldung = KuecheTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _bezeichnungFehler = aktion.Feldfehler.GetValueOrDefault(ZutatFelder.Bezeichnung);
+                    _mengeFehler = aktion.Feldfehler.GetValueOrDefault(ZutatFelder.Menge);
+                    _einheitFehler = aktion.Feldfehler.GetValueOrDefault(ZutatFelder.Einheit);
+                    if (_bezeichnungFehler is null && _mengeFehler is null && _einheitFehler is null)
+                    {
+                        _meldung = AnmeldungAbschluss.FehlerText;
+                    }
+
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task ZutatEntfernenAsync(ApiZutat zutat)
+    {
+        _meldung = null;
+        try
+        {
+            switch (await KuecheApi.ZutatLoeschenAsync(FreizeitId, RezeptId, zutat.Id))
+            {
+                case KuecheAktionErgebnis.Erfolg:
+                    await LadenAsync(felder: true);
+                    break;
+                case KuecheAktionErgebnis.Abgeschlossen:
+                    _meldung = KuecheTexte.AbgeschlossenText;
+                    break;
+                default:
+                    // Z. B. inzwischen von jemand anderem entfernt: neu laden, damit keine veraltete Card stehen bleibt.
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    await LadenAsync(felder: true);
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    private async Task RezeptLoeschenAsync()
+    {
+        _meldung = null;
+        try
+        {
+            switch (await KuecheApi.RezeptLoeschenAsync(FreizeitId, RezeptId))
+            {
+                case KuecheAktionErgebnis.Erfolg:
+                    Navigation.NavigateTo(KuecheTexte.RezepteZiel(FreizeitId));
+                    break;
+                case KuecheAktionErgebnis.Abgeschlossen:
+                    _meldung = KuecheTexte.AbgeschlossenText;
+                    break;
+                // Gibt es das Rezept nicht mehr (z. B. von jemand anderem gelöscht), führt der Weg zu den Rezepten.
+                case KuecheAktionErgebnis.Fehler when await KuecheApi.RezeptLadenAsync(FreizeitId, RezeptId) is null:
+                    Navigation.NavigateTo(KuecheTexte.RezepteZiel(FreizeitId));
+                    break;
+                default:
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+}

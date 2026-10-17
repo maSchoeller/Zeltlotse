@@ -2075,6 +2075,63 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await BildAsync(seite, "org-programmbibliothek", geraet);
     }
 
+    // ---------- Story 4-1: Rezepte mit Skalierung ----------
+
+    /// <summary>
+    /// Lea (Team) öffnet die Demo-Freizeit und tippt „Küche“ (das Zeltlager hat Verpflegung an). Die Freizeit verpflegt 4 Personen: Jonas und Miriam
+    /// (Leitung), Lea (Team) und Mia (bestätigt).
+    /// </summary>
+    private async Task KuecheAsync(IPage seite)
+    {
+        await LeaStartseiteAsync(seite);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Küche", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Rezepte", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByText("Hochgerechnet auf 4 Personen der Freizeit.")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Rezepte(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await KuecheAsync(seite);
+        var cards = seite.Locator("section.elkw-card").Filter(new() { Has = seite.Locator("h2 a") });
+        await Assertions.Expect(cards.Locator("h2")).ToHaveTextAsync(["Chili sin Carne", "Pfannkuchen"], new() { Timeout = 60_000 });
+        await Assertions.Expect(cards.Nth(0)).ToContainTextAsync("für 4 Personen · 7 Zutaten");
+        await Assertions.Expect(cards.Nth(0)).ToContainTextAsync("Allergene: Sellerie");
+        await Assertions.Expect(cards.Nth(1)).ToContainTextAsync("Allergene: Glutenhaltiges Getreide, Eier, Milch (inkl. Laktose)");
+        await Assertions.Expect(seite.Locator("#rezept-anlegen")).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "rezepte", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Rezept(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await KuecheAsync(seite);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Pfannkuchen", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Pfannkuchen", new() { Timeout = 60_000 });
+        var zutaten = seite.Locator("#zutaten");
+        await Assertions.Expect(zutaten.Locator("th")).ToHaveTextAsync(["Menge", "Einheit", "Zutat", "Allergene", "Für 4 Personen"], new() { Timeout = 60_000 });
+        await Assertions.Expect(zutaten.Locator("tbody tr").Nth(0).Locator("td")).ToHaveTextAsync(["400", "g", "Mehl", "Glutenhaltiges Getreide", "400 g"]);
+        await Assertions.Expect(zutaten.Locator("tbody tr").Nth(3).Locator("td")).ToHaveTextAsync(["", "", "Salz", "", ""]);
+        await Assertions.Expect(seite.Locator("#zubereitung")).ToContainTextAsync("In der Pfanne dünn ausbacken.");
+        await Assertions.Expect(seite.GetByLabel("Basis-Personenzahl")).ToHaveValueAsync("4");
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        // Nur lesend, damit der Demo-Stand für die anderen Bilder bleibt.
+        await BildAsync(seite, "rezept", geraet);
+    }
+
     /// <summary>Story 3-6: „Abgelegt am …“ hängt vom Tag des Einspielens ab; im Bild steht ein festes Datum.</summary>
     private static Task AbgelegtAmFestAsync(IPage seite) =>
         seite.EvaluateAsync("() => document.querySelectorAll('.elkw-card p').forEach(p => { if (p.textContent.startsWith('Abgelegt am ')) p.textContent = 'Abgelegt am 14.10.2026'; })");

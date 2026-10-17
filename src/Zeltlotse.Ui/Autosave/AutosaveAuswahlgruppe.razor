@@ -65,6 +65,9 @@
     /// <summary>Text für eine Antwort <c>409</c> statt „Inzwischen geändert – neu laden?“, z. B. in einer abgeschlossenen Freizeit.</summary>
     [Parameter] public string? KonfliktText { get; set; }
 
+    /// <summary>Story 4-1: Nach jedem gelungenen Speichern (auch Rückgängig) mit dem gespeicherten Wert, z. B. um eine Ansicht neu zu laden.</summary>
+    [Parameter] public EventCallback<string?> Gespeichert { get; set; }
+
     /// <summary>Die gewählten Werte; bei Optionsknöpfen ohne Auswahl die Option mit leerem Wert (leer = <c>null</c>).</summary>
     private IReadOnlyCollection<string> Angezeigt => !Mehrfach && _auswahl.Count == 0 && Optionen.Any(o => o.Wert.Length == 0) ? [""] : _auswahl;
 
@@ -169,6 +172,7 @@
                 _auswahl = Werte(gespeichert.Wert);
                 _zustand = SpeicherZustand.Gespeichert;
                 _mitRueckgaengig = !rueckgaengig;
+                await Gespeichert.InvokeAsync(gespeichert.Wert);
                 break;
             case AutosaveErgebnis.Konflikt:
                 _zustand = SpeicherZustand.Konflikt;

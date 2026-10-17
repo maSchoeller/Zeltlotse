@@ -38,6 +38,7 @@
    Story 3-8: In der Nachbereitung steht für alle Rollen die Card „Abschluss“ (AbschlussCard: offene Aufgaben, „Schäden & Verluste“, für die
    Leitung „Freizeit abschließen“ als Inline-Bestätigung); nach dem Abschluss lädt die Seite neu. Ist die Freizeit gelaufen, steht direkt unter
    der Überschrift der Hinweis „Diese Freizeit ist abgeschlossen und nur lesbar.“
+   Story 4-1: Nach „Aufgaben“ der Knopf „Küche“ zu den Rezepten, nur wenn das Modul Verpflegung an ist.
    403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>@(_freizeit?.Name ?? "Freizeit") – Zeltlotse</PageTitle>
 
@@ -198,6 +199,11 @@ else
     <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/programm")" Ansichtswechsel="true">Programm</Knopf></p>
     @* Story 3-5: Die Aufgaben der Freizeit, in jeder Phase für Leitung und Team. *@
     <p><Knopf Art="KnopfArt.Outline" Href="@ProgrammTexte.AufgabenZiel(FreizeitId)" Ansichtswechsel="true">Aufgaben</Knopf></p>
+    @* Story 4-1: Die Küche (Rezepte) für Leitung und Team, nur mit eingeschaltetem Modul Verpflegung (AD-20). *@
+    @if (_kontext.Schalter.Contains(FunktionsSchalter.Verpflegung))
+    {
+        <p><Knopf Art="KnopfArt.Outline" Href="@KuecheTexte.RezepteZiel(FreizeitId)" Ansichtswechsel="true">Küche</Knopf></p>
+    }
     @* Story 3-3: Das Inventar der Organisation mit den Reservierungen dieser Freizeit, in jeder Phase für Leitung und Team. *@
     <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/inventar")" Ansichtswechsel="true">Inventar</Knopf></p>
     @* Story 3-4: Schäden, Verluste und Entnahmen der Freizeit, in jeder Phase für Leitung und Team (nach dem Abschluss Anschaffungswünsche). *@

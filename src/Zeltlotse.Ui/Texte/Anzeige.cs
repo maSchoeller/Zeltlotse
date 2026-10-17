@@ -391,4 +391,13 @@ public static class Anzeige
     /// <summary>Story 3-6: eine Aufgabe im Bibliothekseintrag: „Fahnen verstecken · Während der Freizeit“.</summary>
     public static string BibliotheksAufgabe(Zeltlotse.Api.Contracts.Programm.BibliotheksAufgabe aufgabe) =>
         aufgabe is null ? "" : $"{aufgabe.Titel} · {AufgabenPhase(aufgabe.Phase)}";
+
+    /// <summary>Story 4-1: „für 4 Personen“, „für 1 Person“.</summary>
+    public static string FuerPersonen(int anzahl) => anzahl == 1 ? "für 1 Person" : $"für {anzahl} Personen";
+
+    /// <summary>Story 4-1: eine Menge deutsch ohne Null-Nachkommastellen, z. B. „2,25“ oder „6000“; ohne Menge leer.</summary>
+    public static string Menge(decimal? menge) => menge is { } wert ? Zeltlotse.Api.Contracts.Kueche.ZutatFelder.ZahlText(wert) : "";
+
+    /// <summary>Story 4-1: die Allergene einer Komma-Liste als Text, z. B. „Glutenhaltiges Getreide, Milch (inkl. Laktose)“; ohne Allergene „keine“.</summary>
+    public static string Allergene(string? liste) => Zeltlotse.Api.Contracts.Kueche.Allergene.Texte(liste) is { Count: > 0 } texte ? string.Join(", ", texte) : "keine";
 }

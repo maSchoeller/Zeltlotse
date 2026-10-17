@@ -20,6 +20,10 @@ using Zeltlotse.Inventar.Daten;
 using Zeltlotse.Inventar.Reservierungen;
 using Zeltlotse.Inventar.Schaeden;
 using Zeltlotse.Konten.Anmelden;
+using Zeltlotse.Kueche.Daten;
+using Zeltlotse.Kueche.Rezepte;
+using RezeptFeld = Zeltlotse.Api.Contracts.Kueche.RezeptFeld;
+using ZutatFeld = Zeltlotse.Api.Contracts.Kueche.ZutatFeld;
 using Zeltlotse.Organisationen.Daten;
 using Zeltlotse.Organisationen.Dokumente;
 using Zeltlotse.Organisationen.Einladungen;
@@ -151,6 +155,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await FragenAuswahlAsync(abbruch);
         // Story 3-7: Module der Demo-Freizeit.
         await ModuleAsync(abbruch);
+        // Story 4-1: Rezepte der Küche (braucht das Modul Verpflegung).
+        await KuecheAsync(abbruch);
         await AnmeldungAsync(abbruch);
         await FreizeitpassAsync(abbruch);
         await TeamNotizAsync(abbruch);
@@ -576,6 +582,54 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             if (await sender.Send(new ModulAendernCommand(freizeit.Id, feld, "false", "true"), abbruch) is not ModulAenderung.Gespeichert)
             {
                 throw new InvalidOperationException($"Demo-Freizeit: Das Modul {feld} ließ sich nicht einschalten.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Story 4-1: Rezepte der Demo-Küche aus <see cref="DemoKatalog.Rezepte"/>, über die Commands des Moduls Küche (Verpflegung ist dann an). Idempotent:
+    /// ein Rezept nur, wenn es den Namen in der Freizeit noch nicht gibt, die Zubereitung nur, solange sie leer ist, eine Zutat nur, wenn es die
+    /// Bezeichnung im Rezept noch nicht gibt, ihre Allergene nur beim Anlegen.
+    /// </summary>
+    private async Task KuecheAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var freizeitId = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name)
+            .Select(f => f.Id)
+            .SingleAsync(abbruch);
+        var lesen = dienste.GetRequiredService<KuecheLeseDbContext>();
+        foreach (var demo in DemoKatalog.Rezepte)
+        {
+            var rezept = await lesen.Rezepte.Where(r => r.FreizeitId == freizeitId && r.Name == demo.Name).OrderBy(r => r.Id).Select(r => new { r.Id, r.Version, r.Zubereitung }).FirstOrDefaultAsync(abbruch);
+            if (rezept is null)
+            {
+                var angelegt = await sender.Send(new RezeptAnlegenCommand(freizeitId, demo.Name, demo.BasisPersonen.ToString(CultureInfo.InvariantCulture)), abbruch) as RezeptAnlegen.Angelegt
+                               ?? throw new InvalidOperationException($"Demo-Rezept: {demo.Name} ließ sich nicht anlegen.");
+                rezept = new { angelegt.Rezept.Id, angelegt.Rezept.Version, angelegt.Rezept.Zubereitung };
+            }
+
+            if (rezept.Zubereitung is null
+                && await sender.Send(new RezeptFeldAendernCommand(freizeitId, rezept.Id, RezeptFeld.Zubereitung, rezept.Version, null, demo.Zubereitung), abbruch) is not RezeptAenderung.Gespeichert)
+            {
+                throw new InvalidOperationException($"Demo-Rezept: Die Zubereitung von {demo.Name} ließ sich nicht setzen.");
+            }
+
+            var vorhanden = await lesen.Zutaten.Where(z => z.RezeptId == rezept.Id).Select(z => z.Bezeichnung).ToListAsync(abbruch);
+            foreach (var zutat in demo.Zutaten.Where(z => !vorhanden.Contains(z.Bezeichnung)))
+            {
+                var angelegt = await sender.Send(new ZutatAnlegenCommand(freizeitId, rezept.Id, zutat.Bezeichnung, zutat.Menge, zutat.Einheit), abbruch) as ZutatAnlegen.Angelegt
+                               ?? throw new InvalidOperationException($"Demo-Rezept: {zutat.Bezeichnung} ließ sich nicht anlegen.");
+                if (zutat.Allergene is not null
+                    && await sender.Send(
+                        new ZutatFeldAendernCommand(freizeitId, rezept.Id, angelegt.Zutat.Id, ZutatFeld.Allergene, angelegt.Zutat.Version, null, zutat.Allergene), abbruch)
+                    is not ZutatAenderung.Gespeichert)
+                {
+                    throw new InvalidOperationException($"Demo-Rezept: Die Allergene von {zutat.Bezeichnung} ließen sich nicht setzen.");
+                }
             }
         }
     }

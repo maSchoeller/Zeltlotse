@@ -1,0 +1,166 @@
+@page "/freizeiten/{FreizeitId:guid}/kueche/rezepte"
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Kueche
+@using Zeltlotse.Ui.Kontext
+@inject FreizeitKontextDienst Kontext
+@inject KuecheApiClient KuecheApi
+@inject NavigationManager Navigation
+@* Rezepte (CAP-28, FR-46, Story 4-1) für Leitung und Team, erreicht über den Knopf „Küche“ auf der Startseite (nur mit dem Modul Verpflegung).
+   Dachzeile „Küche“, Überschrift „Rezepte“, darunter „Hochgerechnet auf P Personen der Freizeit.“ (bei 0 Personen „Noch niemand bestätigt –
+   Mengen gelten für die Basis.“). Je Rezept eine Card: Name als Link zur Rezeptseite, „für N Personen“ mit Zahl der Zutaten und die Allergene als
+   Text. Ohne Rezepte „Noch keine Rezepte.“. Darunter das Formular „Rezept anlegen“ (Name *, Basis-Personenzahl *) mit Fehlerübersicht; nach dem
+   Anlegen öffnet sich das Rezept. In der Phase „gelaufen“ nur lesbar. Kontext oder Rezepte nicht verfügbar (auch ohne Verpflegung) → „Diese Seite
+   ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung statt „Noch keine Rezepte.“ *@
+<PageTitle>Rezepte – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Küche</Dachzeile>
+    <h1>Rezepte</h1>
+
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+
+    @if (_liste is null || _kontext is null)
+    {
+        @if (_meldung is null)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@KuecheTexte.AbgeschlossenText</p>
+            </Meldung>
+        }
+        <p>@KuecheTexte.Hochgerechnet(_liste.Personenzahl)</p>
+        @if (_liste.Rezepte.Count == 0)
+        {
+            <LeerZustand Satz="Noch keine Rezepte." />
+        }
+        @foreach (var rezept in _liste.Rezepte)
+        {
+            <Card @key="rezept.Id" Titel="@rezept.Name" TitelHref="@KuecheTexte.RezeptZiel(FreizeitId, rezept.Id)">
+                <p>@Anzeige.FuerPersonen(rezept.BasisPersonen) · @(rezept.Zutaten == 1 ? "1 Zutat" : $"{rezept.Zutaten} Zutaten")</p>
+                <p>Allergene: @Anzeige.Allergene(rezept.Allergene)</p>
+            </Card>
+        }
+
+        @if (!Abgeschlossen)
+        {
+            <Card Titel="Rezept anlegen" Id="rezept-anlegen">
+                <Formular Absenden="AnlegenAsync">
+                    <Fehleruebersicht Fehler="FehlerListe" />
+                    <Feld Label="Name *" Id="rezept-name" Wert="@_name" Fehler="@_nameFehler" autocomplete="off"
+                          Hinweis="@($"Höchstens {RezeptFelder.NameMaximaleLaenge} Zeichen")" @oninput="@(e => _name = e.Value?.ToString())" />
+                    <Feld Label="Basis-Personenzahl *" Id="rezept-basis" Wert="@_basis" Fehler="@_basisFehler" autocomplete="off" inputmode="numeric"
+                          Hinweis="Für so viele Personen gelten die Mengen, z. B. 4" @oninput="@(e => _basis = e.Value?.ToString())" />
+                    <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Rezept anlegen</Knopf>
+                </Formular>
+                <p>* Pflichtfeld</p>
+            </Card>
+        }
+    }
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    private Rezeptliste? _liste;
+    private bool _nichtVerfuegbar;
+    private bool _uebertraegt;
+    private string? _meldung;
+    private string? _name;
+    private string? _basis;
+    private string? _nameFehler;
+    private string? _basisFehler;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    private IReadOnlyList<FeldFehler> FehlerListe =>
+    [
+        .. _nameFehler is null ? Array.Empty<FeldFehler>() : [new FeldFehler("rezept-name", $"Name: {_nameFehler}")],
+        .. _basisFehler is null ? Array.Empty<FeldFehler>() : [new FeldFehler("rezept-basis", $"Basis-Personenzahl: {_basisFehler}")],
+    ];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _liste = null;
+        _nichtVerfuegbar = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var liste = KuecheApi.RezepteLadenAsync(FreizeitId);
+            await Task.WhenAll(kontext, liste);
+            if (kontext.Result is null || liste.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _liste) = (kontext.Result, liste.Result);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“ oder „Noch keine Rezepte.“
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>„Rezept anlegen“: danach öffnet sich das Rezept, dort folgen Zubereitung und Zutaten.</summary>
+    private async Task AnlegenAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        (_nameFehler, _basisFehler, _meldung) = (null, null, null);
+        try
+        {
+            var aktion = await KuecheApi.RezeptAnlegenAsync(FreizeitId, new RezeptNeu(_name, _basis));
+            switch (aktion.Ergebnis)
+            {
+                case KuecheAktionErgebnis.Erfolg:
+                    Navigation.NavigateTo(KuecheTexte.RezeptZiel(FreizeitId, aktion.Rezept!.Id));
+                    break;
+                case KuecheAktionErgebnis.Abgeschlossen:
+                    _meldung = KuecheTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _nameFehler = aktion.Feldfehler.GetValueOrDefault(RezeptFelder.Name);
+                    _basisFehler = aktion.Feldfehler.GetValueOrDefault(RezeptFelder.BasisPersonen);
+                    if (_nameFehler is null && _basisFehler is null)
+                    {
+                        _meldung = AnmeldungAbschluss.FehlerText;
+                    }
+
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

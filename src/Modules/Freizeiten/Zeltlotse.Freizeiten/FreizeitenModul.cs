@@ -54,6 +54,8 @@ public static class FreizeitenModul
         services.AddScoped<IFreizeitPersonenLesen, FreizeitPersonenLesen>();
         services.AddScoped<IFreizeitNamenLesen, FreizeitNamenLesen>();
         services.AddScoped<IFreizeitEndenLesen, FreizeitEndenLesen>();
+        // Story 4-1: die Personenzahl für die Hochrechnung der Rezepte (Pfeil Küche → Freizeiten).
+        services.AddScoped<IFreizeitPersonenzahlLesen, FreizeitPersonenzahlLesen>();
         // Story 3-1: die Tage einer Freizeit für Wochenraster und Mahlzeiten (Pfeil Programm → Freizeiten).
         services.AddScoped<IFreizeitTageLesen, FreizeitTageLesen>();
         services.AddScoped<IBestaetigteTeilnehmende, BestaetigteTeilnehmendeZaehlen>();

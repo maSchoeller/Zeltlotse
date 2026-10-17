@@ -11,7 +11,7 @@ using Zeltlotse.Kueche.Daten;
 namespace Zeltlotse.Kueche.Migrationen
 {
     [DbContext(typeof(KuecheDbContext))]
-    internal partial class KuecheDbContextModelSnapshot : ModelSnapshot
+    partial class KuecheDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -22,6 +22,92 @@ namespace Zeltlotse.Kueche.Migrationen
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Zeltlotse.Kueche.Rezepte.Rezept", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("BasisPersonen")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("Zubereitung")
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FreizeitId");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.ToTable("rezept", "kueche");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Kueche.Rezepte.Zutat", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Allergene")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Bezeichnung")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Einheit")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Menge")
+                        .HasPrecision(10, 3)
+                        .HasColumnType("numeric(10,3)");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RezeptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FreizeitId");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("RezeptId");
+
+                    b.ToTable("zutat", "kueche");
+                });
 
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.InboxEintrag", b =>
                 {
@@ -118,6 +204,15 @@ namespace Zeltlotse.Kueche.Migrationen
                     b.HasIndex("ErledigtAm", "NaechsterVersuch");
 
                     b.ToTable("outbox_zustellung", "kueche");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Kueche.Rezepte.Zutat", b =>
+                {
+                    b.HasOne("Zeltlotse.Kueche.Rezepte.Rezept", null)
+                        .WithMany()
+                        .HasForeignKey("RezeptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.Zustellung", b =>

@@ -26,6 +26,27 @@ internal sealed class FreizeitPersonenLesen(FreizeitenLeseDbContext db) : IFreiz
     }
 }
 
+/// <summary>
+/// Story 4-1: <see cref="IFreizeitPersonenzahlLesen"/> über den Lese-Kontext unter dem Mandantenfilter: bestätigte Teilnehmende vereint mit Leitung und
+/// Team, jede Person einmal; der Platzhalter einer gelöschten Person zählt je bestätigter Anmeldung einzeln.
+/// </summary>
+internal sealed class FreizeitPersonenzahlLesen(FreizeitenLeseDbContext db) : IFreizeitPersonenzahlLesen
+{
+    public async Task<int> AnzahlAsync(Guid freizeitId, CancellationToken abbruch = default)
+    {
+        var teilnehmende = await db.Anmeldungen
+            .Where(a => a.FreizeitId == freizeitId && a.Art == AnmeldeArt.Teilnehmende && a.Status == AnmeldeStatus.Bestaetigt)
+            .Select(a => a.PersonId)
+            .ToListAsync(abbruch);
+        var team = await db.Rollen
+            .Where(r => r.FreizeitId == freizeitId && (r.Rolle == RolleArt.Leitung || r.Rolle == RolleArt.Team))
+            .Select(r => r.PersonId)
+            .ToListAsync(abbruch);
+        var personen = teilnehmende.Concat(team).Where(p => p != GeloeschtePerson.Id).Distinct().Count();
+        return personen + teilnehmende.Count(p => p == GeloeschtePerson.Id);
+    }
+}
+
 /// <summary>Story 2-10: <see cref="IFreizeitNamenLesen"/> über den Lese-Kontext unter dem Mandantenfilter.</summary>
 internal sealed class FreizeitNamenLesen(FreizeitenLeseDbContext db) : IFreizeitNamenLesen
 {

@@ -289,6 +289,15 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 "POST /api/freizeiten/{freizeitId:guid}/programm/punkte/{punktId:guid}/bibliothek",
                 "GET /api/freizeiten/{freizeitId:guid}/programm/bibliothek",
                 "POST /api/freizeiten/{freizeitId:guid}/programm/bibliothek/{eintragId:guid}/uebernehmen",
+                // Story 4-1: Rezepte (Küche), alles für Leitung und Team, nur mit dem Modul Verpflegung.
+                "GET /api/freizeiten/{freizeitId:guid}/kueche/rezepte",
+                "POST /api/freizeiten/{freizeitId:guid}/kueche/rezepte",
+                "GET /api/freizeiten/{freizeitId:guid}/kueche/rezepte/{rezeptId:guid}",
+                "PATCH /api/freizeiten/{freizeitId:guid}/kueche/rezepte/{rezeptId:guid}",
+                "DELETE /api/freizeiten/{freizeitId:guid}/kueche/rezepte/{rezeptId:guid}",
+                "POST /api/freizeiten/{freizeitId:guid}/kueche/rezepte/{rezeptId:guid}/zutaten",
+                "PATCH /api/freizeiten/{freizeitId:guid}/kueche/rezepte/{rezeptId:guid}/zutaten/{zutatId:guid}",
+                "DELETE /api/freizeiten/{freizeitId:guid}/kueche/rezepte/{rezeptId:guid}/zutaten/{zutatId:guid}",
             }.Order(StringComparer.Ordinal),
             freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
         Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));
@@ -306,7 +315,8 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
     {
         var endpunkte = await EndpunkteAsync();
 
-        // Story 3-7 (AD-20): Leitplanke für V4 und V5. Heute gibt es dort noch keine Endpunkte; dann müssen sie den Schalter erklären.
+        // Story 3-7 (AD-20): Leitplanke für V4 und V5: Jeder Endpunkt dort erklärt seinen Schalter. Story 4-1: die acht Routen der Rezepte.
+        Assert.Equal(8, endpunkte.Count(e => e.Pfad.Contains("/kueche/", StringComparison.Ordinal)));
         foreach (var (bereich, schalter) in new[] { ("kueche", FunktionsSchalter.Verpflegung), ("finanzen", FunktionsSchalter.Finanzen) })
         {
             var praefix = $"/api/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/{bereich}";
@@ -315,7 +325,7 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 e => Assert.Equal(schalter, e.Endpunkt.Metadata.GetMetadata<GehoertZuSchalterMetadaten>()?.Schalter));
         }
 
-        // Ein Schalter ohne Freizeit-Rolle wäre ein Konfigurationsfehler (die Rechteprüfung wirft); kein echter Endpunkt hat ihn.
+        // Ein Schalter ohne Freizeit-Rolle wäre ein Konfigurationsfehler (die Rechteprüfung wirft).
         Assert.All(
             endpunkte.Where(e => e.Endpunkt.Metadata.GetMetadata<GehoertZuSchalterMetadaten>() is not null),
             e => Assert.NotNull(e.Endpunkt.Metadata.GetMetadata<NurFreizeitRolleMetadaten>()));

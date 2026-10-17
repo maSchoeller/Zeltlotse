@@ -32,6 +32,38 @@ internal static class DemoKatalog
     public static IReadOnlyList<ModulFeld> Module { get; } = [ModulFeld.Verpflegung, ModulFeld.Finanzen];
 
     /// <summary>
+    /// Story 4-1: Rezepte der Küche in der Demo-Freizeit (Modul Verpflegung), je für 4 Personen, mit Zubereitung und Zutaten (Menge als Text wie im
+    /// Formular, Allergene als Komma-Liste der Schlüssel). Je Rezept nur, wenn es den Namen noch nicht gibt, je Zutat nur, wenn es die Bezeichnung
+    /// im Rezept noch nicht gibt.
+    /// </summary>
+    public static IReadOnlyList<DemoRezept> Rezepte { get; } =
+    [
+        new(
+            "Chili sin Carne",
+            4,
+            "Zwiebeln und Paprika würfeln und in Öl andünsten. Tomaten, Bohnen, Mais und Gemüsebrühe dazugeben, mit Chili würzen und 30 Minuten köcheln lassen.",
+            [
+                new("Kidneybohnen", "500", "g", null),
+                new("Mais", "300", "g", null),
+                new("Paprika", "2", "Stück", null),
+                new("Zwiebeln", "2", "Stück", null),
+                new("Gehackte Tomaten", "800", "g", null),
+                new("Gemüsebrühe", "0,5", "l", "sellerie"),
+                new("Chilipulver", null, null, null),
+            ]),
+        new(
+            "Pfannkuchen",
+            4,
+            "Mehl, Milch, Eier und eine Prise Salz zu einem glatten Teig rühren und 10 Minuten quellen lassen. In der Pfanne dünn ausbacken.",
+            [
+                new("Mehl", "400", "g", "gluten"),
+                new("Milch", "0,75", "l", "milch"),
+                new("Eier", "4", "Stück", "eier"),
+                new("Salz", null, null, null),
+            ]),
+    ];
+
+    /// <summary>
     /// Story 2-2 und 2-3: Anmeldungen der Demo-Freizeit mit Konto, in dieser Reihenfolge. <c>Kind</c> leer heißt: die Person meldet sich
     /// selbst über den Anmeldelink für Mitarbeitende an. Miriam bestätigt die mit <c>Bestaetigt</c>; die anderen bleiben „eingegangen“.
     /// So zeigt die Liste der Leitung alle Status und der Balken „1 von 40“ (Mia; Mitarbeitende zählen nicht).
@@ -435,3 +467,9 @@ internal sealed record DemoPerson(
 /// <param name="Kind">Vorname des Kindes aus der Familie; leer heißt: selbst, über den Anmeldelink für Mitarbeitende.</param>
 /// <param name="Bestaetigt">Miriam hat die Anmeldung bestätigt.</param>
 internal sealed record DemoAnmeldung(string Mail, string? Kind, bool Bestaetigt);
+
+/// <summary>Story 4-1: Ein Rezept der Demo-Küche.</summary>
+internal sealed record DemoRezept(string Name, int BasisPersonen, string Zubereitung, IReadOnlyList<DemoZutat> Zutaten);
+
+/// <summary>Story 4-1: Eine Zutat eines Demo-Rezepts; <c>Menge</c> als Text wie im Formular, <c>Allergene</c> als Komma-Liste der Schlüssel.</summary>
+internal sealed record DemoZutat(string Bezeichnung, string? Menge, string? Einheit, string? Allergene);
