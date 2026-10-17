@@ -138,7 +138,7 @@ public sealed class RezeptSeitenTests : BunitContext
         Assert.Equal(["Chili sin Carne", "Pfannkuchen"], cards.Select(c => c.QuerySelector("h2")!.TextContent));
         Assert.Equal($"freizeiten/{Freizeit}/kueche/rezepte/{Chili}", cards[0].QuerySelector("h2 a")!.GetAttribute("href"));
         Assert.Equal(["für 4 Personen · 7 Zutaten", "Allergene: Sellerie"], cards[0].QuerySelectorAll("p").Select(p => p.TextContent));
-        Assert.Equal(["für 1 Person · 1 Zutat", "Allergene: keine"], cards[1].QuerySelectorAll("p").Select(p => p.TextContent));
+        Assert.Equal(["für 1 Person · 1 Zutat", "Allergene: keine angegeben"], cards[1].QuerySelectorAll("p").Select(p => p.TextContent));
         Assert.NotNull(cut.Find("#rezept-anlegen"));
     }
 
@@ -195,6 +195,7 @@ public sealed class RezeptSeitenTests : BunitContext
                 "application/problem+json"),
             () => Json(PfannkuchenJson(mitZutaten: false), HttpStatusCode.Created));
         var cut = ListeRendern();
+        Assert.Contains("1 bis 1000", cut.Find("#rezept-anlegen").TextContent, StringComparison.Ordinal);
 
         cut.Find("#rezept-basis").Input("abc");
         cut.Find("#rezept-anlegen form").Submit();
@@ -425,6 +426,38 @@ public sealed class RezeptSeitenTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.DoesNotContain(cut.FindAll("section.elkw-card h2"), h => h.TextContent == "Zutat: Salz"));
         Assert.Equal(2, Tabelle(cut).Count);
+        // Die Zutat ist weg wie gewollt: keine Fehlermeldung.
+        Assert.Empty(cut.FindAll(".elkw-alert"));
+    }
+
+    [Fact]
+    public void Fehlermeldung_verschwindet_nach_dem_naechsten_erfolgreichen_Neuladen()
+    {
+        Kontext();
+        _server.BeiDerReihe(
+            HttpMethod.Get,
+            RezeptPfad(Pfannkuchen),
+            () => Json(PfannkuchenJson()),
+            () => Json(PfannkuchenJson()),
+            () => Json(PfannkuchenJson(mehlMenge: 2m, mehlHoch: 3m, version: 8)));
+        _server.Bei(HttpMethod.Delete, ZutatPfad(Pfannkuchen, Salz), () => new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        _server.Bei(HttpMethod.Patch, ZutatPfad(Pfannkuchen, Mehl), () => Json(new { version = 4u, menge = "2" }));
+        var cut = RezeptRendern();
+
+        cut.FindAll("section.elkw-card").Single(c => c.QuerySelector("h2")!.TextContent == "Zutat: Salz").QuerySelectorAll("button")
+            .Single(b => b.TextContent == "Entfernen").Click();
+        cut.FindAll("section.elkw-card").Single(c => c.QuerySelector("h2")!.TextContent == "Zutat: Salz").QuerySelectorAll("button")
+            .Single(b => b.TextContent == "Ja, entfernen").Click();
+        cut.WaitForAssertion(() => Assert.Contains(AnmeldungAbschluss.FehlerText, cut.Find(".elkw-alert").TextContent, StringComparison.Ordinal));
+        Assert.Contains(cut.FindAll("section.elkw-card h2"), h => h.TextContent == "Zutat: Salz");
+
+        var feld = cut.Find($"#zutat-{Mehl}-menge");
+        feld.Focus();
+        feld.Input("2");
+        feld.Blur();
+
+        cut.WaitForAssertion(() => Assert.Equal(["2", "kg", "Mehl", "Glutenhaltiges Getreide", "3 kg"], Tabelle(cut)[0]));
+        Assert.Empty(cut.FindAll(".elkw-alert"));
     }
 
     [Fact]
@@ -497,7 +530,7 @@ public sealed class RezeptSeitenTests : BunitContext
     {
         Assert.Equal(("2,25", "6000", ""), (Anzeige.Menge(2.25m), Anzeige.Menge(6000.00m), Anzeige.Menge(null)));
         Assert.Equal(("für 1 Person", "für 4 Personen"), (Anzeige.FuerPersonen(1), Anzeige.FuerPersonen(4)));
-        Assert.Equal(("Glutenhaltiges Getreide, Eier", "keine"), (Anzeige.Allergene("eier,gluten"), Anzeige.Allergene(null)));
+        Assert.Equal(("Glutenhaltiges Getreide, Eier", "keine angegeben"), (Anzeige.Allergene("eier,gluten"), Anzeige.Allergene(null)));
         Assert.Equal(("Hochgerechnet auf 1 Person der Freizeit.", KuecheTexte.KeinePersonenText), (KuecheTexte.Hochgerechnet(1), KuecheTexte.Hochgerechnet(0)));
     }
 }

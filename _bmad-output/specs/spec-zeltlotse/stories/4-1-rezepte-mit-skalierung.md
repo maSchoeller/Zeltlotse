@@ -5,7 +5,7 @@ created: '2026-10-17'
 status: 'done'
 baseline_revision: 'c6e9a9933db999756bd2ae267e1c183b61064e89'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/specs/spec-zeltlotse/stories/3-2-material-am-programmpunkt.md'
@@ -252,6 +252,34 @@ deferred:
   - `[low]` `[reject]` Intent: Demo und Screenshots zeigen Faktor 1 (4 Personen, Basis 4) — Rechnung durch Fach-, HTTP- und bUnit-Tests belegt, Doku-Text erklärt die Hochrechnung; Änderung widerspräche der Demo-Vorgabe der Spec. Restrisiko notiert.
   - `[false]` `[reject]` Intent: Personenzahl live statt Höchstzahl oder Handwert — bewusst in den Design Notes entschieden („jede Person zählt gleich“, keine Hand-Überschreibung); kein Fehler.
 
+### 2026-10-17 — Review pass (Folgedurchlauf)
+- verdicts: 24 findings — high 0, medium 1, low 13, false 9, maybe-false 1
+- findings:
+  - `[low]` `[reject]` Edge: kleine hochgerechnete Menge rundet auf 0 (`KuecheWerte.Hochrechnen`) — carried: im Küchenalltag praktisch nicht anzutreffen; Abhilfe bräuchte eine Sonderregel.
+  - `[false]` `[reject]` Edge: „1.250“ (Punkt mit genau 3 Nachkommastellen) wird mit 400 abgelehnt — gewollte Grenze: die Form ist im Deutschen ein Tausenderpunkt (1250) und damit mehrdeutig; Fehlertext („keine Tausenderpunkte“) und Doku („1000“ statt „1.000“) nennen sie, „1,25“ geht.
+  - `[low]` `[patch]` Edge: eine alte Fehlermeldung bleibt nach späterem erfolgreichem Neuladen stehen (`Rezept.razor` `LadenAsync` leert `_meldung` nicht) — Patch: `LadenAsync` leert die Meldung nach erfolgreichem Laden; bUnit-Test `Fehlermeldung_verschwindet_nach_dem_naechsten_erfolgreichen_Neuladen`.
+  - `[low]` `[patch]` Edge: Zutat schon von jemand anderem entfernt → trotzdem Fehlermeldung (`Rezept.razor` `ZutatEntfernenAsync`) — Patch: erst neu laden, Meldung nur, wenn die Zutat noch da ist; bUnit-Test um „keine Meldung“ ergänzt.
+  - `[low]` `[reject]` Blind: Zustand „0 Personen“ ist mit Leitung/Team praktisch nicht erreichbar, Text „Noch niemand bestätigt …“ — Text und Zustand sind wörtlich Vorgabe der I/O-Matrix im Intent; der Zweig ist harmlos und schützt die Rechnung (Division).
+  - `[false]` `[reject]` Blind: keine geplante Personenzahl vor den Bestätigungen — die Zählregel ist im Intent festgelegt, keine Hand-Überschreibung laut Design Notes.
+  - `[low]` `[reject]` Blind: kleine Mengen runden auf 0 — gleiche Ursache wie Edge 1, carried.
+  - `[false]` `[reject]` Blind: „1,000“ wird als 1 gespeichert — im Deutschen ist „1,000“ die Zahl 1; die Doku nennt Komma als Dezimaltrenner, der Wert wird als „1“ angezeigt und ist sofort sichtbar.
+  - `[medium]` `[patch]` Blind: „Allergene: keine“ auf der Rezept-Card liest sich wie „frei von Allergenen“, obwohl nur nichts angekreuzt ist (`Anzeige.Allergene`) — Patch: Text „keine angegeben“, Doku-Satz auf `kueche/rezepte.md`, bUnit-Tests angepasst.
+  - `[false]` `[reject]` Blind: `version` im PATCH ungenutzt — carried: AD-19 regelt den Konflikt je Feld über den alten Wert; feste Körperform aller Module.
+  - `[low]` `[reject]` Blind: Personenzahl im Speicher entdoppelt, Überschneidung mit `IBestaetigteTeilnehmende` — carried für den Speicher-Teil; der vorhandene Zähler zählt nur Teilnehmende ohne Rollen, andere Bedeutung, kein gemeinsamer Wert, der auseinanderlaufen könnte.
+  - `[low]` `[reject]` Blind: Spaltenkopf per `[1..]` aus „für …“ gebildet — heute korrekt, bUnit-Tests prüfen „Für 6 Personen“ und „Für 1 Person“ und fangen eine Textänderung ab.
+  - `[low]` `[reject]` Blind: keine Check-Constraints in der Datenbank — carried: Hausstil aller Module, kein Schreibweg an der Pipeline vorbei.
+  - `[low]` `[patch]` Blind: Anlege-Formular nennt den Bereich 1 bis 1000 nicht, das Bearbeiten-Feld schon (`Rezepte.razor`) — Patch: Hinweis „…, 1 bis 1000, z. B. 4“, bUnit-Test prüft ihn.
+  - `[low]` `[reject]` Blind: Doku nennt feste Zutaten-Reihenfolge und doppelte Rezeptnamen nicht — kein Fehlverhalten; doppelte Namen sind erlaubt, die Reihenfolge ist in der Tabelle sichtbar.
+  - `[low]` `[reject]` Blind: fachfremde Sicherheits-Updates in `Directory.Packages.props` — ohne sie scheiterte `dotnet restore` (Auto Run Result); nachträglich trennen bringt keinen Nutzen.
+  - `[false]` `[reject]` Intent: kein 403-Fall nach AD-30 — carried: keine falsche Rolle in der Freizeit erreichbar, ohne Rolle 404 (AD-12).
+  - `[false]` `[reject]` Intent: keine Token-Fälle — carried: keine Token-Endpunkte.
+  - `[false]` `[reject]` Intent: GET liefert Mengen als JSON-Zahl statt „1,5“ — Design Notes: DTOs tragen `decimal?`; „1,5“ gilt an der Autosave-Oberfläche (PATCH-Antwort, `alterWert`, Anzeige), dort durch Tests belegt.
+  - `[false]` `[reject]` Intent: Bestätigte Anmeldungen gelöschter Personen zählen einzeln — jede war eine eigene Person; einzeln zählen entspricht „jede Person zählt einmal“.
+  - `[low]` `[reject]` Intent: Hinweis „Noch niemand bestätigt“ passt nicht zur Zählung mit Rollen — gleiche Ursache wie Blind 1.
+  - `[false]` `[reject]` Intent: Doku-Build im Diff nicht belegt — `npm run build` lief in diesem Durchlauf fehlerfrei (56 Seiten).
+  - `[low]` `[reject]` Intent: Löschlauf, Callback `Gespeichert` und Paket-Updates nicht im Intent genannt — Löschlauf folgt aus AD-16 und den Tasks, der Callback trägt „nach jedem gespeicherten Feld neu laden“, Paket-Updates siehe Blind 12.
+  - `[maybe-false]` `[reject]` Intent: „Test vor dem Code“ am Diff nicht prüfbar — klären würde nur die Commit-Reihenfolge (ein Story-Commit); wenn wahr nur low, kein Fehler im Ergebnis. In diesem Durchlauf wurden die Tests nachweislich zuerst rot geschrieben.
+
 ## Design Notes
 
 *Umfang und Zählweise*
@@ -331,3 +359,32 @@ Status: done
 - Die Demo verpflegt 4 Personen, beide Rezepte sind für 4. Die Screenshots zeigen darum keine abweichende Hochrechnung. Die Rechnung ist durch Tests belegt.
 - Die Paket-Updates heben die Blazor-Pakete eine Patch-Version über die übrigen 10.0.12-Pakete.
 - Die Abschluss-Race ist zurückgestellt (siehe `deferred`).
+
+### Folgedurchlauf 2026-10-17
+
+**Umgesetzt (Patches aus dem Folge-Review):**
+- Rezept-Card zeigt ohne angekreuzte Allergene „Allergene: keine angegeben“ statt „keine“. So liest sich das nicht wie „frei von Allergenen“. Dazu ein Satz in der Doku.
+- Rezeptseite: Eine Fehlermeldung verschwindet nach dem nächsten erfolgreichen Neuladen. Ist eine Zutat beim Entfernen schon weg, erscheint keine Meldung mehr.
+- Das Anlege-Formular nennt den Bereich der Basis-Personenzahl („1 bis 1000, z. B. 4“).
+
+**Dateien:**
+- `src/Zeltlotse.Ui/Texte/Anzeige.cs` – Text „keine angegeben“.
+- `src/Zeltlotse.App/Features/Kueche/Rezept.razor` – Meldung leeren nach erfolgreichem Laden; Meldung beim Entfernen nur, wenn die Zutat noch da ist.
+- `src/Zeltlotse.App/Features/Kueche/Rezepte.razor` – Hinweis mit Bereich.
+- `doku/src/content/docs/kueche/rezepte.md` – Satz zu „keine angegeben“.
+- `tests/Zeltlotse.Ui.Tests/RezeptSeitenTests.cs` – Tests zuerst angepasst (rot), ein neuer Test `Fehlermeldung_verschwindet_nach_dem_naechsten_erfolgreichen_Neuladen`.
+
+**Review:**
+- 24 Funde, die Verifikationslücken-Prüfung fand keine.
+- 4 Einträge gepatcht: medium 1, low 3.
+- Nichts neu zurückgestellt; die übrigen Funde sind mit Begründung im Triage-Log verworfen, 8 davon aus dem ersten Durchlauf übernommen (carried).
+
+**Nachprüfung empfohlen:** nein. Der Folgedurchlauf hat keinen High-Fund gepatcht, die Arbeit ist konvergiert.
+
+**Verifikation:**
+- `dotnet test --project tests/Zeltlotse.Ui.Tests`: zuerst 5 erwartete Fehlschläge, nach dem Patch 686 grün.
+- `dotnet test Zeltlotse.slnx` (alle Projekte inklusive Api, Architektur und E2E mit Doku-Screenshots): 2503 Tests, 0 Fehler.
+- `npm run build` in `doku/`: 56 Seiten, fehlerfrei.
+- Die `rezepte-*`/`rezept-*`-Bilder sind unverändert, weil der neue Hinweis außerhalb des Bildausschnitts liegt. 40 weitere Bilder anderer Seiten waren reines Rendering-Rauschen und sind auf HEAD zurückgesetzt.
+
+**Restrisiken:** wie im ersten Durchlauf: die Demo-Hochrechnung hat Faktor 1, und das Abschluss-Rennen ist zurückgestellt.

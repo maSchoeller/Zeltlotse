@@ -13,7 +13,7 @@ Rezepte gibt es nur, wenn die Leitung das Modul **Verpflegung** für die Freizei
 
 ## Der Weg zu den Rezepten
 
-Startseite der Freizeit → Knopf **Küche**. Die Seite **Rezepte** zeigt je Rezept eine Card: den Namen als Link zum Rezept, „für 4 Personen“ mit der Zahl der Zutaten und die Allergene aller Zutaten. Darüber steht, auf wie viele Personen Zeltlotse hochrechnet, zum Beispiel „Hochgerechnet auf 4 Personen der Freizeit.“ Ohne Rezepte steht dort „Noch keine Rezepte.“
+Startseite der Freizeit → Knopf **Küche**. Die Seite **Rezepte** zeigt je Rezept eine Card: den Namen als Link zum Rezept, „für 4 Personen“ mit der Zahl der Zutaten und die Allergene aller Zutaten. Ist an keiner Zutat ein Allergen angekreuzt, steht dort „keine angegeben“ – das heißt nicht, dass das Rezept frei von Allergenen ist. Darüber steht, auf wie viele Personen Zeltlotse hochrechnet, zum Beispiel „Hochgerechnet auf 4 Personen der Freizeit.“ Ohne Rezepte steht dort „Noch keine Rezepte.“
 
 ![Rezepte am Handy: „Hochgerechnet auf 4 Personen der Freizeit.“, darunter die Cards „Chili sin Carne“ (für 4 Personen · 7 Zutaten, Allergene: Sellerie) und „Pfannkuchen“](../../../assets/screenshots/rezepte-handy.png)
 

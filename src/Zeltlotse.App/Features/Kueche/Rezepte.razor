@@ -65,7 +65,7 @@ else
                     <Feld Label="Name *" Id="rezept-name" Wert="@_name" Fehler="@_nameFehler" autocomplete="off"
                           Hinweis="@($"Höchstens {RezeptFelder.NameMaximaleLaenge} Zeichen")" @oninput="@(e => _name = e.Value?.ToString())" />
                     <Feld Label="Basis-Personenzahl *" Id="rezept-basis" Wert="@_basis" Fehler="@_basisFehler" autocomplete="off" inputmode="numeric"
-                          Hinweis="Für so viele Personen gelten die Mengen, z. B. 4" @oninput="@(e => _basis = e.Value?.ToString())" />
+                          Hinweis="Für so viele Personen gelten die Mengen, 1 bis 1000, z. B. 4" @oninput="@(e => _basis = e.Value?.ToString())" />
                     <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Rezept anlegen</Knopf>
                 </Formular>
                 <p>* Pflichtfeld</p>

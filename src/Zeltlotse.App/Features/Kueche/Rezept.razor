@@ -218,6 +218,7 @@ else
         {
             if (await KuecheApi.RezeptLadenAsync(FreizeitId, RezeptId) is { } rezept)
             {
+                _meldung = null;
                 _rezept = rezept;
                 if (felder)
                 {
@@ -299,9 +300,13 @@ else
                     _meldung = KuecheTexte.AbgeschlossenText;
                     break;
                 default:
-                    // Z. B. inzwischen von jemand anderem entfernt: neu laden, damit keine veraltete Card stehen bleibt.
-                    _meldung = AnmeldungAbschluss.FehlerText;
+                    // Z. B. inzwischen von jemand anderem entfernt: neu laden, damit keine veraltete Card stehen bleibt; die Meldung nur, wenn die Zutat noch da ist.
                     await LadenAsync(felder: true);
+                    if (_rezept?.Zutaten.Any(z => z.Id == zutat.Id) != false)
+                    {
+                        _meldung = AnmeldungAbschluss.FehlerText;
+                    }
+
                     break;
             }
         }

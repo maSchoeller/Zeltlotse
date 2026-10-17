@@ -398,6 +398,6 @@ public static class Anzeige
     /// <summary>Story 4-1: eine Menge deutsch ohne Null-Nachkommastellen, z. B. „2,25“ oder „6000“; ohne Menge leer.</summary>
     public static string Menge(decimal? menge) => menge is { } wert ? Zeltlotse.Api.Contracts.Kueche.ZutatFelder.ZahlText(wert) : "";
 
-    /// <summary>Story 4-1: die Allergene einer Komma-Liste als Text, z. B. „Glutenhaltiges Getreide, Milch (inkl. Laktose)“; ohne Allergene „keine“.</summary>
-    public static string Allergene(string? liste) => Zeltlotse.Api.Contracts.Kueche.Allergene.Texte(liste) is { Count: > 0 } texte ? string.Join(", ", texte) : "keine";
+    /// <summary>Story 4-1: die Allergene einer Komma-Liste als Text, z. B. „Glutenhaltiges Getreide, Milch (inkl. Laktose)“; ohne Allergene „keine angegeben“ (heißt nicht „frei von Allergenen“).</summary>
+    public static string Allergene(string? liste) => Zeltlotse.Api.Contracts.Kueche.Allergene.Texte(liste) is { Count: > 0 } texte ? string.Join(", ", texte) : "keine angegeben";
 }
