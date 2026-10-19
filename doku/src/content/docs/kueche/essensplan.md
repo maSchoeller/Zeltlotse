@@ -2,7 +2,7 @@
 title: Essensplan und Gerichte
 description: Rezepte als Gerichte an Frühstück, Mittag- und Abendessen vormerken, Ersatzportionen sehen und ein Gericht mit Vorschau tauschen.
 sidebar:
-  order: 2
+  order: 3
 ---
 
 **Wer:** Leitung und Team einer Freizeit. Küche ist keine eigene Rolle; wer kocht oder einkauft, arbeitet mit den Rechten des Teams.
@@ -13,13 +13,13 @@ Den Essensplan gibt es nur, wenn die Leitung das Modul **Verpflegung** eingescha
 
 ## Der Weg zum Essensplan
 
-Startseite der Freizeit → Knopf **Küche** → Reiter **Essensplan**. Die vier Reiter **Rezepte · Essensplan · Einkaufsliste · Einkauf** stehen oben auf allen Küche-Seiten.
+Startseite der Freizeit → Knopf **Küche** → Reiter **Essensplan**. Die fünf Reiter **Tagesansicht · Rezepte · Essensplan · Einkaufsliste · Einkauf** stehen oben auf allen Küche-Seiten.
 
 Darunter steht je Tag der Freizeit ein Reiter, zum Beispiel „Di 03.08.“. Gewählt ist der heutige Tag, wenn er zur Freizeit gehört, sonst der erste Tag. Der gewählte Tag steht in der Adresse; ein Lesezeichen öffnet also genau diesen Tag.
 
 Je Mahlzeit steht eine Card: **Frühstück**, **Mittagessen** und **Abendessen** mit ihrer Uhrzeit. Die Mahlzeiten sind die festen Programmpunkte aus dem [Wochenraster](/mitarbeitende/programm/); Zeltlotse legt sie an, sobald der Essensplan das erste Mal geöffnet wird. Ohne Gericht steht in der Card „Noch nichts vorgemerkt.“
 
-![Essensplan am Handy: Reiter „Rezepte · Essensplan · Einkaufsliste · Einkauf“, die Tage als Reiter mit „Di 03.08.“ gewählt, die Card „Frühstück“ mit „Pfannkuchen“, „1 Ersatzportion einplanen (enthält Gluten)“ und den Knöpfen „Tauschen“ und „Entfernen“](../../../assets/screenshots/essensplan-handy.png)
+![Essensplan am Handy: Reiter „Tagesansicht · Rezepte · Essensplan · Einkaufsliste · Einkauf“, die Tage als Reiter mit „Di 03.08.“ gewählt, die Card „Frühstück“ mit „Pfannkuchen“, „1 Ersatzportion einplanen (enthält Gluten)“ und den Knöpfen „Tauschen“ und „Entfernen“](../../../assets/screenshots/essensplan-handy.png)
 
 ![Essensplan am Laptop mit allen Tagen als Reiter und den Cards „Frühstück“ (Pfannkuchen) und „Mittagessen“ (Chili sin Carne)](../../../assets/screenshots/essensplan-laptop.png)
 
@@ -57,6 +57,10 @@ Hat jemand anderes das Gericht inzwischen getauscht, steht „Inzwischen geände
 
 ![Tausch-Vorschau am Handy: „Vorher“ und „Nachher“ untereinander](../../../assets/screenshots/gericht-tauschen-handy.png)
 
+## Restetag
+
+Eine Mahlzeit lässt sich in der [Tagesansicht](/kueche/tagesansicht/) als [Restetag](/kueche/tagesansicht/#restetag-setzen-und-zurücknehmen) markieren. Im Essensplan steht dann als erste Zeile in der Card der Mahlzeit „Restetag: Reste verwerten.“ Die Gerichte bleiben vorgemerkt; der Restetag ändert weder Essensplan noch Einkaufsliste. Posten freigeben und abhaken steht unter [Einkaufen: freigeben und abhaken](/kueche/einkauf/).
+
 ## Nach dem Abschluss
 
 Nach dem Abschluss der Freizeit ist der Essensplan nur lesbar: Oben steht „Diese Freizeit ist abgeschlossen und nur lesbar.“; Vormerken, Tauschen und Entfernen fehlen.
@@ -67,4 +71,4 @@ Gerichte enthalten keine Personendaten. Für die Ersatzportionen sieht die Küch
 
 ## Noch nicht dabei
 
-Die Tagesansicht der Küche und der Restetag kommen mit einer späteren Version. Posten freigeben und abhaken steht unter [Einkaufen: freigeben und abhaken](/kueche/einkauf/).
+Den Essensplan ohne Netz (offline) gibt es noch nicht.

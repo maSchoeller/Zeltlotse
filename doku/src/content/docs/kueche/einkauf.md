@@ -2,7 +2,7 @@
 title: "Einkaufen: freigeben und abhaken"
 description: Posten oder ganze Tage der Einkaufsliste zum Einkaufen freigeben und beim Einkaufen mit einem Tipp abhaken.
 sidebar:
-  order: 4
+  order: 5
 ---
 
 **Wer:** Leitung und Team einer Freizeit. Küche und Einkauf sind keine eigenen Rollen, sondern Aufgaben im Team: Wer einkauft, arbeitet mit den Rechten des Teams.
@@ -33,13 +33,13 @@ Freigeben und Abhaken sind voneinander unabhängig: Es gibt keine feste Reihenfo
 
 ## Der Weg zum Einkauf
 
-Startseite der Freizeit → Knopf **Küche** → Reiter **Einkauf**. Die vier Reiter **Rezepte · Essensplan · Einkaufsliste · Einkauf** stehen oben auf allen Küche-Seiten.
+Startseite der Freizeit → Knopf **Küche** → Reiter **Einkauf**. Die fünf Reiter **Tagesansicht · Rezepte · Essensplan · Einkaufsliste · Einkauf** stehen oben auf allen Küche-Seiten.
 
 Je Tag steht eine Card, zum Beispiel „Dienstag, 3. August 2027“, mit einem Kästchen je freigegebenem Posten, zum Beispiel „Mehl 500 g · Pfannkuchen · Frühstück“ oder bei eigenen Posten „Äpfel 3 kg“. Tage ohne Freigegebenes fehlen. Ist noch nichts freigegeben, steht dort „Noch nichts zum Einkaufen freigegeben.“ mit dem Knopf **Einkaufsliste öffnen**.
 
 Die Seite zeigt keine Allergen-Übersicht und keine Ersatzportionen. Sie fragt dafür auch keine Freizeitpässe ab – siehe [Datenschutz](#datenschutz). Was für die Ersatzportionen nötig ist, ergänzt die Küche auf der Einkaufsliste als [eigenen Posten](/kueche/einkaufsliste/#eigene-posten) und gibt ihn frei; dann steht er auch hier.
 
-![Einkauf am Handy: Reiter „Rezepte · Essensplan · Einkaufsliste · Einkauf“, die Card „Dienstag, 3. August 2027“ mit „Mehl 500 g · Pfannkuchen · Frühstück“ und „Milch 0,75 l · Pfannkuchen · Frühstück“ abgehakt und den übrigen Zutaten des Tags als Kästchen](../../../assets/screenshots/einkauf-handy.png)
+![Einkauf am Handy: Reiter „Tagesansicht · Rezepte · Essensplan · Einkaufsliste · Einkauf“, die Card „Dienstag, 3. August 2027“ mit „Mehl 500 g · Pfannkuchen · Frühstück“ und „Milch 0,75 l · Pfannkuchen · Frühstück“ abgehakt und den übrigen Zutaten des Tags als Kästchen](../../../assets/screenshots/einkauf-handy.png)
 
 ![Einkauf am Laptop: dieselbe Card mit allen freigegebenen Posten des Dienstags](../../../assets/screenshots/einkauf-laptop.png)
 
@@ -63,6 +63,10 @@ Bestätigt die Leitung nach dem Einkauf weitere Anmeldungen, rechnet die Einkauf
 
 Dasselbe gilt, wenn die Küche nach dem Einkauf ein [Rezept](/kueche/rezepte/) ändert: Gekaufte Posten bleiben gekauft, und die Küche prüft die Menge. Eine neu hinzugefügte Zutat steht als Posten auf der Liste, der noch **nicht freigegeben** ist.
 
+## Restetag
+
+Markiert die Küche eine Mahlzeit als [Restetag](/kueche/tagesansicht/#restetag-setzen-und-zurücknehmen), ändert das weder Freigaben noch Haken.
+
 ## Nach dem Abschluss
 
 Nach dem Abschluss der Freizeit sind Einkaufsliste und Einkauf nur lesbar: Oben steht „Diese Freizeit ist abgeschlossen und nur lesbar.“ Auf der Seite „Einkauf“ steht bei jedem Posten „gekauft“ oder „offen“, ohne Kästchen; auf der Einkaufsliste stehen „freigegeben“ und „gekauft“ als Text, die Knöpfe fehlen.
@@ -73,4 +77,4 @@ Freigabe und Haken enthalten keine Personendaten: Zeltlotse speichert weder, wer
 
 ## Noch nicht dabei
 
-Die Tagesansicht der Küche, der Restetag und Einkaufen ohne Netz (offline) kommen mit einer späteren Version.
+Einkaufen ohne Netz (offline) kommt mit einer späteren Version.

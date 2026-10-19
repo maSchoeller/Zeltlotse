@@ -17,6 +17,9 @@ internal enum EinsichtZweck : short
 
     /// <summary>Story 4-2: Der Allergen-Abgleich der Küche hat die Allergie-Auswahl gelesen, ohne lesende Person (AD-8, Zweck ohne Menschen).</summary>
     AllergeneFuerKueche = 3,
+
+    /// <summary>Story 4-4: Der Sonderkost-Abgleich der Küche hat die Ernährungs-Auswahl gelesen, ohne lesende Person (AD-8, Zweck ohne Menschen).</summary>
+    SonderkostFuerKueche = 4,
 }
 
 /// <summary>

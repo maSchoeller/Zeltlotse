@@ -17,7 +17,8 @@
    (übernimmt und öffnet die Einkaufsliste am Tag) oder „Abbrechen“. Story 4-3: Der Vergleich zeigt nur noch nicht gekaufte Posten; gibt es gekaufte,
    steht darunter „N schon gekaufte Posten stehen nicht im Vergleich.“. Ist das Gericht inzwischen geändert: „Inzwischen geändert – neu laden?“. Fragt die
    Freizeit keine Allergien ab, steht „Diese Freizeit fragt keine Allergien ab.“. In der Phase „gelaufen“ nur lesbar. Kontext oder Essensplan nicht
-   verfügbar (auch ohne Verpflegung) → „Diese Seite ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung. *@
+   verfügbar (auch ohne Verpflegung) → „Diese Seite ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung. Story 4-4: Hat die Küche eine
+   Mahlzeit in der Tagesansicht als Restetag markiert, steht an ihr „Restetag: Reste verwerten.“; Gerichte und Einkauf bleiben, wie sie sind. *@
 <PageTitle>Essensplan – Zeltlotse</PageTitle>
 
 @if (_nichtVerfuegbar)
@@ -80,6 +81,10 @@ else
             @foreach (var mahlzeit in MahlzeitenAmTag)
             {
                 <Card @key="mahlzeit.ProgrammpunktId" Titel="@mahlzeit.Titel" Dachzeile="@mahlzeit.Beginn" Ebene="3" Id="@($"mahlzeit-{mahlzeit.ProgrammpunktId}")">
+                    @if (mahlzeit.Restetag)
+                    {
+                        <p>@KuecheTexte.RestetagText</p>
+                    }
                     @if (mahlzeit.Gerichte.Count == 0)
                     {
                         <p>Noch nichts vorgemerkt.</p>

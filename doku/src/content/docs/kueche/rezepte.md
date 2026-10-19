@@ -2,7 +2,7 @@
 title: Rezepte und Mengen
 description: Rezepte mit Zutaten, Mengen und Allergenen anlegen und die Mengen automatisch auf die Personenzahl der Freizeit hochrechnen lassen.
 sidebar:
-  order: 1
+  order: 2
 ---
 
 **Wer:** Leitung und Team einer Freizeit. Küche ist keine eigene Rolle; wer kocht oder einkauft, arbeitet mit den Rechten des Teams.
@@ -13,7 +13,7 @@ Rezepte gibt es nur, wenn die Leitung das Modul **Verpflegung** für die Freizei
 
 ## Der Weg zu den Rezepten
 
-Startseite der Freizeit → Knopf **Küche**. Oben stehen die Reiter **Rezepte · Essensplan · Einkaufsliste · Einkauf**. Die Seite **Rezepte** zeigt je Rezept eine Card: den Namen als Link zum Rezept, „für 4 Personen“ mit der Zahl der Zutaten und die Allergene aller Zutaten. Ist an keiner Zutat ein Allergen angekreuzt, steht dort „keine angegeben“ – das heißt nicht, dass das Rezept frei von Allergenen ist. Darüber steht, auf wie viele Personen Zeltlotse hochrechnet, zum Beispiel „Hochgerechnet auf 4 Personen der Freizeit.“ Ohne Rezepte steht dort „Noch keine Rezepte.“
+Startseite der Freizeit → Knopf **Küche**. Oben stehen die Reiter **Tagesansicht · Rezepte · Essensplan · Einkaufsliste · Einkauf**. Die Seite **Rezepte** zeigt je Rezept eine Card: den Namen als Link zum Rezept, „für 4 Personen“ mit der Zahl der Zutaten und die Allergene aller Zutaten. Ist an keiner Zutat ein Allergen angekreuzt, steht dort „keine angegeben“ – das heißt nicht, dass das Rezept frei von Allergenen ist. Darüber steht, auf wie viele Personen Zeltlotse hochrechnet, zum Beispiel „Hochgerechnet auf 4 Personen der Freizeit.“ Ohne Rezepte steht dort „Noch keine Rezepte.“
 
 ![Rezepte am Handy: „Hochgerechnet auf 4 Personen der Freizeit.“, darunter die Cards „Chili sin Carne“ (für 4 Personen · 7 Zutaten, Allergene: Sellerie) und „Pfannkuchen“](../../../assets/screenshots/rezepte-handy.png)
 

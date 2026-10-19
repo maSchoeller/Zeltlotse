@@ -306,8 +306,8 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
                  {
                      ("Lea Feuerstein", "Freizeitpass fehlt noch"),
                      ("Emma Muster", "5 von 8 Angaben offen"),
-                     // Story 2-11: Mia hat zusätzlich Medikamente angegeben.
-                     ("Mia Probst", "4 von 8 Angaben offen"),
+                     // Story 2-11: Mia hat zusätzlich Medikamente angegeben; Story 4-4: dazu „vegetarisch“.
+                     ("Mia Probst", "3 von 8 Angaben offen"),
                      ("Tobias Wanderer", "Freizeitpass fehlt noch"),
                  })
         {
@@ -2255,6 +2255,45 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await E2EHilfe.AxeAsync(seite);
 
         await BildAsync(seite, "einkauf", geraet);
+    }
+
+    // ---------- Story 4-4: Küchen-Tagesansicht und Restetag ----------
+
+    /// <summary>
+    /// Lea (Team) öffnet Küche → Reiter „Tagesansicht“ und wählt Dienstag (03.08.): Pfannkuchen zum Frühstück mit einer Ersatzportion (Gluten), Chili
+    /// sin Carne zum Mittagessen, das Abendessen ist in der Demo ein Restetag; dazu „Gluten: 1 Person“ und „Vegetarisch: 1 Person“ (Mia, bestätigt). Nur
+    /// lesend, damit der Demo-Stand für die anderen Bilder bleibt.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Tagesansicht(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await KuecheAsync(seite);
+        await seite.GetByRole(AriaRole.Navigation, new() { Name = "Küche" }).GetByRole(AriaRole.Link, new() { Name = "Tagesansicht", Exact = true }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Tagesansicht", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Navigation, new() { Name = "Tage" }).GetByRole(AriaRole.Link, new() { Name = "Di 03.08." }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator(".zl-reiter__inhalt h2")).ToHaveTextAsync("Dienstag, 3. August 2027", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("#allergien-sonderkost li")).ToHaveTextAsync(["Gluten: 1 Person", "Vegetarisch: 1 Person"], new() { Timeout = 60_000 });
+        var fruehstueck = seite.Locator("section.elkw-card").Filter(new() { Has = seite.Locator("h3", new() { HasTextString = "Frühstück" }) });
+        await Assertions.Expect(fruehstueck).ToContainTextAsync("Pfannkuchen");
+        await Assertions.Expect(fruehstueck).ToContainTextAsync("1 Ersatzportion einplanen (enthält Gluten)");
+        var abendessen = seite.Locator("section.elkw-card").Filter(new() { Has = seite.Locator("h3", new() { HasTextString = "Abendessen" }) });
+        await Assertions.Expect(abendessen.GetByLabel("Restetag")).ToBeCheckedAsync();
+        await Assertions.Expect(abendessen).ToContainTextAsync("Restetag: Reste verwerten.");
+        await Assertions.Expect(seite.GetByText("Mia")).ToHaveCountAsync(0);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        // Am Laptop zeigt das Bild die Mahlzeiten bis zum Restetag, am Handy die Übersicht oben.
+        if (geraet == "laptop")
+        {
+            await abendessen.ScrollIntoViewIfNeededAsync();
+        }
+
+        await BildAsync(seite, "tagesansicht", geraet);
     }
 
     /// <summary>Story 3-6: „Abgelegt am …“ hängt vom Tag des Einspielens ab; im Bild steht ein festes Datum.</summary>

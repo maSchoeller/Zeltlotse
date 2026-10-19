@@ -108,7 +108,9 @@ public sealed class GerichteTests(PostgresContainer postgres) : IAsyncLifetime
         Assert.Equal(
             ["Frühstück 08:00 Fruehstueck", "Mittagessen 12:30 Mittagessen", "Abendessen 18:30 Abendessen"],
             mahlzeiten.Select(m => $"{m.GetProperty("titel").GetString()} {m.GetProperty("beginn").GetString()} {m.GetProperty("art").GetString()}"));
-        Assert.Equal(["art", "beginn", "gerichte", "programmpunktId", "titel"], Namen(mahlzeiten[0]));
+        Assert.Equal(["art", "beginn", "gerichte", "programmpunktId", "restetag", "titel"], Namen(mahlzeiten[0]));
+        // Story 4-4: ohne Stand kein Restetag.
+        Assert.All(mahlzeiten, m => Assert.False(m.GetProperty("restetag").GetBoolean()));
         Assert.All(tage, t => Assert.Equal(3, t.GetProperty("mahlzeiten").GetArrayLength()));
         Assert.Equal(["Chili sin Carne", "Pfannkuchen"], plan.GetProperty("rezepte").EnumerateArray().Select(r => r.GetProperty("name").GetString()));
         Assert.Equal(36L, await WertAsync<long>(_s.Verbindung, "SELECT count(*) FROM programm.programmpunkt WHERE \"Mahlzeit\" IS NOT NULL"));

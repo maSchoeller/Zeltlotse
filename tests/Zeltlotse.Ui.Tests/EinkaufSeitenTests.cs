@@ -108,9 +108,9 @@ public sealed class EinkaufSeitenTests : BunitContext
         Assert.Equal("Küche", cut.Find(".elkw-kicker").TextContent);
         Assert.Equal("Einkauf", cut.Find("h1").TextContent);
         var reiter = cut.FindAll("nav[aria-label=Küche] a");
-        Assert.Equal(["Rezepte", "Essensplan", "Einkaufsliste", "Einkauf"], reiter.Select(a => a.TextContent));
-        Assert.Equal($"freizeiten/{Freizeit}/kueche/einkauf", reiter[3].GetAttribute("href"));
-        Assert.Equal("page", reiter[3].GetAttribute("aria-current"));
+        Assert.Equal(["Tagesansicht", "Rezepte", "Essensplan", "Einkaufsliste", "Einkauf"], reiter.Select(a => a.TextContent));
+        Assert.Equal($"freizeiten/{Freizeit}/kueche/einkauf", reiter[4].GetAttribute("href"));
+        Assert.Equal("page", reiter[4].GetAttribute("aria-current"));
         var dienstag = cut.Find("#tag-2027-08-03");
         Assert.Equal("Dienstag, 3. August 2027", dienstag.QuerySelector("h2")!.TextContent);
         Assert.Equal(["Mehl 500 g · Pfannkuchen · Frühstück", "Äpfel 3 kg"], dienstag.QuerySelectorAll("label.elkw-choice").Select(l => l.TextContent.Trim()));

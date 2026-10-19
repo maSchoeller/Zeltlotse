@@ -2,7 +2,7 @@
 title: Einkaufsliste
 description: Die Einkaufsliste aus den Gerichten, Mengen von Hand, eigene Posten, Freigabe zum Einkaufen und der Allergen-Abgleich mit Ersatzportionen.
 sidebar:
-  order: 3
+  order: 4
 ---
 
 **Wer:** Leitung und Team einer Freizeit. Küche ist keine eigene Rolle; wer kocht oder einkauft, arbeitet mit den Rechten des Teams.
@@ -64,6 +64,10 @@ Die Ersatzportionen kommen **zusätzlich** zur Menge; die Hauptmenge bleibt so, 
 
 Fragt die Freizeit die Allergie-Frage weder für Teilnehmende noch für Mitarbeitende ab, steht in der Card „Diese Freizeit fragt keine Allergien ab.“, und es gibt keine Ersatzportionen. Nennt kein bestätigter Freizeitpass ein Allergen, steht dort „Keine Allergien in den bestätigten Freizeitpässen.“
 
+## Restetag
+
+Markiert die Küche eine Mahlzeit als [Restetag](/kueche/tagesansicht/#restetag-setzen-und-zurücknehmen), ändert das die Einkaufsliste nicht: Die Gerichte der Mahlzeit bleiben, und ihre Posten stehen weiter auf der Liste.
+
 ## Datenschutz
 
 Die Küche sieht beim Abgleich **nur Anzahlen**: keine Namen, keine Antworten und keinen Freitext. Zeltlotse speichert in der Küche keine Allergie-Angaben, sondern fragt sie bei jedem Öffnen neu ab. Jeder Abgleich steht im Zugriffsprotokoll der betroffenen Personen als „Allergen-Abgleich der Küche“, ohne Namen eines Teammitglieds und höchstens einmal am Tag – siehe [Was passiert mit meinen Daten](/daten/#einsicht-und-zugriffsprotokoll).
@@ -74,4 +78,4 @@ Nach dem Abschluss der Freizeit ist die Einkaufsliste nur lesbar: Oben steht „
 
 ## Noch nicht dabei
 
-Eine Summe gleicher Zutaten über alle Gerichte, die Tagesansicht der Küche, der Restetag und Einkaufen ohne Netz (offline) kommen mit einer späteren Version.
+Eine Summe gleicher Zutaten über alle Gerichte und Einkaufen ohne Netz (offline) kommen mit einer späteren Version.

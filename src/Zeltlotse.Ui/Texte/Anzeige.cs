@@ -203,6 +203,7 @@ public static class Anzeige
         Zeltlotse.Api.Contracts.Personen.ZugriffZweck.NachweiseEingesehen => "Nachweise eingesehen",
         Zeltlotse.Api.Contracts.Personen.ZugriffZweck.FreizeitpassEingesehen => "Freizeitpass eingesehen",
         Zeltlotse.Api.Contracts.Personen.ZugriffZweck.AllergeneFuerKueche => "Allergen-Abgleich der Küche",
+        Zeltlotse.Api.Contracts.Personen.ZugriffZweck.SonderkostFuerKueche => "Sonderkost-Abgleich der Küche",
         _ => zweck.ToString(),
     };
 

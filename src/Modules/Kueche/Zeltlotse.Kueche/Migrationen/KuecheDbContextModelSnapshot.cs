@@ -109,6 +109,39 @@ namespace Zeltlotse.Kueche.Migrationen
                     b.ToTable("gericht", "kueche");
                 });
 
+            modelBuilder.Entity("Zeltlotse.Kueche.Einkauf.MahlzeitStand", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProgrammpunktId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Restetag")
+                        .HasColumnType("boolean");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("FreizeitId", "ProgrammpunktId")
+                        .IsUnique();
+
+                    b.ToTable("mahlzeit_stand", "kueche");
+                });
+
             modelBuilder.Entity("Zeltlotse.Kueche.Einkauf.MengeVonHand", b =>
                 {
                     b.Property<Guid>("Id")

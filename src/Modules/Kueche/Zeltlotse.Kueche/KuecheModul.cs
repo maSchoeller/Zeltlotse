@@ -38,7 +38,8 @@ public static class KuecheModul
     /// Liste und Rezept lesen (mit hochgerechneten Mengen), Rezept anlegen, bearbeiten (Autosave, AD-19) und löschen, Zutaten hinzufügen, bearbeiten
     /// und entfernen. Story 4-2: unter <c>…/kueche</c> der Essensplan (lesen, Gerichte vormerken, entfernen, Tausch-Vorschau und Tausch) und die
     /// Einkaufsliste (lesen, Hand-Mengen, Hand-Posten anlegen, bearbeiten und entfernen), ebenso für Leitung und Team mit dem Modul Verpflegung. Story 4-3:
-    /// Posten freigeben und abhaken (an den PATCH-Routen), die Tages-Freigabe und die Seite der Einkaufenden (<c>…/kueche/einkauf</c>).
+    /// Posten freigeben und abhaken (an den PATCH-Routen), die Tages-Freigabe und die Seite der Einkaufenden (<c>…/kueche/einkauf</c>). Story 4-4: die
+    /// Küchen-Tagesansicht (<c>…/kueche/tagesansicht</c>) und der Restetag je Mahlzeit (<c>…/kueche/mahlzeiten/{programmpunktId}</c>).
     /// </summary>
     public static IEndpointRouteBuilder MapKuecheEndpoints(this IEndpointRouteBuilder api)
     {
@@ -67,6 +68,9 @@ public static class KuecheModul
         // Story 4-3: Tages-Freigabe und die Seite der Einkaufenden.
         kueche.MapPost("/einkaufsliste/freigabe", EinkaufFreigebenEndpunkt.Freigeben).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
         kueche.MapGet("/einkauf", EinkaufLadenEndpunkt.Laden).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
+        // Story 4-4: Küchen-Tagesansicht und Restetag.
+        kueche.MapGet("/tagesansicht", TagesansichtLadenEndpunkt.Laden).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
+        kueche.MapPatch("/mahlzeiten/{programmpunktId:guid}", RestetagAendernEndpunkt.Aendern).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
         return api;
     }
 }

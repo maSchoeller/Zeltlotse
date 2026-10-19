@@ -273,11 +273,11 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
             verbindung, "SELECT count(*) FROM freizeiten.outbox_zustellung WHERE \"Empfaenger\" = 'Zeltlotse.Mail' AND \"ErledigtAm\" IS NOT NULL"));
 
         // Story 2-4: Miriam hat die Fragen je Zielgruppe gewählt; Katrin hat für Emma drei Antworten gespeichert (genau drei Zeilen,
-        // auch nach dem zweiten Einspielen, nur verschlüsselt); Emmas Anmeldung trägt die Fragen für Teilnehmende.
+        // auch nach dem zweiten Einspielen, nur verschlüsselt; mit Mias fünf Antworten acht Zeilen); Emmas Anmeldung trägt die Fragen für Teilnehmende.
         var fragen = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/fragen", Abbruch));
         Assert.Equal((DemoKatalog.Fragen.Teilnehmende, DemoKatalog.Fragen.Mitarbeitende), (fragen.GetProperty("teilnehmende").GetString(), fragen.GetProperty("mitarbeitende").GetString()));
         Assert.Equal(DemoKatalog.Fragen.Teilnehmende, string.Join(',', anmeldungen[0].GetProperty("fragen").EnumerateArray().Select(f => f.GetString())));
-        Assert.Equal(7L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort"));
+        Assert.Equal(8L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort"));
 
         // Story 3-7: Im Zeltlager sind Verpflegung und Finanzen an, der Teilnehmer-Zugang aus (auch nach dem zweiten Einspielen); die
         // Kinderbibeltage nutzen kein Modul.
@@ -343,6 +343,18 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.posten_stand WHERE \"Gekauft\""));
         Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.einkaufsposten WHERE \"Freigegeben\" OR \"Gekauft\""));
 
+        // Story 4-4: Das Abendessen am Dienstag (03.08.) ist ein Restetag; die Tagesansicht zeigt dazu Gluten und vegetarisch (Mia, bestätigt) je einmal.
+        // Nichts doppelt, auch nach dem zweiten Einspielen; der Restetag ändert den Essensplan sonst nicht.
+        var ansicht = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/kueche/tagesansicht?tag=2027-08-03", Abbruch));
+        Assert.Equal(
+            ["Frühstück False", "Mittagessen False", "Abendessen True"],
+            ansicht.GetProperty("mahlzeiten").EnumerateArray().Select(m => $"{m.GetProperty("titel").GetString()} {m.GetProperty("restetag").GetBoolean()}"));
+        Assert.Equal(["gluten 1"], ansicht.GetProperty("allergene").EnumerateArray().Select(a => $"{a.GetProperty("allergen").GetString()} {a.GetProperty("anzahl").GetInt32()}"));
+        Assert.Equal(["vegetarisch 1"], ansicht.GetProperty("sonderkost").EnumerateArray().Select(s => $"{s.GetProperty("sonderkost").GetString()} {s.GetProperty("anzahl").GetInt32()}"));
+        Assert.True(dienstag[2].GetProperty("restetag").GetBoolean());
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.mahlzeit_stand"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.mahlzeit_stand WHERE \"Restetag\""));
+
         // Story 2-5: Die Fragen-Auswahl kam vor den Anmeldungen: Emmas Freigabe (eingegangen) und Mias (bestätigt) tragen die Fragen für
         // Teilnehmende, Leas die für Mitarbeitende. Daniel hat für Mia drei Antworten gespeichert, Lea eine Team-Notiz zu Mia geschrieben
         // (genau eine, auch nach dem zweiten Einspielen, nur verschlüsselt). Emmas Anmeldung nennt „Einsicht bis“.
@@ -355,8 +367,9 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
 
         Assert.Equal(
             DemoKatalog.Fragen.Mitarbeitende.Split(','), await AnmeldeHelfer.WertAsync<string[]>(verbindung, "SELECT \"Fragen\" FROM personen.freigabe WHERE \"PersonId\" = @p", ("p", lea)));
-        // Story 2-11: dazu Mias Medikamente für den Notfallordner, also vier Antworten.
-        Assert.Equal(4L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort WHERE \"PersonId\" = @m", ("m", mia)));
+        // Story 2-11: dazu Mias Medikamente für den Notfallordner; Story 4-4: dazu „vegetarisch“, also fünf Antworten.
+        Assert.Equal(5L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM personen.freizeitpass_antwort WHERE \"PersonId\" = @m", ("m", mia)));
+        Assert.Contains(("ernaehrung", "vegetarisch"), DemoKatalog.MiasFreizeitpass);
         Assert.Contains(("medikamente", "Asthmaspray bei Bedarf, liegt im Kulturbeutel"), DemoKatalog.MiasFreizeitpass);
         Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.team_notiz"));
         Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(
@@ -376,7 +389,7 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
             [
                 $"Lea Feuerstein {gefragtMitarbeitende}/{gefragtMitarbeitende}",
                 $"Emma Muster {gefragtTeilnehmende}/{gefragtTeilnehmende - 3}",
-                $"Mia Probst {gefragtTeilnehmende}/{gefragtTeilnehmende - 4}",
+                $"Mia Probst {gefragtTeilnehmende}/{gefragtTeilnehmende - 5}",
                 $"Tobias Wanderer {gefragtMitarbeitende}/{gefragtMitarbeitende}",
             ],
             stand.GetProperty("personen").EnumerateArray().Select(p =>

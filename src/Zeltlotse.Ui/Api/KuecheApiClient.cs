@@ -39,6 +39,7 @@ public sealed record PostenAktion(KuecheAktionErgebnis Ergebnis, EinkaufslistenP
 /// <see cref="RezeptPfad"/> und <see cref="ZutatPfad"/>. Story 4-2: Essensplan mit Vormerken, Entfernen, Tausch-Vorschau und Tausch, die Einkaufsliste
 /// mit Hand-Posten; den Autosave von Hand-Mengen und Hand-Posten übernimmt der Autosave-Baustein mit <see cref="HandMengePfad"/> und
 /// <see cref="PostenPfad"/>. Story 4-3: die Seite der Einkaufenden und die Tages-Freigabe; Freigeben und Abhaken einzelner Posten über dieselben Pfade.
+/// Story 4-4: die Küchen-Tagesansicht; den Restetag speichert der Autosave-Baustein mit <see cref="MahlzeitPfad"/>.
 /// </summary>
 public sealed class KuecheApiClient(HttpClient http)
 {
@@ -68,6 +69,12 @@ public sealed class KuecheApiClient(HttpClient http)
 
     /// <summary>Story 4-3: Pfad der Seite der Einkaufenden.</summary>
     public static string EinkaufPfad(Guid freizeitId) => $"/api/freizeiten/{freizeitId}/kueche/einkauf";
+
+    /// <summary>Story 4-4: Pfad der Küchen-Tagesansicht.</summary>
+    public static string TagesansichtPfad(Guid freizeitId) => $"/api/freizeiten/{freizeitId}/kueche/tagesansicht";
+
+    /// <summary>Story 4-4: Pfad einer Mahlzeit für den Autosave-Baustein (<c>PATCH</c>, Feld <c>restetag</c>).</summary>
+    public static string MahlzeitPfad(Guid freizeitId, Guid programmpunktId) => $"/api/freizeiten/{freizeitId}/kueche/mahlzeiten/{programmpunktId}";
 
     /// <summary><c>GET …/kueche/rezepte</c>: die Rezepte und die Personenzahl oder <c>null</c> bei <c>403</c>/<c>404</c> (auch ohne Verpflegung).</summary>
     public Task<Rezeptliste?> RezepteLadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
@@ -128,6 +135,32 @@ public sealed class KuecheApiClient(HttpClient http)
     /// <summary>Story 4-3: <c>GET …/kueche/einkauf</c> (nur freigegebene Posten) oder <c>null</c> bei <c>403</c>/<c>404</c> (auch ohne Verpflegung).</summary>
     public Task<Einkauf?> EinkaufLadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
         LadenAsync<Einkauf>(EinkaufPfad(freizeitId), "den Einkauf", abbruch);
+
+    /// <summary>
+    /// Story 4-4: <c>GET …/kueche/tagesansicht?tag=JJJJ-MM-TT</c> oder <c>null</c> bei <c>403</c>/<c>404</c> (auch ohne Verpflegung). Ohne Tag wählt der
+    /// Server heute oder den ersten Tag. Lehnt der Server den Tag ab (<c>400</c>, z. B. ein alter Link auf einen Tag außerhalb der Freizeit), lädt der
+    /// Client ohne Tag.
+    /// </summary>
+    public async Task<Tagesansicht?> TagesansichtLadenAsync(Guid freizeitId, DateOnly? tag = null, CancellationToken abbruch = default)
+    {
+        if (tag is { } wert)
+        {
+            using var antwort = await http.GetAsync($"{TagesansichtPfad(freizeitId)}?tag={wert.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)}", abbruch);
+            if (antwort.StatusCode != HttpStatusCode.BadRequest)
+            {
+                if (antwort.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+                {
+                    return null;
+                }
+
+                antwort.EnsureSuccessStatusCode();
+                return await antwort.Content.ReadFromJsonAsync<Tagesansicht>(ApiJson.Optionen, abbruch)
+                       ?? throw new HttpRequestException("Leere Antwort beim Laden: die Tagesansicht.");
+            }
+        }
+
+        return await LadenAsync<Tagesansicht>(TagesansichtPfad(freizeitId), "die Tagesansicht", abbruch);
+    }
 
     /// <summary>
     /// Story 4-3: <c>POST …/einkaufsliste/freigabe</c>: gibt alle Posten eines Tags (ohne Tag: die Hand-Posten ohne Tag) frei oder nimmt die Freigabe

@@ -132,11 +132,11 @@ public sealed class EssensplanSeitenTests : BunitContext
         Assert.Equal("Küche", cut.Find(".elkw-kicker").TextContent);
         Assert.Equal("Essensplan", cut.Find("h1").TextContent);
         var kueche = cut.FindAll("nav[aria-label=Küche] a");
-        Assert.Equal(["Rezepte", "Essensplan", "Einkaufsliste", "Einkauf"], kueche.Select(a => a.TextContent));
+        Assert.Equal(["Tagesansicht", "Rezepte", "Essensplan", "Einkaufsliste", "Einkauf"], kueche.Select(a => a.TextContent));
         Assert.Equal(
-            [$"freizeiten/{Freizeit}/kueche/rezepte", $"freizeiten/{Freizeit}/kueche/essensplan", $"freizeiten/{Freizeit}/kueche/einkaufsliste", $"freizeiten/{Freizeit}/kueche/einkauf"],
+            [$"freizeiten/{Freizeit}/kueche/tagesansicht", $"freizeiten/{Freizeit}/kueche/rezepte", $"freizeiten/{Freizeit}/kueche/essensplan", $"freizeiten/{Freizeit}/kueche/einkaufsliste", $"freizeiten/{Freizeit}/kueche/einkauf"],
             kueche.Select(a => a.GetAttribute("href")));
-        Assert.Equal("page", kueche[1].GetAttribute("aria-current"));
+        Assert.Equal("page", kueche[2].GetAttribute("aria-current"));
         var tage = cut.FindAll("nav[aria-label=Tage] a");
         Assert.Equal(["Mo 02.08.", "Di 03.08."], tage.Select(a => a.TextContent));
         Assert.Equal($"freizeiten/{Freizeit}/kueche/essensplan?tag=2027-08-02", tage[0].GetAttribute("href"));
@@ -389,7 +389,7 @@ public sealed class EssensplanSeitenTests : BunitContext
         var cut = ListeRendern();
 
         Assert.Equal("Einkaufsliste", cut.Find("h1").TextContent);
-        Assert.Equal("page", cut.FindAll("nav[aria-label=Küche] a")[2].GetAttribute("aria-current"));
+        Assert.Equal("page", cut.FindAll("nav[aria-label=Küche] a")[3].GetAttribute("aria-current"));
         Assert.Contains("Berechnet für 8 Personen der Freizeit.", cut.FindAll("p").Select(p => p.TextContent));
         var abgleich = cut.Find("#allergen-abgleich");
         Assert.Equal(["Gluten: 1 Person", "Milch: 2 Personen"], abgleich.QuerySelectorAll("li").Select(l => l.TextContent));
@@ -519,7 +519,7 @@ public sealed class EssensplanSeitenTests : BunitContext
         cut.WaitForAssertion(() => Assert.DoesNotContain("Wird geladen", cut.Markup, StringComparison.Ordinal));
 
         var reiter = cut.FindAll("nav[aria-label=Küche] a");
-        Assert.Equal(["Rezepte", "Essensplan", "Einkaufsliste", "Einkauf"], reiter.Select(a => a.TextContent));
-        Assert.Equal("page", reiter[0].GetAttribute("aria-current"));
+        Assert.Equal(["Tagesansicht", "Rezepte", "Essensplan", "Einkaufsliste", "Einkauf"], reiter.Select(a => a.TextContent));
+        Assert.Equal("page", reiter[1].GetAttribute("aria-current"));
     }
 }

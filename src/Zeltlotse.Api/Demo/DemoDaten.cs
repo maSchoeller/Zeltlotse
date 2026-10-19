@@ -27,6 +27,7 @@ using RezeptFeld = Zeltlotse.Api.Contracts.Kueche.RezeptFeld;
 using ZutatFeld = Zeltlotse.Api.Contracts.Kueche.ZutatFeld;
 using EinkaufspostenFeld = Zeltlotse.Api.Contracts.Kueche.EinkaufspostenFeld;
 using HandMengeFeld = Zeltlotse.Api.Contracts.Kueche.HandMengeFeld;
+using MahlzeitFeld = Zeltlotse.Api.Contracts.Kueche.MahlzeitFeld;
 using Zeltlotse.Organisationen.Daten;
 using Zeltlotse.Organisationen.Dokumente;
 using Zeltlotse.Organisationen.Einladungen;
@@ -172,6 +173,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await GerichteAsync(abbruch);
         // Story 4-3: ein Tag zum Einkaufen freigegeben, zwei Posten schon gekauft.
         await EinkaufAsync(abbruch);
+        // Story 4-4: das Abendessen am 03.08. als Restetag.
+        await RestetagAsync(abbruch);
         await MaterialAsync(abbruch);
         await ZweiteFreizeitAsync(abbruch);
         await InventarAsync(abbruch);
@@ -758,6 +761,37 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
                 is not HandMengeAenderung.StandGespeichert)
             {
                 throw new InvalidOperationException($"Demo-Einkauf: {zutatName} ließ sich nicht abhaken.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Story 4-4: Restetage der Demo-Freizeit aus <see cref="DemoKatalog.Restetage"/> über den Command des Moduls Küche. Idempotent: nur, wenn die
+    /// Mahlzeit noch kein Restetag ist (der alte Wert ist der aktuelle).
+    /// </summary>
+    private async Task RestetagAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var freizeitId = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name)
+            .Select(f => f.Id)
+            .SingleAsync(abbruch);
+        var lesen = dienste.GetRequiredService<KuecheLeseDbContext>();
+        var mahlzeiten = await dienste.GetRequiredService<EinkaufAbfrage>().MahlzeitenAsync(freizeitId, abbruch);
+        foreach (var (tag, mahlzeit) in DemoKatalog.Restetage)
+        {
+            var punkt = mahlzeiten.First(m => m.Tag == tag && m.Titel == mahlzeit).ProgrammpunktId;
+            if (await lesen.MahlzeitStaende.AnyAsync(s => s.FreizeitId == freizeitId && s.ProgrammpunktId == punkt && s.Restetag, abbruch))
+            {
+                continue;
+            }
+
+            if (await sender.Send(new RestetagAendernCommand(freizeitId, punkt, MahlzeitFeld.Restetag, 0, "false", "true"), abbruch) is not RestetagAenderung.Gespeichert)
+            {
+                throw new InvalidOperationException($"Demo-Küche: {mahlzeit} am {tag:dd.MM.yyyy} ließ sich nicht als Restetag markieren.");
             }
         }
     }

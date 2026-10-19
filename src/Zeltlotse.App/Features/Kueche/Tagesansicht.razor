@@ -1,0 +1,225 @@
+@page "/freizeiten/{FreizeitId:guid}/kueche/tagesansicht"
+@using System.Globalization
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Kueche
+@using Zeltlotse.Ui.Kontext
+@using ApiTagesansicht = Zeltlotse.Api.Contracts.Kueche.Tagesansicht
+@inject FreizeitKontextDienst Kontext
+@inject KuecheApiClient KuecheApi
+@* Küchen-Tagesansicht (FR-52, FR-53, CAP-31, Story 4-4) für Leitung und Team, erster Küche-Reiter. Dachzeile „Küche“, Überschrift „Tagesansicht“,
+   darunter die Küche-Reiter und Reiter je Tag (gewählt über ?tag=JJJJ-MM-TT; ohne Wahl wählt der Server heute, wenn heute ein Tag der Freizeit ist,
+   sonst den ersten Tag). Card „Allergien und Sonderkost“: je Allergen und je Sonderkost die Zahl der Personen aus bestätigten Freizeitpässen (ohne
+   Namen), sonst „Keine … in den bestätigten Freizeitpässen.“ oder „Diese Freizeit fragt keine … ab.“. Je Mahlzeit eine Card (Titel, Uhrzeit) mit den
+   Gerichten (Link zum Rezept) und „N Ersatzportionen einplanen (enthält …)“; ohne Gericht „Kein Gericht vorgemerkt.“ mit dem Weg zum Essensplan an
+   diesem Tag. Ankreuzfeld „Restetag“ mit Autosave („Gespeichert · Rückgängig“); gesetzt steht „Restetag: Reste verwerten.“ dabei. Der Restetag ist
+   eine reine Markierung und ändert weder Gerichte noch Einkauf. In der Phase „gelaufen“ nur lesbar: der Restetag nur als Text. Kontext oder
+   Tagesansicht nicht verfügbar (auch ohne Verpflegung) → „Diese Seite ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung. *@
+<PageTitle>Tagesansicht – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Küche</Dachzeile>
+    <h1>Tagesansicht</h1>
+    <KuecheReiter FreizeitId="FreizeitId" Aktiv="tagesansicht" />
+
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+
+    @if (_ansicht is null || _kontext is null)
+    {
+        @if (_meldung is null)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@KuecheTexte.AbgeschlossenText</p>
+            </Meldung>
+        }
+        <p>@KuecheTexte.Hochgerechnet(_ansicht.Personenzahl)</p>
+
+        <Reiter Bezeichnung="Tage" Eintraege="TagReiter">
+            <h2>@Anzeige.TagLang(_ansicht.Tag)</h2>
+            <Card Titel="Allergien und Sonderkost" Ebene="3" Id="allergien-sonderkost">
+                <h4>Allergien</h4>
+                @if (!_ansicht.AllergienAbgefragt)
+                {
+                    <p>@KuecheTexte.KeineAllergienText</p>
+                }
+                else if (_ansicht.Allergene.Count == 0)
+                {
+                    <p>@KuecheTexte.KeineAllergeneText</p>
+                }
+                else
+                {
+                    <ul>
+                        @foreach (var allergen in _ansicht.Allergene)
+                        {
+                            <li>@KuecheTexte.AllergenZeile(allergen)</li>
+                        }
+                    </ul>
+                }
+                <h4>Sonderkost</h4>
+                @if (!_ansicht.SonderkostAbgefragt)
+                {
+                    <p>@KuecheTexte.KeineSonderkostAbgefragtText</p>
+                }
+                else if (_ansicht.Sonderkost.Count == 0)
+                {
+                    <p>@KuecheTexte.KeineSonderkostText</p>
+                }
+                else
+                {
+                    <ul>
+                        @foreach (var sonderkost in _ansicht.Sonderkost)
+                        {
+                            <li>@KuecheTexte.SonderkostZeile(sonderkost)</li>
+                        }
+                    </ul>
+                }
+                @if (_ansicht.AllergienAbgefragt || _ansicht.SonderkostAbgefragt)
+                {
+                    <p>Nur Anzahlen aus bestätigten Freizeitpässen, ohne Namen. Wer betroffen ist, steht im Freizeitpass.</p>
+                }
+            </Card>
+
+            @foreach (var mahlzeit in _ansicht.Mahlzeiten)
+            {
+                <Card @key="mahlzeit.ProgrammpunktId" Titel="@mahlzeit.Titel" Dachzeile="@mahlzeit.Beginn" Ebene="3" Id="@($"mahlzeit-{mahlzeit.ProgrammpunktId}")">
+                    @* Wie im Essensplan: der Hinweis zum Restetag als erste Zeile der Card. *@
+                    @if (_restetag.GetValueOrDefault(mahlzeit.ProgrammpunktId))
+                    {
+                        <p>@KuecheTexte.RestetagText</p>
+                    }
+                    @if (mahlzeit.Gerichte.Count == 0)
+                    {
+                        <p>Kein Gericht vorgemerkt.</p>
+                        @if (!Abgeschlossen)
+                        {
+                            <p><a href="@KuecheTexte.EssensplanZiel(FreizeitId, _ansicht.Tag)">Im Essensplan vormerken</a></p>
+                        }
+                    }
+                    @foreach (var gericht in mahlzeit.Gerichte)
+                    {
+                        <p><strong><a href="@KuecheTexte.RezeptZiel(FreizeitId, gericht.RezeptId)">@gericht.RezeptName</a></strong></p>
+                        @if (_ansicht.AllergienAbgefragt && gericht.Ersatzportionen.Anzahl > 0)
+                        {
+                            <p>@KuecheTexte.Ersatzportionen(gericht.Ersatzportionen)</p>
+                        }
+                    }
+                    @if (!Abgeschlossen)
+                    {
+                        <AutosaveAnkreuzfeld @key="@($"restetag-{mahlzeit.ProgrammpunktId}-{_ladung}")" Label="Restetag" Id="@($"restetag-{mahlzeit.ProgrammpunktId}")"
+                                             Feldname="@MahlzeitFelder.Restetag" Pfad="@KuecheApiClient.MahlzeitPfad(FreizeitId, mahlzeit.ProgrammpunktId)"
+                                             Wert="@mahlzeit.Restetag" Version="@mahlzeit.Version" NeuLaden="LadenAsync"
+                                             Gespeichert="@(wert => _restetag[mahlzeit.ProgrammpunktId] = wert == "true")" />
+                    }
+                </Card>
+            }
+        </Reiter>
+    }
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    private ApiTagesansicht? _ansicht;
+    // Der Restetag je Mahlzeit, wie er gerade gespeichert ist (für den Hinweis, auch nach dem Antippen).
+    private readonly Dictionary<Guid, bool> _restetag = [];
+    // Zählt jedes Laden; Teil des @key der Ankreuzfelder, damit sie nach „Neu laden“ aus dem neuen Stand entstehen.
+    private int _ladung;
+    private bool _nichtVerfuegbar;
+    private string? _meldung;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    /// <summary>Der gewählte Tag als <c>JJJJ-MM-TT</c>; ohne gültige Wahl wählt der Server.</summary>
+    [SupplyParameterFromQuery(Name = "tag")] public string? TagWahl { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    private IReadOnlyList<ReiterEintrag> TagReiter =>
+        [.. _ansicht!.Tage.Select(t => new ReiterEintrag(Anzeige.TagKurz(t), KuecheTexte.TagesansichtZiel(FreizeitId, t), t == _ansicht.Tag))];
+
+    private DateOnly? Gewaehlt =>
+        DateOnly.TryParseExact(TagWahl, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var tag) ? tag : null;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Ein anderer Tag-Reiter lädt nur die Tagesansicht neu; der Kontext bleibt.
+        if (_kontext is not null && _kontext.FreizeitId == FreizeitId)
+        {
+            await LadenAsync();
+            return;
+        }
+
+        _kontext = null;
+        _ansicht = null;
+        _nichtVerfuegbar = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var ansicht = KuecheApi.TagesansichtLadenAsync(FreizeitId, Gewaehlt);
+            await Task.WhenAll(kontext, ansicht);
+            if (kontext.Result is null || ansicht.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            _kontext = kontext.Result;
+            Uebernehmen(ansicht.Result);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“ oder „leer“.
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Lädt die Tagesansicht des gewählten Tags neu (auch „Neu laden“ beim Konflikt).</summary>
+    private async Task LadenAsync()
+    {
+        try
+        {
+            if (await KuecheApi.TagesansichtLadenAsync(FreizeitId, Gewaehlt) is { } ansicht)
+            {
+                _meldung = null;
+                Uebernehmen(ansicht);
+            }
+            else
+            {
+                _nichtVerfuegbar = true;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    private void Uebernehmen(ApiTagesansicht ansicht)
+    {
+        _ansicht = ansicht;
+        _restetag.Clear();
+        foreach (var mahlzeit in ansicht.Mahlzeiten)
+        {
+            _restetag[mahlzeit.ProgrammpunktId] = mahlzeit.Restetag;
+        }
+
+        _ladung++;
+    }
+}

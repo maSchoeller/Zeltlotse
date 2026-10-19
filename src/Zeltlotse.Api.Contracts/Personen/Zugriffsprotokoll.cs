@@ -16,6 +16,10 @@ public enum ZugriffZweck
     /// <summary>Story 4-2: Der Allergen-Abgleich der Küche hat die Allergie-Auswahl gelesen (nur Anzahlen, ohne lesende Person, AD-8).</summary>
     [JsonStringEnumMemberName("allergeneFuerKueche")]
     AllergeneFuerKueche = 3,
+
+    /// <summary>Story 4-4: Der Sonderkost-Abgleich der Küche hat die Ernährungs-Auswahl gelesen (nur Anzahlen, ohne lesende Person, AD-8).</summary>
+    [JsonStringEnumMemberName("sonderkostFuerKueche")]
+    SonderkostFuerKueche = 4,
 }
 
 /// <summary>

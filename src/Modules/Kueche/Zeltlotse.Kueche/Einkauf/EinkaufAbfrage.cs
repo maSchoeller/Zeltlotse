@@ -7,7 +7,10 @@ using Zeltlotse.Programm.Contracts.Mahlzeiten;
 
 namespace Zeltlotse.Kueche.Einkauf;
 
-/// <summary>Story 4-2: Ergebnis des Allergen-Abgleichs: ob die Freizeit Allergien abfragt, und die anonymen Profile (sonst leer).</summary>
+/// <summary>
+/// Story 4-2: Ergebnis des Allergen-Abgleichs: ob die Freizeit Allergien abfragt, und die anonymen Profile (sonst leer). Story 4-4: ebenso für die
+/// Sonderkost (<see cref="EinkaufAbfrage.SonderkostAsync"/>).
+/// </summary>
 internal sealed record Abgleich(bool AllergienAbgefragt, IReadOnlyList<IReadOnlyList<string>> Profile);
 
 /// <summary>
@@ -19,7 +22,8 @@ internal sealed class EinkaufAbfrage(
     IFreizeitMahlzeitenLesen mahlzeitenLesen,
     IFreizeitPersonenzahlLesen personenLesen,
     IFreizeitFragenLesen fragenLesen,
-    IFreizeitpassAllergene allergene)
+    IFreizeitpassAllergene allergene,
+    IFreizeitpassSonderkost sonderkost)
 {
     /// <summary>Die Mahlzeiten der Freizeit (fehlende legt Programm vorher an).</summary>
     public Task<IReadOnlyList<FreizeitMahlzeit>> MahlzeitenAsync(Guid freizeitId, CancellationToken abbruch) => mahlzeitenLesen.MahlzeitenAsync(freizeitId, abbruch);
@@ -75,5 +79,21 @@ internal sealed class EinkaufAbfrage(
 
         var personen = await personenLesen.PersonenAsync(freizeitId, abbruch);
         return new Abgleich(true, personen.Count == 0 ? [] : await allergene.ProfileAsync(freizeitId, personen, abbruch));
+    }
+
+    /// <summary>
+    /// Story 4-4, FR-52: Fragt die Freizeit die Frage „Ernährung“ ab, liefert Personen die anonymen Sonderkost-Profile derselben Personen, die die
+    /// Personenzahl bilden (Personen protokolliert den Zweck „Sonderkost-Abgleich der Küche“ ohne lesende Person). Sonst kein Abgleich und keine Abfrage
+    /// bei Personen.
+    /// </summary>
+    public async Task<Abgleich> SonderkostAsync(Guid freizeitId, CancellationToken abbruch)
+    {
+        if (!await fragenLesen.FragtAbAsync(freizeitId, Fragenkatalog.Ernaehrung, abbruch))
+        {
+            return new Abgleich(false, []);
+        }
+
+        var personen = await personenLesen.PersonenAsync(freizeitId, abbruch);
+        return new Abgleich(true, personen.Count == 0 ? [] : await sonderkost.ProfileAsync(freizeitId, personen, abbruch));
     }
 }

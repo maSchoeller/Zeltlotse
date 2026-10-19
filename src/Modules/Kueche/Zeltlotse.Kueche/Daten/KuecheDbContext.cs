@@ -32,7 +32,26 @@ internal sealed class KuecheDbContext(DbContextOptions<KuecheDbContext> optionen
     /// <summary>Story 4-3: Freigabe und Gekauft der berechneten Posten.</summary>
     public DbSet<PostenStand> PostenStaende => Set<PostenStand>();
 
+    /// <summary>Story 4-4: der Restetag der Mahlzeiten.</summary>
+    public DbSet<MahlzeitStand> MahlzeitStaende => Set<MahlzeitStand>();
+
     protected override string Schema => KuecheModul.Schema;
+
+    /// <summary>
+    /// Story 4-4: Stellt die Stand-Zeile einer Mahlzeit sicher (<c>INSERT … ON CONFLICT DO NOTHING</c> auf den eindeutigen Index (Freizeit, Programmpunkt))
+    /// und lädt sie unter dem Mandantenfilter mit Zeilensperre (FOR UPDATE): Zwei gleichzeitige erste Änderungen legen genau eine Zeile an und laufen
+    /// danach nacheinander, ohne Verletzung des Index (keine 500). Ob der Programmpunkt eine Mahlzeit dieser Freizeit ist, prüft der Aufrufer vorher.
+    /// </summary>
+    public async Task<MahlzeitStand> MahlzeitStandSperrenAsync(Guid id, Guid organisationId, Guid freizeitId, Guid programmpunktId, CancellationToken abbruch)
+    {
+        await Database.ExecuteSqlAsync(
+            $"INSERT INTO kueche.mahlzeit_stand (\"Id\", \"OrganisationId\", \"FreizeitId\", \"ProgrammpunktId\", \"Restetag\") VALUES ({id}, {organisationId}, {freizeitId}, {programmpunktId}, FALSE) ON CONFLICT (\"FreizeitId\", \"ProgrammpunktId\") DO NOTHING",
+            abbruch);
+        return (await MahlzeitStaende
+                .FromSql($"SELECT *, xmin FROM kueche.mahlzeit_stand WHERE \"FreizeitId\" = {freizeitId} AND \"ProgrammpunktId\" = {programmpunktId} FOR UPDATE")
+                .ToListAsync(abbruch))
+            .Single();
+    }
 
     /// <summary>
     /// Story 4-1: Lädt ein Rezept der Freizeit unter dem Mandantenfilter mit Zeilensperre (FOR UPDATE): Änderungen, Löschen und neue Zutaten desselben
@@ -122,6 +141,8 @@ internal sealed class KuecheLeseDbContext(DbContextOptions<KuecheLeseDbContext> 
     public DbSet<Einkaufsposten> Einkaufsposten => Set<Einkaufsposten>();
 
     public DbSet<PostenStand> PostenStaende => Set<PostenStand>();
+
+    public DbSet<MahlzeitStand> MahlzeitStaende => Set<MahlzeitStand>();
 
     protected override string Schema => KuecheModul.Schema;
 
@@ -214,6 +235,16 @@ internal static class KuecheModell
             e.HasIndex(s => new { s.GerichtId, s.ZutatId }).IsUnique();
             e.HasIndex(s => s.ZutatId);
             e.HasIndex(s => s.FreizeitId);
+            e.HasIndex(s => s.OrganisationId);
+        });
+
+        // Story 4-4, FR-53: Restetag je Mahlzeit höchstens einmal; die Mahlzeit nur per Kennung (Programm, AD-3), ohne Fremdschlüssel.
+        modelBuilder.Entity<MahlzeitStand>(e =>
+        {
+            e.ToTable("mahlzeit_stand");
+            e.Property(s => s.Id).ValueGeneratedNever();
+            e.Property(s => s.Version).IsRowVersion();
+            e.HasIndex(s => new { s.FreizeitId, s.ProgrammpunktId }).IsUnique();
             e.HasIndex(s => s.OrganisationId);
         });
     }

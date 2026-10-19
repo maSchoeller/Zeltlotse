@@ -6,7 +6,7 @@ namespace Zeltlotse.App.Features.Kueche;
 
 /// <summary>
 /// Story 4-1: Gemeinsames der Küchen-Seiten: Texte, Ziele der Links und die Allergene als Auswahl. Story 4-2: Essensplan und Einkaufsliste. Story 4-3:
-/// Einkauf, Freigabe und „schon gekauft“.
+/// Einkauf, Freigabe und „schon gekauft“. Story 4-4: Tagesansicht, Sonderkost und Restetag.
 /// </summary>
 internal static class KuecheTexte
 {
@@ -42,6 +42,23 @@ internal static class KuecheTexte
     /// <summary>Story 4-2: die Einkaufsliste, mit Tag als Sprungziel der Card dieses Tages.</summary>
     public static string EinkaufslisteZiel(Guid freizeitId, DateOnly? tag = null) =>
         tag is { } wert ? $"freizeiten/{freizeitId}/kueche/einkaufsliste#{TagAnker(wert)}" : $"freizeiten/{freizeitId}/kueche/einkaufsliste";
+
+    /// <summary>Story 4-4: die Küchen-Tagesansicht, mit Tag als <c>?tag=JJJJ-MM-TT</c> (ohne: der Server wählt heute oder den ersten Tag).</summary>
+    public static string TagesansichtZiel(Guid freizeitId, DateOnly? tag = null) =>
+        tag is { } wert ? $"freizeiten/{freizeitId}/kueche/tagesansicht?tag={Iso(wert)}" : $"freizeiten/{freizeitId}/kueche/tagesansicht";
+
+    /// <summary>Story 4-4: Satz, wenn die Freizeit die Frage „Ernährung“ nicht abfragt.</summary>
+    public const string KeineSonderkostAbgefragtText = "Diese Freizeit fragt keine Sonderkost ab.";
+
+    /// <summary>Story 4-4: Satz, wenn kein bestätigter Freizeitpass eine Sonderkost nennt.</summary>
+    public const string KeineSonderkostText = "Keine Sonderkost in den bestätigten Freizeitpässen.";
+
+    /// <summary>Story 4-4: Hinweis an einer Mahlzeit, die als Restetag markiert ist.</summary>
+    public const string RestetagText = "Restetag: Reste verwerten.";
+
+    /// <summary>Story 4-4: „Vegetarisch: 1 Person“, „Vegan: 2 Personen“.</summary>
+    public static string SonderkostZeile(SonderkostAnzahl sonderkost) =>
+        $"{Sonderkost.Text(sonderkost.Sonderkost)}: {Anzeige.Anzahl(sonderkost.Anzahl, "Person", "Personen")}";
 
     /// <summary>Story 4-3: die Seite der Einkaufenden.</summary>
     public static string EinkaufZiel(Guid freizeitId) => $"freizeiten/{freizeitId}/kueche/einkauf";

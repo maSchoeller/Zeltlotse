@@ -1,15 +1,16 @@
 @* Küche-Reiter (Story 4-2): „Rezepte · Essensplan · Einkaufsliste“ als Links oben auf den Küche-Seiten; der aktive trägt aria-current. Story 4-3:
-   dazu „Einkauf“, die Seite der Einkaufenden. *@
+   dazu „Einkauf“, die Seite der Einkaufenden. Story 4-4: „Tagesansicht“ zuerst, die Sicht für den Kochtag. *@
 <Reiter Bezeichnung="Küche" Eintraege="Eintraege" />
 
 @code {
     [Parameter, EditorRequired] public Guid FreizeitId { get; set; }
 
-    /// <summary>Die gewählte Seite: „rezepte“, „essensplan“, „einkaufsliste“ oder „einkauf“.</summary>
+    /// <summary>Die gewählte Seite: „tagesansicht“, „rezepte“, „essensplan“, „einkaufsliste“ oder „einkauf“.</summary>
     [Parameter, EditorRequired] public string Aktiv { get; set; } = "";
 
     private IReadOnlyList<ReiterEintrag> Eintraege =>
     [
+        new("Tagesansicht", KuecheTexte.TagesansichtZiel(FreizeitId), Aktiv == "tagesansicht"),
         new("Rezepte", KuecheTexte.RezepteZiel(FreizeitId), Aktiv == "rezepte"),
         new("Essensplan", KuecheTexte.EssensplanZiel(FreizeitId), Aktiv == "essensplan"),
         new("Einkaufsliste", KuecheTexte.EinkaufslisteZiel(FreizeitId), Aktiv == "einkaufsliste"),

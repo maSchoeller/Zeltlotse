@@ -35,7 +35,7 @@ Der Freizeitpass ist für eine Freizeit nötig und lässt sich daher nicht wider
 
 ## Einsicht und Zugriffsprotokoll
 
-Jede Einsicht in persönliche Daten wird festgehalten: **wer** wann **wessen** Angaben angesehen hat, für welche Organisation und Freizeit und wofür, höchstens einmal am Tag je Person und Zweck. Das betrifft die Prüfung von Nachweisen („Nachweise eingesehen“) und jeden Blick von Leitung oder Team auf die Angaben eines Freizeitpasses („Freizeitpass eingesehen“). Auch der Abgleich der Küche mit der Allergie-Frage steht dort („Allergen-Abgleich der Küche“): Die Küche sieht dabei nur Anzahlen, darum steht bei „Wer“ keine Person, sondern „Niemand persönlich (Abgleich)“. Wer nur den Hinweis „Freizeitpass sichtbar ab Bestätigung der Anmeldung.“ oder „Einsicht beendet am …“ sieht, hat keine Angaben gesehen; das steht nicht im Protokoll. Im **Zugriffsprotokoll** auf der Seite „Zugriffsprotokoll und Meine Daten“ sieht jede Person, wer wann Einsicht in ihre Daten hatte, Eltern auch für ihre Kinder. Das Zugriffsprotokoll gehört der Person; die Organisation sieht es nicht.
+Jede Einsicht in persönliche Daten wird festgehalten: **wer** wann **wessen** Angaben angesehen hat, für welche Organisation und Freizeit und wofür, höchstens einmal am Tag je Person und Zweck. Das betrifft die Prüfung von Nachweisen („Nachweise eingesehen“) und jeden Blick von Leitung oder Team auf die Angaben eines Freizeitpasses („Freizeitpass eingesehen“). Auch der Abgleich der Küche mit der Allergie-Frage („Allergen-Abgleich der Küche“) und mit der Frage „Ernährung“ („Sonderkost-Abgleich der Küche“) steht dort: Die Küche sieht dabei nur Anzahlen, darum steht bei „Wer“ keine Person, sondern „Niemand persönlich (Abgleich)“. Wer nur den Hinweis „Freizeitpass sichtbar ab Bestätigung der Anmeldung.“ oder „Einsicht beendet am …“ sieht, hat keine Angaben gesehen; das steht nicht im Protokoll. Im **Zugriffsprotokoll** auf der Seite „Zugriffsprotokoll und Meine Daten“ sieht jede Person, wer wann Einsicht in ihre Daten hatte, Eltern auch für ihre Kinder. Das Zugriffsprotokoll gehört der Person; die Organisation sieht es nicht.
 
 Auf derselben Seite gibt es per Klick:
 
@@ -73,7 +73,9 @@ Die [Rezepte](/kueche/rezepte/) einer Freizeit enthalten keine Personendaten: Na
 
 Für die Ersatzportionen gleicht Zeltlotse die Allergene der Rezepte mit der Allergie-Frage der Freizeitpässe ab. Gelesen werden nur die angekreuzten Allergene von bestätigten Personen mit laufender Freigabe, nie der Freitext „Sonstiges“; die Küche bekommt davon nur Anzahlen ohne Namen und speichert nichts davon. Jeder Abgleich steht im Zugriffsprotokoll der betroffenen Person als „Allergen-Abgleich der Küche“, ohne lesende Person und höchstens einmal am Tag.
 
-Nach Ablauf der Löschfrist der Organisation für Freizeit-Daten löscht Zeltlotse die Rezepte der Freizeit mit allen Zutaten, die Gerichte und die Einkaufsliste endgültig, zusammen mit den übrigen Arbeitsdaten der Freizeit. Abschalten des Moduls Verpflegung löscht nichts.
+Den Allergen-Abgleich macht Zeltlotse auch bei jedem Aufruf der [Tagesansicht](/kueche/tagesansicht/), für deren Allergen-Übersicht. Für die Tagesansicht liest Zeltlotse zusätzlich die Auswahl der Frage „Ernährung“ (vegetarisch, vegan, kein Schweinefleisch) nach denselben Regeln: nur bestätigte Personen mit laufender Freigabe, nie „Sonstiges“, für die Küche nur Anzahlen ohne Namen, nichts davon gespeichert. Das steht im Zugriffsprotokoll als „Sonderkost-Abgleich der Küche“, ohne lesende Person und höchstens einmal am Tag. Der Restetag einer Mahlzeit enthält keine Personendaten.
+
+Nach Ablauf der Löschfrist der Organisation für Freizeit-Daten löscht Zeltlotse die Rezepte der Freizeit mit allen Zutaten, die Gerichte, die Einkaufsliste und die Restetage endgültig, zusammen mit den übrigen Arbeitsdaten der Freizeit. Abschalten des Moduls Verpflegung löscht nichts.
 
 ## Nachweise: nur eine einmalige Einsicht
 

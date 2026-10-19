@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Zeltlotse.Api.Contracts.Gemeinsam;
 using Zeltlotse.Api.Contracts.Kueche;
+using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
 using Zeltlotse.Personen.Contracts.Freizeitpass;
 using Zeltlotse.SharedKernel.Commands;
 
@@ -104,6 +105,16 @@ internal static partial class KuecheWerte
 
     /// <summary>Der Fehler zum Tag oder <c>null</c>: freiwillig (leer heißt ohne Tag), sonst ein Datum <c>JJJJ-MM-TT</c>.</summary>
     public static string? TagFehler(string? text) => TextOderNull(text) is null || TagLesen(text) is not null ? null : TagFehlerText;
+
+    // ---------- Heute (Story 4-4) ----------
+
+    private static readonly TimeZoneInfo Berlin = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
+
+    /// <summary>Der Kalendertag eines Zeitpunkts in Europe/Berlin („heute“ nach der Uhr, wie in Freizeiten).</summary>
+    public static DateOnly Heute(DateTimeOffset jetzt) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(jetzt, Berlin).DateTime);
+
+    /// <summary>Story 4-4: Der Tag der Tagesansicht ohne Wahl: heute, wenn heute ein Tag der Freizeit ist, sonst der erste Tag.</summary>
+    public static DateOnly TagOhneWahl(FreizeitTage tage, DateTimeOffset jetzt) => Heute(jetzt) is var heute && tage.Enthaelt(heute) ? heute : tage.ErsterTag;
 
     // ---------- Ja/Nein (Story 4-3) ----------
 

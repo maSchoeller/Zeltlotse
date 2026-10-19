@@ -91,6 +91,9 @@ internal static class DemoKatalog
     /// <summary>Story 4-3: Hand-Posten, deren Freigabe die Küche danach wieder zurücknimmt (Bezeichnung).</summary>
     public static IReadOnlyList<string> NichtFreigegeben { get; } = ["Äpfel"];
 
+    /// <summary>Story 4-4: Mahlzeiten, die die Küche als Restetag markiert (Tag, Titel der Mahlzeit).</summary>
+    public static IReadOnlyList<(DateOnly Tag, string Mahlzeit)> Restetage { get; } = [(new DateOnly(2027, 8, 3), "Abendessen")];
+
     /// <summary>Story 4-3: Posten, die beim Einkaufen schon abgehakt sind (Tag, Mahlzeit, Rezept, Zutat); je nur, wenn sie noch nicht gekauft sind.</summary>
     public static IReadOnlyList<(DateOnly Tag, string Mahlzeit, string Rezept, string Zutat)> Gekauft { get; } =
     [
@@ -127,7 +130,7 @@ internal static class DemoKatalog
 
     /// <summary>
     /// Story 2-5: Daniels Antworten für Mia im Freizeitpass (je Frage nur, wenn es noch keine Antwort gibt); Story 2-11: dazu die
-    /// Medikamente für den Notfallordner.
+    /// Medikamente für den Notfallordner; Story 4-4: dazu „vegetarisch“ für die Sonderkost der Küchen-Tagesansicht.
     /// </summary>
     public static IReadOnlyList<(string Kennung, string Wert)> MiasFreizeitpass { get; } =
     [
@@ -135,6 +138,7 @@ internal static class DemoKatalog
         ("notfallkontakte", "Daniel Probst (Vater), 0123 456781"),
         ("schwimmen", "nein"),
         ("medikamente", "Asthmaspray bei Bedarf, liegt im Kulturbeutel"),
+        ("ernaehrung", "vegetarisch"),
     ];
 
     /// <summary>Story 2-5: Leas Team-Notiz zu Mia (nur, wenn es an Mias Anmeldung noch keine Notiz gibt).</summary>

@@ -306,7 +306,7 @@ public sealed class RezeptTests(PostgresContainer postgres)
         Assert.Equal(
             [
                 "EinkaufFreigebenCommand", "EinkaufspostenAnlegenCommand", "EinkaufspostenFeldAendernCommand", "EinkaufspostenLoeschenCommand", "GerichtEntfernenCommand",
-                "GerichtTauschenCommand", "GerichtVormerkenCommand", "HandMengeAendernCommand", "RezeptAnlegenCommand", "RezeptFeldAendernCommand",
+                "GerichtTauschenCommand", "GerichtVormerkenCommand", "HandMengeAendernCommand", "RestetagAendernCommand", "RezeptAnlegenCommand", "RezeptFeldAendernCommand",
                 "RezeptLoeschenCommand", "ZutatAnlegenCommand", "ZutatFeldAendernCommand", "ZutatLoeschenCommand",
             ],
             commands.Select(t => t.Name).Order(StringComparer.Ordinal));

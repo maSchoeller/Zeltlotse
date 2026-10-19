@@ -28,7 +28,8 @@ public sealed record EssensplanTag(DateOnly Tag, IReadOnlyList<EssensplanMahlzei
 /// <param name="ProgrammpunktId">Kennung des Mahlzeiten-Programmpunkts; mit ihr wird ein Gericht vorgemerkt.</param>
 /// <param name="Beginn">Uhrzeit als <c>HH:mm</c> oder <c>null</c>.</param>
 /// <param name="Titel">Titel im Wochenraster, z. B. „Frühstück“.</param>
-public sealed record EssensplanMahlzeit(Guid ProgrammpunktId, string? Beginn, string Titel, MahlzeitArt Art, IReadOnlyList<Gericht> Gerichte);
+/// <param name="Restetag">Story 4-4, FR-53: Die Küche hat die Mahlzeit als Restetag markiert (reine Markierung, ändert nichts am Plan).</param>
+public sealed record EssensplanMahlzeit(Guid ProgrammpunktId, string? Beginn, string Titel, MahlzeitArt Art, IReadOnlyList<Gericht> Gerichte, bool Restetag = false);
 
 /// <summary>Story 4-2: Ein vorgemerktes Gericht: ein Rezept an einer Mahlzeit, mit dem Allergen-Abgleich.</summary>
 /// <param name="Version">Versionsnummer für den Tausch (veraltet → <c>409 konflikt</c>).</param>

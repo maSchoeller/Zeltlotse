@@ -47,7 +47,11 @@ public static class PersonenModul
         services.EmpfaengtEreignis<AnmeldungAbgesagt, FreigabeBeenden>();
         services.AddScoped<IAnmeldeKontakt, AnmeldeKontaktLesen>();
         // Story 4-2: zweckgebundener Lesepfad „Allergene für die Küche“ (AD-8, Pfeil Küche → Personen).
-        services.AddScoped<IFreizeitpassAllergene, FreizeitpassAllergene>();
+        // Story 4-4: dazu „Sonderkost für die Küche“; beide Lesepfade teilen einen Kern (Frage und Zweck als Parameter).
+        services.AddScoped<AuswahlProfile>();
+        services.AddScoped<FreizeitpassKuechenProfile>();
+        services.AddScoped<IFreizeitpassAllergene>(sp => sp.GetRequiredService<FreizeitpassKuechenProfile>());
+        services.AddScoped<IFreizeitpassSonderkost>(sp => sp.GetRequiredService<FreizeitpassKuechenProfile>());
         services.VerschicktMail<NachweisErinnerungMail, NachweisErinnerungMailAufbau>();
         services.VerschicktMail<FreizeitpassErinnerungMail, FreizeitpassErinnerungMailAufbau>();
         services.AddScoped<IDatenauskunft, PersonenAuskunft>();

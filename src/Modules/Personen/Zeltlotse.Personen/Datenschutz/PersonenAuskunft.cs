@@ -282,6 +282,7 @@ internal sealed class PersonenAuskunft(PersonenLeseDbContext db, IVerschluesselu
         EinsichtZweck.NachweiseEingesehen => "Nachweise eingesehen",
         EinsichtZweck.FreizeitpassEingesehen => "Freizeitpass eingesehen",
         EinsichtZweck.AllergeneFuerKueche => "Allergen-Abgleich der Küche",
+        EinsichtZweck.SonderkostFuerKueche => "Sonderkost-Abgleich der Küche",
         _ => zweck.ToString(),
     };
 }

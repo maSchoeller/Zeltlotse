@@ -150,6 +150,14 @@ internal static class EinkaufRechnen
             .Where(a => a.Anzahl > 0),
     ];
 
+    /// <summary>Story 4-4: Sonderkost-Übersicht: je Sonderkost die Zahl der Profile, die sie enthalten, in Katalogreihenfolge; nur mit mindestens einem.</summary>
+    public static IReadOnlyList<SonderkostAnzahl> SonderkostUebersicht(IReadOnlyList<IReadOnlyList<string>> profile) =>
+    [
+        .. Sonderkost.Alle
+            .Select(s => new SonderkostAnzahl(s.Wert, profile.Count(p => p.Contains(s.Wert))))
+            .Where(s => s.Anzahl > 0),
+    ];
+
     /// <summary>
     /// Die Tage der Einkaufsliste: je Gericht und Zutat ein Posten (nichts zusammengefasst), gruppiert nach dem Tag der Mahlzeit, darin nach Mahlzeit
     /// (Uhrzeit, Art), Gericht und Zutat; die Hand-Posten eines Tags danach, Hand-Posten ohne Tag zuletzt. Tage ohne Posten und ohne Ersatzportionen

@@ -17,7 +17,8 @@ namespace Zeltlotse.Kueche.Einkauf;
 /// <summary>
 /// <c>GET /api/freizeiten/{freizeitId}/kueche/essensplan</c> (Leitung und Team, Modul Verpflegung, Story 4-2, FR-47): je Tag die festen Mahlzeiten
 /// (fehlende legt Programm an) mit ihren Gerichten und deren Ersatzportionen, die Rezepte zur Auswahl und die Personenzahl. Den Abgleich mit den
-/// Freizeitpässen gibt es nur, wenn die Freizeit Allergien abfragt und Gerichte vorgemerkt sind; dann protokolliert Personen den Zweck.
+/// Freizeitpässen gibt es nur, wenn die Freizeit Allergien abfragt und Gerichte vorgemerkt sind; dann protokolliert Personen den Zweck. Story 4-4: je
+/// Mahlzeit zusätzlich der Restetag.
 /// </summary>
 internal static class EssensplanLadenEndpunkt
 {
@@ -28,6 +29,8 @@ internal static class EssensplanLadenEndpunkt
         var abgleich = await abfrage.AbgleichAsync(freizeitId, abbruch, profileLesen: gerichte.Count > 0);
         var rezepte = await db.Rezepte.Where(r => r.FreizeitId == freizeitId).Select(r => new { r.Id, r.Name }).ToListAsync(abbruch);
         var nachMahlzeit = gerichte.ToLookup(g => g.Mahlzeit.ProgrammpunktId);
+        // Story 4-4: der Restetag je Mahlzeit (ohne Stand kein Restetag).
+        var restetage = (await db.MahlzeitStaende.Where(s => s.FreizeitId == freizeitId && s.Restetag).Select(s => s.ProgrammpunktId).ToListAsync(abbruch)).ToHashSet();
         return TypedResults.Ok(new ApiEssensplan(
             await abfrage.PersonenzahlAsync(freizeitId, abbruch),
             abgleich.AllergienAbgefragt,
@@ -43,7 +46,8 @@ internal static class EssensplanLadenEndpunkt
                             [
                                 .. nachMahlzeit[m.ProgrammpunktId].Select(g => new ApiGericht(
                                     g.Gericht.Id, g.Gericht.Version, g.Rezept.Id, g.Rezept.Name, EinkaufRechnen.Ersatz(abgleich.Profile, g.Zutaten))),
-                            ])),
+                            ],
+                            restetage.Contains(m.ProgrammpunktId))),
                     ])),
             ],
             [.. rezepte.OrderBy(r => r.Name, KuecheLesen.Vergleich).ThenBy(r => r.Id).Select(r => new RezeptWahl(r.Id, r.Name))]));
