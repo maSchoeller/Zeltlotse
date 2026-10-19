@@ -12,7 +12,7 @@ public sealed class ZustellDienstTests(PostgresContainer postgres)
     [Fact]
     public async Task Host_registriert_den_Zustell_Dienst()
     {
-        await using var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync(), mitZustellDienst: true);
+        await using var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync(), mitZustellDienst: true);
         _ = factory.CreateClient();
 
         Assert.Contains(factory.Services.GetServices<IHostedService>(), d => d is ZustellDienst);

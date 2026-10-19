@@ -24,7 +24,7 @@ public sealed partial class MailTests(PostgresContainer postgres, MailpitContain
     [InlineData("Staging")]
     public async Task Ordner_Adapter_ausserhalb_von_Development_und_Testing_bricht_den_Start_ab(string umgebung)
     {
-        var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync()) { Umgebung = umgebung };
+        var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync()) { Umgebung = umgebung };
         factory.Einstellungen["Zeltlotse:Mail:Art"] = "Ordner";
         factory.Einstellungen["Zeltlotse:Mail:Ordner"] = Path.GetTempPath();
 
@@ -42,7 +42,7 @@ public sealed partial class MailTests(PostgresContainer postgres, MailpitContain
     [InlineData("Zeltlotse:OeffentlicheAdresse", "ftp://lager.example")]
     public async Task Fehlende_oder_ungueltige_Konfiguration_bricht_den_Start_ab_und_nennt_den_Schluessel(string schluessel, string wert)
     {
-        var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync());
+        var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync());
         factory.Einstellungen[schluessel] = wert;
 
         var fehler = await StartScheitertAsync(factory);
@@ -55,7 +55,7 @@ public sealed partial class MailTests(PostgresContainer postgres, MailpitContain
     [InlineData("Staging")]
     public async Task Http_als_oeffentliche_Adresse_bricht_ausserhalb_von_Development_und_Testing_den_Start_ab(string umgebung)
     {
-        var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync()) { Umgebung = umgebung };
+        var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync()) { Umgebung = umgebung };
         factory.Einstellungen["Zeltlotse:OeffentlicheAdresse"] = "http://lager.example";
 
         var fehler = await StartScheitertAsync(factory);
@@ -66,7 +66,7 @@ public sealed partial class MailTests(PostgresContainer postgres, MailpitContain
     [Fact]
     public async Task Http_als_oeffentliche_Adresse_ist_in_Testing_erlaubt()
     {
-        await using var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync());
+        await using var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync());
         factory.Einstellungen["Zeltlotse:OeffentlicheAdresse"] = "http://127.0.0.1:5000";
         using var client = factory.CreateClient();
 
@@ -79,7 +79,7 @@ public sealed partial class MailTests(PostgresContainer postgres, MailpitContain
     [InlineData("Zeltlotse:Mail:Absender", "Zeltlotse zeltlotse@example.org>")]
     public async Task Smtp_ohne_Host_oder_mit_fehlendem_oder_unlesbarem_Absender_bricht_den_Start_ab(string schluessel, string wert)
     {
-        var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync()) { Umgebung = "Production" };
+        var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync()) { Umgebung = "Production" };
         factory.Einstellungen[schluessel] = wert;
 
         var fehler = await StartScheitertAsync(factory);
@@ -90,7 +90,7 @@ public sealed partial class MailTests(PostgresContainer postgres, MailpitContain
     [Fact]
     public async Task Smtp_mit_Host_und_Absender_startet_auch_in_Production()
     {
-        await using var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync()) { Umgebung = "Production" };
+        await using var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync()) { Umgebung = "Production" };
         using var client = factory.CreateClient();
 
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health", Abbruch)).StatusCode);
@@ -99,7 +99,7 @@ public sealed partial class MailTests(PostgresContainer postgres, MailpitContain
     [Fact]
     public async Task Login_Mail_ist_deutsch_ohne_Anrede_mit_Link_auf_die_oeffentliche_Adresse_und_Code()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         factory.Einstellungen["Zeltlotse:OeffentlicheAdresse"] = "https://lager.example/";
         using var client = factory.CreateClient();
 
@@ -140,7 +140,7 @@ public sealed partial class MailTests(PostgresContainer postgres, MailpitContain
     {
         const string mail = "geheim.person@example.org";
         var eintraege = new List<LogRecord>();
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         factory.ZusatzDienste.Add(s => s.Configure<OpenTelemetryLoggerOptions>(o => o.AddInMemoryExporter(eintraege)));
         using var client = factory.CreateClient();

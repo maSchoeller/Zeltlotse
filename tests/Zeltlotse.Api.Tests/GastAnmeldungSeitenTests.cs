@@ -38,7 +38,7 @@ public sealed partial class GastAnmeldungSeitenTests(PostgresContainer postgres)
 
     public async ValueTask InitializeAsync()
     {
-        _verbindung = await postgres.NeueDatenbankAsync();
+        _verbindung = await postgres.NeueMigrierteDatenbankAsync();
         _factory = OrgHelfer.Factory(_verbindung);
         _factory.ZusatzDienste.Add(s => s.Configure<Zeltlotse.Public.PublicSeitenOptionen>(o =>
             o.PrimaerHandler = () => new KindUmleitung(() => _kindUmleitung) { InnerHandler = _factory.Server.CreateHandler() }));

@@ -34,7 +34,7 @@ public sealed class ProfilUebergabeTests(PostgresContainer postgres)
     /// <summary>Katrin mit dem volljährigen Paul im Familienkonto, frisch angemeldet.</summary>
     private async Task<Lage> LageAsync()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         var factory = OrgHelfer.Factory(verbindung);
         var katrin = await AngemeldeterClientAsync(factory, Katrin);
         var paul = await VolljaehrigesKindAsync(katrin, "Paul");

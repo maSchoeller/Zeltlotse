@@ -15,7 +15,7 @@ public sealed class S3DateiSpeicherTests(PostgresContainer postgres, S3Container
     private async Task<(ZeltlotseApiFactory Factory, string Bucket)> FactoryAsync()
     {
         var bucket = S3Container.NeuerBucket();
-        var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync());
+        var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync());
         foreach (var (schluessel, wert) in s3.Einstellungen(bucket))
         {
             factory.Einstellungen[schluessel] = wert;
@@ -97,7 +97,7 @@ public sealed class S3DateiSpeicherTests(PostgresContainer postgres, S3Container
     [Fact]
     public async Task Ohne_Konfiguration_meldet_der_Speicher_was_fehlt()
     {
-        await using var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync());
+        await using var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync());
 
         var fehler = await Assert.ThrowsAsync<InvalidOperationException>(() => factory.Services.GetRequiredService<IDateiSpeicher>()
             .LesenAsync("personen", Guid.CreateVersion7(), Abbruch));

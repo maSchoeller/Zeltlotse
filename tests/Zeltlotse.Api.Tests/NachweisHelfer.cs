@@ -65,7 +65,7 @@ internal sealed class NachweisSzenario : IAsyncDisposable
     /// <summary>Factory mit Global Admin und S3; noch ohne Organisation. <paramref name="vorbereiten"/> läuft vor dem Start.</summary>
     public static async Task<NachweisSzenario> LeerAsync(PostgresContainer postgres, S3Container s3, Action<ZeltlotseApiFactory>? vorbereiten = null)
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         var bucket = S3Container.NeuerBucket();
         var factory = OrgHelfer.Factory(verbindung);
         foreach (var (schluessel, wert) in s3.Einstellungen(bucket))

@@ -152,7 +152,7 @@ public sealed class ZugriffsprotokollTests(PostgresContainer postgres, S3Contain
     [Fact]
     public async Task Eintrag_ueber_ein_Kind_sehen_beide_Eltern_aber_keine_andere_Familie()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var katrin = await AngemeldeterClientAsync(factory, FamilienHelfer.Katrin);
         (await PostAsync(katrin, "/api/ich/profil")).Dispose();
@@ -207,7 +207,7 @@ public sealed class ZugriffsprotokollTests(PostgresContainer postgres, S3Contain
     [Fact]
     public async Task Ohne_Sitzung_401()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var client = factory.CreateClient();
 
         using var antwort = await client.GetAsync(Pfad, Abbruch);

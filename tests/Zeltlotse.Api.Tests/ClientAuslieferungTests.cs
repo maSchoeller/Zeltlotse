@@ -29,7 +29,7 @@ public sealed partial class ClientAuslieferungTests(PostgresContainer postgres)
 
     private async Task<ZeltlotseApiFactory> FactoryAsync(int? grenze = null)
     {
-        var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync());
+        var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync());
         factory.ZusatzDienste.Add(TestEndpunkte.Registrieren);
         if (grenze is not null)
         {

@@ -16,7 +16,7 @@ public sealed class BrowserFehlerTests(PostgresContainer postgres)
 
     private async Task<ZeltlotseApiFactory> FactoryAsync()
     {
-        var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync());
+        var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync());
         factory.ZusatzDienste.Add(s => s.AddLogging(b => b.AddFakeLogging()));
         return factory;
     }

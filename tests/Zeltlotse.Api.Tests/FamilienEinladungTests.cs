@@ -27,7 +27,7 @@ public sealed class FamilienEinladungTests(PostgresContainer postgres)
     /// <summary>Katrin mit Emma im Familienkonto und einer Einladung an Thomas.</summary>
     private async Task<Lage> LageAsync(bool einladen = true)
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         var factory = OrgHelfer.Factory(verbindung);
         var katrin = await AngemeldeterClientAsync(factory, Katrin);
         var emma = await KindAsync(katrin, "Emma");

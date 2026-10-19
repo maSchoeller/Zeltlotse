@@ -22,7 +22,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [Fact]
     public async Task Link_anfordern_antwortet_fuer_bekannte_und_unbekannte_Mail_gleich_und_schickt_je_genau_eine_Mail()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var client = factory.CreateClient();
         await AnmeldenAsync(factory, client, Bekannt);
         using var anonym = factory.CreateClient();
@@ -59,7 +59,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [InlineData("a@x.de;b@y.de")]
     public async Task Ungueltige_Mail_ergibt_400_am_Feld_mail_ohne_Anfrage_und_ohne_Mail(string mail)
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var client = factory.CreateClient();
 
@@ -77,7 +77,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [Fact]
     public async Task Link_einloesen_legt_fuer_eine_unbekannte_Mail_das_Konto_an_und_setzt_das_Sitzungs_Cookie()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var client = factory.CreateClient();
         await LinkAnfordernAsync(client, Unbekannt);
@@ -114,7 +114,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [Fact]
     public async Task Link_einloesen_fuer_ein_bestehendes_Konto_gibt_eine_Sitzung_mit_derselben_PersonId()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var erster = await AngemeldeterClientAsync(factory, Bekannt);
         var personId = await PersonIdAsync(verbindung, Bekannt);
@@ -134,7 +134,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [MemberData(nameof(TokenFaelle))]
     public async Task Ungueltiges_Token_ergibt_404_und_einen_Eintrag_im_Sicherheitsprotokoll(string fall)
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var client = factory.CreateClient();
         var anfrageId = await LinkAnfordernAsync(client, Unbekannt);
@@ -183,7 +183,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [Fact]
     public async Task Gueltig_bis_knapp_vor_15_Minuten()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var client = factory.CreateClient();
         await LinkAnfordernAsync(client, Unbekannt);
         factory.Uhr.Advance(TimeSpan.FromMinutes(15) - TimeSpan.FromSeconds(1));
@@ -198,7 +198,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     {
         const string a = "a@example.org";
         const string b = "b@example.org";
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var kontoB = await AngemeldeterClientAsync(factory, b);
         using var client = await AngemeldeterClientAsync(factory, b);
@@ -216,7 +216,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [Fact]
     public async Task Code_richtig_meldet_an()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var client = factory.CreateClient();
         var anfrageId = await LinkAnfordernAsync(client, Unbekannt);
@@ -236,7 +236,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [Fact]
     public async Task Code_falsch_ergibt_404_und_nach_fuenf_falschen_ist_auch_der_richtige_Code_ungueltig()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var client = factory.CreateClient();
         var anfrageId = await LinkAnfordernAsync(client, Unbekannt);
@@ -259,7 +259,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [Fact]
     public async Task Code_nach_vier_falschen_gilt_noch_und_abgelaufen_oder_fremde_Anfrage_nicht()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var client = factory.CreateClient();
         var anfrageId = await LinkAnfordernAsync(client, Unbekannt);
         var code = factory.Mails.LetzteAn(Unbekannt).Code;
@@ -286,7 +286,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     public async Task Passwort_festlegen_dann_mit_richtigem_Passwort_anmelden_und_falsches_oder_fehlendes_ergibt_401()
     {
         const string passwort = "Zeltlager-2027!";
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var client = await AngemeldeterClientAsync(factory, Bekannt);
         using var ohnePasswort = await AngemeldeterClientAsync(factory, Unbekannt);
@@ -344,7 +344,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [InlineData(null)]
     public async Task Passwort_unter_10_Zeichen_ergibt_400_am_Feld_passwort(string? passwort)
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var client = await AngemeldeterClientAsync(factory, Bekannt);
 
@@ -361,7 +361,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [InlineData(201, HttpStatusCode.BadRequest)]
     public async Task Passwort_hat_10_bis_200_Zeichen(int laenge, HttpStatusCode erwartet)
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var client = await AngemeldeterClientAsync(factory, Bekannt);
 
         using var antwort = await SendenAsync(client, HttpMethod.Put, "/api/ich/konto/passwort", new PasswortFestlegen(new string('p', laenge)));
@@ -372,7 +372,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [Fact]
     public async Task Neues_Passwort_beendet_andere_Sitzungen_und_die_eigene_bleibt_gueltig()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var eigene = await AngemeldeterClientAsync(factory, Bekannt);
         using var andere = await AngemeldeterClientAsync(factory, Bekannt);
         using (var vorher = await andere.GetAsync("/api/ich/konto", Abbruch))
@@ -394,7 +394,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [Fact]
     public async Task Abmelden_loescht_das_Cookie_und_danach_ist_die_Sitzung_weg()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var client = await AngemeldeterClientAsync(factory, Bekannt);
 
         using var abmelden = await PostAsync(client, "/api/konten/abmelden");
@@ -409,7 +409,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [Fact]
     public async Task Abmelden_ohne_Sitzung_ergibt_401()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var client = factory.CreateClient();
 
         using var antwort = await PostAsync(client, "/api/konten/abmelden");
@@ -420,7 +420,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [Fact]
     public async Task Gefaelschtes_oder_veraltetes_Cookie_gilt_nicht()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var client = await AngemeldeterClientAsync(factory, Bekannt);
 
@@ -440,7 +440,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [Fact]
     public async Task Die_21_Anfrage_je_Minute_an_einen_Anmelde_Endpunkt_ergibt_429()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync(), mitZugriffsbegrenzung: true);
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync(), mitZugriffsbegrenzung: true);
         using var client = factory.CreateClient();
         // Antiforgery-Abruf (1) und 19 Anfragen: zusammen 20 in dieser Minute, alle erlaubt.
         var token = await AntiforgeryTokenAsync(client);
@@ -459,7 +459,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [Fact]
     public async Task Fehler_im_Handler_speichert_nichts_aber_der_Protokolleintrag_davor_bleibt()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var client = factory.CreateClient();
         var anfrageId = await LinkAnfordernAsync(client, Unbekannt);
@@ -476,7 +476,7 @@ public sealed class AnmeldungTests(PostgresContainer postgres)
     [Fact]
     public async Task Scheitert_der_Mail_Versand_bleibt_die_Anfrage_und_die_Antwort_ist_500()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         factory.ZusatzDienste.Add(s => s.Replace(ServiceDescriptor.Singleton<IMailVersand, KaputterMailVersand>()));
         using var client = factory.CreateClient();

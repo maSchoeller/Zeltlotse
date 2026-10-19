@@ -19,7 +19,7 @@ public sealed class FamilieTests(PostgresContainer postgres)
     [Fact]
     public async Task Kind_hinzufuegen_legt_die_Familie_an_und_GET_zeigt_das_Kind_mit_Vertragsfeldern()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var katrin = await AngemeldeterClientAsync(factory, Katrin);
         await FreizeitHelfer.NameSetzenAsync(katrin, "Katrin", "Muster");
@@ -49,7 +49,7 @@ public sealed class FamilieTests(PostgresContainer postgres)
     [Fact]
     public async Task Ohne_Familie_sind_alle_Listen_leer_und_Kinder_stehen_nach_Geburtsdatum()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var katrin = await AngemeldeterClientAsync(factory, Katrin);
 
         var leer = await FamilieAsync(katrin);
@@ -79,7 +79,7 @@ public sealed class FamilieTests(PostgresContainer postgres)
     [MemberData(nameof(Ungueltig))]
     public async Task Kind_hinzufuegen_mit_ungueltigem_Feld_ergibt_400_am_Feld(string? vorname, string? nachname, string? geburtsdatum, string feld, string meldung)
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var katrin = await AngemeldeterClientAsync(factory, Katrin);
         var heute = FreizeitHelfer.Heute(factory);
@@ -103,7 +103,7 @@ public sealed class FamilieTests(PostgresContainer postgres)
     [Fact]
     public async Task Persoenlich_jede_Person_sieht_nur_die_eigene_Familie_und_fremde_Kinder_sind_404()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = OrgHelfer.Factory(verbindung);
         using var gerd = await AngemeldeterClientAsync(factory, OrgHelfer.Gerd);
         // Katrin und Jonas in derselben Organisation: Die Organisation verschafft keinen Zugriff auf Kinder.
@@ -140,7 +140,7 @@ public sealed class FamilieTests(PostgresContainer postgres)
     [Fact]
     public async Task Kind_bearbeiten_nach_AD_19_mit_Konflikt_und_Geburtsdatum()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var katrin = await AngemeldeterClientAsync(factory, Katrin);
         var emma = await KindAsync(katrin, "Emma");
         var version = await VersionAsync(katrin, emma);
@@ -174,7 +174,7 @@ public sealed class FamilieTests(PostgresContainer postgres)
     [InlineData("""{"version":1,"geburtsdatum":20170902}""", "geburtsdatum", null)]
     public async Task Kind_bearbeiten_mit_ungueltigem_Koerper_ergibt_400(string koerper, string feld, string? meldung)
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var katrin = await AngemeldeterClientAsync(factory, Katrin);
         var emma = await KindAsync(katrin, "Emma");
 
@@ -191,7 +191,7 @@ public sealed class FamilieTests(PostgresContainer postgres)
     [Fact]
     public async Task Kind_bearbeiten_eines_unbekannten_Kindes_ergibt_404()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var katrin = await AngemeldeterClientAsync(factory, Katrin);
         await KindAsync(katrin, "Emma");
 
@@ -203,7 +203,7 @@ public sealed class FamilieTests(PostgresContainer postgres)
     [Fact]
     public async Task Zweites_Elternteil_bekommt_Kind_Antwort_ohne_Mail_Adressen_fremder_Personen()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var katrin = await AngemeldeterClientAsync(factory, Katrin);
         await KindAsync(katrin, "Emma");
         using var thomas = await ZweiterElternteilAsync(factory, katrin, Thomas);

@@ -36,7 +36,7 @@ public sealed class FragenAuswahlTests(PostgresContainer postgres) : IAsyncLifet
     /// <summary>Organisation A (Andrea) mit Freizeit X, Leitung Miriam, Tobias Team (per SQL); Organisation B (Lea). Katrin mit Emma, Jonas.</summary>
     public async ValueTask InitializeAsync()
     {
-        _verbindung = await postgres.NeueDatenbankAsync();
+        _verbindung = await postgres.NeueMigrierteDatenbankAsync();
         _factory = OrgHelfer.Factory(_verbindung);
         _gerd = await AngemeldeterClientAsync(_factory, Gerd);
         (_a, _andrea) = await OrganisationMitOrgAdminAsync(_factory, _gerd, "CVJM Musterstadt", Andrea);

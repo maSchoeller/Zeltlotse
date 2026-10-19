@@ -37,7 +37,7 @@ public sealed class GastFreizeitpassTests(PostgresContainer postgres) : IAsyncLi
     /// <summary>Organisation A mit Freizeit X (Leitung Miriam); Sabine meldet Lina als Gast an, die Freigabe läuft.</summary>
     public async ValueTask InitializeAsync()
     {
-        _verbindung = await postgres.NeueDatenbankAsync();
+        _verbindung = await postgres.NeueMigrierteDatenbankAsync();
         _factory = OrgHelfer.Factory(_verbindung);
         _gerd = await AngemeldeterClientAsync(_factory, Gerd);
         Guid a;

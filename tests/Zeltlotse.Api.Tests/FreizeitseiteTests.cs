@@ -37,7 +37,7 @@ public sealed class FreizeitseiteTests(PostgresContainer postgres) : IAsyncLifet
     /// </summary>
     public async ValueTask InitializeAsync()
     {
-        _verbindung = await postgres.NeueDatenbankAsync();
+        _verbindung = await postgres.NeueMigrierteDatenbankAsync();
         _factory = OrgHelfer.Factory(_verbindung);
         _gerd = await AngemeldeterClientAsync(_factory, Gerd);
         (_a, _andrea) = await OrganisationMitOrgAdminAsync(_factory, _gerd, "CVJM Musterstadt", Andrea);
@@ -550,7 +550,7 @@ public sealed class FreizeitseiteTests(PostgresContainer postgres) : IAsyncLifet
     [InlineData("/freizeit/{0}/vertrauensseite")]
     public async Task Bei_Zugriffsbegrenzung_antwortet_die_Seite_mit_429_und_einem_Hinweis_statt_500(string muster)
     {
-        await using var factory = AnmeldeHelfer.Factory(await postgres.NeueDatenbankAsync(), mitZugriffsbegrenzung: true);
+        await using var factory = AnmeldeHelfer.Factory(await postgres.NeueMigrierteDatenbankAsync(), mitZugriffsbegrenzung: true);
         factory.Einstellungen["Zeltlotse:Zugriffsbegrenzung:AnfragenJeMinute"] = "1";
         using var client = factory.CreateClient();
         var pfad = string.Format(System.Globalization.CultureInfo.InvariantCulture, muster, Zeltlotse.SharedKernel.Zugangslinks.Zugangslink.NeuesToken());

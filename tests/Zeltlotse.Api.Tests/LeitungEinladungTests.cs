@@ -28,7 +28,7 @@ public sealed class LeitungEinladungTests(PostgresContainer postgres)
     /// <summary>Organisation mit Andrea als Org-Admin und einer Freizeit, Miriam als Leitung eingeladen.</summary>
     private async Task<Lage> LageAsync()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         var factory = OrgHelfer.Factory(verbindung);
         using var gerd = await AngemeldeterClientAsync(factory, Gerd);
         var (orgId, andrea) = await OrganisationMitOrgAdminAsync(factory, gerd, "Jugendwerk", Andrea);

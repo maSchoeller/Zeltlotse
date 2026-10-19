@@ -32,7 +32,7 @@ public sealed class FreizeitKontextTests(PostgresContainer postgres) : IAsyncLif
     /// </summary>
     public async ValueTask InitializeAsync()
     {
-        _factory = OrgHelfer.Factory(await postgres.NeueDatenbankAsync());
+        _factory = OrgHelfer.Factory(await postgres.NeueMigrierteDatenbankAsync());
         _factory.ZusatzDienste.Add(TestEndpunkte.Registrieren);
         _gerd = await AngemeldeterClientAsync(_factory, Gerd);
         (_a, _andrea) = await OrganisationMitOrgAdminAsync(_factory, _gerd, "A", Andrea);

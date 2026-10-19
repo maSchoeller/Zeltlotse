@@ -124,7 +124,7 @@ public sealed class KontoLoeschenTests(PostgresContainer postgres, S3Container s
     [Fact]
     public async Task Anmeldung_aelter_als_10_Minuten_ergibt_401_und_ohne_Antiforgery_400_und_nichts_ist_geloescht()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var client = await AngemeldeterClientAsync(factory, OrgHelfer.Jonas);
         (await PostAsync(client, "/api/ich/profil")).Dispose();
@@ -148,7 +148,7 @@ public sealed class KontoLoeschenTests(PostgresContainer postgres, S3Container s
     [Fact]
     public async Task Einziger_Elternteil_loescht_auch_die_Kinder_und_die_Familie()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var katrin = await AngemeldeterClientAsync(factory, FamilienHelfer.Katrin);
         (await PostAsync(katrin, "/api/ich/profil")).Dispose();
@@ -175,7 +175,7 @@ public sealed class KontoLoeschenTests(PostgresContainer postgres, S3Container s
     [Fact]
     public async Task Mit_zweitem_Elternteil_bleiben_Kinder_und_Familie_beim_anderen()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var katrin = await AngemeldeterClientAsync(factory, FamilienHelfer.Katrin);
         (await PostAsync(katrin, "/api/ich/profil")).Dispose();

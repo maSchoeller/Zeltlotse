@@ -18,7 +18,7 @@ public sealed class OrganisationenTests(PostgresContainer postgres)
     [Fact]
     public async Task Global_Admin_legt_an_201_mit_einer_Einladungs_Mail_und_die_Liste_zeigt_nicht_eingerichtet()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var gerd = await AngemeldeterClientAsync(factory, Gerd);
 
         using var antwort = await PostAsync(gerd, "/api/organisationen", new OrganisationAnlegen("  Jugendwerk Musterstadt ", " Andrea.Beispiel@Example.org"));
@@ -42,7 +42,7 @@ public sealed class OrganisationenTests(PostgresContainer postgres)
     [Fact]
     public async Task Liste_ist_nach_Name_sortiert_und_enthaelt_nur_die_Vertragsfelder()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var gerd = await AngemeldeterClientAsync(factory, Gerd);
         await AnlegenAsync(gerd, "Zeltlager-Verein", Andrea);
         await AnlegenAsync(gerd, "Bezirksjugendwerk", Jonas);
@@ -63,7 +63,7 @@ public sealed class OrganisationenTests(PostgresContainer postgres)
     [InlineData("Jugendwerk", "", "mail")]
     public async Task Anlegen_mit_ungueltigen_Angaben_ergibt_400_je_Feld_ohne_Organisation_und_ohne_Mail(string? name, string mail, string feld)
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var gerd = await AngemeldeterClientAsync(factory, Gerd);
 
@@ -79,7 +79,7 @@ public sealed class OrganisationenTests(PostgresContainer postgres)
     [Fact]
     public async Task Ohne_Global_Admin_ergeben_GET_und_POST_403_auch_bei_ungueltigem_Koerper()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var andrea = await AngemeldeterClientAsync(factory, Andrea);
 
@@ -100,7 +100,7 @@ public sealed class OrganisationenTests(PostgresContainer postgres)
     [Fact]
     public async Task Ich_Konto_erlaubt_Organisationen_anlegen_nur_dem_Global_Admin()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var gerd = await AngemeldeterClientAsync(factory, Gerd);
         using var andrea = await AngemeldeterClientAsync(factory, Andrea);
 
@@ -114,7 +114,7 @@ public sealed class OrganisationenTests(PostgresContainer postgres)
     [Fact]
     public async Task Org_Admin_sieht_Rollen_mit_Namen_ohne_Mail_Adressen_und_nur_offene_nicht_abgelaufene_Einladungen()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var gerd = await AngemeldeterClientAsync(factory, Gerd);
         var (orgId, andrea) = await OrganisationMitOrgAdminAsync(factory, gerd, "Jugendwerk", Andrea);
@@ -159,7 +159,7 @@ public sealed class OrganisationenTests(PostgresContainer postgres)
     [Fact]
     public async Task Org_Admin_laedt_ein_202_mit_Mail_und_400_je_Feld()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var gerd = await AngemeldeterClientAsync(factory, Gerd);
         var (orgId, andrea) = await OrganisationMitOrgAdminAsync(factory, gerd, "Jugendwerk Musterstadt", Andrea);
@@ -188,7 +188,7 @@ public sealed class OrganisationenTests(PostgresContainer postgres)
     [Fact]
     public async Task Einladen_mit_unbekannter_Rolle_ergibt_400_am_Feld_rolle_ohne_Einladung()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var gerd = await AngemeldeterClientAsync(factory, Gerd);
         var (orgId, andrea) = await OrganisationMitOrgAdminAsync(factory, gerd, "Jugendwerk", Andrea);

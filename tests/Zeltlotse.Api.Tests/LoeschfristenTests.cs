@@ -21,7 +21,7 @@ public sealed class LoeschfristenTests(PostgresContainer postgres) : IAsyncLifet
 
     public async ValueTask InitializeAsync()
     {
-        _factory = OrgHelfer.Factory(await postgres.NeueDatenbankAsync());
+        _factory = OrgHelfer.Factory(await postgres.NeueMigrierteDatenbankAsync());
         _gerd = await AngemeldeterClientAsync(_factory, OrgHelfer.Gerd);
         (_orgId, _andrea) = await OrgHelfer.OrganisationMitOrgAdminAsync(_factory, _gerd, "Jugendwerk Musterstadt", OrgHelfer.Andrea);
     }

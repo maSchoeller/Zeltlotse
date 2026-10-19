@@ -28,6 +28,7 @@ public sealed class ZeltlotseApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _verbindungsZeichenfolge;
     private readonly bool _mitZustellDienst;
+    private readonly ZugriffsbegrenzerAufraeumen _zugriffsbegrenzer = new();
 
     public ZeltlotseApiFactory(string verbindungsZeichenfolge, bool mitZustellDienst = false)
     {
@@ -98,6 +99,7 @@ public sealed class ZeltlotseApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Uhr);
             services.AddTransient<IStartupFilter, AbsenderIpSetzen>();
+            services.AddSingleton<IStartupFilter>(_zugriffsbegrenzer);
 
             // Die öffentlichen Seiten rufen die API über den Testserver statt über ein Netzwerk-Socket auf.
             services.Configure<PublicSeitenOptionen>(optionen =>
@@ -127,6 +129,13 @@ public sealed class ZeltlotseApiFactory : WebApplicationFactory<Program>
                 services.Remove(dienst);
             }
         });
+    }
+
+    /// <summary>Beendet den Host und gibt danach die Zugriffsbegrenzer frei (siehe <see cref="ZugriffsbegrenzerAufraeumen"/>).</summary>
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync();
+        _zugriffsbegrenzer.Freigeben();
     }
 
     /// <summary>Stellt alle fälligen Outbox-Ereignisse sofort zu, bis nichts mehr fällig ist.</summary>

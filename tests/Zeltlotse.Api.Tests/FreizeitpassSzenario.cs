@@ -81,7 +81,7 @@ internal sealed class FreizeitpassSzenario : IAsyncDisposable
     /// <param name="mitTestEndpunkten">Story 3-7: bildet die <see cref="TestEndpunkte"/> ab (z. B. den Endpunkt des Schalters Verpflegung).</param>
     public static async Task<FreizeitpassSzenario> AufbauenAsync(PostgresContainer postgres, S3Container? s3 = null, bool mitTestEndpunkten = false)
     {
-        var szenario = new FreizeitpassSzenario(await postgres.NeueDatenbankAsync());
+        var szenario = new FreizeitpassSzenario(await postgres.NeueMigrierteDatenbankAsync());
         if (mitTestEndpunkten)
         {
             szenario.Factory.ZusatzDienste.Add(TestEndpunkte.Registrieren);

@@ -99,7 +99,7 @@ public sealed class DatenauskunftTests(PostgresContainer postgres, S3Container s
     [Fact]
     public async Task Anmeldung_aelter_als_10_Minuten_ergibt_401_ohne_Export_und_eine_neue_Anmeldung_hilft()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var client = await AngemeldeterClientAsync(factory, OrgHelfer.Jonas);
         (await PostAsync(client, "/api/ich/profil")).Dispose();
@@ -119,7 +119,7 @@ public sealed class DatenauskunftTests(PostgresContainer postgres, S3Container s
     [Fact]
     public async Task Auskunft_nennt_die_Antworten_im_Freizeitpass_der_Person_und_der_Kinder_entschluesselt()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var katrin = await AngemeldeterClientAsync(factory, FamilienHelfer.Katrin);
         await FreizeitHelfer.NameSetzenAsync(katrin, "Katrin", "Muster");
@@ -195,7 +195,7 @@ public sealed class DatenauskunftTests(PostgresContainer postgres, S3Container s
     [Fact]
     public async Task Ohne_Sitzung_401()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var client = factory.CreateClient();
 
         using var antwort = await client.GetAsync(Pfad, Abbruch);

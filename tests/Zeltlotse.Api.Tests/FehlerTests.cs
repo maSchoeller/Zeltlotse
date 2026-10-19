@@ -13,7 +13,7 @@ public sealed class FehlerTests(PostgresContainer postgres)
 {
     private async Task<ZeltlotseApiFactory> FactoryAsync()
     {
-        var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync());
+        var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync());
         factory.ZusatzDienste.Add(TestEndpunkte.Registrieren);
         factory.ZusatzDienste.Add(s => s.AddLogging(b => b.AddFakeLogging().SetMinimumLevel(LogLevel.Trace)));
         return factory;
@@ -86,7 +86,7 @@ public sealed class FehlerTests(PostgresContainer postgres)
     [Fact]
     public async Task Test_Endpunkte_werden_ausserhalb_von_Testing_nicht_abgebildet()
     {
-        var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync()) { Umgebung = "Production" };
+        var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync()) { Umgebung = "Production" };
         factory.ZusatzDienste.Add(TestEndpunkte.Registrieren);
         await using (factory)
         {

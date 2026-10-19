@@ -56,7 +56,7 @@ public sealed class FreizeitAnmeldungTests(PostgresContainer postgres) : IAsyncL
     /// </summary>
     public async ValueTask InitializeAsync()
     {
-        _verbindung = await postgres.NeueDatenbankAsync();
+        _verbindung = await postgres.NeueMigrierteDatenbankAsync();
         _factory = OrgHelfer.Factory(_verbindung);
         _gerd = await AngemeldeterClientAsync(_factory, Gerd);
         (_a, _andrea) = await OrganisationMitOrgAdminAsync(_factory, _gerd, "CVJM Musterstadt", Andrea);

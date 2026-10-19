@@ -16,7 +16,7 @@ public sealed class ProfilTests(PostgresContainer postgres)
     [Fact]
     public async Task Profil_zweimal_sicherstellen_legt_eine_Person_und_einen_Schluessel_an_mit_gleicher_Antwort()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var client = await AngemeldeterClientAsync(factory, Mail);
         var personId = await PersonIdAsync(verbindung, Mail);
@@ -42,7 +42,7 @@ public sealed class ProfilTests(PostgresContainer postgres)
     [Fact]
     public async Task Feld_mit_passendem_alten_Wert_speichert_und_liefert_neue_Version_und_nur_das_Feld()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var client = await AngemeldeterClientAsync(factory, Mail);
         var version = await SicherstellenAsync(client);
 
@@ -62,7 +62,7 @@ public sealed class ProfilTests(PostgresContainer postgres)
     [Fact]
     public async Task Abweichender_alter_Wert_desselben_Felds_ergibt_409_konflikt_und_aendert_nichts()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var client = await AngemeldeterClientAsync(factory, Mail);
         var version = await SicherstellenAsync(client);
         using (var erstes = await PatchAsync(client, $$"""{"version":{{version}},"alterWert":null,"vorname":"Lea"}"""))
@@ -82,7 +82,7 @@ public sealed class ProfilTests(PostgresContainer postgres)
     [Fact]
     public async Task Inzwischen_geaendertes_anderes_Feld_stoert_nicht()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var client = await AngemeldeterClientAsync(factory, Mail);
         var version = await SicherstellenAsync(client);
         using (var vorname = await PatchAsync(client, $$"""{"version":{{version}},"alterWert":null,"vorname":"Lea"}"""))
@@ -103,7 +103,7 @@ public sealed class ProfilTests(PostgresContainer postgres)
     [Fact]
     public async Task Gleichzeitige_Aenderungen_an_verschiedenen_Feldern_gelingen_beide()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var client = await AngemeldeterClientAsync(factory, Mail);
         var version = await SicherstellenAsync(client);
         string? vorname = null;
@@ -140,7 +140,7 @@ public sealed class ProfilTests(PostgresContainer postgres)
     [InlineData(101, HttpStatusCode.BadRequest)]
     public async Task Je_Feld_hoechstens_100_Zeichen(int laenge, HttpStatusCode erwartet)
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var client = await AngemeldeterClientAsync(factory, Mail);
         var version = await SicherstellenAsync(client);
 
@@ -161,7 +161,7 @@ public sealed class ProfilTests(PostgresContainer postgres)
     [InlineData("""[1]""")]
     public async Task Koerper_ohne_genau_ein_Feld_oder_ohne_Version_ergibt_400(string koerper)
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var client = await AngemeldeterClientAsync(factory, Mail);
         await SicherstellenAsync(client);
 
@@ -174,7 +174,7 @@ public sealed class ProfilTests(PostgresContainer postgres)
     [Fact]
     public async Task Aendern_ohne_angelegte_Person_ergibt_404()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var client = await AngemeldeterClientAsync(factory, Mail);
 
         using var antwort = await PatchAsync(client, """{"version":1,"alterWert":null,"vorname":"Lea"}""");
@@ -185,7 +185,7 @@ public sealed class ProfilTests(PostgresContainer postgres)
     [Fact]
     public async Task Die_Sitzung_von_Person_A_liefert_nur_die_Daten_von_A_in_der_Vertragsform()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var a = await AngemeldeterClientAsync(factory, "a@example.org");
         using var b = await AngemeldeterClientAsync(factory, "b@example.org");
         foreach (var (client, name) in new[] { (a, "Anna"), (b, "Bernd") })
@@ -210,7 +210,7 @@ public sealed class ProfilTests(PostgresContainer postgres)
     [Fact]
     public async Task Herkunft_wird_gespeichert_steht_in_der_Datenauskunft_und_ist_hoechstens_60_Zeichen_lang()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var client = await AngemeldeterClientAsync(factory, Mail);
         var version = await SicherstellenAsync(client);
 

@@ -20,7 +20,7 @@ public sealed class EinladungTests(PostgresContainer postgres)
     [Fact]
     public async Task Gueltige_Einladung_vergibt_die_Rolle_protokolliert_die_Rollenvergabe_und_richtet_die_Organisation_ein()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var gerd = await AngemeldeterClientAsync(factory, Gerd);
         var orgId = await AnlegenAsync(gerd, "Jugendwerk", Andrea);
@@ -50,7 +50,7 @@ public sealed class EinladungTests(PostgresContainer postgres)
     [MemberData(nameof(TokenFaelle))]
     public async Task Ungueltiges_Token_ergibt_404_ohne_Rolle_und_einen_Eintrag_im_Sicherheitsprotokoll(string fall)
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var gerd = await AngemeldeterClientAsync(factory, Gerd);
         var (orgId, lea) = await OrganisationMitOrgAdminAsync(factory, gerd, "Jugendwerk", Lea);
@@ -102,7 +102,7 @@ public sealed class EinladungTests(PostgresContainer postgres)
     [Fact]
     public async Task Andere_Mail_ergibt_404_und_danach_nimmt_die_eingeladene_Person_dieselbe_Einladung_an()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var gerd = await AngemeldeterClientAsync(factory, Gerd);
         var orgId = await AnlegenAsync(gerd, "Jugendwerk", Andrea);
@@ -124,7 +124,7 @@ public sealed class EinladungTests(PostgresContainer postgres)
     [Fact]
     public async Task Einladung_fuer_X_gibt_eine_Rolle_nur_in_X()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var gerd = await AngemeldeterClientAsync(factory, Gerd);
         var y = await AnlegenAsync(gerd, "Y", Jonas);
         var (x, andrea) = await OrganisationMitOrgAdminAsync(factory, gerd, "X", Andrea);
@@ -138,7 +138,7 @@ public sealed class EinladungTests(PostgresContainer postgres)
     [Fact]
     public async Task Zweite_Einladung_gleicher_Rolle_ergibt_eine_Rollen_Zeile()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var gerd = await AngemeldeterClientAsync(factory, Gerd);
         var (orgId, andrea) = await OrganisationMitOrgAdminAsync(factory, gerd, "Jugendwerk", Andrea);
@@ -155,7 +155,7 @@ public sealed class EinladungTests(PostgresContainer postgres)
     [Fact]
     public async Task Org_Ueberblick_annehmen_vergibt_Org_Ueberblick_und_aendert_eingerichtet_nicht()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = Factory(verbindung);
         using var gerd = await AngemeldeterClientAsync(factory, Gerd);
         var orgId = await AnlegenAsync(gerd, "Jugendwerk", Andrea);
@@ -173,7 +173,7 @@ public sealed class EinladungTests(PostgresContainer postgres)
     [Fact]
     public async Task Ich_Organisationen_liefert_je_Person_nur_die_eigenen_Rollen_und_nur_die_Vertragsfelder()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var gerd = await AngemeldeterClientAsync(factory, Gerd);
         var (orgId, andrea) = await OrganisationMitOrgAdminAsync(factory, gerd, "Jugendwerk", Andrea);
         var zweite = await AnlegenAsync(gerd, "Bezirk", Andrea);
@@ -202,7 +202,7 @@ public sealed class EinladungTests(PostgresContainer postgres)
     [Fact]
     public async Task Ich_Organisationen_liefert_bei_mehreren_Organisationen_je_Eintrag_nur_dessen_Rollen_nach_Name()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var gerd = await AngemeldeterClientAsync(factory, Gerd);
         var (zeltlager, andrea) = await OrganisationMitOrgAdminAsync(factory, gerd, "Zeltlager", Andrea);
         using (andrea)
@@ -230,7 +230,7 @@ public sealed class EinladungTests(PostgresContainer postgres)
     [Fact]
     public async Task Annehmen_ist_zugriffsbegrenzt()
     {
-        await using var factory = AnmeldeHelfer.Factory(await postgres.NeueDatenbankAsync(), mitZugriffsbegrenzung: true);
+        await using var factory = AnmeldeHelfer.Factory(await postgres.NeueMigrierteDatenbankAsync(), mitZugriffsbegrenzung: true);
         factory.Einstellungen["Zeltlotse:Zugriffsbegrenzung:AnfragenJeMinute"] = "7";
         using var andrea = factory.CreateClient();
         await AnmeldenAsync(factory, andrea, Andrea);

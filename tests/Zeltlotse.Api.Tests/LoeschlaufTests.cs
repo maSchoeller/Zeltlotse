@@ -148,7 +148,7 @@ public sealed class LoeschlaufTests(PostgresContainer postgres)
     [Fact]
     public async Task Ein_werfendes_Modul_wird_geloggt_und_haelt_die_anderen_nicht_auf()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = new ZeltlotseApiFactory(verbindung);
         // Als erstes registriert, damit alle Module der Lösung danach laufen müssen.
         factory.ZusatzDienste.Add(s => s.Insert(0, ServiceDescriptor.Scoped<ILoeschlauf, WerfenderLoeschlauf>()));
@@ -169,7 +169,7 @@ public sealed class LoeschlaufTests(PostgresContainer postgres)
 
     private async Task<(ZeltlotseApiFactory Factory, string Verbindung)> StartenAsync()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         var factory = new ZeltlotseApiFactory(verbindung);
         _ = factory.CreateClient();
         return (factory, verbindung);

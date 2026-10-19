@@ -72,7 +72,7 @@ public sealed class TelemetrieTests(PostgresContainer postgres)
 
     private async Task<ZeltlotseApiFactory> FactoryAsync(List<Activity> spans)
     {
-        var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync());
+        var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync());
         factory.ZusatzDienste.Add(TestEndpunkte.Registrieren);
         factory.ZusatzDienste.Add(s => s.AddOpenTelemetry().WithTracing(t => t.AddInMemoryExporter(spans)));
         return factory;

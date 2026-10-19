@@ -30,7 +30,7 @@ public sealed class RechteTests(PostgresContainer postgres) : IAsyncLifetime
     /// </summary>
     public async ValueTask InitializeAsync()
     {
-        _factory = Factory(await postgres.NeueDatenbankAsync());
+        _factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         _gerd = await AngemeldeterClientAsync(_factory, Gerd);
         (_a, _andrea) = await OrganisationMitOrgAdminAsync(_factory, _gerd, "A", Andrea);
         (_b, _lea) = await OrganisationMitOrgAdminAsync(_factory, _gerd, "B", Lea);

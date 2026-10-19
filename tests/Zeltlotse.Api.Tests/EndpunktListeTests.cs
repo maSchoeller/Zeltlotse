@@ -391,7 +391,7 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
     [Fact]
     public async Task Jeder_angemeldete_Endpunkt_antwortet_ohne_Sitzung_mit_401_ProblemDetails()
     {
-        await using var factory = Factory(await postgres.NeueDatenbankAsync());
+        await using var factory = Factory(await postgres.NeueMigrierteDatenbankAsync());
         using var client = factory.CreateClient();
         var endpunkte = Endpunkte(factory).Where(e => !Anonym.Contains(e.Name)).ToList();
         Assert.NotEmpty(endpunkte);
@@ -410,7 +410,7 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
 
     private async Task<List<(string Name, string Methode, string Pfad, RouteEndpoint Endpunkt)>> EndpunkteAsync()
     {
-        var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync());
+        var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync());
         await using (factory)
         {
             _ = factory.CreateClient();

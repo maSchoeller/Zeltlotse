@@ -21,7 +21,7 @@ public sealed class SicherheitsprotokollTests(PostgresContainer postgres)
     [Fact]
     public async Task Schreiben_legt_eine_Zeile_mit_Kennungen_und_Zeitpunkt_an()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = new ZeltlotseApiFactory(verbindung);
         _ = factory.CreateClient();
         var protokoll = factory.Services.GetRequiredService<ISicherheitsprotokoll>();
@@ -44,7 +44,7 @@ public sealed class SicherheitsprotokollTests(PostgresContainer postgres)
     public async Task Abbruch_des_Aufrufers_verhindert_den_Eintrag_nicht()
     {
         // Sonst entginge z. B. eine fehlgeschlagene Anmeldung dem Protokoll, wenn der Client die Verbindung abbricht.
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = new ZeltlotseApiFactory(verbindung);
         _ = factory.CreateClient();
         using var abgebrochen = new CancellationTokenSource();
@@ -59,7 +59,7 @@ public sealed class SicherheitsprotokollTests(PostgresContainer postgres)
     [Fact]
     public async Task Tabelle_hat_nur_Kennungen_und_keine_Freitext_oder_IP_Spalte()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = new ZeltlotseApiFactory(verbindung);
         _ = factory.CreateClient();
 
@@ -80,7 +80,7 @@ public sealed class SicherheitsprotokollTests(PostgresContainer postgres)
     [Fact]
     public async Task Aufraeumlauf_loescht_Zeilen_aelter_als_365_Tage_und_behaelt_juengere()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = new ZeltlotseApiFactory(verbindung);
         _ = factory.CreateClient();
         var protokoll = factory.Services.GetRequiredService<ISicherheitsprotokoll>();
@@ -101,7 +101,7 @@ public sealed class SicherheitsprotokollTests(PostgresContainer postgres)
     [Fact]
     public async Task Zeile_genau_an_der_Frist_bleibt()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = new ZeltlotseApiFactory(verbindung);
         _ = factory.CreateClient();
         await factory.Services.GetRequiredService<ISicherheitsprotokoll>().SchreibenAsync(SicherheitsEreignisArt.Anmeldung, Person, abbruch: Abbruch);
@@ -113,7 +113,7 @@ public sealed class SicherheitsprotokollTests(PostgresContainer postgres)
     [Fact]
     public async Task Fristdienst_raeumt_beim_Start_und_danach_taeglich_auf()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = new ZeltlotseApiFactory(verbindung);
         _ = factory.CreateClient();
         var protokoll = factory.Services.GetRequiredService<ISicherheitsprotokoll>();
@@ -138,7 +138,7 @@ public sealed class SicherheitsprotokollTests(PostgresContainer postgres)
     [Fact]
     public async Task Fristdienst_laeuft_nach_einem_Fehler_weiter_und_loggt_nur_den_Typ()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = new ZeltlotseApiFactory(verbindung);
         _ = factory.CreateClient();
         await factory.Services.GetRequiredService<ISicherheitsprotokoll>().SchreibenAsync(SicherheitsEreignisArt.Anmeldung, Person, abbruch: Abbruch);
@@ -169,7 +169,7 @@ public sealed class SicherheitsprotokollTests(PostgresContainer postgres)
     [Fact]
     public async Task Host_registriert_den_Fristdienst()
     {
-        await using var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync(), mitZustellDienst: true);
+        await using var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync(), mitZustellDienst: true);
         _ = factory.CreateClient();
 
         Assert.Contains(factory.Services.GetServices<IHostedService>(), d => d is SicherheitsprotokollFristDienst);

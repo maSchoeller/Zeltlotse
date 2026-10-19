@@ -30,7 +30,7 @@ public sealed class FreizeitpassTests(PostgresContainer postgres) : IAsyncLifeti
     /// <summary>Katrin hat Emma im Familienkonto, Thomas ist zweiter Elternteil; Daniel hat ein eigenes Konto.</summary>
     public async ValueTask InitializeAsync()
     {
-        _verbindung = await postgres.NeueDatenbankAsync();
+        _verbindung = await postgres.NeueMigrierteDatenbankAsync();
         _factory = OrgHelfer.Factory(_verbindung);
         _katrin = await AngemeldeterClientAsync(_factory, FamilienHelfer.Katrin);
         await NameSetzenAsync(_katrin, "Katrin", "Muster");
@@ -283,7 +283,7 @@ public sealed class FreizeitpassTests(PostgresContainer postgres) : IAsyncLifeti
     [Fact]
     public async Task Konto_loeschen_entfernt_die_Antworten_der_Person_und_der_Kinder_einziger_Eltern()
     {
-        var verbindung = await postgres.NeueDatenbankAsync();
+        var verbindung = await postgres.NeueMigrierteDatenbankAsync();
         await using var factory = OrgHelfer.Factory(verbindung);
         using var daniel = await AngemeldeterClientAsync(factory, FamilienHelfer.Daniel);
         (await PostAsync(daniel, "/api/ich/profil")).Dispose();

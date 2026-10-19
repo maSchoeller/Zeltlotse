@@ -62,7 +62,7 @@ public sealed class LogExportTests(PostgresContainer postgres)
     public async Task Host_gibt_Logs_nur_ueber_OpenTelemetry_aus()
     {
         // Konsole, Debug, EventSource und EventLog umgingen die Bereinigung und schrieben Ausnahmen mit Nachricht und Stacktrace.
-        await using var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync());
+        await using var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync());
         _ = factory.CreateClient();
 
         Assert.All(factory.Services.GetServices<ILoggerProvider>(), p => Assert.IsType<OpenTelemetryLoggerProvider>(p));
@@ -70,7 +70,7 @@ public sealed class LogExportTests(PostgresContainer postgres)
 
     private async Task<ZeltlotseApiFactory> FactoryAsync(List<LogRecord> eintraege)
     {
-        var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync());
+        var factory = new ZeltlotseApiFactory(await postgres.NeueMigrierteDatenbankAsync());
         factory.ZusatzDienste.Add(TestEndpunkte.Registrieren);
         factory.ZusatzDienste.Add(s => s.Configure<OpenTelemetryLoggerOptions>(o => o.AddInMemoryExporter(eintraege)));
         return factory;
