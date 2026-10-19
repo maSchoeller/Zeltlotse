@@ -329,6 +329,20 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.menge_von_hand"));
         Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.einkaufsposten"));
 
+        // Story 4-3: Die Küche hat Dienstag (03.08.) ganz freigegeben und danach die Äpfel wieder zurückgenommen; Mehl und Milch der Pfannkuchen sind
+        // gekauft. Die Seite „Einkauf“ zeigt die 11 berechneten Posten des Tags. Nichts doppelt, auch nach dem zweiten Einspielen.
+        var postenStand = einkauf.GetProperty("tage").EnumerateArray().Single().GetProperty("posten").EnumerateArray()
+            .Select(p => $"{p.GetProperty("bezeichnung").GetString()}{(p.GetProperty("freigegeben").GetBoolean() ? " F" : "")}{(p.GetProperty("gekauft").GetBoolean() ? " G" : "")}")
+            .ToList();
+        Assert.Equal(["Mehl F G", "Milch F G", "Eier F"], postenStand.Take(3));
+        Assert.Equal("Äpfel", postenStand[^1]);
+        Assert.Equal(11, postenStand.Count(p => p.Contains(" F", StringComparison.Ordinal)));
+        var einkaufSeite = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/kueche/einkauf", Abbruch));
+        Assert.Equal(11, einkaufSeite.GetProperty("tage").EnumerateArray().Single().GetProperty("posten").GetArrayLength());
+        Assert.Equal(11L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.posten_stand"));
+        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.posten_stand WHERE \"Gekauft\""));
+        Assert.Equal(0L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.einkaufsposten WHERE \"Freigegeben\" OR \"Gekauft\""));
+
         // Story 2-5: Die Fragen-Auswahl kam vor den Anmeldungen: Emmas Freigabe (eingegangen) und Mias (bestätigt) tragen die Fragen für
         // Teilnehmende, Leas die für Mitarbeitende. Daniel hat für Mia drei Antworten gespeichert, Lea eine Team-Notiz zu Mia geschrieben
         // (genau eine, auch nach dem zweiten Einspielen, nur verschlüsselt). Emmas Anmeldung nennt „Einsicht bis“.

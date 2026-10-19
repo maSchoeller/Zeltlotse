@@ -1,6 +1,6 @@
 ---
 title: Einkaufsliste
-description: Die Einkaufsliste aus den Gerichten, Mengen von Hand, eigene Posten und der Allergen-Abgleich mit Ersatzportionen.
+description: Die Einkaufsliste aus den Gerichten, Mengen von Hand, eigene Posten, Freigabe zum Einkaufen und der Allergen-Abgleich mit Ersatzportionen.
 sidebar:
   order: 3
 ---
@@ -21,13 +21,17 @@ Je Tag steht eine Card, zum Beispiel „Dienstag, 3. August 2027“, mit einer T
 - **Menge** – die hochgerechnete Menge oder die Menge von Hand,
 - **Einheit**,
 - **Gericht · Mahlzeit** – zum Beispiel „Pfannkuchen · Frühstück“,
-- **von Hand** – steht dort, wenn die Menge von Hand gesetzt ist oder der Posten selbst ergänzt wurde.
+- **von Hand** – steht dort, wenn die Menge von Hand gesetzt ist oder der Posten selbst ergänzt wurde,
+- **Freigegeben** – ein Kästchen: Ist es angekreuzt, steht der Posten auf der Seite **Einkauf** für die Einkaufenden,
+- **Gekauft** – „gekauft“, sobald jemand den Posten beim Einkaufen abgehakt hat.
+
+Über jeder Tabelle steht, wie viele Posten des Tags freigegeben und gekauft sind, zum Beispiel „11 von 12 freigegeben · 2 gekauft“, darunter die Knöpfe **Ganzen Tag freigeben** und **Freigabe zurücknehmen**. Wie Freigeben und Abhaken zusammenspielen, steht unter [Einkaufen: freigeben und abhaken](/kueche/einkauf/).
 
 Innerhalb eines Tages stehen die Posten in der Reihenfolge der Mahlzeiten. Gleiche Zutaten aus verschiedenen Gerichten fasst Zeltlotse **nicht** zusammen und rechnet keine Einheiten um: So bleibt jede Zeile nachvollziehbar. Eigene Posten ohne Tag stehen zuletzt in der Card „Ohne Tag“. Ist noch nichts vorgemerkt und nichts ergänzt, steht dort „Noch nichts auf der Einkaufsliste.“
 
-![Einkaufsliste am Laptop: „Berechnet für 4 Personen der Freizeit.“, Card „Allergen-Abgleich“ mit „Gluten: 1 Person“ und die Card „Dienstag, 3. August 2027“ mit Mehl 500 g von Hand und Milch für „Pfannkuchen · Frühstück“](../../../assets/screenshots/einkaufsliste-laptop.png)
+![Einkaufsliste am Laptop: „Berechnet für 4 Personen der Freizeit.“, Card „Allergen-Abgleich“ mit „Gluten: 1 Person“ und die Card „Dienstag, 3. August 2027“ mit „11 von 12 freigegeben · 2 gekauft“, den Knöpfen „Ganzen Tag freigeben“ und „Freigabe zurücknehmen“ und Mehl 500 g von Hand, freigegeben und gekauft, für „Pfannkuchen · Frühstück“](../../../assets/screenshots/einkaufsliste-laptop.png)
 
-![Einkaufsliste am Handy: die Posten untereinander mit Zutat, Menge, Einheit, Gericht und Mahlzeit](../../../assets/screenshots/einkaufsliste-handy.png)
+![Einkaufsliste am Handy: die Posten untereinander mit Zutat, Menge, Einheit, Gericht und Mahlzeit, dem Kästchen „freigegeben“ und „gekauft“](../../../assets/screenshots/einkaufsliste-handy.png)
 
 ## Mengen von Hand
 
@@ -66,8 +70,8 @@ Die Küche sieht beim Abgleich **nur Anzahlen**: keine Namen, keine Antworten un
 
 ## Nach dem Abschluss
 
-Nach dem Abschluss der Freizeit ist die Einkaufsliste nur lesbar: Oben steht „Diese Freizeit ist abgeschlossen und nur lesbar.“; Mengen stehen als Text da, und „Posten ergänzen“, die Hand-Posten und „Entfernen“ fehlen.
+Nach dem Abschluss der Freizeit ist die Einkaufsliste nur lesbar: Oben steht „Diese Freizeit ist abgeschlossen und nur lesbar.“; Mengen, „freigegeben“ und „gekauft“ stehen als Text da, und „Posten ergänzen“, die Hand-Posten, „Entfernen“ und die Knöpfe zur Freigabe fehlen.
 
 ## Noch nicht dabei
 
-Einkauf freigeben und Posten abhaken, eine Summe gleicher Zutaten über alle Gerichte, die Tagesansicht der Küche und der Restetag kommen mit einer späteren Version.
+Eine Summe gleicher Zutaten über alle Gerichte, die Tagesansicht der Küche, der Restetag und Einkaufen ohne Netz (offline) kommen mit einer späteren Version.

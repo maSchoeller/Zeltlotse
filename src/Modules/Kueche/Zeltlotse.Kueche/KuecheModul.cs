@@ -37,7 +37,8 @@ public static class KuecheModul
     /// <c>/api/freizeiten/{freizeitId}/kueche/rezepte</c> für Leitung und Team, nur mit eingeschaltetem Modul Verpflegung (sonst <c>404</c>, AD-20):
     /// Liste und Rezept lesen (mit hochgerechneten Mengen), Rezept anlegen, bearbeiten (Autosave, AD-19) und löschen, Zutaten hinzufügen, bearbeiten
     /// und entfernen. Story 4-2: unter <c>…/kueche</c> der Essensplan (lesen, Gerichte vormerken, entfernen, Tausch-Vorschau und Tausch) und die
-    /// Einkaufsliste (lesen, Hand-Mengen, Hand-Posten anlegen, bearbeiten und entfernen), ebenso für Leitung und Team mit dem Modul Verpflegung.
+    /// Einkaufsliste (lesen, Hand-Mengen, Hand-Posten anlegen, bearbeiten und entfernen), ebenso für Leitung und Team mit dem Modul Verpflegung. Story 4-3:
+    /// Posten freigeben und abhaken (an den PATCH-Routen), die Tages-Freigabe und die Seite der Einkaufenden (<c>…/kueche/einkauf</c>).
     /// </summary>
     public static IEndpointRouteBuilder MapKuecheEndpoints(this IEndpointRouteBuilder api)
     {
@@ -63,6 +64,9 @@ public static class KuecheModul
         kueche.MapPost("/einkaufsliste/posten", EinkaufspostenAnlegenEndpunkt.Anlegen).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
         kueche.MapPatch("/einkaufsliste/posten/{postenId:guid}", EinkaufspostenFeldAendernEndpunkt.Aendern).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
         kueche.MapDelete("/einkaufsliste/posten/{postenId:guid}", EinkaufspostenLoeschenEndpunkt.Loeschen).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
+        // Story 4-3: Tages-Freigabe und die Seite der Einkaufenden.
+        kueche.MapPost("/einkaufsliste/freigabe", EinkaufFreigebenEndpunkt.Freigeben).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
+        kueche.MapGet("/einkauf", EinkaufLadenEndpunkt.Laden).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
         return api;
     }
 }

@@ -113,9 +113,9 @@ public sealed class EinkaufTests(PostgresContainer postgres)
         var kaffee = Einkaufsposten.Anlegen(Guid.CreateVersion7(), Org, Freizeit, "Kaffee", null, null, null);
         GerichtDaten[] gerichte =
         [
-            new(gerichtAbend, abendDi, chili, [zwiebeln, mehlImChili], []),
-            new(gerichtFrueh, fruehDi, pfannkuchen, [mehl], [Hand(gerichtFrueh, mehl, 500m)]),
-            new(gerichtMo, mittagMo, pfannkuchen, [mehl], []),
+            new(gerichtAbend, abendDi, chili, [zwiebeln, mehlImChili], [], []),
+            new(gerichtFrueh, fruehDi, pfannkuchen, [mehl], [Hand(gerichtFrueh, mehl, 500m)], []),
+            new(gerichtMo, mittagMo, pfannkuchen, [mehl], [], []),
         ];
 
         var tage = EinkaufRechnen.Tage(gerichte, [kaffee, aepfel], 8, []);
@@ -173,7 +173,7 @@ public sealed class EinkaufTests(PostgresContainer postgres)
         var mittag = Mahlzeit(Dienstag, FreizeitMahlzeitArt.Mittagessen);
         var gericht = Vormerken(frueh, pfannkuchen);
 
-        var tage = EinkaufRechnen.Tage([new(gericht, frueh, pfannkuchen, [mehl], []), new(Vormerken(mittag, chili), mittag, chili, [bruehe], [])], [], 4, [["gluten"]]);
+        var tage = EinkaufRechnen.Tage([new(gericht, frueh, pfannkuchen, [mehl], [], []), new(Vormerken(mittag, chili), mittag, chili, [bruehe], [], [])], [], 4, [["gluten"]]);
 
         var ersatz = Assert.Single(Assert.Single(tage).Ersatzportionen);
         Assert.Equal((gericht.Id, "Pfannkuchen", "Frühstück", 1), (ersatz.GerichtId, ersatz.RezeptName, ersatz.MahlzeitName, ersatz.Ersatzportionen.Anzahl));
@@ -321,7 +321,7 @@ public sealed class EinkaufTests(PostgresContainer postgres)
     [InlineData("1.000", false)]
     public void HandMenge_prueft_die_Menge_leer_heisst_zurueck_zur_berechneten(string? menge, bool gueltig)
     {
-        var ergebnis = new HandMengeAendernValidator().Validate(new HandMengeAendernCommand(Freizeit, Guid.CreateVersion7(), Guid.CreateVersion7(), 0, null, menge));
+        var ergebnis = new HandMengeAendernValidator().Validate(new HandMengeAendernCommand(Freizeit, Guid.CreateVersion7(), Guid.CreateVersion7(), HandMengeFeld.Menge, 0, null, menge));
 
         Assert.Equal(gueltig, ergebnis.IsValid);
         if (!gueltig)

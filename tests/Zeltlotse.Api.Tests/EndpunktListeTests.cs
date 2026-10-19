@@ -304,7 +304,9 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 "DELETE /api/freizeiten/{freizeitId:guid}/kueche/gerichte/{gerichtId:guid}",
                 "GET /api/freizeiten/{freizeitId:guid}/kueche/gerichte/{gerichtId:guid}/tausch",
                 "POST /api/freizeiten/{freizeitId:guid}/kueche/gerichte/{gerichtId:guid}/tauschen",
+                "GET /api/freizeiten/{freizeitId:guid}/kueche/einkauf",
                 "GET /api/freizeiten/{freizeitId:guid}/kueche/einkaufsliste",
+                "POST /api/freizeiten/{freizeitId:guid}/kueche/einkaufsliste/freigabe",
                 "PATCH /api/freizeiten/{freizeitId:guid}/kueche/einkaufsliste/gerichte/{gerichtId:guid}/zutaten/{zutatId:guid}",
                 "POST /api/freizeiten/{freizeitId:guid}/kueche/einkaufsliste/posten",
                 "PATCH /api/freizeiten/{freizeitId:guid}/kueche/einkaufsliste/posten/{postenId:guid}",
@@ -327,8 +329,8 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         var endpunkte = await EndpunkteAsync();
 
         // Story 3-7 (AD-20): Leitplanke für V4 und V5: Jeder Endpunkt dort erklärt seinen Schalter. Story 4-1: die acht Routen der Rezepte;
-        // Story 4-2: zehn Routen für Essensplan, Gerichte und Einkaufsliste.
-        Assert.Equal(18, endpunkte.Count(e => e.Pfad.Contains("/kueche/", StringComparison.Ordinal)));
+        // Story 4-2: zehn Routen für Essensplan, Gerichte und Einkaufsliste; Story 4-3: Tages-Freigabe und die Seite der Einkaufenden.
+        Assert.Equal(20, endpunkte.Count(e => e.Pfad.Contains("/kueche/", StringComparison.Ordinal)));
         foreach (var (bereich, schalter) in new[] { ("kueche", FunktionsSchalter.Verpflegung), ("finanzen", FunktionsSchalter.Finanzen) })
         {
             var praefix = $"/api/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/{bereich}";

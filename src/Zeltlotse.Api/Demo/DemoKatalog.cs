@@ -85,6 +85,19 @@ internal static class DemoKatalog
         ("Äpfel", "3", "kg", new DateOnly(2027, 8, 3)),
     ];
 
+    /// <summary>Story 4-3: Tage, die die Küche in der Demo ganz zum Einkaufen freigibt.</summary>
+    public static IReadOnlyList<DateOnly> EinkaufTage { get; } = [new DateOnly(2027, 8, 3)];
+
+    /// <summary>Story 4-3: Hand-Posten, deren Freigabe die Küche danach wieder zurücknimmt (Bezeichnung).</summary>
+    public static IReadOnlyList<string> NichtFreigegeben { get; } = ["Äpfel"];
+
+    /// <summary>Story 4-3: Posten, die beim Einkaufen schon abgehakt sind (Tag, Mahlzeit, Rezept, Zutat); je nur, wenn sie noch nicht gekauft sind.</summary>
+    public static IReadOnlyList<(DateOnly Tag, string Mahlzeit, string Rezept, string Zutat)> Gekauft { get; } =
+    [
+        (new DateOnly(2027, 8, 3), "Frühstück", "Pfannkuchen", "Mehl"),
+        (new DateOnly(2027, 8, 3), "Frühstück", "Pfannkuchen", "Milch"),
+    ];
+
     /// <summary>
     /// Story 2-2 und 2-3: Anmeldungen der Demo-Freizeit mit Konto, in dieser Reihenfolge. <c>Kind</c> leer heißt: die Person meldet sich
     /// selbst über den Anmeldelink für Mitarbeitende an. Miriam bestätigt die mit <c>Bestaetigt</c>; die anderen bleiben „eingegangen“.

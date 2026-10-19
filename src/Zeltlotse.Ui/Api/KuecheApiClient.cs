@@ -38,7 +38,7 @@ public sealed record PostenAktion(KuecheAktionErgebnis Ergebnis, EinkaufslistenP
 /// Verpflegung; sonst wie nicht verfügbar). Den Autosave der Felder von Rezept und Zutat übernimmt der Autosave-Baustein mit
 /// <see cref="RezeptPfad"/> und <see cref="ZutatPfad"/>. Story 4-2: Essensplan mit Vormerken, Entfernen, Tausch-Vorschau und Tausch, die Einkaufsliste
 /// mit Hand-Posten; den Autosave von Hand-Mengen und Hand-Posten übernimmt der Autosave-Baustein mit <see cref="HandMengePfad"/> und
-/// <see cref="PostenPfad"/>.
+/// <see cref="PostenPfad"/>. Story 4-3: die Seite der Einkaufenden und die Tages-Freigabe; Freigeben und Abhaken einzelner Posten über dieselben Pfade.
 /// </summary>
 public sealed class KuecheApiClient(HttpClient http)
 {
@@ -65,6 +65,9 @@ public sealed class KuecheApiClient(HttpClient http)
 
     /// <summary>Story 4-2: Pfad eines Hand-Postens, auch für den Autosave-Baustein.</summary>
     public static string PostenPfad(Guid freizeitId, Guid postenId) => $"{EinkaufslistePfad(freizeitId)}/posten/{postenId}";
+
+    /// <summary>Story 4-3: Pfad der Seite der Einkaufenden.</summary>
+    public static string EinkaufPfad(Guid freizeitId) => $"/api/freizeiten/{freizeitId}/kueche/einkauf";
 
     /// <summary><c>GET …/kueche/rezepte</c>: die Rezepte und die Personenzahl oder <c>null</c> bei <c>403</c>/<c>404</c> (auch ohne Verpflegung).</summary>
     public Task<Rezeptliste?> RezepteLadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
@@ -121,6 +124,20 @@ public sealed class KuecheApiClient(HttpClient http)
     /// <summary>Story 4-2: <c>GET …/kueche/einkaufsliste</c> oder <c>null</c> bei <c>403</c>/<c>404</c> (auch ohne Verpflegung).</summary>
     public Task<Einkaufsliste?> EinkaufslisteLadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
         LadenAsync<Einkaufsliste>(EinkaufslistePfad(freizeitId), "die Einkaufsliste", abbruch);
+
+    /// <summary>Story 4-3: <c>GET …/kueche/einkauf</c> (nur freigegebene Posten) oder <c>null</c> bei <c>403</c>/<c>404</c> (auch ohne Verpflegung).</summary>
+    public Task<Einkauf?> EinkaufLadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
+        LadenAsync<Einkauf>(EinkaufPfad(freizeitId), "den Einkauf", abbruch);
+
+    /// <summary>
+    /// Story 4-3: <c>POST …/einkaufsliste/freigabe</c>: gibt alle Posten eines Tags (ohne Tag: die Hand-Posten ohne Tag) frei oder nimmt die Freigabe
+    /// zurück; erledigt, abgeschlossen oder ein anderer Fehler.
+    /// </summary>
+    public async Task<KuecheAktionErgebnis> FreigabeAsync(Guid freizeitId, EinkaufFreigabe freigabe, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync($"{EinkaufslistePfad(freizeitId)}/freigabe", freigabe, ApiJson.Optionen, abbruch);
+        return antwort.IsSuccessStatusCode ? KuecheAktionErgebnis.Erfolg : await FehlerAsync(antwort, abbruch);
+    }
 
     /// <summary>Story 4-2: <c>GET …/gerichte/{gerichtId}/tausch?rezeptId=</c>: die Vorschau oder <c>null</c> (Gericht oder Rezept nicht mehr da).</summary>
     public async Task<Tauschvorschau?> TauschvorschauLadenAsync(Guid freizeitId, Guid gerichtId, Guid rezeptId, CancellationToken abbruch = default)

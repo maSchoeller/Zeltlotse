@@ -13,13 +13,13 @@ Den Essensplan gibt es nur, wenn die Leitung das Modul **Verpflegung** eingescha
 
 ## Der Weg zum Essensplan
 
-Startseite der Freizeit → Knopf **Küche** → Reiter **Essensplan**. Die drei Reiter **Rezepte · Essensplan · Einkaufsliste** stehen oben auf allen Küche-Seiten.
+Startseite der Freizeit → Knopf **Küche** → Reiter **Essensplan**. Die vier Reiter **Rezepte · Essensplan · Einkaufsliste · Einkauf** stehen oben auf allen Küche-Seiten.
 
 Darunter steht je Tag der Freizeit ein Reiter, zum Beispiel „Di 03.08.“. Gewählt ist der heutige Tag, wenn er zur Freizeit gehört, sonst der erste Tag. Der gewählte Tag steht in der Adresse; ein Lesezeichen öffnet also genau diesen Tag.
 
 Je Mahlzeit steht eine Card: **Frühstück**, **Mittagessen** und **Abendessen** mit ihrer Uhrzeit. Die Mahlzeiten sind die festen Programmpunkte aus dem [Wochenraster](/mitarbeitende/programm/); Zeltlotse legt sie an, sobald der Essensplan das erste Mal geöffnet wird. Ohne Gericht steht in der Card „Noch nichts vorgemerkt.“
 
-![Essensplan am Handy: Reiter „Rezepte · Essensplan · Einkaufsliste“, die Tage als Reiter mit „Di 03.08.“ gewählt, die Card „Frühstück“ mit „Pfannkuchen“, „1 Ersatzportion einplanen (enthält Gluten)“ und den Knöpfen „Tauschen“ und „Entfernen“](../../../assets/screenshots/essensplan-handy.png)
+![Essensplan am Handy: Reiter „Rezepte · Essensplan · Einkaufsliste · Einkauf“, die Tage als Reiter mit „Di 03.08.“ gewählt, die Card „Frühstück“ mit „Pfannkuchen“, „1 Ersatzportion einplanen (enthält Gluten)“ und den Knöpfen „Tauschen“ und „Entfernen“](../../../assets/screenshots/essensplan-handy.png)
 
 ![Essensplan am Laptop mit allen Tagen als Reiter und den Cards „Frühstück“ (Pfannkuchen) und „Mittagessen“ (Chili sin Carne)](../../../assets/screenshots/essensplan-laptop.png)
 
@@ -41,7 +41,7 @@ Ein Tausch ändert die Planung und damit die Einkaufsliste. Darum zeigt Zeltlots
 
 1. Am Gericht **Tauschen** tippen.
 2. Unter „Tauschen gegen“ das neue Rezept wählen.
-3. Zeltlotse zeigt **Vorher** und **Nachher** – am Laptop nebeneinander, am Handy untereinander: links die Posten des bisherigen Rezepts, rechts genau die Posten, die nach dem Tausch auf der Einkaufsliste stehen. Was sich ändert, ist **fett** markiert.
+3. Zeltlotse zeigt **Vorher** und **Nachher** – am Laptop nebeneinander, am Handy untereinander: links die noch nicht gekauften Posten des bisherigen Rezepts, rechts genau die Posten, die nach dem Tausch auf der Einkaufsliste stehen. Was sich ändert, ist **fett** markiert. Was schon gekauft ist, steht nicht im Vergleich; darunter steht dann zum Beispiel „2 schon gekaufte Posten stehen nicht im Vergleich.“
 4. Dann eine der drei Möglichkeiten:
    - **Übernehmen** – tauscht das Gericht; der Essensplan bleibt offen und meldet „Pfannkuchen gegen Chili sin Carne getauscht.“
    - **Anpassen** – tauscht das Gericht und öffnet die Einkaufsliste an diesem Tag, um dort Mengen anzupassen.
@@ -49,9 +49,11 @@ Ein Tausch ändert die Planung und damit die Einkaufsliste. Darum zeigt Zeltlots
 
 Mengen, die auf der Einkaufsliste von Hand gesetzt sind, wandern mit, wenn das neue Rezept eine Zutat mit derselben Bezeichnung (Groß- und Kleinschreibung egal) und derselben Einheit hat. Alle anderen Mengen von Hand des Gerichts entfallen. Die Vorschau zeigt das schon.
 
+Freigabe und Haken der Posten wandern **nicht** mit: Nach dem Tausch sind die Posten des neuen Rezepts offen und nicht freigegeben – siehe [Einkaufen: freigeben und abhaken](/kueche/einkauf/#gerichte-tauschen-nach-dem-einkauf).
+
 Hat jemand anderes das Gericht inzwischen getauscht, steht „Inzwischen geändert – neu laden?“ mit dem Knopf **Neu laden**; getauscht wird dann nichts.
 
-![Tausch-Vorschau am Laptop: am Frühstück „Tauschen gegen“ mit „Chili sin Carne“ gewählt, darunter „Vorher“ (Pfannkuchen: 500 g Mehl von Hand, Milch, Eier, Salz) und „Nachher“ (Chili sin Carne mit allen Zutaten), alle Zeilen fett](../../../assets/screenshots/gericht-tauschen-laptop.png)
+![Tausch-Vorschau am Laptop: am Frühstück „Tauschen gegen“ mit „Chili sin Carne“ gewählt, darunter „Vorher“ (Pfannkuchen: Eier und Salz; Mehl und Milch sind schon gekauft) und „Nachher“ (Chili sin Carne mit allen Zutaten), alle Zeilen fett](../../../assets/screenshots/gericht-tauschen-laptop.png)
 
 ![Tausch-Vorschau am Handy: „Vorher“ und „Nachher“ untereinander](../../../assets/screenshots/gericht-tauschen-handy.png)
 
@@ -65,4 +67,4 @@ Gerichte enthalten keine Personendaten. Für die Ersatzportionen sieht die Küch
 
 ## Noch nicht dabei
 
-Einkauf freigeben und abhaken, die Tagesansicht der Küche und der Restetag kommen mit einer späteren Version.
+Die Tagesansicht der Küche und der Restetag kommen mit einer späteren Version. Posten freigeben und abhaken steht unter [Einkaufen: freigeben und abhaken](/kueche/einkauf/).

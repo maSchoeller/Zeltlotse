@@ -4,7 +4,10 @@ using Zeltlotse.Ui.Texte;
 
 namespace Zeltlotse.App.Features.Kueche;
 
-/// <summary>Story 4-1: Gemeinsames der Küchen-Seiten: Texte, Ziele der Links und die Allergene als Auswahl. Story 4-2: Essensplan und Einkaufsliste.</summary>
+/// <summary>
+/// Story 4-1: Gemeinsames der Küchen-Seiten: Texte, Ziele der Links und die Allergene als Auswahl. Story 4-2: Essensplan und Einkaufsliste. Story 4-3:
+/// Einkauf, Freigabe und „schon gekauft“.
+/// </summary>
 internal static class KuecheTexte
 {
     public const string AbgeschlossenText = "Diese Freizeit ist abgeschlossen und nur lesbar.";
@@ -39,6 +42,29 @@ internal static class KuecheTexte
     /// <summary>Story 4-2: die Einkaufsliste, mit Tag als Sprungziel der Card dieses Tages.</summary>
     public static string EinkaufslisteZiel(Guid freizeitId, DateOnly? tag = null) =>
         tag is { } wert ? $"freizeiten/{freizeitId}/kueche/einkaufsliste#{TagAnker(wert)}" : $"freizeiten/{freizeitId}/kueche/einkaufsliste";
+
+    /// <summary>Story 4-3: die Seite der Einkaufenden.</summary>
+    public static string EinkaufZiel(Guid freizeitId) => $"freizeiten/{freizeitId}/kueche/einkauf";
+
+    /// <summary>
+    /// Story 4-3: Ein Posten in einer Zeile, z. B. „Mehl 500 g · Pfannkuchen · Frühstück“; Hand-Posten ohne Gericht, z. B. „Äpfel 3 kg“, ohne Menge nur
+    /// die Bezeichnung.
+    /// </summary>
+    public static string PostenText(EinkaufslistenPosten posten) =>
+        $"{posten.Bezeichnung} {MengeMitEinheit(posten.Menge, posten.Einheit)}".Trim()
+        + (posten.RezeptName is null ? "" : $" · {posten.RezeptName} · {posten.MahlzeitName}");
+
+    /// <summary>Story 4-3: Zählzeile eines Tages auf der Einkaufsliste, z. B. „1 von 3 freigegeben · 0 gekauft“.</summary>
+    public static string Freigabezeile(IReadOnlyCollection<EinkaufslistenPosten> posten) =>
+        $"{posten.Count(p => p.Freigegeben)} von {posten.Count} freigegeben · {posten.Count(p => p.Gekauft)} gekauft";
+
+    /// <summary>Story 4-3: Satz der Tausch-Vorschau zu schon gekauften Posten; ohne solche <c>null</c>.</summary>
+    public static string? SchonGekauft(int anzahl) => anzahl switch
+    {
+        <= 0 => null,
+        1 => "1 schon gekaufter Posten steht nicht im Vergleich.",
+        _ => $"{anzahl} schon gekaufte Posten stehen nicht im Vergleich.",
+    };
 
     /// <summary>Story 4-2: Kennung der Card eines Tages auf der Einkaufsliste, z. B. „tag-2027-08-03“; ohne Tag „tag-ohne“.</summary>
     public static string TagAnker(DateOnly? tag) => tag is { } wert ? $"tag-{Iso(wert)}" : "tag-ohne";

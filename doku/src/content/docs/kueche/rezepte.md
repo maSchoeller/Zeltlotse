@@ -13,7 +13,7 @@ Rezepte gibt es nur, wenn die Leitung das Modul **Verpflegung** für die Freizei
 
 ## Der Weg zu den Rezepten
 
-Startseite der Freizeit → Knopf **Küche**. Oben stehen die Reiter **Rezepte · Essensplan · Einkaufsliste**. Die Seite **Rezepte** zeigt je Rezept eine Card: den Namen als Link zum Rezept, „für 4 Personen“ mit der Zahl der Zutaten und die Allergene aller Zutaten. Ist an keiner Zutat ein Allergen angekreuzt, steht dort „keine angegeben“ – das heißt nicht, dass das Rezept frei von Allergenen ist. Darüber steht, auf wie viele Personen Zeltlotse hochrechnet, zum Beispiel „Hochgerechnet auf 4 Personen der Freizeit.“ Ohne Rezepte steht dort „Noch keine Rezepte.“
+Startseite der Freizeit → Knopf **Küche**. Oben stehen die Reiter **Rezepte · Essensplan · Einkaufsliste · Einkauf**. Die Seite **Rezepte** zeigt je Rezept eine Card: den Namen als Link zum Rezept, „für 4 Personen“ mit der Zahl der Zutaten und die Allergene aller Zutaten. Ist an keiner Zutat ein Allergen angekreuzt, steht dort „keine angegeben“ – das heißt nicht, dass das Rezept frei von Allergenen ist. Darüber steht, auf wie viele Personen Zeltlotse hochrechnet, zum Beispiel „Hochgerechnet auf 4 Personen der Freizeit.“ Ohne Rezepte steht dort „Noch keine Rezepte.“
 
 ![Rezepte am Handy: „Hochgerechnet auf 4 Personen der Freizeit.“, darunter die Cards „Chili sin Carne“ (für 4 Personen · 7 Zutaten, Allergene: Sellerie) und „Pfannkuchen“](../../../assets/screenshots/rezepte-handy.png)
 
@@ -74,4 +74,4 @@ Rezepte gehören zur Freizeit und enthalten keine Personendaten. Deshalb gehöre
 
 ## Noch nicht dabei
 
-Gerichte an den Mahlzeiten stehen im [Essensplan](/kueche/essensplan/), der Abgleich der Allergene mit den Freizeitpässen und die Mengen zum Einkaufen auf der [Einkaufsliste](/kueche/einkaufsliste/). Einkauf freigeben und abhaken, die Tagesansicht der Küche und der Restetag kommen mit einer späteren Version. Rezepte gelten heute nur in ihrer Freizeit; eine Rezeptsammlung der Organisation und das Kopieren von Rezepten in eine andere Freizeit gibt es nicht.
+Gerichte an den Mahlzeiten stehen im [Essensplan](/kueche/essensplan/), der Abgleich der Allergene mit den Freizeitpässen und die Mengen zum Einkaufen auf der [Einkaufsliste](/kueche/einkaufsliste/), Freigeben und Abhaken unter [Einkaufen: freigeben und abhaken](/kueche/einkauf/). Die Tagesansicht der Küche und der Restetag kommen mit einer späteren Version. Rezepte gelten heute nur in ihrer Freizeit; eine Rezeptsammlung der Organisation und das Kopieren von Rezepten in eine andere Freizeit gibt es nicht.

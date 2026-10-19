@@ -27,7 +27,8 @@ internal sealed class EinkaufAbfrage(
     public Task<int> PersonenzahlAsync(Guid freizeitId, CancellationToken abbruch) => personenLesen.AnzahlAsync(freizeitId, abbruch);
 
     /// <summary>
-    /// Die Gerichte der Freizeit (oder nur eines) mit Mahlzeit, Rezept, Zutaten nach Kennung und Hand-Mengen; ein Gericht ohne bekannte Mahlzeit fehlt.
+    /// Die Gerichte der Freizeit (oder nur eines) mit Mahlzeit, Rezept, Zutaten nach Kennung, Hand-Mengen und (Story 4-3) dem Stand der Posten; ein Gericht
+    /// ohne bekannte Mahlzeit fehlt.
     /// </summary>
     public async Task<List<GerichtDaten>> GerichteAsync(Guid freizeitId, IReadOnlyList<FreizeitMahlzeit> mahlzeiten, CancellationToken abbruch, Guid? nurGericht = null)
     {
@@ -45,12 +46,14 @@ internal sealed class EinkaufAbfrage(
         var rezepte = await db.Rezepte.Where(r => rezeptIds.Contains(r.Id)).ToDictionaryAsync(r => r.Id, abbruch);
         var zutaten = (await db.Zutaten.Where(z => rezeptIds.Contains(z.RezeptId)).OrderBy(z => z.Id).ToListAsync(abbruch)).ToLookup(z => z.RezeptId);
         var hand = (await db.MengenVonHand.Where(h => gerichtIds.Contains(h.GerichtId)).ToListAsync(abbruch)).ToLookup(h => h.GerichtId);
+        // Story 4-3: der Stand der Posten (Freigabe, Gekauft).
+        var staende = (await db.PostenStaende.Where(s => gerichtIds.Contains(s.GerichtId)).ToListAsync(abbruch)).ToLookup(s => s.GerichtId);
         var nachId = mahlzeiten.ToDictionary(m => m.ProgrammpunktId);
         return
         [
             .. gerichte
                 .Where(g => nachId.ContainsKey(g.ProgrammpunktId) && rezepte.ContainsKey(g.RezeptId))
-                .Select(g => new GerichtDaten(g, nachId[g.ProgrammpunktId], rezepte[g.RezeptId], [.. zutaten[g.RezeptId]], [.. hand[g.Id]])),
+                .Select(g => new GerichtDaten(g, nachId[g.ProgrammpunktId], rezepte[g.RezeptId], [.. zutaten[g.RezeptId]], [.. hand[g.Id]], [.. staende[g.Id]])),
         ];
     }
 

@@ -62,13 +62,16 @@ public sealed record GerichtTauschen(uint Version, Guid? RezeptId);
 /// Groß-/Kleinschreibung) und gleicher Einheit, die übrigen entfallen.
 /// </summary>
 /// <param name="Version">Version des Gerichts für <c>POST …/tauschen</c>.</param>
+/// <param name="Vorher">Story 4-3: nur die noch nicht gekauften Posten des bisherigen Rezepts.</param>
+/// <param name="SchonGekauft">Story 4-3, FR-50: so viele Posten des bisherigen Rezepts sind schon gekauft und stehen nicht im Vergleich.</param>
 public sealed record Tauschvorschau(
     Guid GerichtId,
     uint Version,
     RezeptWahl Rezept,
     RezeptWahl NeuesRezept,
     IReadOnlyList<TauschZeile> Vorher,
-    IReadOnlyList<TauschZeile> Nachher);
+    IReadOnlyList<TauschZeile> Nachher,
+    int SchonGekauft);
 
 /// <summary>Story 4-2: Eine Zeile der Tausch-Vorschau.</summary>
 /// <param name="Menge">Hochgerechnete Menge oder die Hand-Menge; ohne Menge <c>null</c>.</param>

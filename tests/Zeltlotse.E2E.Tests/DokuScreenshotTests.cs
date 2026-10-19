@@ -2184,8 +2184,11 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await chili.ClickAsync();
         var vergleich = fruehstueck.Locator(".zl-vergleich");
         await Assertions.Expect(vergleich.Locator(".zl-vergleich__text")).ToHaveTextAsync(["Pfannkuchen", "Chili sin Carne"], new() { Timeout = 60_000 });
-        await Assertions.Expect(vergleich.Locator(".zl-vergleich__spalte").Nth(0)).ToContainTextAsync("500 g Mehl (von Hand)");
+        // Story 4-3: Mehl und Milch sind in der Demo schon gekauft und stehen nicht im Vergleich.
+        await Assertions.Expect(vergleich.Locator(".zl-vergleich__spalte").Nth(0)).ToContainTextAsync("4 Stück Eier");
+        await Assertions.Expect(vergleich.Locator(".zl-vergleich__spalte").Nth(0)).Not.ToContainTextAsync("Mehl");
         await Assertions.Expect(vergleich.Locator(".zl-vergleich__spalte").Nth(1)).ToContainTextAsync("500 g Kidneybohnen");
+        await Assertions.Expect(fruehstueck).ToContainTextAsync("2 schon gekaufte Posten stehen nicht im Vergleich.");
         await Assertions.Expect(fruehstueck.GetByRole(AriaRole.Button, new() { Name = "Übernehmen", Exact = true })).ToBeEnabledAsync();
         await Assertions.Expect(chili).ToBeCheckedAsync();
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
@@ -2211,12 +2214,47 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(dienstag.Locator("h2")).ToHaveTextAsync("Dienstag, 3. August 2027");
         await Assertions.Expect(dienstag.Locator("tbody tr").First).ToContainTextAsync("Pfannkuchen · Frühstück");
         await Assertions.Expect(dienstag.Locator("tbody tr").First).ToContainTextAsync("von Hand");
+        // Story 4-3: Spalten „Freigegeben“ und „Gekauft“, Zählzeile und Tages-Knöpfe.
+        await Assertions.Expect(dienstag.Locator("tbody tr").First).ToContainTextAsync("gekauft");
+        await Assertions.Expect(dienstag.Locator("tbody tr").First.GetByRole(AriaRole.Checkbox)).ToBeCheckedAsync();
+        await Assertions.Expect(dienstag).ToContainTextAsync("11 von 12 freigegeben · 2 gekauft");
+        await Assertions.Expect(dienstag.GetByRole(AriaRole.Button, new() { Name = "Ganzen Tag freigeben" })).ToBeVisibleAsync();
         await Assertions.Expect(dienstag).ToContainTextAsync("Pfannkuchen · Frühstück: 1 Ersatzportion einplanen (enthält Gluten)");
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await E2EHilfe.AxeAsync(seite);
 
         // Nur lesend, damit der Demo-Stand für die anderen Bilder bleibt.
         await BildAsync(seite, "einkaufsliste", geraet);
+    }
+
+    // ---------- Story 4-3: Einkauf freigeben und abhaken ----------
+
+    /// <summary>
+    /// Lea (Team) kauft ein: Küche → Reiter „Einkauf“. In der Demo ist Dienstag (03.08.) freigegeben (ohne die Äpfel), Mehl und Milch der Pfannkuchen sind
+    /// schon abgehakt. Nur lesend, damit der Demo-Stand für die anderen Bilder bleibt.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Einkauf(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await KuecheAsync(seite);
+        await seite.GetByRole(AriaRole.Navigation, new() { Name = "Küche" }).GetByRole(AriaRole.Link, new() { Name = "Einkauf", Exact = true }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Einkauf", new() { Timeout = 60_000 });
+        var dienstag = seite.Locator("#tag-2027-08-03");
+        await Assertions.Expect(dienstag.Locator("h2")).ToHaveTextAsync("Dienstag, 3. August 2027", new() { Timeout = 60_000 });
+        await Assertions.Expect(dienstag.GetByRole(AriaRole.Checkbox)).ToHaveCountAsync(11);
+        await Assertions.Expect(dienstag.GetByLabel("Mehl 500 g · Pfannkuchen · Frühstück")).ToBeCheckedAsync();
+        await Assertions.Expect(dienstag.GetByLabel("Milch 0,75 l · Pfannkuchen · Frühstück")).ToBeCheckedAsync();
+        await Assertions.Expect(dienstag.GetByLabel("Eier 4 Stück · Pfannkuchen · Frühstück")).Not.ToBeCheckedAsync();
+        await Assertions.Expect(seite.GetByText("Äpfel")).ToHaveCountAsync(0);
+        await Assertions.Expect(seite.GetByText("Allergen")).ToHaveCountAsync(0);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "einkauf", geraet);
     }
 
     /// <summary>Story 3-6: „Abgelegt am …“ hängt vom Tag des Einspielens ab; im Bild steht ein festes Datum.</summary>

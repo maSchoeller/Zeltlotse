@@ -6,12 +6,19 @@ using Zutat = Zeltlotse.Kueche.Rezepte.Zutat;
 
 namespace Zeltlotse.Kueche.Einkauf;
 
-/// <summary>Story 4-2: Ein berechneter Posten eines Gerichts: die Zutat, die geltende Menge und ob sie von Hand ist.</summary>
+/// <summary>
+/// Story 4-2: Ein berechneter Posten eines Gerichts: die Zutat, die geltende Menge und ob sie von Hand ist. Story 4-3: dazu Freigabe und Gekauft aus dem
+/// <see cref="PostenStand"/> (ohne Zeile beides <c>false</c>).
+/// </summary>
 /// <param name="Version">Version der Hand-Menge, ohne Hand-Menge 0.</param>
-internal sealed record RechenPosten(Zutat Zutat, decimal? Menge, bool VonHand, uint Version);
+internal sealed record RechenPosten(Zutat Zutat, decimal? Menge, bool VonHand, uint Version, bool Freigegeben = false, bool Gekauft = false);
 
-/// <summary>Story 4-2: Alles, was die Liste von einem Gericht braucht: Gericht, Mahlzeit, Rezept, dessen Zutaten (nach Kennung) und die Hand-Mengen.</summary>
-internal sealed record GerichtDaten(Gericht Gericht, FreizeitMahlzeit Mahlzeit, Rezept Rezept, IReadOnlyList<Zutat> Zutaten, IReadOnlyList<MengeVonHand> HandMengen);
+/// <summary>
+/// Story 4-2: Alles, was die Liste von einem Gericht braucht: Gericht, Mahlzeit, Rezept, dessen Zutaten (nach Kennung) und die Hand-Mengen. Story 4-3: dazu
+/// der Stand der Posten.
+/// </summary>
+internal sealed record GerichtDaten(
+    Gericht Gericht, FreizeitMahlzeit Mahlzeit, Rezept Rezept, IReadOnlyList<Zutat> Zutaten, IReadOnlyList<MengeVonHand> HandMengen, IReadOnlyList<PostenStand> Staende);
 
 /// <summary>
 /// Story 4-2 (CAP-29, FR-47 bis FR-50): Die Rechenregeln der Einkaufsliste an genau einer Stelle, ohne Datenbank. Die Liste wird bei jedem Abruf aus den
@@ -21,13 +28,19 @@ internal static class EinkaufRechnen
 {
     /// <summary>
     /// Die Posten eines Gerichts in der Reihenfolge der Zutaten: je Zutat die auf die Personenzahl hochgerechnete Menge (wie auf der Rezeptseite, ohne
-    /// Abzug für Ersatzportionen); eine Hand-Menge ersetzt sie.
+    /// Abzug für Ersatzportionen); eine Hand-Menge ersetzt sie. Story 4-3: Freigabe und Gekauft aus dem Stand der Zutat, ohne Stand beides <c>false</c>.
     /// </summary>
-    public static IReadOnlyList<RechenPosten> Posten(Rezept rezept, IReadOnlyList<Zutat> zutaten, IReadOnlyCollection<MengeVonHand> handMengen, int personenzahl) =>
+    public static IReadOnlyList<RechenPosten> Posten(
+        Rezept rezept, IReadOnlyList<Zutat> zutaten, IReadOnlyCollection<MengeVonHand> handMengen, int personenzahl, IReadOnlyCollection<PostenStand>? staende = null) =>
     [
-        .. zutaten.Select(z => handMengen.FirstOrDefault(h => h.ZutatId == z.Id) is { } hand
-            ? new RechenPosten(z, KuecheWerte.OhneNullen(hand.Menge), VonHand: true, hand.Version)
-            : new RechenPosten(z, KuecheWerte.Hochrechnen(z.Menge, rezept.BasisPersonen, personenzahl), VonHand: false, 0)),
+        .. zutaten.Select(z =>
+        {
+            var stand = staende?.FirstOrDefault(s => s.ZutatId == z.Id);
+            var posten = handMengen.FirstOrDefault(h => h.ZutatId == z.Id) is { } hand
+                ? new RechenPosten(z, KuecheWerte.OhneNullen(hand.Menge), VonHand: true, hand.Version)
+                : new RechenPosten(z, KuecheWerte.Hochrechnen(z.Menge, rezept.BasisPersonen, personenzahl), VonHand: false, 0);
+            return posten with { Freigegeben = stand?.Freigegeben ?? false, Gekauft = stand?.Gekauft ?? false };
+        }),
     ];
 
     /// <summary>
@@ -68,11 +81,11 @@ internal static class EinkaufRechnen
     /// </summary>
     public static IReadOnlyList<RechenPosten> PostenNachTausch(
         Rezept altesRezept, IReadOnlyList<Zutat> alteZutaten, IReadOnlyCollection<MengeVonHand> handMengen, Rezept neuesRezept, IReadOnlyList<Zutat> neueZutaten,
-        int personenzahl)
+        int personenzahl, IReadOnlyCollection<PostenStand>? staende = null)
     {
         if (altesRezept.Id == neuesRezept.Id)
         {
-            return Posten(altesRezept, alteZutaten, handMengen, personenzahl);
+            return Posten(altesRezept, alteZutaten, handMengen, personenzahl, staende);
         }
 
         var abgebildet = TauschAbbilden(alteZutaten, handMengen, neueZutaten);
@@ -90,6 +103,23 @@ internal static class EinkaufRechnen
     /// </summary>
     public static (IReadOnlyList<TauschZeile> Vorher, IReadOnlyList<TauschZeile> Nachher) Vergleich(IReadOnlyList<RechenPosten> vorher, IReadOnlyList<RechenPosten> nachher) =>
         ([.. vorher.Select(p => Zeile(p, nachher))], [.. nachher.Select(p => Zeile(p, vorher))]);
+
+    /// <summary>
+    /// Story 4-3, FR-50: Die Tausch-Vorschau eines Gerichts: Vorher und Nachher nur mit den noch nicht gekauften Posten (Gekauftes ist da und steht nicht zur
+    /// Wahl) und die Zahl der schon gekauften Posten des bisherigen Rezepts. Mit anderem Rezept sind alle neuen Posten offen (der Stand entfällt beim
+    /// Übernehmen); mit gleichem Rezept bleibt alles, wie es ist.
+    /// </summary>
+    public static (IReadOnlyList<TauschZeile> Vorher, IReadOnlyList<TauschZeile> Nachher, int SchonGekauft) Tauschvorschau(
+        GerichtDaten gericht, Rezept neuesRezept, IReadOnlyList<Zutat> neueZutaten, int personenzahl)
+    {
+        var alle = Posten(gericht.Rezept, gericht.Zutaten, gericht.HandMengen, personenzahl, gericht.Staende);
+        var vorher = alle.Where(p => !p.Gekauft).ToList();
+        var nachher = PostenNachTausch(gericht.Rezept, gericht.Zutaten, gericht.HandMengen, neuesRezept, neueZutaten, personenzahl, gericht.Staende)
+            .Where(p => !p.Gekauft)
+            .ToList();
+        var (links, rechts) = Vergleich(vorher, nachher);
+        return (links, rechts, alle.Count - vorher.Count);
+    }
 
     private static TauschZeile Zeile(RechenPosten posten, IReadOnlyList<RechenPosten> andere) =>
         new(posten.Zutat.Bezeichnung, posten.Menge, posten.Zutat.Einheit, posten.VonHand, !andere.Any(a => Gleich(posten, a)));
@@ -148,7 +178,7 @@ internal static class EinkaufRechnen
             var amTag = geordnet.Where(g => g.Mahlzeit.Tag == tag).ToList();
             List<EinkaufslistenPosten> posten =
             [
-                .. amTag.SelectMany(g => Posten(g.Rezept, g.Zutaten, g.HandMengen, personenzahl).Select(p => AlsApi(g, p))),
+                .. amTag.SelectMany(g => Posten(g.Rezept, g.Zutaten, g.HandMengen, personenzahl, g.Staende).Select(p => AlsApi(g, p))),
                 .. handPosten.Where(p => p.Tag == tag).OrderBy(p => p.Id).Select(AlsApi),
             ];
             List<GerichtErsatz> ersatz =
@@ -166,6 +196,17 @@ internal static class EinkaufRechnen
         return ergebnis;
     }
 
+    /// <summary>
+    /// Story 4-3, FR-51: Die Seite der Einkaufenden: dieselben Tage wie <see cref="Tage"/>, aber nur Posten mit Freigabe; Tage ohne solche Posten fehlen,
+    /// Ersatzportionen gibt es dort keine.
+    /// </summary>
+    public static IReadOnlyList<EinkaufsTag> NurFreigegeben(IReadOnlyList<EinkaufsTag> tage) =>
+    [
+        .. tage
+            .Select(t => new EinkaufsTag(t.Tag, [.. t.Posten.Where(p => p.Freigegeben)], []))
+            .Where(t => t.Posten.Count > 0),
+    ];
+
     private static EinkaufslistenPosten AlsApi(GerichtDaten gericht, RechenPosten posten) => new(
         gericht.Gericht.Id,
         posten.Zutat.Id,
@@ -176,7 +217,9 @@ internal static class EinkaufRechnen
         gericht.Rezept.Name,
         gericht.Mahlzeit.Titel,
         posten.VonHand,
-        posten.Version);
+        posten.Version,
+        posten.Freigegeben,
+        posten.Gekauft);
 
     public static EinkaufslistenPosten AlsApi(Einkaufsposten posten) => new(
         null,
@@ -188,7 +231,9 @@ internal static class EinkaufRechnen
         null,
         null,
         VonHand: true,
-        posten.Version);
+        posten.Version,
+        posten.Freigegeben,
+        posten.Gekauft);
 
     /// <summary>Der angezeigte Text einer Menge für den Autosave (deutsch mit Komma) oder <c>null</c>.</summary>
     public static string? MengeText(decimal? menge) => menge is { } wert ? ZutatFelder.ZahlText(wert) : null;

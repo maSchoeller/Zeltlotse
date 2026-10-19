@@ -5,7 +5,7 @@
    speichert sofort. Gespeichert → „Gespeichert · Rückgängig“ (erneuter PATCH mit dem vorigen Wert); 409 → „Inzwischen
    geändert – neu laden?“; Netzfehler oder 5xx → „Nicht gespeichert.“ mit „Erneut versuchen“, das Kästchen bleibt, wie gewählt.
    Story 3-7: Mit KonfliktText zeigt ein 409 wie beim AutosaveFeld eine Fehlermeldung mit diesem Text, und das Kästchen zeigt wieder den
-   gespeicherten Wert. *@
+   gespeicherten Wert. Story 4-3: Gespeichert meldet den gespeicherten Wert ("true"/"false"), z. B. damit die Seite eine Zählzeile neu lädt. *@
 <Ankreuzfeld Label="@Label" Id="@Id" Name="@Feldname" Wert="@_eingabe" Deaktiviert="@_uebertraegt" @onfocus="Fokus" @onchange="GeaendertAsync">
     <UnterDemFeld>
         @if (_zustand == SpeicherZustand.Konflikt && KonfliktText is not null)
@@ -54,6 +54,9 @@
 
     /// <summary>Text für eine Antwort <c>409</c> statt „Inzwischen geändert – neu laden?“, z. B. in einer abgeschlossenen Freizeit.</summary>
     [Parameter] public string? KonfliktText { get; set; }
+
+    /// <summary>Story 4-3: nach jedem gespeicherten Wert (auch nach Rückgängig), mit dem gespeicherten Wert.</summary>
+    [Parameter] public EventCallback<string?> Gespeichert { get; set; }
 
     protected override void OnInitialized() => Dienst.FeldAktiv += AnderesFeldAktiv;
 
@@ -122,6 +125,7 @@
                 _eingabe = _gespeichert;
                 _zustand = SpeicherZustand.Gespeichert;
                 _mitRueckgaengig = !rueckgaengig;
+                await Gespeichert.InvokeAsync(gespeichert.Wert);
                 break;
             case AutosaveErgebnis.Konflikt:
                 _zustand = SpeicherZustand.Konflikt;

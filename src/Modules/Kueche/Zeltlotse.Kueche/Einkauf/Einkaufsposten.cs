@@ -35,6 +35,12 @@ internal sealed class Einkaufsposten : IOrganisationsEigen
     /// <summary>Ein Tag der Freizeit oder <c>null</c>; ob er dazugehört, prüft der Handler.</summary>
     public DateOnly? Tag { get; private set; }
 
+    /// <summary>Story 4-3, FR-51: zum Einkaufen freigegeben; unabhängig von <see cref="Gekauft"/>.</summary>
+    public bool Freigegeben { get; private set; }
+
+    /// <summary>Story 4-3, FR-51: abgehakt; wer abgehakt hat, steht nirgends.</summary>
+    public bool Gekauft { get; private set; }
+
     /// <summary>Versionsnummer der Zeile (<c>xmin</c>, AD-19).</summary>
     public uint Version { get; private set; }
 
@@ -56,6 +62,8 @@ internal sealed class Einkaufsposten : IOrganisationsEigen
         EinkaufspostenFeld.Menge => Menge is { } menge ? ZutatFelder.ZahlText(menge) : null,
         EinkaufspostenFeld.Einheit => Einheit,
         EinkaufspostenFeld.Tag => KuecheWerte.TagText(Tag),
+        EinkaufspostenFeld.Freigegeben => KuecheWerte.JaNeinText(Freigegeben),
+        EinkaufspostenFeld.Gekauft => KuecheWerte.JaNeinText(Gekauft),
         _ => throw new ArgumentOutOfRangeException(nameof(feld), feld, null),
     };
 
@@ -88,12 +96,21 @@ internal sealed class Einkaufsposten : IOrganisationsEigen
                     ? null
                     : KuecheWerte.TagLesen(neuerWert) ?? throw new ArgumentException("Ungültiger Tag.", nameof(neuerWert));
                 break;
+            case EinkaufspostenFeld.Freigegeben:
+                Freigegeben = KuecheWerte.JaNeinLesen(neuerWert) ?? throw new ArgumentException(KuecheWerte.JaNeinFehlerText, nameof(neuerWert));
+                break;
+            case EinkaufspostenFeld.Gekauft:
+                Gekauft = KuecheWerte.JaNeinLesen(neuerWert) ?? throw new ArgumentException(KuecheWerte.JaNeinFehlerText, nameof(neuerWert));
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(feld), feld, null);
         }
 
         return true;
     }
+
+    /// <summary>Story 4-3: Tages-Freigabe: setzt nur <see cref="Freigegeben"/>; <see cref="Gekauft"/> bleibt.</summary>
+    public void Freigeben(bool freigegeben) => Freigegeben = freigegeben;
 
     private static string? Vergleichswert(EinkaufspostenFeld feld, string? text) => feld switch
     {

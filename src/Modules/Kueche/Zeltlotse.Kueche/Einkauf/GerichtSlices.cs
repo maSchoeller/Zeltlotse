@@ -159,7 +159,7 @@ internal static class GerichtEntfernenEndpunkt
 
 /// <summary>
 /// Story 4-2, FR-50, AD-13: Übernimmt den Tausch des Rezepts eines Gerichts, den die Vorschau gezeigt hat; das ist die Bestätigung. Die Hand-Mengen
-/// wandern nach <see cref="EinkaufRechnen.TauschAbbilden"/>, die übrigen entfallen. Ist die Version veraltet (z. B. inzwischen getauscht), ist das
+/// wandern nach <see cref="EinkaufRechnen.TauschAbbilden"/>, die übrigen entfallen. Story 4-3: Der Stand der Posten (Freigabe, Gekauft) entfällt ganz. Ist die Version veraltet (z. B. inzwischen getauscht), ist das
 /// Ergebnis <see cref="GerichtTausch.Konflikt"/>, und nichts ändert sich.
 /// </summary>
 internal sealed record GerichtTauschenCommand(Guid FreizeitId, Guid GerichtId, uint Version, Guid? RezeptId)
@@ -235,6 +235,8 @@ internal sealed class GerichtTauschenHandler(KuecheDbContext db, IMandantenKonte
         var handMengen = await db.MengenVonHand.Where(h => h.GerichtId == gericht.Id).ToListAsync(cancellationToken);
         var abgebildet = EinkaufRechnen.TauschAbbilden(alteZutaten, handMengen, neueZutaten);
         db.MengenVonHand.RemoveRange(handMengen);
+        // Story 4-3: Der Stand (Freigabe, Gekauft) geht nicht auf das neue Rezept über: Dessen Posten sind offen und nicht freigegeben.
+        db.PostenStaende.RemoveRange(await db.PostenStaende.Where(s => s.GerichtId == gericht.Id).ToListAsync(cancellationToken));
         var jetzt = uhr.GetUtcNow();
         foreach (var (zutatId, menge) in abgebildet)
         {

@@ -204,7 +204,7 @@ public sealed class GerichteTests(PostgresContainer postgres) : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
         var vorschau = await JsonAsync(antwort);
-        Assert.Equal(["gerichtId", "nachher", "neuesRezept", "rezept", "version", "vorher"], Namen(vorschau));
+        Assert.Equal(["gerichtId", "nachher", "neuesRezept", "rezept", "schonGekauft", "version", "vorher"], Namen(vorschau));
         // Die Hand-Menge hat dem Gericht eine neue Version gegeben; die Vorschau trägt die aktuelle.
         var aktuell = (await EssensplanAsync()).GetProperty("tage")[1].GetProperty("mahlzeiten")[0].GetProperty("gerichte")[0];
         Assert.NotEqual(Version(gericht), Version(aktuell));

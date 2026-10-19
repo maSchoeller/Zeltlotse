@@ -29,6 +29,9 @@ internal sealed class KuecheDbContext(DbContextOptions<KuecheDbContext> optionen
     /// <summary>Story 4-2: die Hand-Posten der Einkaufsliste.</summary>
     public DbSet<Einkaufsposten> Einkaufsposten => Set<Einkaufsposten>();
 
+    /// <summary>Story 4-3: Freigabe und Gekauft der berechneten Posten.</summary>
+    public DbSet<PostenStand> PostenStaende => Set<PostenStand>();
+
     protected override string Schema => KuecheModul.Schema;
 
     /// <summary>
@@ -68,6 +71,39 @@ internal sealed class KuecheDbContext(DbContextOptions<KuecheDbContext> optionen
             .ToListAsync(abbruch))
         .SingleOrDefault();
 
+    /// <summary>
+    /// Story 4-3: Lädt die Gerichte der Freizeit an diesen Mahlzeiten unter dem Mandantenfilter mit Zeilensperre (FOR UPDATE), nach Kennung geordnet: Die
+    /// Tages-Freigabe sperrt immer in derselben Reihenfolge, damit zwei gleichzeitige Freigaben sich nicht gegenseitig blockieren (kein Deadlock).
+    /// </summary>
+    public async Task<List<Gericht>> GerichteSperrenAsync(Guid freizeitId, IReadOnlyCollection<Guid> programmpunktIds, CancellationToken abbruch)
+    {
+        if (programmpunktIds.Count == 0)
+        {
+            return [];
+        }
+
+        var punkte = programmpunktIds.ToArray();
+        return await Gerichte
+            .FromSql($"SELECT *, xmin FROM kueche.gericht WHERE \"FreizeitId\" = {freizeitId} AND \"ProgrammpunktId\" = ANY({punkte}) ORDER BY \"Id\" FOR UPDATE")
+            .OrderBy(g => g.Id)
+            .ToListAsync(abbruch);
+    }
+
+    /// <summary>
+    /// Story 4-3: Lädt die Hand-Posten der Freizeit mit diesem Tag (<c>null</c>: ohne Tag) unter dem Mandantenfilter mit Zeilensperre (FOR UPDATE), nach
+    /// Kennung geordnet.
+    /// </summary>
+    public async Task<List<Einkaufsposten>> PostenAmTagSperrenAsync(Guid freizeitId, DateOnly? tag, CancellationToken abbruch) =>
+        tag is { } wert
+            ? await Einkaufsposten
+                .FromSql($"SELECT *, xmin FROM kueche.einkaufsposten WHERE \"FreizeitId\" = {freizeitId} AND \"Tag\" = {wert} ORDER BY \"Id\" FOR UPDATE")
+                .OrderBy(p => p.Id)
+                .ToListAsync(abbruch)
+            : await Einkaufsposten
+                .FromSql($"SELECT *, xmin FROM kueche.einkaufsposten WHERE \"FreizeitId\" = {freizeitId} AND \"Tag\" IS NULL ORDER BY \"Id\" FOR UPDATE")
+                .OrderBy(p => p.Id)
+                .ToListAsync(abbruch);
+
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => KuecheModell.Konfigurieren(modelBuilder);
 }
 
@@ -84,6 +120,8 @@ internal sealed class KuecheLeseDbContext(DbContextOptions<KuecheLeseDbContext> 
     public DbSet<MengeVonHand> MengenVonHand => Set<MengeVonHand>();
 
     public DbSet<Einkaufsposten> Einkaufsposten => Set<Einkaufsposten>();
+
+    public DbSet<PostenStand> PostenStaende => Set<PostenStand>();
 
     protected override string Schema => KuecheModul.Schema;
 
@@ -158,9 +196,25 @@ internal static class KuecheModell
             e.Property(p => p.Bezeichnung).HasMaxLength(EinkaufspostenFelder.BezeichnungMaximaleLaenge);
             e.Property(p => p.Menge).HasPrecision(10, ZutatFelder.MengeNachkommastellen);
             e.Property(p => p.Einheit).HasMaxLength(EinkaufspostenFelder.EinheitMaximaleLaenge);
+            e.Property(p => p.Freigegeben).HasDefaultValue(false);
+            e.Property(p => p.Gekauft).HasDefaultValue(false);
             e.Property(p => p.Version).IsRowVersion();
             e.HasIndex(p => p.FreizeitId);
             e.HasIndex(p => p.OrganisationId);
+        });
+
+        // Story 4-3, FR-51: Stand eines berechneten Postens je (Gericht, Zutat) höchstens einmal; verschwindet mit dem Gericht oder der Zutat.
+        modelBuilder.Entity<PostenStand>(e =>
+        {
+            e.ToTable("posten_stand");
+            e.Property(s => s.Id).ValueGeneratedNever();
+            e.Property(s => s.Version).IsRowVersion();
+            e.HasOne<Gericht>().WithMany().HasForeignKey(s => s.GerichtId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Zutat>().WithMany().HasForeignKey(s => s.ZutatId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(s => new { s.GerichtId, s.ZutatId }).IsUnique();
+            e.HasIndex(s => s.ZutatId);
+            e.HasIndex(s => s.FreizeitId);
+            e.HasIndex(s => s.OrganisationId);
         });
     }
 }

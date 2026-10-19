@@ -132,8 +132,10 @@ public sealed class EssensplanSeitenTests : BunitContext
         Assert.Equal("Küche", cut.Find(".elkw-kicker").TextContent);
         Assert.Equal("Essensplan", cut.Find("h1").TextContent);
         var kueche = cut.FindAll("nav[aria-label=Küche] a");
-        Assert.Equal(["Rezepte", "Essensplan", "Einkaufsliste"], kueche.Select(a => a.TextContent));
-        Assert.Equal([$"freizeiten/{Freizeit}/kueche/rezepte", $"freizeiten/{Freizeit}/kueche/essensplan", $"freizeiten/{Freizeit}/kueche/einkaufsliste"], kueche.Select(a => a.GetAttribute("href")));
+        Assert.Equal(["Rezepte", "Essensplan", "Einkaufsliste", "Einkauf"], kueche.Select(a => a.TextContent));
+        Assert.Equal(
+            [$"freizeiten/{Freizeit}/kueche/rezepte", $"freizeiten/{Freizeit}/kueche/essensplan", $"freizeiten/{Freizeit}/kueche/einkaufsliste", $"freizeiten/{Freizeit}/kueche/einkauf"],
+            kueche.Select(a => a.GetAttribute("href")));
         Assert.Equal("page", kueche[1].GetAttribute("aria-current"));
         var tage = cut.FindAll("nav[aria-label=Tage] a");
         Assert.Equal(["Mo 02.08.", "Di 03.08."], tage.Select(a => a.TextContent));
@@ -393,15 +395,15 @@ public sealed class EssensplanSeitenTests : BunitContext
         Assert.Equal(["Gluten: 1 Person", "Milch: 2 Personen"], abgleich.QuerySelectorAll("li").Select(l => l.TextContent));
         var dienstag = cut.Find("#tag-2027-08-03");
         Assert.Equal("Dienstag, 3. August 2027", dienstag.QuerySelector("h2")!.TextContent);
-        Assert.Equal(["Zutat", "Menge", "Einheit", "Gericht · Mahlzeit", "von Hand"], dienstag.QuerySelectorAll("th").Select(t => t.TextContent));
+        Assert.Equal(["Zutat", "Menge", "Einheit", "Gericht · Mahlzeit", "von Hand", "Freigegeben", "Gekauft"], dienstag.QuerySelectorAll("th").Select(t => t.TextContent));
         var zeilen = Tabelle(dienstag);
         Assert.Equal(("Mehl", "g", "Pfannkuchen · Frühstück", ""), (zeilen[0][0], zeilen[0][2], zeilen[0][3], zeilen[0][4]));
         Assert.Equal("800", dienstag.QuerySelector($"#menge-{Gericht}-{Mehl}")!.GetAttribute("value"));
-        Assert.Equal(["Äpfel", "3", "kg", "–", "von Hand"], zeilen[1]);
+        Assert.Equal(["Äpfel", "3", "kg", "–", "von Hand"], zeilen[1].Take(5));
         Assert.Contains("Pfannkuchen · Frühstück: 1 Ersatzportion einplanen (enthält Gluten)", dienstag.TextContent, StringComparison.Ordinal);
         var ohneTag = cut.Find("#tag-ohne");
         Assert.Equal("Ohne Tag", ohneTag.QuerySelector("h2")!.TextContent);
-        Assert.Equal(["Kaffee", "", "", "–", "von Hand"], Tabelle(ohneTag)[0]);
+        Assert.Equal(["Kaffee", "", "", "–", "von Hand"], Tabelle(ohneTag)[0].Take(5));
         var handPosten = cut.Find("#hand-posten");
         Assert.Equal("Äpfel", handPosten.QuerySelector($"#posten-{Aepfel}-bezeichnung")!.GetAttribute("value"));
         Assert.Equal("2027-08-03", handPosten.QuerySelector($"#posten-{Aepfel}-tag")!.GetAttribute("value"));
@@ -484,7 +486,7 @@ public sealed class EssensplanSeitenTests : BunitContext
         var cut = ListeRendern();
 
         Assert.Contains(KuecheTexte.AbgeschlossenText, cut.Find(".elkw-alert").TextContent, StringComparison.Ordinal);
-        Assert.Equal(["Mehl", "800", "g", "Pfannkuchen · Frühstück", ""], Tabelle(cut.Find("#tag-2027-08-03"))[0]);
+        Assert.Equal(["Mehl", "800", "g", "Pfannkuchen · Frühstück", "", "", ""], Tabelle(cut.Find("#tag-2027-08-03"))[0]);
         Assert.Empty(cut.FindAll("input"));
         Assert.Empty(cut.FindAll("form"));
         Assert.Empty(cut.FindAll("button"));
@@ -517,7 +519,7 @@ public sealed class EssensplanSeitenTests : BunitContext
         cut.WaitForAssertion(() => Assert.DoesNotContain("Wird geladen", cut.Markup, StringComparison.Ordinal));
 
         var reiter = cut.FindAll("nav[aria-label=Küche] a");
-        Assert.Equal(["Rezepte", "Essensplan", "Einkaufsliste"], reiter.Select(a => a.TextContent));
+        Assert.Equal(["Rezepte", "Essensplan", "Einkaufsliste", "Einkauf"], reiter.Select(a => a.TextContent));
         Assert.Equal("page", reiter[0].GetAttribute("aria-current"));
     }
 }

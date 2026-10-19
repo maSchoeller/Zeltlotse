@@ -14,7 +14,8 @@
    erste Tag). Je Mahlzeit eine Card mit den vorgemerkten Gerichten: Rezept, „N Ersatzportionen einplanen (enthält …)“, „Tauschen“ und „Entfernen“
    (Inline-Bestätigung); ohne Gericht „Noch nichts vorgemerkt.“. „Gericht vormerken“ per Auswahl der Rezepte; ohne Rezepte ein Leer-Zustand mit dem
    Weg zu den Rezepten. Tauschen: Auswahl des neuen Rezepts → Vergleich Vorher/Nachher (schreibt nichts) → „Übernehmen“ (bleibt hier), „Anpassen“
-   (übernimmt und öffnet die Einkaufsliste am Tag) oder „Abbrechen“. Ist das Gericht inzwischen geändert: „Inzwischen geändert – neu laden?“. Fragt die
+   (übernimmt und öffnet die Einkaufsliste am Tag) oder „Abbrechen“. Story 4-3: Der Vergleich zeigt nur noch nicht gekaufte Posten; gibt es gekaufte,
+   steht darunter „N schon gekaufte Posten stehen nicht im Vergleich.“. Ist das Gericht inzwischen geändert: „Inzwischen geändert – neu laden?“. Fragt die
    Freizeit keine Allergien ab, steht „Diese Freizeit fragt keine Allergien ab.“. In der Phase „gelaufen“ nur lesbar. Kontext oder Essensplan nicht
    verfügbar (auch ohne Verpflegung) → „Diese Seite ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung. *@
 <PageTitle>Essensplan – Zeltlotse</PageTitle>
@@ -163,6 +164,10 @@ else
         {
             <Vergleich Bezeichnung="@($"Tausch {vorschau.Rezept.Name} gegen {vorschau.NeuesRezept.Name}")" Ebene="4"
                        VorherText="@vorschau.Rezept.Name" Vorher="@Zeilen(vorschau.Vorher)" NachherText="@vorschau.NeuesRezept.Name" Nachher="@Zeilen(vorschau.Nachher)" />
+            @if (KuecheTexte.SchonGekauft(vorschau.SchonGekauft) is { } gekauft)
+            {
+                <p>@gekauft</p>
+            }
             <p>Die Einkaufsliste ändert sich erst mit „Übernehmen“. „Anpassen“ übernimmt und öffnet die Einkaufsliste am @Anzeige.TagKurz(_tag).</p>
         }
         <Knopf Deaktiviert="@(_vorschau is null || _uebertraegt)" @onclick="@(() => TauschenAsync(anpassen: false))">Übernehmen</Knopf>

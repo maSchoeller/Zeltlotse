@@ -25,6 +25,8 @@ using Zeltlotse.Kueche.Einkauf;
 using Zeltlotse.Kueche.Rezepte;
 using RezeptFeld = Zeltlotse.Api.Contracts.Kueche.RezeptFeld;
 using ZutatFeld = Zeltlotse.Api.Contracts.Kueche.ZutatFeld;
+using EinkaufspostenFeld = Zeltlotse.Api.Contracts.Kueche.EinkaufspostenFeld;
+using HandMengeFeld = Zeltlotse.Api.Contracts.Kueche.HandMengeFeld;
 using Zeltlotse.Organisationen.Daten;
 using Zeltlotse.Organisationen.Dokumente;
 using Zeltlotse.Organisationen.Einladungen;
@@ -168,6 +170,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await ProgrammAsync(abbruch);
         // Story 4-2: Gerichte, eine Hand-Menge und ein Hand-Posten der Küche (braucht Rezepte und Mahlzeiten).
         await GerichteAsync(abbruch);
+        // Story 4-3: ein Tag zum Einkaufen freigegeben, zwei Posten schon gekauft.
+        await EinkaufAsync(abbruch);
         await MaterialAsync(abbruch);
         await ZweiteFreizeitAsync(abbruch);
         await InventarAsync(abbruch);
@@ -683,7 +687,7 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
 
             var basis = rezepte.Single(r => r.Id == rezeptId).BasisPersonen;
             var berechnet = EinkaufRechnen.MengeText(KuecheWerte.Hochrechnen(zutat.Menge, basis, personenzahl));
-            if (await sender.Send(new HandMengeAendernCommand(freizeitId, gericht.Id, zutat.Id, 0, berechnet, menge), abbruch) is not HandMengeAenderung.Gespeichert)
+            if (await sender.Send(new HandMengeAendernCommand(freizeitId, gericht.Id, zutat.Id, HandMengeFeld.Menge, 0, berechnet, menge), abbruch) is not HandMengeAenderung.Gespeichert)
             {
                 throw new InvalidOperationException($"Demo-Einkaufsliste: Die Hand-Menge für {zutatName} ließ sich nicht setzen.");
             }
@@ -696,6 +700,64 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             if (await sender.Send(new EinkaufspostenAnlegenCommand(freizeitId, bezeichnung, menge, einheit, tagText), abbruch) is not EinkaufspostenAnlegen.Angelegt)
             {
                 throw new InvalidOperationException($"Demo-Einkaufsliste: {bezeichnung} ließ sich nicht anlegen.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Story 4-3: Einkauf der Demo-Freizeit über die Commands des Moduls Küche: Die Küche gibt die Tage aus <see cref="DemoKatalog.EinkaufTage"/> ganz frei
+    /// und nimmt danach die Freigabe der Hand-Posten aus <see cref="DemoKatalog.NichtFreigegeben"/> zurück; die Posten aus
+    /// <see cref="DemoKatalog.Gekauft"/> sind abgehakt. Idempotent: Freigeben nur, solange es noch keinen Stand eines Postens gibt; Abhaken nur, wenn
+    /// der Posten noch nicht gekauft ist.
+    /// </summary>
+    private async Task EinkaufAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var freizeitId = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name)
+            .Select(f => f.Id)
+            .SingleAsync(abbruch);
+        var lesen = dienste.GetRequiredService<KuecheLeseDbContext>();
+
+        if (!await lesen.PostenStaende.AnyAsync(s => s.FreizeitId == freizeitId, abbruch))
+        {
+            foreach (var tag in DemoKatalog.EinkaufTage)
+            {
+                if (await sender.Send(new EinkaufFreigebenCommand(freizeitId, tag.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), true), abbruch) != KuecheFreigabe.Gespeichert)
+                {
+                    throw new InvalidOperationException($"Demo-Einkauf: Der {tag:dd.MM.yyyy} ließ sich nicht freigeben.");
+                }
+            }
+
+            foreach (var posten in await lesen.Einkaufsposten.Where(p => p.FreizeitId == freizeitId && p.Freigegeben && DemoKatalog.NichtFreigegeben.Contains(p.Bezeichnung)).ToListAsync(abbruch))
+            {
+                if (await sender.Send(new EinkaufspostenFeldAendernCommand(freizeitId, posten.Id, EinkaufspostenFeld.Freigegeben, posten.Version, "true", "false"), abbruch)
+                    is not EinkaufspostenAenderung.Gespeichert)
+                {
+                    throw new InvalidOperationException($"Demo-Einkauf: Die Freigabe von {posten.Bezeichnung} ließ sich nicht zurücknehmen.");
+                }
+            }
+        }
+
+        var mahlzeiten = await dienste.GetRequiredService<EinkaufAbfrage>().MahlzeitenAsync(freizeitId, abbruch);
+        foreach (var (tag, mahlzeit, rezept, zutatName) in DemoKatalog.Gekauft)
+        {
+            var punkt = mahlzeiten.First(m => m.Tag == tag && m.Titel == mahlzeit).ProgrammpunktId;
+            var rezeptId = await lesen.Rezepte.Where(r => r.FreizeitId == freizeitId && r.Name == rezept).OrderBy(r => r.Id).Select(r => r.Id).FirstAsync(abbruch);
+            var gericht = await lesen.Gerichte.Where(g => g.FreizeitId == freizeitId && g.ProgrammpunktId == punkt && g.RezeptId == rezeptId).OrderBy(g => g.Id).FirstAsync(abbruch);
+            var zutat = await lesen.Zutaten.Where(z => z.RezeptId == rezeptId && z.Bezeichnung == zutatName).OrderBy(z => z.Id).FirstAsync(abbruch);
+            if (await lesen.PostenStaende.AnyAsync(s => s.GerichtId == gericht.Id && s.ZutatId == zutat.Id && s.Gekauft, abbruch))
+            {
+                continue;
+            }
+
+            if (await sender.Send(new HandMengeAendernCommand(freizeitId, gericht.Id, zutat.Id, HandMengeFeld.Gekauft, 0, "false", "true"), abbruch)
+                is not HandMengeAenderung.StandGespeichert)
+            {
+                throw new InvalidOperationException($"Demo-Einkauf: {zutatName} ließ sich nicht abhaken.");
             }
         }
     }

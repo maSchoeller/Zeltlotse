@@ -105,6 +105,27 @@ internal static partial class KuecheWerte
     /// <summary>Der Fehler zum Tag oder <c>null</c>: freiwillig (leer heißt ohne Tag), sonst ein Datum <c>JJJJ-MM-TT</c>.</summary>
     public static string? TagFehler(string? text) => TextOderNull(text) is null || TagLesen(text) is not null ? null : TagFehlerText;
 
+    // ---------- Ja/Nein (Story 4-3) ----------
+
+    public const string JaNeinFehlerText = "Nur „true“ oder „false“.";
+
+    /// <summary>Ein Ja/Nein als Text, wie das Autosave-Ankreuzfeld es schickt und erwartet.</summary>
+    public static string JaNeinText(bool wert) => wert ? "true" : "false";
+
+    /// <summary>Der Wert aus <c>"true"</c>/<c>"false"</c> (getrimmt) oder <c>null</c>, wenn der Text keiner davon ist.</summary>
+    public static bool? JaNeinLesen(string? text) => text?.Trim() switch
+    {
+        "true" => true,
+        "false" => false,
+        _ => null,
+    };
+
+    /// <summary>Der Fehler zu einem Ja/Nein oder <c>null</c>: Pflicht, nur <c>"true"</c> oder <c>"false"</c>.</summary>
+    public static string? JaNeinFehler(string? text) => JaNeinLesen(text) is null ? JaNeinFehlerText : null;
+
+    /// <summary>Konfliktregel (AD-19) für ein Ja/Nein: der mitgeschickte alte Wert (getrimmt) ist genau der aktuelle Text.</summary>
+    public static bool JaNeinGleich(string aktuell, string? alterWert) => string.Equals(aktuell, alterWert?.Trim(), StringComparison.Ordinal);
+
     // ---------- Allergene ----------
 
     private static List<string> Schluessel(string? liste) =>

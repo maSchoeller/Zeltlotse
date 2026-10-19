@@ -1,0 +1,148 @@
+@page "/freizeiten/{FreizeitId:guid}/kueche/einkauf"
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Kueche
+@using Zeltlotse.Ui.Kontext
+@using ApiEinkauf = Zeltlotse.Api.Contracts.Kueche.Einkauf
+@inject FreizeitKontextDienst Kontext
+@inject KuecheApiClient KuecheApi
+@* Einkauf (CAP-30, FR-51, Story 4-3): die Seite der Einkaufenden (Leitung und Team; Einkaufen ist eine Aufgabe im Team, keine Rolle), erreicht über die
+   Küche-Reiter. Dachzeile „Küche“, Überschrift „Einkauf“. Je Tag eine Card (Sprungziel #tag-JJJJ-MM-TT, „Ohne Tag“ zuletzt) mit den Posten, die die
+   Küche freigegeben hat: je Posten ein Autosave-Ankreuzfeld „gekauft“ mit der Beschriftung „Mehl 500 g · Pfannkuchen · Frühstück“ (Hand-Posten ohne
+   Gericht). Ein Tipp hakt ab, darunter „Gespeichert · Rückgängig“; hat jemand anderes den Posten inzwischen abgehakt, „Inzwischen geändert – neu
+   laden?“. Ohne Allergen-Abgleich und ohne Ersatzportionen. Nichts freigegeben → „Noch nichts zum Einkaufen freigegeben.“ mit dem Weg zur
+   Einkaufsliste. In der Phase „gelaufen“ nur lesbar: „gekauft“ oder „offen“ als Text. Kontext oder Einkauf nicht verfügbar (auch ohne Verpflegung) →
+   „Diese Seite ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung statt „leer“. *@
+<PageTitle>Einkauf – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Küche</Dachzeile>
+    <h1>Einkauf</h1>
+    <KuecheReiter FreizeitId="FreizeitId" Aktiv="einkauf" />
+
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+
+    @if (_einkauf is null || _kontext is null)
+    {
+        @if (_meldung is null)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@KuecheTexte.AbgeschlossenText</p>
+            </Meldung>
+        }
+
+        @if (_einkauf.Tage.Count == 0)
+        {
+            <LeerZustand Satz="Noch nichts zum Einkaufen freigegeben." KnopfText="Einkaufsliste öffnen" KnopfHref="@KuecheTexte.EinkaufslisteZiel(FreizeitId)" />
+        }
+        else if (!Abgeschlossen)
+        {
+            <p>Hier steht, was die Küche zum Einkaufen freigegeben hat. Ein Tipp hakt einen Posten ab.</p>
+        }
+
+        @foreach (var tag in _einkauf.Tage)
+        {
+            <Card @key="KuecheTexte.TagAnker(tag.Tag)" Titel="@(tag.Tag is { } wert ? Anzeige.TagLang(wert) : "Ohne Tag")" Id="@KuecheTexte.TagAnker(tag.Tag)">
+                @if (Abgeschlossen)
+                {
+                    <ul>
+                        @foreach (var posten in tag.Posten)
+                        {
+                            <li>@($"{KuecheTexte.PostenText(posten)}: {(posten.Gekauft ? "gekauft" : "offen")}")</li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    @foreach (var posten in tag.Posten)
+                    {
+                        var (id, pfad, feldname) = posten is { GerichtId: { } gericht, ZutatId: { } zutat }
+                            ? ($"gekauft-{gericht}-{zutat}", KuecheApiClient.HandMengePfad(FreizeitId, gericht, zutat), HandMengeFelder.Gekauft)
+                            : ($"gekauft-{posten.PostenId}", KuecheApiClient.PostenPfad(FreizeitId, posten.PostenId!.Value), EinkaufspostenFelder.Gekauft);
+                        <AutosaveAnkreuzfeld @key="@($"{id}-{_ladung}")" Label="@KuecheTexte.PostenText(posten)" Id="@id" Feldname="@feldname" Pfad="@pfad"
+                                             Wert="@posten.Gekauft" Version="@posten.Version" NeuLaden="LadenAsync" />
+                    }
+                }
+            </Card>
+        }
+    }
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    private ApiEinkauf? _einkauf;
+    // Zählt jedes Laden; Teil des @key der Ankreuzfelder, damit sie nach „Neu laden“ aus dem neuen Stand entstehen (berechnete Posten haben immer
+    // Version 0, ein geänderter Wert allein setzt das Feld nicht zurück).
+    private int _ladung;
+    private bool _nichtVerfuegbar;
+    private string? _meldung;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _einkauf = null;
+        _nichtVerfuegbar = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var einkauf = KuecheApi.EinkaufLadenAsync(FreizeitId);
+            await Task.WhenAll(kontext, einkauf);
+            if (kontext.Result is null || einkauf.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _einkauf) = (kontext.Result, einkauf.Result);
+            _ladung++;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“ oder „leer“.
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>„Neu laden“ beim Konflikt: der aktuelle Stand vom Server.</summary>
+    private async Task LadenAsync()
+    {
+        try
+        {
+            if (await KuecheApi.EinkaufLadenAsync(FreizeitId) is { } einkauf)
+            {
+                (_einkauf, _meldung) = (einkauf, null);
+                _ladung++;
+            }
+            else
+            {
+                _nichtVerfuegbar = true;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+}

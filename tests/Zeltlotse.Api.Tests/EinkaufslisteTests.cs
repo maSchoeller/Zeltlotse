@@ -126,7 +126,7 @@ public sealed class EinkaufslisteTests(PostgresContainer postgres) : IAsyncLifet
         Assert.Equal("2027-08-03", tag.GetProperty("tag").GetString());
         Assert.Equal(["Mehl 800 g Pfannkuchen Frühstück", "Milch 1.5 l Pfannkuchen Frühstück", "Salz - - Pfannkuchen Frühstück"], Posten(liste));
         var posten = tag.GetProperty("posten")[0];
-        Assert.Equal(["bezeichnung", "einheit", "gerichtId", "mahlzeitName", "menge", "postenId", "rezeptName", "version", "vonHand", "zutatId"], Namen(posten));
+        Assert.Equal(["bezeichnung", "einheit", "freigegeben", "gekauft", "gerichtId", "mahlzeitName", "menge", "postenId", "rezeptName", "version", "vonHand", "zutatId"], Namen(posten));
         Assert.Equal((gericht, mehl, JsonValueKind.Null), (posten.GetProperty("gerichtId").GetGuid(), posten.GetProperty("zutatId").GetGuid(), posten.GetProperty("postenId").ValueKind));
     }
 
@@ -206,7 +206,7 @@ public sealed class EinkaufslisteTests(PostgresContainer postgres) : IAsyncLifet
         var aepfel = await PostenNeuAsync(" Äpfel ", "3", "kg", "2027-08-03");
         await PostenNeuAsync("Kaffee");
 
-        Assert.Equal(["bezeichnung", "einheit", "gerichtId", "mahlzeitName", "menge", "postenId", "rezeptName", "version", "vonHand", "zutatId"], Namen(aepfel));
+        Assert.Equal(["bezeichnung", "einheit", "freigegeben", "gekauft", "gerichtId", "mahlzeitName", "menge", "postenId", "rezeptName", "version", "vonHand", "zutatId"], Namen(aepfel));
         Assert.Equal(("Äpfel", 3m, true), (aepfel.GetProperty("bezeichnung").GetString(), aepfel.GetProperty("menge").GetDecimal(), aepfel.GetProperty("vonHand").GetBoolean()));
         var liste = await EinkaufslisteAsync(_s);
         Assert.Equal(["2027-08-03", null], liste.GetProperty("tage").EnumerateArray().Select(t => t.GetProperty("tag").GetString()));

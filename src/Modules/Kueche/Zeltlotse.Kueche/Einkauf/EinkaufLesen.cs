@@ -10,6 +10,7 @@ using Zeltlotse.SharedKernel.Commands;
 using ApiGericht = Zeltlotse.Api.Contracts.Kueche.Gericht;
 using ApiEinkaufsliste = Zeltlotse.Api.Contracts.Kueche.Einkaufsliste;
 using ApiEssensplan = Zeltlotse.Api.Contracts.Kueche.Essensplan;
+using ApiEinkauf = Zeltlotse.Api.Contracts.Kueche.Einkauf;
 
 namespace Zeltlotse.Kueche.Einkauf;
 
@@ -51,7 +52,8 @@ internal static class EssensplanLadenEndpunkt
 
 /// <summary>
 /// <c>GET /api/freizeiten/{freizeitId}/kueche/gerichte/{gerichtId}/tausch?rezeptId=…</c> (Leitung und Team, Modul Verpflegung, Story 4-2, FR-50, AD-13):
-/// die Posten des Gerichts vorher und genau die, die „Übernehmen“ speichern würde, nachher, mit geänderten Zeilen markiert. Schreibt nichts, auch nicht
+/// die Posten des Gerichts vorher und genau die, die „Übernehmen“ speichern würde, nachher, mit geänderten Zeilen markiert; Story 4-3: nur die noch nicht
+/// gekauften Posten, dazu die Zahl der schon gekauften (<see cref="EinkaufRechnen.Tauschvorschau"/>). Schreibt nichts, auch nicht
 /// nach dem Abschluss verboten. Ohne oder mit fremdem Rezept <c>400</c> am Feld <c>rezeptId</c>; Gericht unbekannt oder aus einer anderen Freizeit
 /// <c>404</c>.
 /// </summary>
@@ -79,11 +81,10 @@ internal static class TauschvorschauEndpunkt
 
         var personenzahl = await abfrage.PersonenzahlAsync(freizeitId, abbruch);
         var neueZutaten = await db.Zutaten.Where(z => z.RezeptId == neues.Id).OrderBy(z => z.Id).ToListAsync(abbruch);
-        var vorher = EinkaufRechnen.Posten(gericht.Rezept, gericht.Zutaten, gericht.HandMengen, personenzahl);
-        var nachher = EinkaufRechnen.PostenNachTausch(gericht.Rezept, gericht.Zutaten, gericht.HandMengen, neues, neueZutaten, personenzahl);
-        var (links, rechts) = EinkaufRechnen.Vergleich(vorher, nachher);
+        var (links, rechts, schonGekauft) = EinkaufRechnen.Tauschvorschau(gericht, neues, neueZutaten, personenzahl);
         return TypedResults.Ok(new Tauschvorschau(
-            gericht.Gericht.Id, gericht.Gericht.Version, new RezeptWahl(gericht.Rezept.Id, gericht.Rezept.Name), new RezeptWahl(neues.Id, neues.Name), links, rechts));
+            gericht.Gericht.Id, gericht.Gericht.Version, new RezeptWahl(gericht.Rezept.Id, gericht.Rezept.Name), new RezeptWahl(neues.Id, neues.Name), links, rechts,
+            schonGekauft));
     }
 }
 
@@ -106,6 +107,23 @@ internal static class EinkaufslisteLadenEndpunkt
             abgleich.AllergienAbgefragt,
             EinkaufRechnen.Uebersicht(abgleich.Profile),
             EinkaufRechnen.Tage(gerichte, handPosten, personenzahl, abgleich.Profile)));
+    }
+}
+
+/// <summary>
+/// <c>GET /api/freizeiten/{freizeitId}/kueche/einkauf</c> (Leitung und Team, Modul Verpflegung, Story 4-3, FR-51): die Seite der Einkaufenden. Dieselbe
+/// Berechnung wie die Einkaufsliste, aber nur freigegebene Posten (<see cref="EinkaufRechnen.NurFreigegeben"/>). Ohne Allergen-Abgleich: Personen wird
+/// nicht gefragt, und es entsteht kein Eintrag im Zugriffsprotokoll (Datensparsamkeit, AD-8). Auch nach dem Abschluss lesbar.
+/// </summary>
+internal static class EinkaufLadenEndpunkt
+{
+    public static async Task<Ok<ApiEinkauf>> Laden(Guid freizeitId, EinkaufAbfrage abfrage, KuecheLeseDbContext db, CancellationToken abbruch)
+    {
+        var mahlzeiten = await abfrage.MahlzeitenAsync(freizeitId, abbruch);
+        var gerichte = await abfrage.GerichteAsync(freizeitId, mahlzeiten, abbruch);
+        var handPosten = await db.Einkaufsposten.Where(p => p.FreizeitId == freizeitId).OrderBy(p => p.Id).ToListAsync(abbruch);
+        var personenzahl = await abfrage.PersonenzahlAsync(freizeitId, abbruch);
+        return TypedResults.Ok(new ApiEinkauf(EinkaufRechnen.NurFreigegeben(EinkaufRechnen.Tage(gerichte, handPosten, personenzahl, []))));
     }
 }
 

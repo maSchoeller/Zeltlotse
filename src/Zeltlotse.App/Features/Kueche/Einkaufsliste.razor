@@ -12,7 +12,10 @@
    Autosave-Feld: von Hand setzen, leer zurück zur berechneten Menge), Einheit, Gericht · Mahlzeit und „von Hand“, darunter die Ersatzportionen je
    Gericht. Card „Hand-Posten“ mit Autosave-Feldern und „Entfernen“ (Inline-Bestätigung), Formular „Posten ergänzen“. Nach jedem gespeicherten Feld
    lädt die Liste neu; die Felder behalten „Gespeichert · Rückgängig“. In der Phase „gelaufen“ nur lesbar. Kontext oder Liste nicht verfügbar (auch
-   ohne Verpflegung) → „Diese Seite ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung statt „leer“. *@
+   ohne Verpflegung) → „Diese Seite ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung statt „leer“.
+   Story 4-3 (CAP-30, FR-51): Spalten „Freigegeben“ (Autosave-Ankreuzfeld je Posten) und „Gekauft“ (Text), je Tag die Zählzeile „N von M freigegeben ·
+   K gekauft“ und die Knöpfe „Ganzen Tag freigeben“ (solange ein Posten nicht freigegeben ist) und „Freigabe zurücknehmen“ (sobald einer freigegeben
+   ist); nach dem Abschluss beides nur als Text. *@
 <PageTitle>Einkaufsliste – Zeltlotse</PageTitle>
 
 @if (_nichtVerfuegbar)
@@ -78,6 +81,19 @@ else
         @foreach (var tag in _liste.Tage)
         {
             <Card @key="KuecheTexte.TagAnker(tag.Tag)" Titel="@TagTitel(tag.Tag)" Id="@KuecheTexte.TagAnker(tag.Tag)">
+                <p>@KuecheTexte.Freigabezeile(tag.Posten)</p>
+                @if (!Abgeschlossen)
+                {
+                    var tagWert = tag.Tag;
+                    @if (tag.Posten.Any(p => !p.Freigegeben))
+                    {
+                        <Knopf Art="KnopfArt.Outline" Deaktiviert="_uebertraegt" @onclick="@(() => FreigebenAsync(tagWert, true))">Ganzen Tag freigeben</Knopf>
+                    }
+                    @if (tag.Posten.Any(p => p.Freigegeben))
+                    {
+                        <Knopf Art="KnopfArt.Outline" Deaktiviert="_uebertraegt" @onclick="@(() => FreigebenAsync(tagWert, false))">Freigabe zurücknehmen</Knopf>
+                    }
+                }
                 <Datentabelle TZeile="EinkaufslistenPosten" Beschriftung="@($"Einkauf {TagTitel(tag.Tag)}")" Spalten="Spalten" Zeilen="tag.Posten" />
                 @foreach (var ersatz in tag.Ersatzportionen)
                 {
@@ -138,6 +154,9 @@ else
     // Der Stand der Autosave-Felder: nur beim Öffnen, nach „Neu laden“ und nach Ergänzen oder Entfernen neu, damit ein gespeichertes Feld
     // „Gespeichert · Rückgängig“ behält, während die Liste neu lädt.
     private ApiEinkaufsliste? _felder;
+    // Story 4-3: zählt jedes Laden der Felder; Teil des @key der Ankreuzfelder, damit sie nach „Neu laden“ oder einer Tages-Freigabe aus dem neuen Stand
+    // entstehen (berechnete Posten haben immer Version 0, ein geänderter Wert allein setzt das Feld nicht zurück).
+    private int _ladung;
     private bool _nichtVerfuegbar;
     private bool _uebertraegt;
     private string? _meldung;
@@ -170,7 +189,26 @@ else
         new("Einheit", p => @<text>@p.Einheit</text>),
         new("Gericht · Mahlzeit", p => @<text>@(p.RezeptName is null ? "–" : $"{p.RezeptName} · {p.MahlzeitName}")</text>),
         new("von Hand", p => @<text>@(p.VonHand ? "von Hand" : "")</text>),
+        new("Freigegeben", p => @<text>@Freigegeben(p)</text>),
+        new("Gekauft", p => @<text>@(p.Gekauft ? "gekauft" : "")</text>),
     ];
+
+    /// <summary>Story 4-3: „Freigegeben“ als Autosave-Ankreuzfeld mit dem Stand der Felder (nicht nach dem Abschluss), sonst als Text.</summary>
+    private RenderFragment Freigegeben(EinkaufslistenPosten posten) => @<text>
+        @if (Abgeschlossen)
+        {
+            @(posten.Freigegeben ? "freigegeben" : "")
+        }
+        else
+        {
+            var feld = _felder!.Tage.SelectMany(t => t.Posten).FirstOrDefault(p => p.GerichtId == posten.GerichtId && p.ZutatId == posten.ZutatId && p.PostenId == posten.PostenId) ?? posten;
+            var (id, pfad, feldname) = posten is { GerichtId: { } gericht, ZutatId: { } zutat }
+                ? ($"freigegeben-{gericht}-{zutat}", KuecheApiClient.HandMengePfad(FreizeitId, gericht, zutat), HandMengeFelder.Freigegeben)
+                : ($"freigegeben-{posten.PostenId}", KuecheApiClient.PostenPfad(FreizeitId, posten.PostenId!.Value), EinkaufspostenFelder.Freigegeben);
+            <AutosaveAnkreuzfeld @key="@($"{id}-{_ladung}")" Label="@($"{KuecheTexte.PostenText(posten)} freigegeben")" Id="@id" Feldname="@feldname" Pfad="@pfad"
+                                 Wert="@feld.Freigegeben" Version="@feld.Version" NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+        }
+    </text>;
 
     /// <summary>Berechnete Posten (nicht nach dem Abschluss) als Autosave-Feld mit dem Stand der Felder, sonst die Menge als Text.</summary>
     private RenderFragment Menge(EinkaufslistenPosten posten) => @<text>
@@ -213,6 +251,7 @@ else
             }
 
             (_kontext, _liste, _felder) = (kontext.Result, liste.Result, liste.Result);
+            _ladung++;
         }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
         {
@@ -233,6 +272,7 @@ else
                 if (felder)
                 {
                     _felder = liste;
+                    _ladung++;
                 }
             }
             else
@@ -251,6 +291,44 @@ else
 
     /// <summary>„Neu laden“ beim Konflikt: alles neu, auch die Felder.</summary>
     private Task NeuLadenAsync() => LadenAsync(felder: true);
+
+    /// <summary>
+    /// Story 4-3: „Ganzen Tag freigeben“ oder „Freigabe zurücknehmen“ für alle Posten eines Tags (ohne Tag: die Hand-Posten ohne Tag); danach alles neu,
+    /// auch die Ankreuzfelder.
+    /// </summary>
+    private async Task FreigebenAsync(DateOnly? tag, bool freigegeben)
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _meldung = null;
+        try
+        {
+            switch (await KuecheApi.FreigabeAsync(FreizeitId, new EinkaufFreigabe(tag is { } wert ? KuecheTexte.Iso(wert) : null, freigegeben)))
+            {
+                case KuecheAktionErgebnis.Erfolg:
+                    await LadenAsync(felder: true);
+                    break;
+                case KuecheAktionErgebnis.Abgeschlossen:
+                    _meldung = KuecheTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
 
     /// <summary>„Posten ergänzen“: danach steht er in der Liste, das Formular ist leer.</summary>
     private async Task PostenAnlegenAsync()
