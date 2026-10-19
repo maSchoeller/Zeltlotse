@@ -45,6 +45,7 @@ Test-Tempo ab 2-3 (Vorgabe von Marvin, 2026-10-12): Story-Sitzungen testen währ
 | 2026-10-17 15:50 | 4-1 | done (mit Folgedurchlauf) | ja (done, keiner mehr) | schnell grün: Build, Architektur 135/135, UI 686/686 / – (Sitzung: 2503 grün, Doku 56 Seiten) | 590e476 | Paketversionen angehoben (Blazor 10.0.13, Pkcs, MessagePack) wegen neuer Sicherheitswarnungen; Demo-Rezepte zeigen keine echte Hochrechnung (Faktor 1) |
 | 2026-10-19 08:30 | 4-2 | abgebrochen (Umgebung) | – | – | 9e492fa | Sitzung vom 17.10. 15:26 endete ohne Ergebnis (Prozess beendet, Rechner/Docker neu gestartet). Story-Spec war geschrieben, noch kein Code; Spec auf draft gesetzt und behalten, Story neu gestartet |
 | 2026-10-19 11:55 | 4-2 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 135/135, UI 707/707 / – (Sitzung: Api 879/880, Doku 58 Seiten) | 0f32ff7 | Dauer 3 h 20 min, viel davon Testläufe unter Last. Wackliger Telemetrie-Test Ausnahmen_erscheinen_in_Spans_nicht_mit_Nachricht (einzeln grün). Jedes Öffnen der Einkaufsliste schreibt ins Zugriffsprotokoll (Allergen-Abgleich) |
+| 2026-10-19 15:05 | 4-3 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 135/135, UI 724/724 / – (Sitzung: 2647 grün inkl. Playwright) | d566343 | Seltene Fälle offen: 500 bei gleichzeitigem Löschen einer Zutat; Tages-Freigabe für Tag außerhalb einer verkürzten Freizeit schlägt fehl |
 
 ## Entscheidungen im Lauf
 
