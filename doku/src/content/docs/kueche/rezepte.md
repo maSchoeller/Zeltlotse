@@ -13,7 +13,7 @@ Rezepte gibt es nur, wenn die Leitung das Modul **Verpflegung** für die Freizei
 
 ## Der Weg zu den Rezepten
 
-Startseite der Freizeit → Knopf **Küche**. Die Seite **Rezepte** zeigt je Rezept eine Card: den Namen als Link zum Rezept, „für 4 Personen“ mit der Zahl der Zutaten und die Allergene aller Zutaten. Ist an keiner Zutat ein Allergen angekreuzt, steht dort „keine angegeben“ – das heißt nicht, dass das Rezept frei von Allergenen ist. Darüber steht, auf wie viele Personen Zeltlotse hochrechnet, zum Beispiel „Hochgerechnet auf 4 Personen der Freizeit.“ Ohne Rezepte steht dort „Noch keine Rezepte.“
+Startseite der Freizeit → Knopf **Küche**. Oben stehen die Reiter **Rezepte · Essensplan · Einkaufsliste**. Die Seite **Rezepte** zeigt je Rezept eine Card: den Namen als Link zum Rezept, „für 4 Personen“ mit der Zahl der Zutaten und die Allergene aller Zutaten. Ist an keiner Zutat ein Allergen angekreuzt, steht dort „keine angegeben“ – das heißt nicht, dass das Rezept frei von Allergenen ist. Darüber steht, auf wie viele Personen Zeltlotse hochrechnet, zum Beispiel „Hochgerechnet auf 4 Personen der Freizeit.“ Ohne Rezepte steht dort „Noch keine Rezepte.“
 
 ![Rezepte am Handy: „Hochgerechnet auf 4 Personen der Freizeit.“, darunter die Cards „Chili sin Carne“ (für 4 Personen · 7 Zutaten, Allergene: Sellerie) und „Pfannkuchen“](../../../assets/screenshots/rezepte-handy.png)
 
@@ -40,7 +40,7 @@ Neue Zutaten kommen über das Formular **Zutat hinzufügen**:
 
 Eine Menge darf Komma oder Punkt als Dezimaltrenner haben, aber keine Tausenderpunkte: erlaubt sind Zahlen bis 1.000.000 mit höchstens drei Nachkommastellen, also „1000“ statt „1.000“. Zeltlotse rechnet keine Einheiten um: Was in der Einheit steht, steht so in der Tabelle. Eine Menge steht immer mit Komma da, „1.5“ wird zu „1,5“.
 
-Je Zutat gibt es eine eigene Card mit ihren Feldern. Dort lassen sich Bezeichnung, Menge und Einheit ändern und die **Allergene** ankreuzen. **Entfernen** klappt eine Rückfrage auf („„Salz“ entfernen?“ – „Ja, entfernen“ / „Nein“). **Rezept löschen** ganz unten löscht nach einer Rückfrage das Rezept mit allen Zutaten.
+Je Zutat gibt es eine eigene Card mit ihren Feldern. Dort lassen sich Bezeichnung, Menge und Einheit ändern und die **Allergene** ankreuzen. **Entfernen** klappt eine Rückfrage auf („„Salz“ entfernen?“ – „Ja, entfernen“ / „Nein“). **Rezept löschen** ganz unten löscht nach einer Rückfrage das Rezept mit allen Zutaten; vorgemerkte Gerichte mit diesem Rezept verschwinden dabei aus dem [Essensplan](/kueche/essensplan/) und von der Einkaufsliste.
 
 ## Allergene
 
@@ -74,4 +74,4 @@ Rezepte gehören zur Freizeit und enthalten keine Personendaten. Deshalb gehöre
 
 ## Noch nicht dabei
 
-Gerichte an den Mahlzeiten, der Abgleich der Allergene mit den Freizeitpässen, die Einkaufsliste, die Tagesansicht der Küche und der Restetag kommen mit einer späteren Version. Rezepte gelten heute nur in ihrer Freizeit; eine Rezeptsammlung der Organisation und das Kopieren von Rezepten in eine andere Freizeit gibt es nicht.
+Gerichte an den Mahlzeiten stehen im [Essensplan](/kueche/essensplan/), der Abgleich der Allergene mit den Freizeitpässen und die Mengen zum Einkaufen auf der [Einkaufsliste](/kueche/einkaufsliste/). Einkauf freigeben und abhaken, die Tagesansicht der Küche und der Restetag kommen mit einer späteren Version. Rezepte gelten heute nur in ihrer Freizeit; eine Rezeptsammlung der Organisation und das Kopieren von Rezepten in eine andere Freizeit gibt es nicht.

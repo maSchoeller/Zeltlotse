@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Zeltlotse.Freizeiten.Contracts.Fragen;
 using Zeltlotse.Freizeiten.Contracts.Namen;
 using Zeltlotse.Freizeiten.Contracts.Personen;
 using Zeltlotse.Freizeiten.Daten;
@@ -34,6 +35,20 @@ internal sealed class FreizeitPersonenzahlLesen(FreizeitenLeseDbContext db) : IF
 {
     public async Task<int> AnzahlAsync(Guid freizeitId, CancellationToken abbruch = default)
     {
+        var (teilnehmende, team) = await KennungenAsync(freizeitId, abbruch);
+        var personen = teilnehmende.Concat(team).Where(p => p != GeloeschtePerson.Id).Distinct().Count();
+        return personen + teilnehmende.Count(p => p == GeloeschtePerson.Id);
+    }
+
+    public async Task<IReadOnlyList<Guid>> PersonenAsync(Guid freizeitId, CancellationToken abbruch = default)
+    {
+        var (teilnehmende, team) = await KennungenAsync(freizeitId, abbruch);
+        return [.. teilnehmende.Concat(team).Where(p => p != GeloeschtePerson.Id).Distinct()];
+    }
+
+    /// <summary>Bestätigte Teilnehmende und Personen mit Rolle Leitung oder Team, je mit Wiederholungen und Platzhaltern.</summary>
+    private async Task<(List<Guid> Teilnehmende, List<Guid> Team)> KennungenAsync(Guid freizeitId, CancellationToken abbruch)
+    {
         var teilnehmende = await db.Anmeldungen
             .Where(a => a.FreizeitId == freizeitId && a.Art == AnmeldeArt.Teilnehmende && a.Status == AnmeldeStatus.Bestaetigt)
             .Select(a => a.PersonId)
@@ -42,8 +57,23 @@ internal sealed class FreizeitPersonenzahlLesen(FreizeitenLeseDbContext db) : IF
             .Where(r => r.FreizeitId == freizeitId && (r.Rolle == RolleArt.Leitung || r.Rolle == RolleArt.Team))
             .Select(r => r.PersonId)
             .ToListAsync(abbruch);
-        var personen = teilnehmende.Concat(team).Where(p => p != GeloeschtePerson.Id).Distinct().Count();
-        return personen + teilnehmende.Count(p => p == GeloeschtePerson.Id);
+        return (teilnehmende, team);
+    }
+}
+
+/// <summary>
+/// Story 4-2: <see cref="IFreizeitFragenLesen"/> über den Lese-Kontext unter dem Mandantenfilter: die Kennung steht in den Fragen für Teilnehmende
+/// oder für Mitarbeitende.
+/// </summary>
+internal sealed class FreizeitFragenLesen(FreizeitenLeseDbContext db) : IFreizeitFragenLesen
+{
+    public async Task<bool> FragtAbAsync(Guid freizeitId, string kennung, CancellationToken abbruch = default)
+    {
+        var fragen = await db.Freizeiten
+            .Where(f => f.Id == freizeitId)
+            .Select(f => new { f.FragenTeilnehmende, f.FragenMitarbeitende })
+            .SingleOrDefaultAsync(abbruch);
+        return fragen is not null && (fragen.FragenTeilnehmende.Contains(kennung) || fragen.FragenMitarbeitende.Contains(kennung));
     }
 }
 

@@ -388,6 +388,8 @@ public sealed class RezeptSeitenTests : BunitContext
 
         cut.FindAll("button").Single(b => b.TextContent == "Rezept löschen").Click();
         Assert.Contains("Rezept „Pfannkuchen“ mit allen Zutaten löschen?", cut.Markup, StringComparison.Ordinal);
+        // Story 4-2: Der Satz nennt, dass vorgemerkte Gerichte mit entfernt werden.
+        Assert.Contains("Vorgemerkte Gerichte mit diesem Rezept werden mit entfernt.", cut.Markup, StringComparison.Ordinal);
         cut.FindAll("button").Single(b => b.TextContent == "Ja, löschen").Click();
 
         cut.WaitForAssertion(() => Assert.EndsWith($"freizeiten/{Freizeit}/kueche/rezepte", Navigation.Uri, StringComparison.Ordinal));

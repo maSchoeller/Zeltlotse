@@ -127,7 +127,7 @@ else
                 <p>* Pflichtfeld</p>
             </Card>
 
-            <InlineBestaetigung AusloeserText="Rezept löschen" AusloeserArt="KnopfArt.Outline" Satz="@($"Rezept „{_rezept.Name}“ mit allen Zutaten löschen?")"
+            <InlineBestaetigung AusloeserText="Rezept löschen" AusloeserArt="KnopfArt.Outline" Satz="@($"Rezept „{_rezept.Name}“ mit allen Zutaten löschen? Vorgemerkte Gerichte mit diesem Rezept werden mit entfernt.")"
                                 JaText="Ja, löschen" Bestaetigt="RezeptLoeschenAsync" />
         }
     }

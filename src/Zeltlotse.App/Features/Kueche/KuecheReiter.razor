@@ -1,0 +1,16 @@
+@* Küche-Reiter (Story 4-2): „Rezepte · Essensplan · Einkaufsliste“ als Links oben auf den drei Küche-Seiten; der aktive trägt aria-current. *@
+<Reiter Bezeichnung="Küche" Eintraege="Eintraege" />
+
+@code {
+    [Parameter, EditorRequired] public Guid FreizeitId { get; set; }
+
+    /// <summary>Die gewählte Seite: „rezepte“, „essensplan“ oder „einkaufsliste“.</summary>
+    [Parameter, EditorRequired] public string Aktiv { get; set; } = "";
+
+    private IReadOnlyList<ReiterEintrag> Eintraege =>
+    [
+        new("Rezepte", KuecheTexte.RezepteZiel(FreizeitId), Aktiv == "rezepte"),
+        new("Essensplan", KuecheTexte.EssensplanZiel(FreizeitId), Aktiv == "essensplan"),
+        new("Einkaufsliste", KuecheTexte.EinkaufslisteZiel(FreizeitId), Aktiv == "einkaufsliste"),
+    ];
+}

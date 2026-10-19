@@ -1,0 +1,66 @@
+@* Vergleich (Story 4-2; EXPERIENCE.md → Bestätigung vor Planungsänderung, AD-13): zwei Spalten „Vorher“ und „Nachher“, am Laptop nebeneinander,
+   am Handy (unter 1024 px) untereinander. Je Spalte eine Überschrift, optional ein Satz darunter (z. B. das Rezept) und die Zeilen als Liste mit der
+   Menge vor dem Text. Geänderte Zeilen sind fett (nicht nur farbig) und tragen für Screenreader „(geändert)“. Ohne Zeilen „Keine Posten.“.
+   Statisch tauglich: keine Ereignis-Handler; die Aktionen setzt die Seite darunter. *@
+<div class="zl-vergleich" role="group" aria-label="@Bezeichnung">
+    @Spalte("Vorher", VorherText, Vorher)
+    @Spalte("Nachher", NachherText, Nachher)
+</div>
+
+@code {
+    /// <summary>Name der Gruppe für Screenreader, z. B. „Tausch Pfannkuchen gegen Chili sin Carne“.</summary>
+    [Parameter, EditorRequired] public string Bezeichnung { get; set; } = "";
+
+    /// <summary>Satz unter „Vorher“, z. B. der Name des bisherigen Rezepts.</summary>
+    [Parameter] public string? VorherText { get; set; }
+
+    [Parameter, EditorRequired] public IReadOnlyList<VergleichZeile> Vorher { get; set; } = [];
+
+    /// <summary>Satz unter „Nachher“, z. B. der Name des neuen Rezepts.</summary>
+    [Parameter] public string? NachherText { get; set; }
+
+    [Parameter, EditorRequired] public IReadOnlyList<VergleichZeile> Nachher { get; set; } = [];
+
+    /// <summary>Überschriftenebene der Spaltenköpfe, 3 (Vorgabe) oder 4.</summary>
+    [Parameter] public int Ebene { get; set; } = 3;
+
+    private RenderFragment Spalte(string titel, string? text, IReadOnlyList<VergleichZeile> zeilen) => @<section class="zl-vergleich__spalte">
+        @if (Ebene == 4)
+        {
+            <h4 class="zl-vergleich__titel">@titel</h4>
+        }
+        else
+        {
+            <h3 class="zl-vergleich__titel">@titel</h3>
+        }
+        @if (text is not null)
+        {
+            <p class="zl-vergleich__text">@text</p>
+        }
+        @if (zeilen.Count == 0)
+        {
+            <p>Keine Posten.</p>
+        }
+        else
+        {
+            <ul class="zl-vergleich__liste">
+                @foreach (var zeile in zeilen)
+                {
+                    <li class="@(zeile.Geaendert ? "zl-vergleich__zeile zl-vergleich__zeile--geaendert" : "zl-vergleich__zeile")">
+                        @if (zeile.Geaendert)
+                        {
+                            <strong>@Inhalt(zeile)</strong>
+                            <span class="zl-nur-vorlesen"> (geändert)</span>
+                        }
+                        else
+                        {
+                            @Inhalt(zeile)
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </section>;
+
+    private static string Inhalt(VergleichZeile zeile) => zeile.Menge is { Length: > 0 } menge ? $"{menge} {zeile.Text}" : zeile.Text;
+}

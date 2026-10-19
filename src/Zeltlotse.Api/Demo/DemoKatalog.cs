@@ -64,6 +64,28 @@ internal static class DemoKatalog
     ];
 
     /// <summary>
+    /// Story 4-2: Gerichte im Essensplan der Demo-Freizeit (Tag, Titel der Mahlzeit, Rezept); je nur, wenn das Rezept an dieser Mahlzeit noch nicht
+    /// vorgemerkt ist.
+    /// </summary>
+    public static IReadOnlyList<(DateOnly Tag, string Mahlzeit, string Rezept)> Gerichte { get; } =
+    [
+        (new DateOnly(2027, 8, 3), "Frühstück", "Pfannkuchen"),
+        (new DateOnly(2027, 8, 3), "Mittagessen", "Chili sin Carne"),
+    ];
+
+    /// <summary>Story 4-2: Hand-Mengen der Einkaufsliste (Tag, Mahlzeit, Rezept, Zutat, Menge als Text); je nur, wenn es dort noch keine gibt.</summary>
+    public static IReadOnlyList<(DateOnly Tag, string Mahlzeit, string Rezept, string Zutat, string Menge)> HandMengen { get; } =
+    [
+        (new DateOnly(2027, 8, 3), "Frühstück", "Pfannkuchen", "Mehl", "500"),
+    ];
+
+    /// <summary>Story 4-2: Hand-Posten der Einkaufsliste; je nur, wenn es die Bezeichnung noch nicht gibt.</summary>
+    public static IReadOnlyList<(string Bezeichnung, string? Menge, string? Einheit, DateOnly? Tag)> Einkaufsposten { get; } =
+    [
+        ("Äpfel", "3", "kg", new DateOnly(2027, 8, 3)),
+    ];
+
+    /// <summary>
     /// Story 2-2 und 2-3: Anmeldungen der Demo-Freizeit mit Konto, in dieser Reihenfolge. <c>Kind</c> leer heißt: die Person meldet sich
     /// selbst über den Anmeldelink für Mitarbeitende an. Miriam bestätigt die mit <c>Bestaetigt</c>; die anderen bleiben „eingegangen“.
     /// So zeigt die Liste der Leitung alle Status und der Balken „1 von 40“ (Mia; Mitarbeitende zählen nicht).

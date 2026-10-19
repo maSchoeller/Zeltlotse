@@ -550,7 +550,7 @@ namespace Zeltlotse.Personen.Migrationen
                     b.Property<Guid?>("FreizeitId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("LesendePersonId")
+                    b.Property<Guid?>("LesendePersonId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("OrganisationId")
@@ -569,7 +569,9 @@ namespace Zeltlotse.Personen.Migrationen
                     b.HasIndex("LesendePersonId", "BetroffenePersonId", "Tag", "Zweck")
                         .IsUnique()
                         .HasDatabaseName("IX_einsicht_protokoll_je_tag")
-                        .HasFilter("\"LesendePersonId\" <> '00000000-0000-7000-8000-0000000de1e7'");
+                        .HasFilter("\"LesendePersonId\" IS NULL OR \"LesendePersonId\" <> '00000000-0000-7000-8000-0000000de1e7'");
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("LesendePersonId", "BetroffenePersonId", "Tag", "Zweck"), false);
 
                     b.ToTable("einsicht_protokoll", "personen");
                 });

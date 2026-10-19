@@ -136,7 +136,8 @@ public static class ZutatFelder
 }
 
 /// <summary>Story 4-1: Ein Allergen: gespeicherter Schlüssel und Anzeigetext.</summary>
-public sealed record Allergen(string Wert, string Text);
+/// <param name="Kurz">Story 4-2: kurzer Name für Hinweise wie „enthält Gluten“ und die Allergen-Übersicht der Einkaufsliste.</param>
+public sealed record Allergen(string Wert, string Text, string Kurz);
 
 /// <summary>
 /// Story 4-1: Die 14 EU-Hauptallergene für die Oberfläche, mit denselben Schlüsseln und in derselben Reihenfolge wie die Allergie-Frage des
@@ -146,20 +147,20 @@ public static class Allergene
 {
     public static IReadOnlyList<Allergen> Alle { get; } =
     [
-        new("gluten", "Glutenhaltiges Getreide"),
-        new("krebstiere", "Krebstiere"),
-        new("eier", "Eier"),
-        new("fisch", "Fisch"),
-        new("erdnuesse", "Erdnüsse"),
-        new("soja", "Soja"),
-        new("milch", "Milch (inkl. Laktose)"),
-        new("schalenfruechte", "Schalenfrüchte (Nüsse)"),
-        new("sellerie", "Sellerie"),
-        new("senf", "Senf"),
-        new("sesam", "Sesam"),
-        new("sulfite", "Schwefeldioxid und Sulfite"),
-        new("lupinen", "Lupinen"),
-        new("weichtiere", "Weichtiere"),
+        new("gluten", "Glutenhaltiges Getreide", "Gluten"),
+        new("krebstiere", "Krebstiere", "Krebstiere"),
+        new("eier", "Eier", "Eier"),
+        new("fisch", "Fisch", "Fisch"),
+        new("erdnuesse", "Erdnüsse", "Erdnüsse"),
+        new("soja", "Soja", "Soja"),
+        new("milch", "Milch (inkl. Laktose)", "Milch"),
+        new("schalenfruechte", "Schalenfrüchte (Nüsse)", "Schalenfrüchte"),
+        new("sellerie", "Sellerie", "Sellerie"),
+        new("senf", "Senf", "Senf"),
+        new("sesam", "Sesam", "Sesam"),
+        new("sulfite", "Schwefeldioxid und Sulfite", "Sulfite"),
+        new("lupinen", "Lupinen", "Lupinen"),
+        new("weichtiere", "Weichtiere", "Weichtiere"),
     ];
 
     /// <summary>Die Anzeigetexte einer Komma-Liste in Katalogreihenfolge; Unbekanntes fällt weg.</summary>
@@ -167,5 +168,12 @@ public static class Allergene
     {
         var schluessel = (liste ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.Ordinal);
         return [.. Alle.Where(a => schluessel.Contains(a.Wert)).Select(a => a.Text)];
+    }
+
+    /// <summary>Story 4-2: Die kurzen Namen einer Menge von Schlüsseln in Katalogreihenfolge, z. B. „Gluten“, „Milch“; Unbekanntes fällt weg.</summary>
+    public static IReadOnlyList<string> Kurztexte(IEnumerable<string> schluessel)
+    {
+        var menge = schluessel.ToHashSet(StringComparer.Ordinal);
+        return [.. Alle.Where(a => menge.Contains(a.Wert)).Select(a => a.Kurz)];
     }
 }

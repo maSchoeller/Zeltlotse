@@ -901,6 +901,43 @@ public sealed class KomponentenTests : BunitContext
         Assert.Empty(cut.FindAll(".zl-reiter__inhalt"));
     }
 
+    // ---------- Story 4-2: Vergleich ----------
+
+    [Fact]
+    public void Vergleich_zeigt_Vorher_und_Nachher_als_zwei_Spalten_geaenderte_Zeilen_fett_und_vorgelesen()
+    {
+        VergleichZeile[] vorher = [new("Mehl", "1 g", Geaendert: true), new("Salz", null, Geaendert: false)];
+        VergleichZeile[] nachher = [new("Kidneybohnen", "250 g", Geaendert: true)];
+
+        var cut = Render<Vergleich>(ps => ps
+            .Add(p => p.Bezeichnung, "Tausch Pfannkuchen gegen Chili sin Carne")
+            .Add(p => p.VorherText, "Pfannkuchen")
+            .Add(p => p.Vorher, vorher)
+            .Add(p => p.NachherText, "Chili sin Carne")
+            .Add(p => p.Nachher, nachher));
+
+        Assert.Equal("Tausch Pfannkuchen gegen Chili sin Carne", cut.Find(".zl-vergleich").GetAttribute("aria-label"));
+        var spalten = cut.FindAll(".zl-vergleich__spalte");
+        Assert.Equal(["Vorher", "Nachher"], spalten.Select(s => s.QuerySelector("h3")!.TextContent));
+        Assert.Equal(["Pfannkuchen", "Chili sin Carne"], spalten.Select(s => s.QuerySelector("p")!.TextContent));
+        var zeilen = spalten[0].QuerySelectorAll("li");
+        Assert.Equal("1 g Mehl", zeilen[0].QuerySelector("strong")!.TextContent);
+        Assert.Contains("(geändert)", zeilen[0].QuerySelector(".zl-nur-vorlesen")!.TextContent, StringComparison.Ordinal);
+        Assert.Null(zeilen[1].QuerySelector("strong"));
+        Assert.Equal("Salz", zeilen[1].TextContent.Trim());
+        Assert.Equal("250 g Kidneybohnen", spalten[1].QuerySelector("li strong")!.TextContent);
+        Assert.Empty(cut.FindAll("button"));
+    }
+
+    [Fact]
+    public void Vergleich_ohne_Zeilen_nennt_das()
+    {
+        var cut = Render<Vergleich>(ps => ps.Add(p => p.Bezeichnung, "Tausch").Add(p => p.Vorher, []).Add(p => p.Nachher, [new VergleichZeile("Reis", "1 kg", false)]));
+
+        Assert.Equal("Keine Posten.", cut.FindAll(".zl-vergleich__spalte")[0].QuerySelector("p")!.TextContent);
+        Assert.Equal(["Vorher", "Nachher"], cut.FindAll("h3").Select(h => h.TextContent));
+    }
+
     [Fact]
     public void Termin_zeigt_Uhrzeit_als_Dachzeile_Titel_als_Link_Status_und_Inhalt()
     {

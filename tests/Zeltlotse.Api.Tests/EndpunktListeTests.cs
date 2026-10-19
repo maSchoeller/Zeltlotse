@@ -298,6 +298,17 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 "POST /api/freizeiten/{freizeitId:guid}/kueche/rezepte/{rezeptId:guid}/zutaten",
                 "PATCH /api/freizeiten/{freizeitId:guid}/kueche/rezepte/{rezeptId:guid}/zutaten/{zutatId:guid}",
                 "DELETE /api/freizeiten/{freizeitId:guid}/kueche/rezepte/{rezeptId:guid}/zutaten/{zutatId:guid}",
+                // Story 4-2: Essensplan, Gerichte und Einkaufsliste (Küche), alles für Leitung und Team, nur mit dem Modul Verpflegung.
+                "GET /api/freizeiten/{freizeitId:guid}/kueche/essensplan",
+                "POST /api/freizeiten/{freizeitId:guid}/kueche/gerichte",
+                "DELETE /api/freizeiten/{freizeitId:guid}/kueche/gerichte/{gerichtId:guid}",
+                "GET /api/freizeiten/{freizeitId:guid}/kueche/gerichte/{gerichtId:guid}/tausch",
+                "POST /api/freizeiten/{freizeitId:guid}/kueche/gerichte/{gerichtId:guid}/tauschen",
+                "GET /api/freizeiten/{freizeitId:guid}/kueche/einkaufsliste",
+                "PATCH /api/freizeiten/{freizeitId:guid}/kueche/einkaufsliste/gerichte/{gerichtId:guid}/zutaten/{zutatId:guid}",
+                "POST /api/freizeiten/{freizeitId:guid}/kueche/einkaufsliste/posten",
+                "PATCH /api/freizeiten/{freizeitId:guid}/kueche/einkaufsliste/posten/{postenId:guid}",
+                "DELETE /api/freizeiten/{freizeitId:guid}/kueche/einkaufsliste/posten/{postenId:guid}",
             }.Order(StringComparer.Ordinal),
             freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
         Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));
@@ -315,8 +326,9 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
     {
         var endpunkte = await EndpunkteAsync();
 
-        // Story 3-7 (AD-20): Leitplanke für V4 und V5: Jeder Endpunkt dort erklärt seinen Schalter. Story 4-1: die acht Routen der Rezepte.
-        Assert.Equal(8, endpunkte.Count(e => e.Pfad.Contains("/kueche/", StringComparison.Ordinal)));
+        // Story 3-7 (AD-20): Leitplanke für V4 und V5: Jeder Endpunkt dort erklärt seinen Schalter. Story 4-1: die acht Routen der Rezepte;
+        // Story 4-2: zehn Routen für Essensplan, Gerichte und Einkaufsliste.
+        Assert.Equal(18, endpunkte.Count(e => e.Pfad.Contains("/kueche/", StringComparison.Ordinal)));
         foreach (var (bereich, schalter) in new[] { ("kueche", FunktionsSchalter.Verpflegung), ("finanzen", FunktionsSchalter.Finanzen) })
         {
             var praefix = $"/api/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/{bereich}";

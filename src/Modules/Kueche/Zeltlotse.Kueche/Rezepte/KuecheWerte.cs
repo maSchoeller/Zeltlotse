@@ -87,6 +87,24 @@ internal static partial class KuecheWerte
             ? OhneNullen(Math.Round(wert * personenzahl / basisPersonen, 2, MidpointRounding.AwayFromZero))
             : null;
 
+    // ---------- Tag (Story 4-2) ----------
+
+    public const string TagFehlerText = "Nur ein Datum im Format JJJJ-MM-TT.";
+
+    public const string TagAusserhalbText = "Nur ein Tag der Freizeit.";
+
+    /// <summary>Der Tag aus einem Text <c>JJJJ-MM-TT</c> oder <c>null</c>.</summary>
+    public static DateOnly? TagLesen(string? text) =>
+        TextOderNull(text) is { } wert
+        && DateOnly.TryParseExact(wert, Api.Contracts.Kueche.EinkaufspostenFelder.TagFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var tag)
+            ? tag
+            : null;
+
+    public static string? TagText(DateOnly? tag) => tag?.ToString(Api.Contracts.Kueche.EinkaufspostenFelder.TagFormat, CultureInfo.InvariantCulture);
+
+    /// <summary>Der Fehler zum Tag oder <c>null</c>: freiwillig (leer heißt ohne Tag), sonst ein Datum <c>JJJJ-MM-TT</c>.</summary>
+    public static string? TagFehler(string? text) => TextOderNull(text) is null || TagLesen(text) is not null ? null : TagFehlerText;
+
     // ---------- Allergene ----------
 
     private static List<string> Schluessel(string? liste) =>

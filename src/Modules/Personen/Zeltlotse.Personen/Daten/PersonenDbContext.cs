@@ -240,7 +240,8 @@ internal static class PersonenModell
             e.Property(t => t.Zweck).HasConversion<short>();
             e.HasIndex(t => new { t.LesendePersonId, t.BetroffenePersonId, t.Tag, t.Zweck })
                 .IsUnique()
-                .HasFilter($"\"LesendePersonId\" <> '{GeloeschtePerson.Id}'")
+                .AreNullsDistinct(false)
+                .HasFilter($"\"LesendePersonId\" IS NULL OR \"LesendePersonId\" <> '{GeloeschtePerson.Id}'")
                 .HasDatabaseName("IX_einsicht_protokoll_je_tag");
             e.HasIndex(t => t.BetroffenePersonId);
         });

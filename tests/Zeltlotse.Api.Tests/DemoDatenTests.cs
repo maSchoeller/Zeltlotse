@@ -309,6 +309,26 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.rezept"));
         Assert.Equal(11L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.zutat"));
 
+        // Story 4-2: Am Dienstag (03.08.) Pfannkuchen zum Frühstück und Chili sin Carne zum Mittagessen; Mehl von Hand auf 500 g, dazu Äpfel 3 kg als
+        // Hand-Posten. Mia (bestätigt, Gluten) braucht beim Pfannkuchen eine Ersatzportion. Nichts doppelt, auch nach dem zweiten Einspielen.
+        var plan = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/kueche/essensplan", Abbruch));
+        var dienstag = plan.GetProperty("tage").EnumerateArray().Single(t => t.GetProperty("tag").GetString() == "2027-08-03").GetProperty("mahlzeiten");
+        Assert.Equal(
+            ["Frühstück: Pfannkuchen", "Mittagessen: Chili sin Carne", "Abendessen: "],
+            dienstag.EnumerateArray().Select(m => $"{m.GetProperty("titel").GetString()}: {string.Join(", ", m.GetProperty("gerichte").EnumerateArray().Select(g => g.GetProperty("rezeptName").GetString()))}"));
+        Assert.Equal(1, dienstag[0].GetProperty("gerichte")[0].GetProperty("ersatzportionen").GetProperty("anzahl").GetInt32());
+        var einkauf = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/kueche/einkaufsliste", Abbruch));
+        var posten = einkauf.GetProperty("tage").EnumerateArray().Single().GetProperty("posten").EnumerateArray()
+            .Select(p => $"{p.GetProperty("bezeichnung").GetString()} {(p.GetProperty("menge").ValueKind == System.Text.Json.JsonValueKind.Null ? "-" : p.GetProperty("menge").GetRawText())} {p.GetProperty("einheit").GetString() ?? "-"}{(p.GetProperty("vonHand").GetBoolean() ? " von Hand" : "")}")
+            .ToList();
+        Assert.Equal("Mehl 500 g von Hand", posten[0]);
+        Assert.Contains("Kidneybohnen 500 g", posten);
+        Assert.Equal("Äpfel 3 kg von Hand", posten[^1]);
+        Assert.Equal(12, posten.Count);
+        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.gericht"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.menge_von_hand"));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.einkaufsposten"));
+
         // Story 2-5: Die Fragen-Auswahl kam vor den Anmeldungen: Emmas Freigabe (eingegangen) und Mias (bestätigt) tragen die Fragen für
         // Teilnehmende, Leas die für Mitarbeitende. Daniel hat für Mia drei Antworten gespeichert, Lea eine Team-Notiz zu Mia geschrieben
         // (genau eine, auch nach dem zweiten Einspielen, nur verschlüsselt). Emmas Anmeldung nennt „Einsicht bis“.

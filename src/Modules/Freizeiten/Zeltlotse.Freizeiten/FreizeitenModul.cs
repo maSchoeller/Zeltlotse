@@ -5,6 +5,7 @@ using Zeltlotse.Freizeiten.Abschluss;
 using Zeltlotse.Freizeiten.Anmeldungen;
 using Zeltlotse.Freizeiten.Anmeldungen.Entscheiden;
 using Zeltlotse.Freizeiten.Contracts.Dokumente;
+using Zeltlotse.Freizeiten.Contracts.Fragen;
 using Zeltlotse.Freizeiten.Contracts.Namen;
 using Zeltlotse.Freizeiten.Contracts.Personen;
 using Zeltlotse.Freizeiten.Contracts.Rollen;
@@ -56,6 +57,8 @@ public static class FreizeitenModul
         services.AddScoped<IFreizeitEndenLesen, FreizeitEndenLesen>();
         // Story 4-1: die Personenzahl für die Hochrechnung der Rezepte (Pfeil Küche → Freizeiten).
         services.AddScoped<IFreizeitPersonenzahlLesen, FreizeitPersonenzahlLesen>();
+        // Story 4-2: ob eine Freizeit die Allergie-Frage abfragt (Pfeil Küche → Freizeiten).
+        services.AddScoped<IFreizeitFragenLesen, FreizeitFragenLesen>();
         // Story 3-1: die Tage einer Freizeit für Wochenraster und Mahlzeiten (Pfeil Programm → Freizeiten).
         services.AddScoped<IFreizeitTageLesen, FreizeitTageLesen>();
         services.AddScoped<IBestaetigteTeilnehmende, BestaetigteTeilnehmendeZaehlen>();

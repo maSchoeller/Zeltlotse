@@ -14,13 +14,17 @@ internal enum EinsichtZweck : short
 
     /// <summary>Story 2-5: Leitung oder Team hat den Freizeitpass im Freizeit-Kontext gesehen.</summary>
     FreizeitpassEingesehen = 2,
+
+    /// <summary>Story 4-2: Der Allergen-Abgleich der Küche hat die Allergie-Auswahl gelesen, ohne lesende Person (AD-8, Zweck ohne Menschen).</summary>
+    AllergeneFuerKueche = 3,
 }
 
 /// <summary>
 /// Ein Eintrag im Einsicht-Protokoll (AD-8, FR-13): wer (<see cref="LesendePersonId"/>) wann wessen Daten
 /// (<see cref="BetroffenePersonId"/>) wofür eingesehen hat, mit Organisation und Freizeit. Höchstens ein Eintrag je lesender Person,
-/// betroffener Person, Kalendertag (Europe/Berlin) und Zweck (eindeutiger Index). Nicht organisationseigen: Das Protokoll gehört
-/// der betroffenen Person. Ist die lesende Person gelöscht, steht dort der Platzhalter.
+/// betroffener Person, Kalendertag (Europe/Berlin) und Zweck (eindeutiger Index, ohne lesende Person gilt <c>null</c> als ein Wert). Nicht
+/// organisationseigen: Das Protokoll gehört der betroffenen Person. Ist die lesende Person gelöscht, steht dort der Platzhalter. Story 4-2: Ein
+/// Lesen ohne Menschen (Allergen-Abgleich der Küche) hat keine lesende Person (<c>null</c>).
 /// </summary>
 internal sealed class EinsichtProtokollEintrag
 {
@@ -32,7 +36,7 @@ internal sealed class EinsichtProtokollEintrag
 
     public Guid BetroffenePersonId { get; private init; }
 
-    public Guid LesendePersonId { get; private init; }
+    public Guid? LesendePersonId { get; private init; }
 
     public Guid? OrganisationId { get; private init; }
 
@@ -51,7 +55,7 @@ internal sealed class EinsichtProtokollEintrag
 /// eines Lesezugriffs und läuft auch nach dem Abschluss einer Freizeit. Gibt es für (lesend, betroffen, Tag, Zweck) schon einen
 /// Eintrag, gilt das als Erfolg (<c>ON CONFLICT DO NOTHING</c>).
 /// </summary>
-internal sealed record EinsichtProtokollieren(Guid BetroffenePersonId, Guid LesendePersonId, Guid? OrganisationId, Guid? FreizeitId, EinsichtZweck Zweck)
+internal sealed record EinsichtProtokollieren(Guid BetroffenePersonId, Guid? LesendePersonId, Guid? OrganisationId, Guid? FreizeitId, EinsichtZweck Zweck)
     : ICommand, IModulCommand<PersonenDbContext>;
 
 internal sealed class EinsichtProtokollierenHandler(PersonenDbContext db, TimeProvider uhr) : ICommandHandler<EinsichtProtokollieren>

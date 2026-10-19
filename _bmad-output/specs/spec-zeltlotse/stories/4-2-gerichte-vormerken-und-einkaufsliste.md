@@ -2,15 +2,29 @@
 title: 'Story 4-2: Gerichte vormerken und Einkaufsliste'
 type: 'feature'
 created: '2026-10-17'
-status: 'draft'
-baseline_revision: '9e492fa9176b5e23a96301d844cae5f6d0e29e81'
+status: 'done'
+baseline_revision: '5be62b3529864fe9e41838617cd2fab6a52689ac'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/specs/spec-zeltlotse/stories/4-1-rezepte-mit-skalierung.md'
 warnings: ['oversized']
-deferred: []
+deferred:
+  - summary: >-
+      Nach dem Verschieben der Freizeit-Daten fehlen Mahlzeiten an neuen Tagen, alte Mahlzeiten samt Gerichten erscheinen weiter in Essensplan und Einkaufsliste.
+    evidence: |-
+      FreizeitMahlzeitenLesen und WochenrasterLaden (Story 3-1) zählen alle Mahlzeiten der Freizeit gegen 3 × Tage, ohne nach dem aktuellen Zeitraum zu filtern; vorbestehende Zählregel aus Programm.
+    location: >-
+      src/Modules/Programm/Zeltlotse.Programm/Programme/FreizeitMahlzeitenLesen.cs
+    severity: medium
+  - summary: >-
+      Jeder Aufruf von Essensplan oder Einkaufsliste entschlüsselt je Person die Allergie-Antwort und schickt je Person einen Protokoll-Command.
+    evidence: |-
+      Gleiches Muster wie der Notfallordner. Ob es bei 100+ Personen spürbar langsam wird, klärt nur eine Messung mit großer Freizeit.
+    location: >-
+      src/Modules/Personen/Zeltlotse.Personen/Freizeitpass/FreizeitpassAllergene.cs
+    severity: medium (unverified)
 ---
 
 <intent-contract>
@@ -238,6 +252,39 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-10-19 — Review pass
+- verdicts: 29 findings — high 0, medium 4, low 13, false 11, maybe-false 1
+- findings:
+  - `[medium]` `[patch]` Blind: Tausch-Vorschau und „Übernehmen“ können auseinanderlaufen, weil eine Hand-Menge die Version des Gerichts nicht ändert — HandMengeAendern erzwingt jetzt ein UPDATE des gesperrten Gerichts (neue xmin); API-Test Vorschau → Hand-Menge → Tauschen = 409. Teil „Zutaten des neuen Rezepts ändern sich zwischendurch“ ist selten und bräuchte Rezept-Versionen im Tausch-Körper (zurückgewiesen, low).
+  - `[low]` `[reject]` Blind: Hand-Menge bleibt bei geänderter Einheit/Bezeichnung der Zutat — die Intent verlangt ausdrücklich „bleibt bei geändertem Rezept erhalten“.
+  - `[low]` `[reject]` Blind: Neue Personenzahl führt bei berechneten Mengen zu 409 „Inzwischen geändert“; `Version` im PATCH ungenutzt — der angezeigte Wert ist tatsächlich veraltet, Neuladen ist richtig; `version` hält die AD-19-Form einheitlich. Fix bräuchte Sonderlogik.
+  - `[false]` `[reject]` Blind/Edge: Einkaufsliste liest Profile auch ohne Gerichte — gewollt: die Card „Allergen-Abgleich“ zeigt die Übersicht unabhängig von Gerichten (Tasks: Allergen-Abgleich-Card), und jeder Abgleich wird protokolliert.
+  - `[low]` `[reject]` Blind: Kleine Anzahlen lassen Rückschlüsse zu — Anzahlen sind von FR-48 und der Intent vorgegeben; Schwellwert wäre neue Speziallogik.
+  - `[low]` `[patch]` Blind: `meine-daten.md` nennt unter „Was“ nur „Nachweise eingesehen“ — Aufzählung um „Freizeitpass eingesehen“ und „Allergen-Abgleich der Küche“ ergänzt.
+  - `[low]` `[reject]` Blind: `Down` der Migration ZugriffOhnePerson macht anonyme Einträge zur Null-Kennung — Rückrollen wird im Betrieb nicht genutzt; Fix bräuchte Datenumbau.
+  - `[medium]` `[defer]` Blind/Edge: Nach Verschieben der Freizeit-Daten fehlen Mahlzeiten an neuen Tagen, alte Mahlzeiten samt Gerichten erscheinen weiter — gleiche Zählregel wie das bestehende `WochenrasterLaden` (Story 3-1), also vorbestehend.
+  - `[low]` `[patch]` Blind: Einheit beim Tausch exakt statt wie die Bezeichnung verglichen — Einheit getrimmt und ohne Groß/Klein in `GleicheZutat` und `Gleich`; Fachtest ergänzt.
+  - `[low]` `[reject]` Blind: Gericht eines Rezepts ohne Zutaten erscheint nicht auf der Liste, Anker von „Anpassen“ fehlt dann — selten; der Browser ignoriert den fehlenden Anker, Fix bräuchte neue Zweige.
+  - `[maybe-false]` `[defer]` Blind: Je Seitenaufruf N Entschlüsselungen und N Protokoll-Commands — gleiches Muster wie Notfallordner; ob es bei 100+ Personen spürbar ist, zeigt nur eine Messung (wenn wahr: medium).
+  - `[low]` `[patch]` Blind/Verification-Gap: Datenauskunft-Zeile „Niemand persönlich (Abgleich): Allergen-Abgleich der Küche“ ungetestet — Test in `DatenauskunftTests` ergänzt (die übrigen genannten Testlücken gehören zu den Einträgen oben).
+  - `[low]` `[reject]` Edge: Zutat wird gleichzeitig zum Setzen einer Hand-Menge gelöscht → FK-Fehler 500 — sehr selten; Fix bräuchte zusätzliche Sperren mit Deadlock-Risiko.
+  - `[low]` `[reject]` Edge: Gleiches beim Tausch, wenn eine Zutat des neuen Rezepts gleichzeitig gelöscht wird — wie oben.
+  - `[medium]` `[patch]` Edge: Vorschau ≠ Übernehmen (gleiche Ursache wie der erste Eintrag) — siehe dort.
+  - `[false]` `[reject]` Edge: Einkaufsliste ohne `profileLesen`-Schutz — siehe vierter Eintrag.
+  - `[low]` `[reject]` Edge: Doppelte gleiche Zeilen im Vergleich werden nicht als Multimenge abgeglichen — nur bei doppelten Zutaten in einem Rezept; Fix bräuchte neue Zuordnungslogik.
+  - `[medium]` `[defer]` Edge: Mahlzeiten nach Datumsänderung (gleiche Ursache wie oben) — siehe dort.
+  - `[false]` `[reject]` Edge: Essensplan ohne Tage zeigt 01.01.0001 — jede Freizeit hat Anfangs- und Enddatum (`FreizeitTage`), eine unbekannte Freizeit endet vorher in 404.
+  - `[low]` `[patch]` Edge: Antworten zweier schneller Rezeptwahlen in falscher Reihenfolge setzen die falsche Vorschau — Ergebnis nach dem `await` verworfen, wenn die Wahl inzwischen eine andere ist.
+  - `[false]` `[reject]` Edge: „Mahlzeit-Namen in Anzeige“ fehlt — die Namen kommen als `Titel` aus Programm; kein Nutzer sieht eine Lücke.
+  - `[false]` `[reject]` Intent R1: „Anpassen“ nur per bUnit geprüft — Lesart (a) ist in Design Notes festgelegt und umgesetzt.
+  - `[false]` `[reject]` Intent R2: Matrix „1 (Einheit kg)“ ergibt im Test „1 g“ — die Hand-Menge hat keine eigene Einheit („keine Einheiten-Umrechnung“); erwartet ist „Posten zeigt 1 und vonHand“, das gilt.
+  - `[false]` `[reject]` Intent R3: Personen mit leerer Auswahl werden protokolliert — ihre Antwort wurde gelesen, also gehört der Eintrag dazu.
+  - `[false]` `[reject]` Intent R5: Ganze Zeile statt nur Menge fett — die geänderte Menge ist fett, die Zeile ebenso; die Intent verlangt nur „nicht nur farbig“.
+  - `[false]` `[reject]` Intent R7: Lesen legt in Gelaufen Mahlzeiten an — `MahlzeitenSicherstellen` ist laut Story 3-1 ausdrücklich in jeder Phase erlaubt (keine Planungsänderung).
+  - `[low]` `[reject]` Intent: Personenzahl im Test über Team-Rollen statt bestätigte Anmeldung erhöht — gleiche Zählregel, gleiches Ergebnis.
+  - `[false]` `[reject]` Intent R8: `IFreizeitFragenLesen` nicht in der Intent genannt — steht in den Tasks des Specs.
+  - `[false]` `[reject]` Intent R4: Vorschau ohne Abgleich — die Intent verlangt Ersatzportionen nur in Essensplan und Liste.
+
 ## Design Notes
 
 *Rechnen und Speichern*
@@ -264,3 +311,35 @@ deferred: []
 - `dotnet test --project tests/Zeltlotse.ArchitectureTests` und `tests/Zeltlotse.Ui.Tests`: grün.
 - Am Ende einmal alle Testprojekte inklusive E2E (Screenshots erzeugt, Rauschen auf HEAD zurückgesetzt): grün.
 - `npm run build` in `doku/`: fehlerfrei.
+
+## Auto Run Result
+
+Status: done
+
+**Umgesetzt:** Die Küche merkt Rezepte an Mahlzeiten vor (Essensplan mit Tag-Reitern, Vormerken, Entfernen, Tauschen mit Vorher/Nachher-Vorschau). Die Einkaufsliste wird bei jedem Abruf berechnet, mit Hand-Mengen, Hand-Posten, Allergen-Übersicht und Ersatzportionen je Gericht. Der Allergen-Abgleich läuft über die neue zweckgebundene Schnittstelle `IFreizeitpassAllergene` (nur anonyme Profile) und steht als „Allergen-Abgleich der Küche“ ohne lesende Person im Zugriffsprotokoll. Neue Leseschnittstellen: `IFreizeitMahlzeitenLesen` (Programm), `IFreizeitPersonenzahlLesen.PersonenAsync` und `IFreizeitFragenLesen` (Freizeiten). Neuer Baustein `Vergleich`, Küche-Reiter auf allen drei Küche-Seiten.
+
+**Geänderte Dateien (Auswahl):**
+- `src/Modules/Kueche/Zeltlotse.Kueche/Einkauf/*`: Entitäten `Gericht`, `MengeVonHand`, `Einkaufsposten`, Rechenregeln `EinkaufRechnen`, Abfrage `EinkaufAbfrage`, Slices für alle 10 Routen.
+- `Kueche/Migrationen/…_Einkaufsliste`, `Personen/Migrationen/…_ZugriffOhnePerson`: neue Tabellen; `LesendePersonId` nullable, Index mit `NULLS NOT DISTINCT`.
+- `Personen/Freizeitpass/FreizeitpassAllergene.cs`, `Zugriffsprotokoll/*`, `Datenschutz/PersonenAuskunft.cs`, `PersonLoeschen.cs`: Lesepfad, neuer Zweck, Anzeige ohne lesende Person.
+- `Programm/Programme/FreizeitMahlzeitenLesen.cs`, `Freizeiten/Rechte/FreizeitPersonenLesen.cs`: Leseschnittstellen.
+- `src/Zeltlotse.Api.Contracts/Kueche/Essensplan.cs`, `Einkaufsliste.cs`, `Rezepte.cs` (Kurznamen der Allergene), `Personen/Zugriffsprotokoll.cs`.
+- `src/Zeltlotse.App/Features/Kueche/Essensplan.razor`, `Einkaufsliste.razor`, `KuecheReiter.razor`, `Rezept(e).razor`; `Ui.Komponenten/Vergleich.razor`, `Card.razor` (Überschriftenebene), CSS; `Ui/Api/KuecheApiClient.cs`; `MeineDaten.razor`.
+- Demo: `DemoKatalog.cs`/`DemoDaten.cs` Schritt `GerichteAsync`.
+- Doku: neu `kueche/essensplan.md`, `kueche/einkaufsliste.md`; ergänzt `kueche/index.md`, `kueche/rezepte.md`, `daten.md`, `erste-schritte/meine-daten.md`, `leitung/module-schalten.md`; Screenshots `essensplan-*`, `gericht-tauschen-*`, `einkaufsliste-*` neu, `rezepte-*` mit Küche-Reitern.
+- Tests: `Kueche.Tests/EinkaufTests.cs`, `Api.Tests/GerichteTests.cs`, `EinkaufslisteTests.cs`, `DatenauskunftTests.cs`, `EndpunktListeTests.cs`, `DemoDatenTests.cs`, `Ui.Tests/EssensplanSeitenTests.cs` u. a., E2E-Abschnitt „Story 4-2“, `DokuRegeln.PflichtSeiten`.
+
+**Review:** 29 Befunde. Gepatcht (5 Einträge): Hand-Menge macht eine ältere Tausch-Vorschau veraltet (medium), Einheit beim Tausch ohne Groß/Klein (low), veraltete Vorschau-Antworten verworfen (low), `meine-daten.md` „Was“ (low), Test der Datenauskunft-Zeile (low). Zurückgestellt: 2 (siehe `deferred`). Zurückgewiesen: alle übrigen mit Begründung im Review Triage Log.
+
+**Folge-Review:** nicht empfohlen (`false`) — gepatcht wurden 1 medium und 4 low, kein high.
+
+**Verifikation:**
+- Gezielt während der Arbeit: Kueche 88/88, Personen 153/153, Freizeiten 93/93, Programm 91/91, Architektur 135/135, Ui 707/707, Api-Filter (Gerichte, Einkaufsliste, Zugriffsprotokoll, EndpunktListe, DemoDaten, Migrationen) 73/73; Fall-Matrix vollständig durch gelaufene Tests abgedeckt.
+- Komplettlauf nach den Patches: alle Testprojekte grün inklusive E2E (Screenshots erzeugt, 19 min). Api.Tests im Gesamtlauf mit Zeitüberschreitungen unter Last, danach allein: 879/880; der eine Fehler `TelemetrieTests.Ausnahmen_erscheinen_in_Spans_nicht_mit_Nachricht` (zwei gleiche Spans bei 18 s Antwortzeit) ist allein grün (3/3) und stammt unverändert aus Story 0-2.
+- `npm run build` in `doku/`: fehlerfrei, 58 Seiten.
+- 42 Screenshots, die der Lauf nur mit Rendering-Rauschen (zufällige Ports und Links) neu erzeugt hatte, auf HEAD zurückgesetzt.
+
+**Restrisiken:**
+- `TelemetrieTests` wackelt unter hoher Last (vorbestehend).
+- Gleichzeitiges Löschen einer Zutat beim Setzen einer Hand-Menge oder beim Tausch kann selten einen FK-Fehler (500) auslösen (zurückgewiesen, low).
+- Mahlzeiten nach Verschieben der Freizeit-Daten (zurückgestellt) und Kosten des Abgleichs bei großen Freizeiten (zurückgestellt, ungeprüft).

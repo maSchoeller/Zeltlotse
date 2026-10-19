@@ -10,7 +10,9 @@
     <ProjectReference Include="..\Zeltlotse.Kueche.Contracts\Zeltlotse.Kueche.Contracts.csproj" />
     <!-- Pfeil aus AD-2: Küche liest Freizeiten (Phase für den Schreibschutz, AD-17; Personenzahl für die Hochrechnung, FR-46). -->
     <ProjectReference Include="..\..\Freizeiten\Zeltlotse.Freizeiten.Contracts\Zeltlotse.Freizeiten.Contracts.csproj" />
-    <!-- Pfeil aus AD-2: Küche nutzt die Allergen-Schlüssel des Fragenkatalogs (AD-10). -->
+    <!-- Pfeil aus AD-2: Küche liest die Mahlzeiten des Wochenrasters (Story 4-2, Essensplan). -->
+    <ProjectReference Include="..\..\Programm\Zeltlotse.Programm.Contracts\Zeltlotse.Programm.Contracts.csproj" />
+    <!-- Pfeil aus AD-2: Küche nutzt die Allergen-Schlüssel des Fragenkatalogs (AD-10) und den Lesepfad „Allergene für die Küche“ (AD-8, Story 4-2). -->
     <ProjectReference Include="..\..\Personen\Zeltlotse.Personen.Contracts\Zeltlotse.Personen.Contracts.csproj" />
     <ProjectReference Include="..\..\..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
   </ItemGroup>

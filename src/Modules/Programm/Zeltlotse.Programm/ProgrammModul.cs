@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Inventar.Contracts.Events;
 using Zeltlotse.Personen.Contracts.Events;
+using Zeltlotse.Programm.Contracts.Mahlzeiten;
 using Zeltlotse.Programm.Aufgaben;
 using Zeltlotse.Programm.Bibliothek;
 using Zeltlotse.Programm.Daten;
@@ -33,6 +34,8 @@ public static class ProgrammModul
         services.EmpfaengtEreignis<ReservierungGeaendert, ProgrammReservierungUebernehmen>();
         services.AddScoped<IDatenauskunft, ProgrammAuskunft>();
         services.AddScoped<ILoeschlauf, ProgrammLoeschlauf>();
+        // Story 4-2: die Mahlzeiten für den Essensplan der Küche (Pfeil Küche → Programm).
+        services.AddScoped<IFreizeitMahlzeitenLesen, FreizeitMahlzeitenLesen>();
         return services;
     }
 

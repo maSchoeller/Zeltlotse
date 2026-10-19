@@ -12,12 +12,15 @@ Auf der Seite **Zugriffsprotokoll und Meine Daten** steht, wer wann Einsicht in 
 Die Tabelle zeigt jede Einsicht in die eigenen Daten, neueste zuerst:
 
 - **Wann:** der Tag der Einsicht.
-- **Wer:** die Person, die eingesehen hat. Ist ihr Konto gelöscht, steht dort „Gelöschte Person“.
+- **Wer:** die Person, die eingesehen hat. Ist ihr Konto gelöscht, steht dort „Gelöschte Person“. Beim „Allergen-Abgleich der Küche“ steht dort „Niemand persönlich (Abgleich)“: Die Küche sieht nur Anzahlen, keine einzelne Person.
 - **Organisation:** für welche Organisation sie eingesehen hat.
-- **Was:** heute „Nachweise eingesehen“, also die Prüfung von Führungszeugnis, JuLeiCa und anderen Nachweisen (siehe [Nachweise](/mitarbeitende/nachweise/)).
+- **Was:** wofür eingesehen wurde:
+  - „Nachweise eingesehen“ – die Prüfung von Führungszeugnis, JuLeiCa und anderen Nachweisen (siehe [Nachweise](/mitarbeitende/nachweise/)),
+  - „Freizeitpass eingesehen“ – Leitung oder Team einer Freizeit hat die Angaben im Freizeitpass angesehen (siehe [Freizeitpass](/eltern/freizeitpass/)),
+  - „Allergen-Abgleich der Küche“ – die Küche hat für die Ersatzportionen die angekreuzten Allergene gezählt; sie sieht dabei nur Anzahlen, keine Namen (siehe [Einkaufsliste](/kueche/einkaufsliste/#allergen-abgleich-und-ersatzportionen)).
 - **Betrifft:** wessen Daten. Eltern sehen hier auch die Einsichten in die Daten ihrer Kinder im Familienkonto, der zweite Elternteil ebenso.
 
-Festgehalten wird jede Einsicht durch die prüfende Person, höchstens einmal am Tag je Person. Hatte noch niemand Einsicht, steht dort „Bisher hatte niemand Einsicht.“
+Festgehalten wird jede Einsicht, höchstens einmal am Tag je Person und Zweck. Hatte noch niemand Einsicht, steht dort „Bisher hatte niemand Einsicht.“
 
 ![Seite „Zugriffsprotokoll und Meine Daten“ am Handy mit dem Eintrag „Miriam Zeltner, Jugendwerk Musterstadt, Nachweise eingesehen“](../../../assets/screenshots/meine-daten-zugriffsprotokoll-handy.png)
 

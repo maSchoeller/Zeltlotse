@@ -23,6 +23,123 @@ namespace Zeltlotse.Kueche.Migrationen
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Zeltlotse.Kueche.Einkauf.Einkaufsposten", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Bezeichnung")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Einheit")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Menge")
+                        .HasPrecision(10, 3)
+                        .HasColumnType("numeric(10,3)");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("Tag")
+                        .HasColumnType("date");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FreizeitId");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.ToTable("einkaufsposten", "kueche");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Kueche.Einkauf.Gericht", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProgrammpunktId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RezeptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FreizeitId");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("RezeptId");
+
+                    b.ToTable("gericht", "kueche");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Kueche.Einkauf.MengeVonHand", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("GerichtId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Menge")
+                        .HasPrecision(10, 3)
+                        .HasColumnType("numeric(10,3)");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid>("ZutatId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FreizeitId");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("ZutatId");
+
+                    b.HasIndex("GerichtId", "ZutatId")
+                        .IsUnique();
+
+                    b.ToTable("menge_von_hand", "kueche");
+                });
+
             modelBuilder.Entity("Zeltlotse.Kueche.Rezepte.Rezept", b =>
                 {
                     b.Property<Guid>("Id")
@@ -204,6 +321,30 @@ namespace Zeltlotse.Kueche.Migrationen
                     b.HasIndex("ErledigtAm", "NaechsterVersuch");
 
                     b.ToTable("outbox_zustellung", "kueche");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Kueche.Einkauf.Gericht", b =>
+                {
+                    b.HasOne("Zeltlotse.Kueche.Rezepte.Rezept", null)
+                        .WithMany()
+                        .HasForeignKey("RezeptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zeltlotse.Kueche.Einkauf.MengeVonHand", b =>
+                {
+                    b.HasOne("Zeltlotse.Kueche.Einkauf.Gericht", null)
+                        .WithMany()
+                        .HasForeignKey("GerichtId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Zeltlotse.Kueche.Rezepte.Zutat", null)
+                        .WithMany()
+                        .HasForeignKey("ZutatId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Zeltlotse.Kueche.Rezepte.Zutat", b =>

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Freizeiten.Contracts.Events;
 using Zeltlotse.Personen.Contracts.Anmeldung;
+using Zeltlotse.Personen.Contracts.Freizeitpass;
 using Zeltlotse.Personen.Contracts.Namen;
 using Zeltlotse.Personen.Daten;
 using Zeltlotse.Personen.Datenschutz;
@@ -45,6 +46,8 @@ public static class PersonenModul
         services.EmpfaengtEreignis<AnmeldungBestaetigt, FreigabeTeamSetzen>();
         services.EmpfaengtEreignis<AnmeldungAbgesagt, FreigabeBeenden>();
         services.AddScoped<IAnmeldeKontakt, AnmeldeKontaktLesen>();
+        // Story 4-2: zweckgebundener Lesepfad „Allergene für die Küche“ (AD-8, Pfeil Küche → Personen).
+        services.AddScoped<IFreizeitpassAllergene, FreizeitpassAllergene>();
         services.VerschicktMail<NachweisErinnerungMail, NachweisErinnerungMailAufbau>();
         services.VerschicktMail<FreizeitpassErinnerungMail, FreizeitpassErinnerungMailAufbau>();
         services.AddScoped<IDatenauskunft, PersonenAuskunft>();

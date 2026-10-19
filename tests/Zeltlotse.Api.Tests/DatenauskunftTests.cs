@@ -170,6 +170,29 @@ public sealed class DatenauskunftTests(PostgresContainer postgres, S3Container s
     }
 
     [Fact]
+    public async Task Auskunft_nennt_den_Allergen_Abgleich_der_Kueche_ohne_lesende_Person()
+    {
+        // Story 4-2 (AD-8): Tobias (volljährig, eigenes Konto, als Mitarbeitender bestätigt) hat Gluten im Freizeitpass; seine Freigabe enthält die
+        // Allergie-Frage. Öffnet die Leitung die Einkaufsliste, steht der Abgleich ohne lesende Person in seiner Auskunft.
+        await using var s = await FreizeitpassSzenario.AufbauenAsync(postgres);
+        await KuecheTestHelfer.VerpflegungAsync(s, s.X);
+        await AusfuehrenAsync(s.Verbindung, "UPDATE personen.freigabe SET \"Fragen\" = '{allergien}' WHERE \"PersonId\" = @p", ("p", s.TobiasId));
+        using (var antwort = await SendenAsync(
+                   s.Tobias, HttpMethod.Patch, $"/api/ich/freizeitpass/{s.TobiasId}/antworten/allergien",
+                   new Dictionary<string, object?> { ["version"] = 0, ["alterWert"] = null, ["wert"] = "gluten" }))
+        {
+            Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
+        }
+
+        await KuecheTestHelfer.EinkaufslisteAsync(s, s.Miriam);
+        await AnmeldenAsync(s.Factory, s.Tobias, FreizeitHelfer.Tobias);
+
+        var auskunft = (await s.Tobias.GetFromJsonAsync<DatenauskunftAntwort>(Pfad, Abbruch))!;
+
+        Assert.Contains(Abschnitt(auskunft, "Zugriffsprotokoll"), z => z.Wert.EndsWith("Niemand persönlich (Abgleich): Allergen-Abgleich der Küche", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Ohne_Sitzung_401()
     {
         await using var factory = Factory(await postgres.NeueDatenbankAsync());

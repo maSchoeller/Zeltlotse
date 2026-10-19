@@ -304,7 +304,11 @@ public sealed class RezeptTests(PostgresContainer postgres)
         var commands = typeof(RezeptAnlegenCommand).Assembly.GetTypes().Where(t => typeof(IBenutzerCommand).IsAssignableFrom(t) && !t.IsInterface).ToList();
 
         Assert.Equal(
-            ["RezeptAnlegenCommand", "RezeptFeldAendernCommand", "RezeptLoeschenCommand", "ZutatAnlegenCommand", "ZutatFeldAendernCommand", "ZutatLoeschenCommand"],
+            [
+                "EinkaufspostenAnlegenCommand", "EinkaufspostenFeldAendernCommand", "EinkaufspostenLoeschenCommand", "GerichtEntfernenCommand",
+                "GerichtTauschenCommand", "GerichtVormerkenCommand", "HandMengeAendernCommand", "RezeptAnlegenCommand", "RezeptFeldAendernCommand",
+                "RezeptLoeschenCommand", "ZutatAnlegenCommand", "ZutatFeldAendernCommand", "ZutatLoeschenCommand",
+            ],
             commands.Select(t => t.Name).Order(StringComparer.Ordinal));
         Assert.All(commands, t =>
         {
@@ -332,6 +336,9 @@ public sealed class RezeptTests(PostgresContainer postgres)
             Fragenkatalog.Allergene.Select(a => (a.Wert, a.Text)),
             Allergene.Alle.Select(a => (a.Wert, a.Text)));
         Assert.Equal(["Milch (inkl. Laktose)", "Senf"], Allergene.Texte("senf,milch,unbekannt"));
+        // Story 4-2: kurze Namen für „enthält …“ und die Allergen-Übersicht.
+        Assert.Equal(["Gluten", "Milch"], Allergene.Kurztexte(["milch", "gluten", "unbekannt"]));
+        Assert.Equal(14, Allergene.Alle.Select(a => a.Kurz).Distinct().Count());
     }
 
     // ---------- Datenbank: Mandantenfilter ----------

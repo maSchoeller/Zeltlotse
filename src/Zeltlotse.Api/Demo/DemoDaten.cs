@@ -21,6 +21,7 @@ using Zeltlotse.Inventar.Reservierungen;
 using Zeltlotse.Inventar.Schaeden;
 using Zeltlotse.Konten.Anmelden;
 using Zeltlotse.Kueche.Daten;
+using Zeltlotse.Kueche.Einkauf;
 using Zeltlotse.Kueche.Rezepte;
 using RezeptFeld = Zeltlotse.Api.Contracts.Kueche.RezeptFeld;
 using ZutatFeld = Zeltlotse.Api.Contracts.Kueche.ZutatFeld;
@@ -165,6 +166,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await SchutzkonzeptAsync(abbruch);
         await VorfaelleAsync(abbruch);
         await ProgrammAsync(abbruch);
+        // Story 4-2: Gerichte, eine Hand-Menge und ein Hand-Posten der Küche (braucht Rezepte und Mahlzeiten).
+        await GerichteAsync(abbruch);
         await MaterialAsync(abbruch);
         await ZweiteFreizeitAsync(abbruch);
         await InventarAsync(abbruch);
@@ -630,6 +633,69 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
                 {
                     throw new InvalidOperationException($"Demo-Rezept: Die Allergene von {zutat.Bezeichnung} ließen sich nicht setzen.");
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Story 4-2: Gerichte im Essensplan aus <see cref="DemoKatalog.Gerichte"/>, Hand-Mengen aus <see cref="DemoKatalog.HandMengen"/> und Hand-Posten aus
+    /// <see cref="DemoKatalog.Einkaufsposten"/>, über die Commands des Moduls Küche. Idempotent: ein Gericht nur, wenn das Rezept an der Mahlzeit noch nicht
+    /// vorgemerkt ist, eine Hand-Menge nur, wenn es dort noch keine gibt (der alte Wert ist die berechnete Menge), ein Hand-Posten nur, wenn es die
+    /// Bezeichnung noch nicht gibt.
+    /// </summary>
+    private async Task GerichteAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var freizeitId = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name)
+            .Select(f => f.Id)
+            .SingleAsync(abbruch);
+        var abfrage = dienste.GetRequiredService<EinkaufAbfrage>();
+        var lesen = dienste.GetRequiredService<KuecheLeseDbContext>();
+        var mahlzeiten = await abfrage.MahlzeitenAsync(freizeitId, abbruch);
+        var rezepte = await lesen.Rezepte.Where(r => r.FreizeitId == freizeitId).ToListAsync(abbruch);
+        Guid MahlzeitVon(DateOnly tag, string titel) => mahlzeiten.First(m => m.Tag == tag && m.Titel == titel).ProgrammpunktId;
+        Guid RezeptVon(string name) => rezepte.Where(r => r.Name == name).OrderBy(r => r.Id).First().Id;
+
+        foreach (var (tag, mahlzeit, rezept) in DemoKatalog.Gerichte)
+        {
+            var (punkt, rezeptId) = (MahlzeitVon(tag, mahlzeit), RezeptVon(rezept));
+            if (!await lesen.Gerichte.AnyAsync(g => g.FreizeitId == freizeitId && g.ProgrammpunktId == punkt && g.RezeptId == rezeptId, abbruch)
+                && await sender.Send(new GerichtVormerkenCommand(freizeitId, punkt, rezeptId), abbruch) is not GerichtVormerken.Angelegt)
+            {
+                throw new InvalidOperationException($"Demo-Gericht: {rezept} ließ sich nicht vormerken.");
+            }
+        }
+
+        var personenzahl = await abfrage.PersonenzahlAsync(freizeitId, abbruch);
+        foreach (var (tag, mahlzeit, rezept, zutatName, menge) in DemoKatalog.HandMengen)
+        {
+            var (punkt, rezeptId) = (MahlzeitVon(tag, mahlzeit), RezeptVon(rezept));
+            var gericht = await lesen.Gerichte.Where(g => g.FreizeitId == freizeitId && g.ProgrammpunktId == punkt && g.RezeptId == rezeptId).OrderBy(g => g.Id).FirstAsync(abbruch);
+            var zutat = await lesen.Zutaten.Where(z => z.RezeptId == rezeptId && z.Bezeichnung == zutatName).OrderBy(z => z.Id).FirstAsync(abbruch);
+            if (await lesen.MengenVonHand.AnyAsync(h => h.GerichtId == gericht.Id && h.ZutatId == zutat.Id, abbruch))
+            {
+                continue;
+            }
+
+            var basis = rezepte.Single(r => r.Id == rezeptId).BasisPersonen;
+            var berechnet = EinkaufRechnen.MengeText(KuecheWerte.Hochrechnen(zutat.Menge, basis, personenzahl));
+            if (await sender.Send(new HandMengeAendernCommand(freizeitId, gericht.Id, zutat.Id, 0, berechnet, menge), abbruch) is not HandMengeAenderung.Gespeichert)
+            {
+                throw new InvalidOperationException($"Demo-Einkaufsliste: Die Hand-Menge für {zutatName} ließ sich nicht setzen.");
+            }
+        }
+
+        var vorhanden = await lesen.Einkaufsposten.Where(p => p.FreizeitId == freizeitId).Select(p => p.Bezeichnung).ToListAsync(abbruch);
+        foreach (var (bezeichnung, menge, einheit, tag) in DemoKatalog.Einkaufsposten.Where(p => !vorhanden.Contains(p.Bezeichnung)))
+        {
+            var tagText = tag?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            if (await sender.Send(new EinkaufspostenAnlegenCommand(freizeitId, bezeichnung, menge, einheit, tagText), abbruch) is not EinkaufspostenAnlegen.Angelegt)
+            {
+                throw new InvalidOperationException($"Demo-Einkaufsliste: {bezeichnung} ließ sich nicht anlegen.");
             }
         }
     }

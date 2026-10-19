@@ -85,7 +85,7 @@ else
     private IReadOnlyList<Spalte<ZugriffsprotokollEintrag>> ProtokollSpalten =>
     [
         new("Wann", e => @<text>@Anzeige.Datum(e.Am)</text>),
-        new("Wer", e => @<text>@Person(e.LesenderName)</text>),
+        new("Wer", e => @<text>@(e.LesendePersonId is null ? "Niemand persönlich (Abgleich)" : Person(e.LesenderName))</text>),
         new("Organisation", e => @<text>@(e.OrganisationId is { } org && _organisationen.TryGetValue(org, out var name) ? name : "–")</text>),
         new("Was", e => @<text>@Anzeige.Zweck(e.Zweck)</text>),
         new("Betrifft", e => @<text>@Person(e.BetroffenerName)</text>),

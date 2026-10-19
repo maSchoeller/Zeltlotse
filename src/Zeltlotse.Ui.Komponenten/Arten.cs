@@ -81,3 +81,9 @@ public sealed record ReiterEintrag(string Text, string Href, bool Aktiv = false)
 
 /// <summary>Story 3-1: Eine Spalte der <see cref="TagesSpalten"/>: Tageskopf (z. B. „Mo 02.08.“) und Inhalt (z. B. die Termine des Tages).</summary>
 public sealed record TagesSpalte(string Kopf, RenderFragment Inhalt);
+
+/// <summary>
+/// Story 4-2: Eine Zeile eines <see cref="Vergleich"/>: Text (z. B. „Mehl“) und optional die Menge davor (z. B. „1 kg“); geänderte Zeilen sind fett
+/// und werden als „(geändert)“ vorgelesen.
+/// </summary>
+public sealed record VergleichZeile(string Text, string? Menge, bool Geaendert);

@@ -1,5 +1,6 @@
 @* Card der Bibliothek (DESIGN.md): weiße Fläche mit Titel und Inhalt; optional mit einer Kennung als Sprungziel für Links. Story 3-2: optional
-   eine Dachzeile über dem Titel und der Titel als Link (z. B. Tag und Uhrzeit eines Programmpunkts, Link zur Detailseite). *@
+   eine Dachzeile über dem Titel und der Titel als Link (z. B. Tag und Uhrzeit eines Programmpunkts, Link zur Detailseite). Story 4-2: der Titel
+   wahlweise als Überschrift der Ebene 3. *@
 <section class="elkw-card" id="@Id" aria-labelledby="@(Titel is null ? null : _titelId)">
     <div class="elkw-card__body">
         @if (Titel is not null)
@@ -8,7 +9,15 @@
             {
                 <p class="elkw-kicker">@Dachzeile</p>
             }
-            @if (TitelHref is not null)
+            @if (Ebene == 3 && TitelHref is not null)
+            {
+                <h3 class="elkw-card__title" id="@_titelId"><a href="@TitelHref">@Titel</a></h3>
+            }
+            else if (Ebene == 3)
+            {
+                <h3 class="elkw-card__title" id="@_titelId">@Titel</h3>
+            }
+            else if (TitelHref is not null)
             {
                 <h2 class="elkw-card__title" id="@_titelId"><a href="@TitelHref">@Titel</a></h2>
             }
@@ -34,6 +43,9 @@
 
     /// <summary>Kennung der Card (<c>id</c>), etwa als Anker eines Links auf derselben Seite; ohne Angabe keine.</summary>
     [Parameter] public string? Id { get; set; }
+
+    /// <summary>Story 4-2: Überschriftenebene des Titels, 2 (Vorgabe) oder 3, z. B. für Cards unter einer Tagesüberschrift.</summary>
+    [Parameter] public int Ebene { get; set; } = 2;
 
     [Parameter] public RenderFragment? ChildContent { get; set; }
 }

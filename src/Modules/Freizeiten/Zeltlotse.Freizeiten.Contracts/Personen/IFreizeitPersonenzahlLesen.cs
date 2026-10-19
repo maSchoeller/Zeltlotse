@@ -13,4 +13,10 @@ public interface IFreizeitPersonenzahlLesen
     /// vergibt. Jede bestätigte Anmeldung einer gelöschten Person (Platzhalter) zählt einzeln.
     /// </summary>
     Task<int> AnzahlAsync(Guid freizeitId, CancellationToken abbruch = default);
+
+    /// <summary>
+    /// Story 4-2: Dieselbe Menge von Personen wie <see cref="AnzahlAsync"/> als Kennungen, jede einmal, für den Allergen-Abgleich der Küche; gelöschte
+    /// Personen (Platzhalter) fallen heraus. Die Küche reicht sie nur an Personen weiter und speichert sie nicht.
+    /// </summary>
+    Task<IReadOnlyList<Guid>> PersonenAsync(Guid freizeitId, CancellationToken abbruch = default);
 }

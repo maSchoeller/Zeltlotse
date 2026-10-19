@@ -7,11 +7,11 @@ sidebar:
 
 Nicht jede Freizeit braucht alles. Eine Kinderbibelwoche ohne Übernachtung kocht nicht und rechnet keine Belege ab. Deshalb legt die Leitung fest, welche **Module** ihre Freizeit nutzt. Eine neue Freizeit startet ohne Module; die Leitung schaltet ein, was sie braucht. Das darf **nur die Leitung**.
 
-Von den Modulen gibt es heute die **Verpflegung** mit den [Rezepten](/kueche/rezepte/); Finanzen und der Teilnehmer-Zugang kommen später. Für sie gibt es heute nur den Schalter: Die Leitung legt schon fest, ob die Freizeit sie nutzen soll. Was unten zu abgeschalteten Modulen steht, gilt für die Verpflegung schon und für die anderen, sobald es sie gibt.
+Von den Modulen gibt es heute die **Verpflegung** mit Rezepten, Essensplan und Einkaufsliste; Finanzen und der Teilnehmer-Zugang kommen später. Für sie gibt es heute nur den Schalter: Die Leitung legt schon fest, ob die Freizeit sie nutzen soll. Was unten zu abgeschalteten Modulen steht, gilt für die Verpflegung schon und für die anderen, sobald es sie gibt.
 
 ## Die drei Module
 
-- **Verpflegung** – die Küche: heute die [Rezepte](/kueche/rezepte/) mit hochgerechneten Mengen und auf der Startseite der Knopf **Küche**; später Gerichte an den Mahlzeiten, Einkaufsliste, Allergien und Restetag (siehe [Küche](/kueche/)).
+- **Verpflegung** – die Küche: die [Rezepte](/kueche/rezepte/) mit hochgerechneten Mengen, der [Essensplan](/kueche/essensplan/) mit Gerichten an den Mahlzeiten und die [Einkaufsliste](/kueche/einkaufsliste/) mit Allergen-Abgleich, auf der Startseite der Knopf **Küche**; später Tagesansicht und Restetag (siehe [Küche](/kueche/)).
 - **Finanzen** – Kalkulation, Einnahmen, Belege und der Vermerk „Beitrag bezahlt“.
 - **Teilnehmer-Zugang** – der QR-Code, mit dem Teilnehmende ohne Konto die Wochenübersicht, allgemeine Infos und den Kanal „Alle“ sehen; er endet mit der Freizeit.
 
@@ -38,4 +38,4 @@ Das Team sieht die Card „Module“ nicht; die Einstellungen sind für das Team
 
 ## Noch nicht dabei
 
-Von der Verpflegung gibt es heute die Rezepte; Gerichte an den Mahlzeiten und die Einkaufsliste folgen. Finanzen (Kalkulation, Belege) und der Teilnehmer-Zugang per QR-Code kommen später; für sie lässt sich heute nur schon festlegen, ob die Freizeit sie nutzen soll. Sobald ein Modul da ist, erscheint es nur in Freizeiten, in denen es eingeschaltet ist.
+Von der Verpflegung gibt es heute Rezepte, Essensplan und Einkaufsliste; die Tagesansicht der Küche und der Restetag folgen. Finanzen (Kalkulation, Belege) und der Teilnehmer-Zugang per QR-Code kommen später; für sie lässt sich heute nur schon festlegen, ob die Freizeit sie nutzen soll. Sobald ein Modul da ist, erscheint es nur in Freizeiten, in denen es eingeschaltet ist.

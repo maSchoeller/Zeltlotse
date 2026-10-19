@@ -10,7 +10,8 @@
    Mengen gelten für die Basis.“). Je Rezept eine Card: Name als Link zur Rezeptseite, „für N Personen“ mit Zahl der Zutaten und die Allergene als
    Text. Ohne Rezepte „Noch keine Rezepte.“. Darunter das Formular „Rezept anlegen“ (Name *, Basis-Personenzahl *) mit Fehlerübersicht; nach dem
    Anlegen öffnet sich das Rezept. In der Phase „gelaufen“ nur lesbar. Kontext oder Rezepte nicht verfügbar (auch ohne Verpflegung) → „Diese Seite
-   ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung statt „Noch keine Rezepte.“ *@
+   ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung statt „Noch keine Rezepte.“ Story 4-2: oben die Küche-Reiter
+   „Rezepte · Essensplan · Einkaufsliste“. *@
 <PageTitle>Rezepte – Zeltlotse</PageTitle>
 
 @if (_nichtVerfuegbar)
@@ -21,6 +22,7 @@ else
 {
     <Dachzeile>Küche</Dachzeile>
     <h1>Rezepte</h1>
+    <KuecheReiter FreizeitId="FreizeitId" Aktiv="rezepte" />
 
     @if (_meldung is not null)
     {

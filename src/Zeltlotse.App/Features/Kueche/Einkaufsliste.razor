@@ -1,0 +1,326 @@
+@page "/freizeiten/{FreizeitId:guid}/kueche/einkaufsliste"
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Kueche
+@using Zeltlotse.Ui.Kontext
+@using ApiEinkaufsliste = Zeltlotse.Api.Contracts.Kueche.Einkaufsliste
+@inject FreizeitKontextDienst Kontext
+@inject KuecheApiClient KuecheApi
+@* Einkaufsliste (CAP-29, FR-47 bis FR-49, Story 4-2) für Leitung und Team, erreicht über die Küche-Reiter. Dachzeile „Küche“, Überschrift
+   „Einkaufsliste“, „Berechnet für P Personen der Freizeit.“. Card „Allergen-Abgleich“: je Allergen die Zahl der Personen aus bestätigten
+   Freizeitpässen (ohne Namen), sonst „Keine Allergien in den bestätigten Freizeitpässen.“ oder „Diese Freizeit fragt keine Allergien ab.“. Je Tag eine
+   Card (Sprungziel #tag-JJJJ-MM-TT, Hand-Posten ohne Tag zuletzt in „Ohne Tag“) mit der Datentabelle Zutat, Menge (berechnete Posten als
+   Autosave-Feld: von Hand setzen, leer zurück zur berechneten Menge), Einheit, Gericht · Mahlzeit und „von Hand“, darunter die Ersatzportionen je
+   Gericht. Card „Hand-Posten“ mit Autosave-Feldern und „Entfernen“ (Inline-Bestätigung), Formular „Posten ergänzen“. Nach jedem gespeicherten Feld
+   lädt die Liste neu; die Felder behalten „Gespeichert · Rückgängig“. In der Phase „gelaufen“ nur lesbar. Kontext oder Liste nicht verfügbar (auch
+   ohne Verpflegung) → „Diese Seite ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung statt „leer“. *@
+<PageTitle>Einkaufsliste – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Küche</Dachzeile>
+    <h1>Einkaufsliste</h1>
+    <KuecheReiter FreizeitId="FreizeitId" Aktiv="einkaufsliste" />
+
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+
+    @if (_liste is null || _felder is null || _kontext is null)
+    {
+        @if (_meldung is null)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@KuecheTexte.AbgeschlossenText</p>
+            </Meldung>
+        }
+        <p>@KuecheTexte.Berechnet(_liste.Personenzahl)</p>
+
+        <Card Titel="Allergen-Abgleich" Id="allergen-abgleich">
+            @if (!_liste.AllergienAbgefragt)
+            {
+                <p>@KuecheTexte.KeineAllergienText</p>
+            }
+            else if (_liste.Allergene.Count == 0)
+            {
+                <p>@KuecheTexte.KeineAllergeneText</p>
+            }
+            else
+            {
+                <ul>
+                    @foreach (var allergen in _liste.Allergene)
+                    {
+                        <li>@KuecheTexte.AllergenZeile(allergen)</li>
+                    }
+                </ul>
+                <p>Nur Anzahlen aus bestätigten Freizeitpässen, ohne Namen. Ersatzportionen kommen zur Menge dazu.</p>
+            }
+        </Card>
+
+        @if (_liste.Tage.Count == 0)
+        {
+            <LeerZustand Satz="Noch nichts auf der Einkaufsliste. Gerichte im Essensplan vormerken oder Posten ergänzen."
+                         KnopfText="Essensplan öffnen" KnopfHref="@KuecheTexte.EssensplanZiel(FreizeitId)" />
+        }
+        @foreach (var tag in _liste.Tage)
+        {
+            <Card @key="KuecheTexte.TagAnker(tag.Tag)" Titel="@TagTitel(tag.Tag)" Id="@KuecheTexte.TagAnker(tag.Tag)">
+                <Datentabelle TZeile="EinkaufslistenPosten" Beschriftung="@($"Einkauf {TagTitel(tag.Tag)}")" Spalten="Spalten" Zeilen="tag.Posten" />
+                @foreach (var ersatz in tag.Ersatzportionen)
+                {
+                    <p>@($"{ersatz.RezeptName} · {ersatz.MahlzeitName}: {KuecheTexte.Ersatzportionen(ersatz.Ersatzportionen)}")</p>
+                }
+            </Card>
+        }
+
+        @if (!Abgeschlossen)
+        {
+            @if (HandPosten.Count > 0)
+            {
+                <Card Titel="Hand-Posten" Id="hand-posten">
+                    @foreach (var posten in HandPosten)
+                    {
+                        var id = posten.PostenId!.Value;
+                        <h3>@Bezeichnung(posten)</h3>
+                        <AutosaveFeld Label="Bezeichnung" Id="@($"posten-{id}-bezeichnung")" Feldname="@EinkaufspostenFelder.Bezeichnung" Pfad="@KuecheApiClient.PostenPfad(FreizeitId, id)"
+                                      Wert="@posten.Bezeichnung" Version="@posten.Version" NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                        <AutosaveFeld Label="Menge" Id="@($"posten-{id}-menge")" Feldname="@EinkaufspostenFelder.Menge" Pfad="@KuecheApiClient.PostenPfad(FreizeitId, id)"
+                                      Wert="@(posten.Menge is null ? null : Anzeige.Menge(posten.Menge))" Version="@posten.Version" Hinweis="z. B. 1,5; leer heißt ohne Menge"
+                                      NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                        <AutosaveFeld Label="Einheit" Id="@($"posten-{id}-einheit")" Feldname="@EinkaufspostenFelder.Einheit" Pfad="@KuecheApiClient.PostenPfad(FreizeitId, id)"
+                                      Wert="@posten.Einheit" Version="@posten.Version" Hinweis="z. B. g, kg, l oder Stück" NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                        <AutosaveFeld Label="Tag" Id="@($"posten-{id}-tag")" Typ="date" Feldname="@EinkaufspostenFelder.Tag" Pfad="@KuecheApiClient.PostenPfad(FreizeitId, id)"
+                                      Wert="@TagDesPostens(id)" Version="@posten.Version" Hinweis="Leer heißt ohne Tag" NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                        <InlineBestaetigung AusloeserText="Entfernen" AusloeserArt="KnopfArt.Outline" Satz="@($"„{Bezeichnung(posten)}“ entfernen?")"
+                                            JaText="Ja, entfernen" Bestaetigt="@(() => PostenEntfernenAsync(id))" />
+                    }
+                </Card>
+            }
+
+            <Card Titel="Posten ergänzen" Id="posten-ergaenzen">
+                <p>Zum Beispiel Obst oder Zutaten für ein Ersatzgericht. Ohne Tag steht der Posten zuletzt.</p>
+                <Formular Absenden="PostenAnlegenAsync">
+                    <Fehleruebersicht Fehler="FehlerListe" />
+                    <Feld Label="Bezeichnung *" Id="posten-bezeichnung" Wert="@_bezeichnung" Fehler="@_fehler.GetValueOrDefault(EinkaufspostenFelder.Bezeichnung)" autocomplete="off"
+                          Hinweis="@($"Höchstens {EinkaufspostenFelder.BezeichnungMaximaleLaenge} Zeichen")" @oninput="@(e => _bezeichnung = e.Value?.ToString())" />
+                    <Feld Label="Menge" Id="posten-menge" Wert="@_menge" Fehler="@_fehler.GetValueOrDefault(EinkaufspostenFelder.Menge)" autocomplete="off" inputmode="decimal"
+                          Hinweis="z. B. 1,5; leer heißt ohne Menge" @oninput="@(e => _menge = e.Value?.ToString())" />
+                    <Feld Label="Einheit" Id="posten-einheit" Wert="@_einheit" Fehler="@_fehler.GetValueOrDefault(EinkaufspostenFelder.Einheit)" autocomplete="off"
+                          Hinweis="z. B. g, kg, l oder Stück" @oninput="@(e => _einheit = e.Value?.ToString())" />
+                    <Feld Label="Tag" Id="posten-tag" Typ="date" Wert="@_tag" Fehler="@_fehler.GetValueOrDefault(EinkaufspostenFelder.Tag)"
+                          Hinweis="Ein Tag der Freizeit; leer heißt ohne Tag" @oninput="@(e => _tag = e.Value?.ToString())" />
+                    <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Posten ergänzen</Knopf>
+                </Formular>
+                <p>* Pflichtfeld</p>
+            </Card>
+        }
+    }
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    // Der zuletzt geladene Stand für Tabellen und Abgleich.
+    private ApiEinkaufsliste? _liste;
+    // Der Stand der Autosave-Felder: nur beim Öffnen, nach „Neu laden“ und nach Ergänzen oder Entfernen neu, damit ein gespeichertes Feld
+    // „Gespeichert · Rückgängig“ behält, während die Liste neu lädt.
+    private ApiEinkaufsliste? _felder;
+    private bool _nichtVerfuegbar;
+    private bool _uebertraegt;
+    private string? _meldung;
+    private string? _bezeichnung;
+    private string? _menge;
+    private string? _einheit;
+    private string? _tag;
+    private IReadOnlyDictionary<string, string> _fehler = new Dictionary<string, string>();
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    private static string TagTitel(DateOnly? tag) => tag is { } wert ? Anzeige.TagLang(wert) : "Ohne Tag";
+
+    /// <summary>Die Hand-Posten aus dem Stand der Felder, in Listenreihenfolge.</summary>
+    private IReadOnlyList<EinkaufslistenPosten> HandPosten => [.. _felder!.Tage.SelectMany(t => t.Posten).Where(p => p.PostenId is not null)];
+
+    private string? TagDesPostens(Guid postenId) =>
+        _felder!.Tage.FirstOrDefault(t => t.Posten.Any(p => p.PostenId == postenId))?.Tag is { } tag ? KuecheTexte.Iso(tag) : null;
+
+    /// <summary>Die Bezeichnung aus dem zuletzt geladenen Stand (nach einer Änderung schon neu).</summary>
+    private string Bezeichnung(EinkaufslistenPosten posten) =>
+        _liste?.Tage.SelectMany(t => t.Posten).FirstOrDefault(p => p.PostenId == posten.PostenId)?.Bezeichnung ?? posten.Bezeichnung;
+
+    private IReadOnlyList<Spalte<EinkaufslistenPosten>> Spalten =>
+    [
+        new("Zutat", p => @<text>@p.Bezeichnung</text>),
+        new("Menge", p => @<text>@Menge(p)</text>),
+        new("Einheit", p => @<text>@p.Einheit</text>),
+        new("Gericht · Mahlzeit", p => @<text>@(p.RezeptName is null ? "–" : $"{p.RezeptName} · {p.MahlzeitName}")</text>),
+        new("von Hand", p => @<text>@(p.VonHand ? "von Hand" : "")</text>),
+    ];
+
+    /// <summary>Berechnete Posten (nicht nach dem Abschluss) als Autosave-Feld mit dem Stand der Felder, sonst die Menge als Text.</summary>
+    private RenderFragment Menge(EinkaufslistenPosten posten) => @<text>
+        @if (!Abgeschlossen && posten is { GerichtId: { } gericht, ZutatId: { } zutat })
+        {
+            var feld = _felder!.Tage.SelectMany(t => t.Posten).FirstOrDefault(p => p.GerichtId == gericht && p.ZutatId == zutat) ?? posten;
+            <AutosaveFeld Label="@($"Menge {posten.Bezeichnung}")" Id="@($"menge-{gericht}-{zutat}")" Feldname="@HandMengeFelder.Menge"
+                          Pfad="@KuecheApiClient.HandMengePfad(FreizeitId, gericht, zutat)" Wert="@(feld.Menge is null ? null : Anzeige.Menge(feld.Menge))"
+                          Version="@feld.Version" Hinweis="Leer heißt: zurück zur berechneten Menge" NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+        }
+        else
+        {
+            @Anzeige.Menge(posten.Menge)
+        }
+    </text>;
+
+    private IReadOnlyList<FeldFehler> FehlerListe =>
+    [
+        .. new[] { (EinkaufspostenFelder.Bezeichnung, "posten-bezeichnung", "Bezeichnung"), (EinkaufspostenFelder.Menge, "posten-menge", "Menge"), (EinkaufspostenFelder.Einheit, "posten-einheit", "Einheit"), (EinkaufspostenFelder.Tag, "posten-tag", "Tag") }
+            .Where(f => _fehler.ContainsKey(f.Item1))
+            .Select(f => new FeldFehler(f.Item2, $"{f.Item3}: {_fehler[f.Item1]}")),
+    ];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _liste = null;
+        _felder = null;
+        _nichtVerfuegbar = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var liste = KuecheApi.EinkaufslisteLadenAsync(FreizeitId);
+            await Task.WhenAll(kontext, liste);
+            if (kontext.Result is null || liste.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _liste, _felder) = (kontext.Result, liste.Result, liste.Result);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“ oder „leer“.
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Lädt die Liste neu; mit <paramref name="felder"/> bekommen auch die Autosave-Felder den neuen Stand.</summary>
+    private async Task LadenAsync(bool felder)
+    {
+        try
+        {
+            if (await KuecheApi.EinkaufslisteLadenAsync(FreizeitId) is { } liste)
+            {
+                _meldung = null;
+                _liste = liste;
+                if (felder)
+                {
+                    _felder = liste;
+                }
+            }
+            else
+            {
+                _nichtVerfuegbar = true;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Nach jedem gespeicherten Feld: die Liste neu (Spalte „von Hand“, Tage), die Felder behalten ihren Stand.</summary>
+    private Task NachSpeichernAsync(string? _) => LadenAsync(felder: false);
+
+    /// <summary>„Neu laden“ beim Konflikt: alles neu, auch die Felder.</summary>
+    private Task NeuLadenAsync() => LadenAsync(felder: true);
+
+    /// <summary>„Posten ergänzen“: danach steht er in der Liste, das Formular ist leer.</summary>
+    private async Task PostenAnlegenAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        (_fehler, _meldung) = (new Dictionary<string, string>(), null);
+        try
+        {
+            var aktion = await KuecheApi.PostenAnlegenAsync(FreizeitId, new EinkaufspostenNeu(_bezeichnung, _menge, _einheit, string.IsNullOrWhiteSpace(_tag) ? null : _tag));
+            switch (aktion.Ergebnis)
+            {
+                case KuecheAktionErgebnis.Erfolg:
+                    (_bezeichnung, _menge, _einheit, _tag) = (null, null, null, null);
+                    await LadenAsync(felder: true);
+                    break;
+                case KuecheAktionErgebnis.Abgeschlossen:
+                    _meldung = KuecheTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _fehler = aktion.Feldfehler;
+                    if (_fehler.Count == 0)
+                    {
+                        _meldung = AnmeldungAbschluss.FehlerText;
+                    }
+
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task PostenEntfernenAsync(Guid postenId)
+    {
+        _meldung = null;
+        try
+        {
+            switch (await KuecheApi.PostenLoeschenAsync(FreizeitId, postenId))
+            {
+                case KuecheAktionErgebnis.Abgeschlossen:
+                    _meldung = KuecheTexte.AbgeschlossenText;
+                    break;
+                case KuecheAktionErgebnis.Erfolg:
+                    await LadenAsync(felder: true);
+                    break;
+                default:
+                    // Z. B. inzwischen von jemand anderem entfernt: neu laden; die Meldung nur, wenn der Posten noch da ist.
+                    await LadenAsync(felder: true);
+                    if (_liste?.Tage.SelectMany(t => t.Posten).Any(p => p.PostenId == postenId) != false)
+                    {
+                        _meldung = AnmeldungAbschluss.FehlerText;
+                    }
+
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+}

@@ -259,13 +259,13 @@ internal sealed class PersonenAuskunft(PersonenLeseDbContext db, IVerschluesselu
     private async Task<List<AuskunftZeile>> ProtokollAsync(Guid personId, CancellationToken abbruch)
     {
         var eintraege = await db.EinsichtProtokoll.Where(e => e.BetroffenePersonId == personId).OrderBy(e => e.Am).ToListAsync(abbruch);
-        var lesendeIds = eintraege.Select(e => e.LesendePersonId).Distinct().ToList();
+        var lesendeIds = eintraege.Select(e => e.LesendePersonId ?? Guid.Empty).Distinct().ToList();
         var namen = await db.Personen.Where(p => lesendeIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => AuskunftFormat.Name(p.Vorname, p.Nachname), abbruch);
         return
         [
             .. eintraege.Select(e => new AuskunftZeile(
                 AuskunftFormat.Datum(e.Am),
-                $"{namen.GetValueOrDefault(e.LesendePersonId) ?? "Gelöschte Person"}: {Zweck(e.Zweck)}")),
+                $"{(e.LesendePersonId is { } lesend ? namen.GetValueOrDefault(lesend) ?? "Gelöschte Person" : "Niemand persönlich (Abgleich)")}: {Zweck(e.Zweck)}")),
         ];
     }
 
@@ -280,6 +280,8 @@ internal sealed class PersonenAuskunft(PersonenLeseDbContext db, IVerschluesselu
     private static string Zweck(EinsichtZweck zweck) => zweck switch
     {
         EinsichtZweck.NachweiseEingesehen => "Nachweise eingesehen",
+        EinsichtZweck.FreizeitpassEingesehen => "Freizeitpass eingesehen",
+        EinsichtZweck.AllergeneFuerKueche => "Allergen-Abgleich der Küche",
         _ => zweck.ToString(),
     };
 }

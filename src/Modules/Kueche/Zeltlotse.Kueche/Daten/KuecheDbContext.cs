@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore.Design;
 using Zeltlotse.Api.Contracts.Kueche;
 using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Mandanten;
+using Zeltlotse.Kueche.Einkauf;
+using Gericht = Zeltlotse.Kueche.Einkauf.Gericht;
 using Rezept = Zeltlotse.Kueche.Rezepte.Rezept;
 using Zutat = Zeltlotse.Kueche.Rezepte.Zutat;
 
@@ -17,6 +19,15 @@ internal sealed class KuecheDbContext(DbContextOptions<KuecheDbContext> optionen
 
     /// <summary>Story 4-1: die Zutaten der Rezepte.</summary>
     public DbSet<Zutat> Zutaten => Set<Zutat>();
+
+    /// <summary>Story 4-2: die vorgemerkten Gerichte an den Mahlzeiten.</summary>
+    public DbSet<Gericht> Gerichte => Set<Gericht>();
+
+    /// <summary>Story 4-2: die Hand-Mengen der Einkaufsliste.</summary>
+    public DbSet<MengeVonHand> MengenVonHand => Set<MengeVonHand>();
+
+    /// <summary>Story 4-2: die Hand-Posten der Einkaufsliste.</summary>
+    public DbSet<Einkaufsposten> Einkaufsposten => Set<Einkaufsposten>();
 
     protected override string Schema => KuecheModul.Schema;
 
@@ -40,6 +51,23 @@ internal sealed class KuecheDbContext(DbContextOptions<KuecheDbContext> optionen
             .ToListAsync(abbruch))
         .SingleOrDefault();
 
+    /// <summary>
+    /// Story 4-2: Lädt ein Gericht der Freizeit unter dem Mandantenfilter mit Zeilensperre (FOR UPDATE): Tausch, Entfernen und Hand-Mengen desselben
+    /// Gerichts laufen nacheinander. <c>null</c>, wenn es das Gericht in dieser Freizeit nicht (mehr) gibt.
+    /// </summary>
+    public async Task<Gericht?> GerichtSperrenAsync(Guid freizeitId, Guid gerichtId, CancellationToken abbruch) =>
+        (await Gerichte
+            .FromSql($"SELECT *, xmin FROM kueche.gericht WHERE \"Id\" = {gerichtId} AND \"FreizeitId\" = {freizeitId} FOR UPDATE")
+            .ToListAsync(abbruch))
+        .SingleOrDefault();
+
+    /// <summary>Story 4-2: Lädt einen Hand-Posten der Freizeit unter dem Mandantenfilter mit Zeilensperre (FOR UPDATE); <c>null</c>, wenn es ihn nicht (mehr) gibt.</summary>
+    public async Task<Einkaufsposten?> PostenSperrenAsync(Guid freizeitId, Guid postenId, CancellationToken abbruch) =>
+        (await Einkaufsposten
+            .FromSql($"SELECT *, xmin FROM kueche.einkaufsposten WHERE \"Id\" = {postenId} AND \"FreizeitId\" = {freizeitId} FOR UPDATE")
+            .ToListAsync(abbruch))
+        .SingleOrDefault();
+
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => KuecheModell.Konfigurieren(modelBuilder);
 }
 
@@ -50,6 +78,12 @@ internal sealed class KuecheLeseDbContext(DbContextOptions<KuecheLeseDbContext> 
     public DbSet<Rezept> Rezepte => Set<Rezept>();
 
     public DbSet<Zutat> Zutaten => Set<Zutat>();
+
+    public DbSet<Gericht> Gerichte => Set<Gericht>();
+
+    public DbSet<MengeVonHand> MengenVonHand => Set<MengeVonHand>();
+
+    public DbSet<Einkaufsposten> Einkaufsposten => Set<Einkaufsposten>();
 
     protected override string Schema => KuecheModul.Schema;
 
@@ -87,6 +121,46 @@ internal static class KuecheModell
             e.HasIndex(z => z.FreizeitId);
             e.HasIndex(z => z.RezeptId);
             e.HasIndex(z => z.OrganisationId);
+        });
+
+        // Story 4-2, FR-47: Gerichte an Mahlzeiten; die Mahlzeit nur per Kennung (Programm, AD-3), das Rezept per Fremdschlüssel mit Cascade.
+        modelBuilder.Entity<Gericht>(e =>
+        {
+            e.ToTable("gericht");
+            e.Property(g => g.Id).ValueGeneratedNever();
+            e.Property(g => g.Version).IsRowVersion();
+            e.HasOne<Rezept>().WithMany().HasForeignKey(g => g.RezeptId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(g => g.FreizeitId);
+            e.HasIndex(g => g.RezeptId);
+            e.HasIndex(g => g.OrganisationId);
+        });
+
+        // Story 4-2: Hand-Mengen je (Gericht, Zutat) höchstens einmal; sie verschwinden mit dem Gericht oder der Zutat.
+        modelBuilder.Entity<MengeVonHand>(e =>
+        {
+            e.ToTable("menge_von_hand");
+            e.Property(h => h.Id).ValueGeneratedNever();
+            e.Property(h => h.Menge).HasPrecision(10, ZutatFelder.MengeNachkommastellen);
+            e.Property(h => h.Version).IsRowVersion();
+            e.HasOne<Gericht>().WithMany().HasForeignKey(h => h.GerichtId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Zutat>().WithMany().HasForeignKey(h => h.ZutatId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(h => new { h.GerichtId, h.ZutatId }).IsUnique();
+            e.HasIndex(h => h.ZutatId);
+            e.HasIndex(h => h.FreizeitId);
+            e.HasIndex(h => h.OrganisationId);
+        });
+
+        // Story 4-2, FR-49: Hand-Posten der Einkaufsliste.
+        modelBuilder.Entity<Einkaufsposten>(e =>
+        {
+            e.ToTable("einkaufsposten");
+            e.Property(p => p.Id).ValueGeneratedNever();
+            e.Property(p => p.Bezeichnung).HasMaxLength(EinkaufspostenFelder.BezeichnungMaximaleLaenge);
+            e.Property(p => p.Menge).HasPrecision(10, ZutatFelder.MengeNachkommastellen);
+            e.Property(p => p.Einheit).HasMaxLength(EinkaufspostenFelder.EinheitMaximaleLaenge);
+            e.Property(p => p.Version).IsRowVersion();
+            e.HasIndex(p => p.FreizeitId);
+            e.HasIndex(p => p.OrganisationId);
         });
     }
 }

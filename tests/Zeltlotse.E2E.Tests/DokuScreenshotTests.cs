@@ -2132,6 +2132,93 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await BildAsync(seite, "rezept", geraet);
     }
 
+    // ---------- Story 4-2: Gerichte vormerken und Einkaufsliste ----------
+
+    /// <summary>
+    /// Lea (Team) öffnet die Küche, tippt den Reiter „Essensplan“ und den Tag „Di 03.08.“. Dort hängen in der Demo Pfannkuchen (Frühstück) und Chili sin
+    /// Carne (Mittagessen); Mia (bestätigt) hat Gluten im Freizeitpass.
+    /// </summary>
+    private async Task EssensplanAsync(IPage seite)
+    {
+        await KuecheAsync(seite);
+        await seite.GetByRole(AriaRole.Navigation, new() { Name = "Küche" }).GetByRole(AriaRole.Link, new() { Name = "Essensplan", Exact = true }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Essensplan", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Navigation, new() { Name = "Tage" }).GetByRole(AriaRole.Link, new() { Name = "Di 03.08.", Exact = true }).ClickAsync();
+        await Assertions.Expect(seite.Locator(".zl-reiter__inhalt h2")).ToHaveTextAsync("Dienstag, 3. August 2027", new() { Timeout = 60_000 });
+    }
+
+    private static ILocator MahlzeitCard(IPage seite, string titel) =>
+        seite.Locator("section.elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = titel, Exact = true, Level = 3 }) });
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Essensplan(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await EssensplanAsync(seite);
+        var fruehstueck = MahlzeitCard(seite, "Frühstück");
+        await Assertions.Expect(fruehstueck).ToContainTextAsync("Pfannkuchen", new() { Timeout = 60_000 });
+        await Assertions.Expect(fruehstueck).ToContainTextAsync("1 Ersatzportion einplanen (enthält Gluten)");
+        await Assertions.Expect(MahlzeitCard(seite, "Mittagessen")).ToContainTextAsync("Chili sin Carne");
+        await Assertions.Expect(MahlzeitCard(seite, "Abendessen")).ToContainTextAsync("Noch nichts vorgemerkt.");
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        // Nur lesend, damit der Demo-Stand für die anderen Bilder bleibt.
+        await BildAsync(seite, "essensplan", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Gericht_tauschen(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await EssensplanAsync(seite);
+        var fruehstueck = MahlzeitCard(seite, "Frühstück");
+        await fruehstueck.GetByRole(AriaRole.Button, new() { Name = "Tauschen", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+        var chili = fruehstueck.GetByRole(AriaRole.Group, new() { Name = "Tauschen gegen" }).GetByLabel("Chili sin Carne");
+        await chili.ClickAsync();
+        var vergleich = fruehstueck.Locator(".zl-vergleich");
+        await Assertions.Expect(vergleich.Locator(".zl-vergleich__text")).ToHaveTextAsync(["Pfannkuchen", "Chili sin Carne"], new() { Timeout = 60_000 });
+        await Assertions.Expect(vergleich.Locator(".zl-vergleich__spalte").Nth(0)).ToContainTextAsync("500 g Mehl (von Hand)");
+        await Assertions.Expect(vergleich.Locator(".zl-vergleich__spalte").Nth(1)).ToContainTextAsync("500 g Kidneybohnen");
+        await Assertions.Expect(fruehstueck.GetByRole(AriaRole.Button, new() { Name = "Übernehmen", Exact = true })).ToBeEnabledAsync();
+        await Assertions.Expect(chili).ToBeCheckedAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        // Nur die Vorschau, ohne „Übernehmen“: Der Demo-Stand bleibt für die anderen Bilder.
+        await vergleich.ScrollIntoViewIfNeededAsync();
+        await BildAsync(seite, "gericht-tauschen", geraet);
+    }
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Einkaufsliste(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await KuecheAsync(seite);
+        await seite.GetByRole(AriaRole.Navigation, new() { Name = "Küche" }).GetByRole(AriaRole.Link, new() { Name = "Einkaufsliste", Exact = true }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Einkaufsliste", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("#allergen-abgleich li")).ToHaveTextAsync(["Gluten: 1 Person"], new() { Timeout = 60_000 });
+        var dienstag = seite.Locator("#tag-2027-08-03");
+        await Assertions.Expect(dienstag.Locator("h2")).ToHaveTextAsync("Dienstag, 3. August 2027");
+        await Assertions.Expect(dienstag.Locator("tbody tr").First).ToContainTextAsync("Pfannkuchen · Frühstück");
+        await Assertions.Expect(dienstag.Locator("tbody tr").First).ToContainTextAsync("von Hand");
+        await Assertions.Expect(dienstag).ToContainTextAsync("Pfannkuchen · Frühstück: 1 Ersatzportion einplanen (enthält Gluten)");
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        // Nur lesend, damit der Demo-Stand für die anderen Bilder bleibt.
+        await BildAsync(seite, "einkaufsliste", geraet);
+    }
+
     /// <summary>Story 3-6: „Abgelegt am …“ hängt vom Tag des Einspielens ab; im Bild steht ein festes Datum.</summary>
     private static Task AbgelegtAmFestAsync(IPage seite) =>
         seite.EvaluateAsync("() => document.querySelectorAll('.elkw-card p').forEach(p => { if (p.textContent.startsWith('Abgelegt am ')) p.textContent = 'Abgelegt am 14.10.2026'; })");

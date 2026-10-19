@@ -171,7 +171,7 @@ internal sealed class PersonLoeschenHandler(PersonenDbContext db) : ICommandHand
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.ErinnertVon, GeloeschtePerson.Id), abbruch);
         await db.FreizeitpassErinnerungen.IgnoreQueryFilters().Where(e => ids.Contains(e.ErinnertVon))
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.ErinnertVon, GeloeschtePerson.Id), abbruch);
-        await db.EinsichtProtokoll.Where(e => ids.Contains(e.LesendePersonId))
+        await db.EinsichtProtokoll.Where(e => e.LesendePersonId != null && ids.Contains(e.LesendePersonId.Value))
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.LesendePersonId, GeloeschtePerson.Id), abbruch);
         await db.FamilienEinladungen.Where(e => ids.Contains(e.EingeladenVon))
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.EingeladenVon, GeloeschtePerson.Id), abbruch);

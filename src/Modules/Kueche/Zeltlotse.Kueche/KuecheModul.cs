@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Kueche.Daten;
 using Zeltlotse.Kueche.Datenschutz;
+using Zeltlotse.Kueche.Einkauf;
 using Zeltlotse.Kueche.Rezepte;
 using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Datenschutz;
@@ -26,6 +27,8 @@ public static class KuecheModul
         services.AddModul<KuecheDbContext, KuecheLeseDbContext>(Name, Schema);
         // Story 4-1: Rezepte sind Arbeitsdaten der Freizeit und werden nach der Frist gelöscht (AD-16).
         services.AddScoped<ILoeschlauf, KuecheLoeschlauf>();
+        // Story 4-2: gemeinsame Abfrage von Essensplan, Einkaufsliste und Tausch-Vorschau (AD-27).
+        services.AddScoped<EinkaufAbfrage>();
         return services;
     }
 
@@ -33,7 +36,8 @@ public static class KuecheModul
     /// Bindet die Endpunkte des Moduls in die <c>/api</c>-Gruppe ein. Story 4-1: Rezepte der Freizeit unter
     /// <c>/api/freizeiten/{freizeitId}/kueche/rezepte</c> für Leitung und Team, nur mit eingeschaltetem Modul Verpflegung (sonst <c>404</c>, AD-20):
     /// Liste und Rezept lesen (mit hochgerechneten Mengen), Rezept anlegen, bearbeiten (Autosave, AD-19) und löschen, Zutaten hinzufügen, bearbeiten
-    /// und entfernen.
+    /// und entfernen. Story 4-2: unter <c>…/kueche</c> der Essensplan (lesen, Gerichte vormerken, entfernen, Tausch-Vorschau und Tausch) und die
+    /// Einkaufsliste (lesen, Hand-Mengen, Hand-Posten anlegen, bearbeiten und entfernen), ebenso für Leitung und Team mit dem Modul Verpflegung.
     /// </summary>
     public static IEndpointRouteBuilder MapKuecheEndpoints(this IEndpointRouteBuilder api)
     {
@@ -46,6 +50,19 @@ public static class KuecheModul
         rezepte.MapPost("/{rezeptId:guid}/zutaten", ZutatAnlegenEndpunkt.Anlegen).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
         rezepte.MapPatch("/{rezeptId:guid}/zutaten/{zutatId:guid}", ZutatFeldAendernEndpunkt.Aendern).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
         rezepte.MapDelete("/{rezeptId:guid}/zutaten/{zutatId:guid}", ZutatLoeschenEndpunkt.Loeschen).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
+
+        var kueche = api.MapGroup($"/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/kueche");
+        kueche.MapGet("/essensplan", EssensplanLadenEndpunkt.Laden).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
+        kueche.MapPost("/gerichte", GerichtVormerkenEndpunkt.Vormerken).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
+        kueche.MapDelete("/gerichte/{gerichtId:guid}", GerichtEntfernenEndpunkt.Entfernen).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
+        kueche.MapGet("/gerichte/{gerichtId:guid}/tausch", TauschvorschauEndpunkt.Laden).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
+        kueche.MapPost("/gerichte/{gerichtId:guid}/tauschen", GerichtTauschenEndpunkt.Tauschen).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
+        kueche.MapGet("/einkaufsliste", EinkaufslisteLadenEndpunkt.Laden).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
+        kueche.MapPatch("/einkaufsliste/gerichte/{gerichtId:guid}/zutaten/{zutatId:guid}", HandMengeAendernEndpunkt.Aendern)
+            .NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
+        kueche.MapPost("/einkaufsliste/posten", EinkaufspostenAnlegenEndpunkt.Anlegen).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
+        kueche.MapPatch("/einkaufsliste/posten/{postenId:guid}", EinkaufspostenFeldAendernEndpunkt.Aendern).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
+        kueche.MapDelete("/einkaufsliste/posten/{postenId:guid}", EinkaufspostenLoeschenEndpunkt.Loeschen).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Verpflegung);
         return api;
     }
 }

@@ -7,7 +7,7 @@ using Zeltlotse.SharedKernel.Datenschutz;
 namespace Zeltlotse.Kueche.Datenschutz;
 
 /// <summary>
-/// Story 4-1: Täglicher Lösch-Lauf der Küche (AD-16): die Rezepte samt Zutaten der Freizeiten, deren Daten nach der Frist der Organisation abgelaufen
+/// Story 4-1: Täglicher Lösch-Lauf der Küche (AD-16): die Rezepte samt Zutaten (Story 4-2: dazu Gerichte, Hand-Mengen und Hand-Posten) der Freizeiten, deren Daten nach der Frist der Organisation abgelaufen
 /// sind. Rezepte sind Arbeitsdaten der Freizeit ohne Personenbezug; Datenauskunft und Empfänger von <c>PersonGeloescht</c> braucht die Küche dafür
 /// nicht.
 /// </summary>
@@ -30,6 +30,10 @@ internal sealed class RezepteLoeschenHandler(KuecheDbContext db) : ICommandHandl
     public async ValueTask<Unit> Handle(RezepteLoeschen command, CancellationToken cancellationToken)
     {
         var freizeiten = command.FreizeitIds.ToList();
+        // Story 4-2: Hand-Mengen, Gerichte und Hand-Posten zuerst (sie hängen an Zutaten und Rezepten).
+        await db.MengenVonHand.IgnoreQueryFilters().Where(h => freizeiten.Contains(h.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
+        await db.Gerichte.IgnoreQueryFilters().Where(g => freizeiten.Contains(g.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
+        await db.Einkaufsposten.IgnoreQueryFilters().Where(p => freizeiten.Contains(p.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
         await db.Zutaten.IgnoreQueryFilters().Where(z => freizeiten.Contains(z.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
         await db.Rezepte.IgnoreQueryFilters().Where(r => freizeiten.Contains(r.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
         return Unit.Value;

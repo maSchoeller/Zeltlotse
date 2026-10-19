@@ -1,0 +1,427 @@
+@page "/freizeiten/{FreizeitId:guid}/kueche/essensplan"
+@using System.Globalization
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Kueche
+@using Zeltlotse.Ui.Kontext
+@using ApiEssensplan = Zeltlotse.Api.Contracts.Kueche.Essensplan
+@using ApiGericht = Zeltlotse.Api.Contracts.Kueche.Gericht
+@inject FreizeitKontextDienst Kontext
+@inject KuecheApiClient KuecheApi
+@inject NavigationManager Navigation
+@inject TimeProvider Uhr
+@* Essensplan (CAP-29, FR-47, FR-48, FR-50, Story 4-2) für Leitung und Team, erreicht über die Küche-Reiter. Dachzeile „Küche“, Überschrift
+   „Essensplan“, darunter die Küche-Reiter und Reiter je Tag (gewählt über ?tag=JJJJ-MM-TT, sonst heute, wenn heute ein Tag der Freizeit ist, sonst der
+   erste Tag). Je Mahlzeit eine Card mit den vorgemerkten Gerichten: Rezept, „N Ersatzportionen einplanen (enthält …)“, „Tauschen“ und „Entfernen“
+   (Inline-Bestätigung); ohne Gericht „Noch nichts vorgemerkt.“. „Gericht vormerken“ per Auswahl der Rezepte; ohne Rezepte ein Leer-Zustand mit dem
+   Weg zu den Rezepten. Tauschen: Auswahl des neuen Rezepts → Vergleich Vorher/Nachher (schreibt nichts) → „Übernehmen“ (bleibt hier), „Anpassen“
+   (übernimmt und öffnet die Einkaufsliste am Tag) oder „Abbrechen“. Ist das Gericht inzwischen geändert: „Inzwischen geändert – neu laden?“. Fragt die
+   Freizeit keine Allergien ab, steht „Diese Freizeit fragt keine Allergien ab.“. In der Phase „gelaufen“ nur lesbar. Kontext oder Essensplan nicht
+   verfügbar (auch ohne Verpflegung) → „Diese Seite ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung. *@
+<PageTitle>Essensplan – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Küche</Dachzeile>
+    <h1>Essensplan</h1>
+    <KuecheReiter FreizeitId="FreizeitId" Aktiv="essensplan" />
+
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+    @if (_konflikt)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>Inzwischen geändert – neu laden?</p>
+            <Knopf Art="KnopfArt.Outline" @onclick="NeuLadenAsync">Neu laden</Knopf>
+        </Meldung>
+    }
+    @if (_erfolg is not null)
+    {
+        <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+            <p>@_erfolg</p>
+        </Meldung>
+    }
+
+    @if (_plan is null || _kontext is null)
+    {
+        @if (_meldung is null)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@KuecheTexte.AbgeschlossenText</p>
+            </Meldung>
+        }
+        <p>@KuecheTexte.Hochgerechnet(_plan.Personenzahl)</p>
+        @if (!_plan.AllergienAbgefragt)
+        {
+            <p>@KuecheTexte.KeineAllergienText</p>
+        }
+        @if (_plan.Rezepte.Count == 0 && !Abgeschlossen)
+        {
+            <LeerZustand Satz="Noch keine Rezepte." KnopfText="Rezepte öffnen" KnopfHref="@KuecheTexte.RezepteZiel(FreizeitId)" />
+        }
+
+        <Reiter Bezeichnung="Tage" Eintraege="TagReiter">
+            <h2>@Anzeige.TagLang(_tag)</h2>
+            @foreach (var mahlzeit in MahlzeitenAmTag)
+            {
+                <Card @key="mahlzeit.ProgrammpunktId" Titel="@mahlzeit.Titel" Dachzeile="@mahlzeit.Beginn" Ebene="3" Id="@($"mahlzeit-{mahlzeit.ProgrammpunktId}")">
+                    @if (mahlzeit.Gerichte.Count == 0)
+                    {
+                        <p>Noch nichts vorgemerkt.</p>
+                    }
+                    @foreach (var gericht in mahlzeit.Gerichte)
+                    {
+                        <p><strong>@gericht.RezeptName</strong></p>
+                        @if (_plan.AllergienAbgefragt && gericht.Ersatzportionen.Anzahl > 0)
+                        {
+                            <p>@KuecheTexte.Ersatzportionen(gericht.Ersatzportionen)</p>
+                        }
+                        @if (!Abgeschlossen)
+                        {
+                            @if (_tausch?.Id == gericht.Id)
+                            {
+                                @Tausch(mahlzeit, gericht)
+                            }
+                            else
+                            {
+                                <Knopf Art="KnopfArt.Outline" @onclick="@(() => TauschStarten(gericht))">Tauschen</Knopf>
+                                <InlineBestaetigung AusloeserText="Entfernen" AusloeserArt="KnopfArt.Outline" Satz="@($"„{gericht.RezeptName}“ entfernen?")"
+                                                    JaText="Ja, entfernen" Bestaetigt="@(() => EntfernenAsync(gericht))" />
+                            }
+                        }
+                    }
+                    @if (!Abgeschlossen && _plan.Rezepte.Count > 0)
+                    {
+                        <Auswahl Legende="@($"Rezept für {mahlzeit.Titel} vormerken")" Gruppe="@($"vormerken-{mahlzeit.ProgrammpunktId}")" Optionen="RezeptOptionen"
+                                 Wert="@_wahl.GetValueOrDefault(mahlzeit.ProgrammpunktId)" WertGeaendert="@(w => _wahl[mahlzeit.ProgrammpunktId] = w)"
+                                 Fehler="@_wahlFehler.GetValueOrDefault(mahlzeit.ProgrammpunktId)" Deaktiviert="_uebertraegt" />
+                        <Knopf Art="KnopfArt.Outline" Deaktiviert="_uebertraegt" @onclick="@(() => VormerkenAsync(mahlzeit))">Gericht vormerken</Knopf>
+                    }
+                </Card>
+            }
+        </Reiter>
+    }
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    private ApiEssensplan? _plan;
+    private Guid? _geladen;
+    private DateOnly _tag;
+    private bool _nichtVerfuegbar;
+    private bool _uebertraegt;
+    private bool _konflikt;
+    private string? _meldung;
+    private string? _erfolg;
+    private readonly Dictionary<Guid, string> _wahl = [];
+    private readonly Dictionary<Guid, string> _wahlFehler = [];
+    // Der Tausch, der gerade offen ist: Gericht, gewähltes Rezept und die Vorschau dazu.
+    private ApiGericht? _tausch;
+    private string? _tauschRezept;
+    private Tauschvorschau? _vorschau;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    /// <summary>Der gewählte Tag als <c>JJJJ-MM-TT</c>.</summary>
+    [SupplyParameterFromQuery(Name = "tag")] public string? TagWahl { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    private IReadOnlyList<ReiterEintrag> TagReiter =>
+        [.. _plan!.Tage.Select(t => new ReiterEintrag(Anzeige.TagKurz(t.Tag), KuecheTexte.EssensplanZiel(FreizeitId, t.Tag), t.Tag == _tag))];
+
+    private IReadOnlyList<EssensplanMahlzeit> MahlzeitenAmTag => _plan!.Tage.FirstOrDefault(t => t.Tag == _tag)?.Mahlzeiten ?? [];
+
+    private IReadOnlyList<AuswahlOption> RezeptOptionen => [.. _plan!.Rezepte.Select(r => new AuswahlOption(r.Id.ToString(), r.Name))];
+
+    private RenderFragment Tausch(EssensplanMahlzeit mahlzeit, ApiGericht gericht) => @<text>
+        @if (_plan!.Rezepte.Where(r => r.Id != gericht.RezeptId).ToList() is { Count: > 0 } andere)
+        {
+            <Auswahl Legende="Tauschen gegen" Gruppe="@($"tausch-{gericht.Id}")" Optionen="@([.. andere.Select(r => new AuswahlOption(r.Id.ToString(), r.Name))])"
+                     Wert="@_tauschRezept" WertGeaendert="VorschauLadenAsync" Deaktiviert="_uebertraegt" />
+        }
+        else
+        {
+            <p>Es gibt kein anderes Rezept.</p>
+        }
+        @if (_vorschau is { } vorschau)
+        {
+            <Vergleich Bezeichnung="@($"Tausch {vorschau.Rezept.Name} gegen {vorschau.NeuesRezept.Name}")" Ebene="4"
+                       VorherText="@vorschau.Rezept.Name" Vorher="@Zeilen(vorschau.Vorher)" NachherText="@vorschau.NeuesRezept.Name" Nachher="@Zeilen(vorschau.Nachher)" />
+            <p>Die Einkaufsliste ändert sich erst mit „Übernehmen“. „Anpassen“ übernimmt und öffnet die Einkaufsliste am @Anzeige.TagKurz(_tag).</p>
+        }
+        <Knopf Deaktiviert="@(_vorschau is null || _uebertraegt)" @onclick="@(() => TauschenAsync(anpassen: false))">Übernehmen</Knopf>
+        <Knopf Art="KnopfArt.Outline" Deaktiviert="@(_vorschau is null || _uebertraegt)" @onclick="@(() => TauschenAsync(anpassen: true))">Anpassen</Knopf>
+        <Knopf Art="KnopfArt.Text" @onclick="TauschBeenden">Abbrechen</Knopf>
+    </text>;
+
+    private static IReadOnlyList<VergleichZeile> Zeilen(IReadOnlyList<TauschZeile> zeilen) =>
+    [
+        .. zeilen.Select(z => new VergleichZeile(
+            z.VonHand ? $"{z.Bezeichnung} (von Hand)" : z.Bezeichnung,
+            z.Menge is null ? null : KuecheTexte.MengeMitEinheit(z.Menge, z.Einheit),
+            z.Geaendert)),
+    ];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Nur der Tag-Reiter hat gewechselt: nichts neu laden, nur den Tag wählen (die Wahl steht in der Adresse).
+        if (_geladen == FreizeitId && _plan is not null)
+        {
+            TagWaehlen();
+            return;
+        }
+
+        _kontext = null;
+        _plan = null;
+        _nichtVerfuegbar = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var plan = KuecheApi.EssensplanLadenAsync(FreizeitId);
+            await Task.WhenAll(kontext, plan);
+            if (kontext.Result is null || plan.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _plan, _geladen) = (kontext.Result, plan.Result, FreizeitId);
+            TagWaehlen();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Der Tag aus der Adresse, sonst heute (wenn er zur Freizeit gehört), sonst der erste Tag.</summary>
+    private void TagWaehlen()
+    {
+        var tage = _plan!.Tage.Select(t => t.Tag).ToList();
+        if (tage.Count == 0)
+        {
+            return;
+        }
+
+        if (DateOnly.TryParseExact(TagWahl, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var gewaehlt) && tage.Contains(gewaehlt))
+        {
+            _tag = gewaehlt;
+            return;
+        }
+
+        var heute = Anzeige.Tag(Uhr.GetUtcNow());
+        _tag = tage.Contains(heute) ? heute : tage[0];
+    }
+
+    /// <summary>Lädt den Essensplan neu; die Tag-Wahl bleibt.</summary>
+    private async Task LadenAsync()
+    {
+        try
+        {
+            if (await KuecheApi.EssensplanLadenAsync(FreizeitId) is { } plan)
+            {
+                _plan = plan;
+                _meldung = null;
+                TagWaehlen();
+            }
+            else
+            {
+                _nichtVerfuegbar = true;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    private async Task NeuLadenAsync()
+    {
+        _konflikt = false;
+        TauschBeenden();
+        await LadenAsync();
+    }
+
+    private void Zuruecksetzen()
+    {
+        (_meldung, _erfolg, _konflikt) = (null, null, false);
+    }
+
+    /// <summary>„Gericht vormerken“: das gewählte Rezept an dieser Mahlzeit; danach lädt der Plan neu.</summary>
+    private async Task VormerkenAsync(EssensplanMahlzeit mahlzeit)
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        Zuruecksetzen();
+        _wahlFehler.Remove(mahlzeit.ProgrammpunktId);
+        if (!Guid.TryParse(_wahl.GetValueOrDefault(mahlzeit.ProgrammpunktId), out var rezept))
+        {
+            _wahlFehler[mahlzeit.ProgrammpunktId] = "Rezept fehlt.";
+            return;
+        }
+
+        _uebertraegt = true;
+        try
+        {
+            switch ((await KuecheApi.GerichtVormerkenAsync(FreizeitId, new GerichtNeu(mahlzeit.ProgrammpunktId, rezept))).Ergebnis)
+            {
+                case KuecheAktionErgebnis.Erfolg:
+                    _wahl.Remove(mahlzeit.ProgrammpunktId);
+                    await LadenAsync();
+                    break;
+                case KuecheAktionErgebnis.Abgeschlossen:
+                    _meldung = KuecheTexte.AbgeschlossenText;
+                    break;
+                default:
+                    // Z. B. das Rezept wurde inzwischen gelöscht: neu laden, damit die Auswahl stimmt.
+                    await LadenAsync();
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task EntfernenAsync(ApiGericht gericht)
+    {
+        Zuruecksetzen();
+        try
+        {
+            switch (await KuecheApi.GerichtEntfernenAsync(FreizeitId, gericht.Id))
+            {
+                case KuecheAktionErgebnis.Abgeschlossen:
+                    _meldung = KuecheTexte.AbgeschlossenText;
+                    break;
+                case KuecheAktionErgebnis.Erfolg:
+                    await LadenAsync();
+                    break;
+                default:
+                    // Z. B. inzwischen von jemand anderem entfernt: neu laden; die Meldung nur, wenn das Gericht noch da ist.
+                    await LadenAsync();
+                    if (_plan?.Tage.SelectMany(t => t.Mahlzeiten).SelectMany(m => m.Gerichte).Any(g => g.Id == gericht.Id) != false)
+                    {
+                        _meldung = AnmeldungAbschluss.FehlerText;
+                    }
+
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    private void TauschStarten(ApiGericht gericht)
+    {
+        Zuruecksetzen();
+        (_tausch, _tauschRezept, _vorschau) = (gericht, null, null);
+    }
+
+    private void TauschBeenden() => (_tausch, _tauschRezept, _vorschau) = (null, null, null);
+
+    /// <summary>Nach der Wahl des neuen Rezepts: die Vorschau laden (schreibt nichts).</summary>
+    private async Task VorschauLadenAsync(string rezept)
+    {
+        if (_tausch is null || !Guid.TryParse(rezept, out var rezeptId))
+        {
+            return;
+        }
+
+        (_tauschRezept, _vorschau, _meldung) = (rezept, null, null);
+        var gerichtId = _tausch.Id;
+        try
+        {
+            var vorschau = await KuecheApi.TauschvorschauLadenAsync(FreizeitId, gerichtId, rezeptId);
+            // Inzwischen anders gewählt oder abgebrochen: Diese Antwort gehört nicht mehr zur Auswahl.
+            if (_tausch?.Id != gerichtId || _tauschRezept != rezept)
+            {
+                return;
+            }
+
+            _vorschau = vorschau;
+            if (_vorschau is null)
+            {
+                // Gericht oder Rezept gibt es nicht mehr.
+                TauschBeenden();
+                await LadenAsync();
+                _meldung = AnmeldungAbschluss.FehlerText;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>„Übernehmen“ oder „Anpassen“: der Tausch mit der Version aus der Vorschau (AD-13: das ist die Bestätigung).</summary>
+    private async Task TauschenAsync(bool anpassen)
+    {
+        if (_uebertraegt || _tausch is null || _vorschau is not { } vorschau)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        Zuruecksetzen();
+        try
+        {
+            switch (await KuecheApi.GerichtTauschenAsync(FreizeitId, vorschau.GerichtId, new GerichtTauschen(vorschau.Version, vorschau.NeuesRezept.Id)))
+            {
+                case KuecheAktionErgebnis.Erfolg when anpassen:
+                    Navigation.NavigateTo(KuecheTexte.EinkaufslisteZiel(FreizeitId, _tag));
+                    break;
+                case KuecheAktionErgebnis.Erfolg:
+                    TauschBeenden();
+                    _erfolg = $"{vorschau.Rezept.Name} gegen {vorschau.NeuesRezept.Name} getauscht.";
+                    await LadenAsync();
+                    break;
+                case KuecheAktionErgebnis.Konflikt:
+                    _konflikt = true;
+                    break;
+                case KuecheAktionErgebnis.Abgeschlossen:
+                    _meldung = KuecheTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

@@ -121,6 +121,25 @@ public sealed class MeineDatenSeitenTests : BunitContext
     }
 
     [Fact]
+    public void Allergen_Abgleich_der_Kueche_steht_ohne_lesende_Person_im_Protokoll()
+    {
+        // Story 4-2 (AD-8): Zweck „allergeneFuerKueche“ ohne lesende Person.
+        Protokoll(new
+        {
+            am = "2026-10-12T08:00:00+00:00", betroffenePersonId = Emma, betroffenerName = "Emma Hüttner", lesendePersonId = (Guid?)null,
+            lesenderName = (string?)null, organisationId = Org, freizeitId = Guid.CreateVersion7(), zweck = "allergeneFuerKueche",
+        });
+
+        var cut = Render<MeineDaten>();
+
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("tbody tr")));
+        Assert.Equal(
+            ["12.10.2026", "Niemand persönlich (Abgleich)", "Jugendwerk Musterstadt", "Allergen-Abgleich der Küche", "Emma Hüttner"],
+            cut.FindAll("tbody td").Select(t => t.TextContent.Trim()));
+        Assert.Equal("Allergen-Abgleich der Küche", Anzeige.Zweck(Zeltlotse.Api.Contracts.Personen.ZugriffZweck.AllergeneFuerKueche));
+    }
+
+    [Fact]
     public void Leeres_Protokoll_zeigt_den_Leer_Zustand()
     {
         Protokoll();

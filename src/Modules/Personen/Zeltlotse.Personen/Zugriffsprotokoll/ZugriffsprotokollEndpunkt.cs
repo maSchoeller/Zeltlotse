@@ -11,7 +11,8 @@ namespace Zeltlotse.Personen.Zugriffsprotokoll;
 /// <summary>
 /// <c>GET /api/ich/zugriffsprotokoll</c> (AD-8, AD-26, FR-13): die Einträge über die Person selbst und über die Kinder ihrer Familie,
 /// neueste zuerst, mit den Namen von betroffener und lesender Person. Fremde Einträge sind nie enthalten. Der Name der lesenden
-/// Person ist <c>null</c>, wenn sie gelöscht ist (Platzhalter).
+/// Person ist <c>null</c>, wenn sie gelöscht ist (Platzhalter). Story 4-2: Ein Lesen ohne Menschen (Allergen-Abgleich der Küche) hat keine
+/// lesende Person (Kennung und Name <c>null</c>).
 /// </summary>
 internal static class ZugriffsprotokollEndpunkt
 {
@@ -29,7 +30,7 @@ internal static class ZugriffsprotokollEndpunkt
             .OrderByDescending(e => e.Am)
             .ThenByDescending(e => e.Id)
             .ToListAsync(abbruch);
-        var personIds = eintraege.SelectMany(e => new[] { e.BetroffenePersonId, e.LesendePersonId }).Distinct().ToList();
+        var personIds = eintraege.SelectMany(e => new[] { e.BetroffenePersonId, e.LesendePersonId ?? Guid.Empty }).Distinct().ToList();
         var namen = await db.Personen
             .Where(p => personIds.Contains(p.Id))
             .ToDictionaryAsync(p => p.Id, p => NameAus(p.Vorname, p.Nachname), abbruch);
@@ -39,7 +40,7 @@ internal static class ZugriffsprotokollEndpunkt
                 e.BetroffenePersonId,
                 namen.GetValueOrDefault(e.BetroffenePersonId),
                 e.LesendePersonId,
-                namen.GetValueOrDefault(e.LesendePersonId),
+                e.LesendePersonId is { } lesend ? namen.GetValueOrDefault(lesend) : null,
                 e.OrganisationId,
                 e.FreizeitId,
                 (ZugriffZweck)(int)e.Zweck))
