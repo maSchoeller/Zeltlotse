@@ -46,6 +46,7 @@ Test-Tempo ab 2-3 (Vorgabe von Marvin, 2026-10-12): Story-Sitzungen testen währ
 | 2026-10-19 08:30 | 4-2 | abgebrochen (Umgebung) | – | – | 9e492fa | Sitzung vom 17.10. 15:26 endete ohne Ergebnis (Prozess beendet, Rechner/Docker neu gestartet). Story-Spec war geschrieben, noch kein Code; Spec auf draft gesetzt und behalten, Story neu gestartet |
 | 2026-10-19 11:55 | 4-2 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 135/135, UI 707/707 / – (Sitzung: Api 879/880, Doku 58 Seiten) | 0f32ff7 | Dauer 3 h 20 min, viel davon Testläufe unter Last. Wackliger Telemetrie-Test Ausnahmen_erscheinen_in_Spans_nicht_mit_Nachricht (einzeln grün). Jedes Öffnen der Einkaufsliste schreibt ins Zugriffsprotokoll (Allergen-Abgleich) |
 | 2026-10-19 15:05 | 4-3 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 135/135, UI 724/724 / – (Sitzung: 2647 grün inkl. Playwright) | d566343 | Seltene Fälle offen: 500 bei gleichzeitigem Löschen einer Zutat; Tages-Freigabe für Tag außerhalb einer verkürzten Freizeit schlägt fehl |
+| 2026-10-19 20:20 | 4-4 | done | nein (nicht empfohlen) | Ende Epic 4: Build, Architektur 135/135, UI 737/737 grün; Sitzung: alles grün inkl. Playwright, Api 910/910 (allein 56 min) / grün (60 Seiten) | d2b3c6d | Knopf „Küche“ auf der Freizeit-Startseite öffnet weiter die Rezepte, nicht die Tagesansicht. Api.Tests sprengen im Komplettlauf das 60-min-Limit → Beschleunigung vor 5-1 |
 
 ## Entscheidungen im Lauf
 
