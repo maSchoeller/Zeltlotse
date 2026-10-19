@@ -43,6 +43,7 @@ Test-Tempo ab 2-3 (Vorgabe von Marvin, 2026-10-12): Story-Sitzungen testen währ
 | 2026-10-17 08:35 | 3-8 | done (Erstdurchlauf) | Folgedurchlauf abgebrochen | – | 68d70a0 | Folgedurchlauf am 14.10. 12:10 sofort abgebrochen: Wochenlimit des Claude-Kontos erreicht (Reset 17.10. 4 Uhr). Lauf stand bis 17.10. still; Spec-Status zurückgesetzt, Folgedurchlauf neu gestartet |
 | 2026-10-17 11:45 | 3-8 | done (mit Folgedurchlauf) | ja (done, keiner mehr) | voll (Ende Epic 3): 2391/2392, 1 wackliger axe-Kontrasttest (Überblendung) → behoben / grün (55 Seiten) | 95eb818 | Folgedurchlauf: Nachweis-Einsicht nach Abschluss gesperrt, gleichzeitiger Abschluss getestet. Zurückgestellt: Anmeldung parallel zum Abschluss; Demo-Freizeiten ohne Team; Demo-Daten laufen ab ca. Juni 2027 über die Löschfrist |
 | 2026-10-17 15:50 | 4-1 | done (mit Folgedurchlauf) | ja (done, keiner mehr) | schnell grün: Build, Architektur 135/135, UI 686/686 / – (Sitzung: 2503 grün, Doku 56 Seiten) | 590e476 | Paketversionen angehoben (Blazor 10.0.13, Pkcs, MessagePack) wegen neuer Sicherheitswarnungen; Demo-Rezepte zeigen keine echte Hochrechnung (Faktor 1) |
+| 2026-10-19 08:30 | 4-2 | abgebrochen (Umgebung) | – | – | 9e492fa | Sitzung vom 17.10. 15:26 endete ohne Ergebnis (Prozess beendet, Rechner/Docker neu gestartet). Story-Spec war geschrieben, noch kein Code; Spec auf draft gesetzt und behalten, Story neu gestartet |
 
 ## Entscheidungen im Lauf
 
