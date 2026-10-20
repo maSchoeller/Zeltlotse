@@ -146,6 +146,14 @@ a.zl-gross:not(.elkw-btn) { display: inline-flex; align-items: center; }
 .zl-bestaetigung { padding: var(--elkw-space-s) var(--elkw-space-m); background: var(--elkw-neutral-10); border-radius: var(--elkw-radius); }
 .zl-bestaetigung__satz { margin: 0 0 var(--elkw-space-xs); }
 
+/* Hinweiszeile („Geändert, noch nicht mitgeteilt“): klein, text-muted, kein Statusrot; Textknöpfe dahinter, die Inline-Bestätigung in voller Breite */
+.zl-hinweiszeile { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; margin: 0.35rem 0 0; font-size: var(--elkw-fs-small); line-height: 1.5; color: var(--elkw-dunkelgrau); }
+.zl-hinweiszeile__text { margin: 0; }
+.zl-hinweiszeile > .elkw-btn { margin: 0; min-height: 2rem; padding-top: 0; padding-bottom: 0; font-size: inherit; line-height: 1.5; }
+/* Textknöpfe in Textfarbe mit Unterstrich: Die Aktionsfarbe erreicht auf dem Grundton (Handy, ohne Card) nicht 4,5:1. */
+.zl-hinweiszeile > .elkw-btn--text { color: var(--elkw-text); text-decoration: underline; text-underline-offset: 0.2em; }
+.zl-hinweiszeile > .zl-bestaetigung { flex-basis: 100%; font-size: 1rem; color: var(--elkw-text); }
+
 /* Speicher-Hinweis an der Stelle des Feldhinweises */
 .zl-speicher-hinweis { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin: 0.25rem 0 0; font-size: var(--elkw-fs-small); line-height: 1.5; color: var(--elkw-dunkelgrau); }
 .zl-speicher-hinweis .elkw-btn { margin: 0; font-size: inherit; line-height: 1.5; }

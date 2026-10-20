@@ -1614,6 +1614,47 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await BildAsync(seite, "wochenraster", geraet);
     }
 
+    // ---------- Story 6-2: „Alle informieren?“ bei Verschiebung ----------
+
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Programm_mitteilen(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await ProgrammAsync(seite);
+        ILocator dienstag;
+        if (geraet == "handy")
+        {
+            // Am Handy ist der erste Tag gewählt; das Geländespiel liegt am zweiten.
+            await seite.Locator(".zl-reiter nav a").Nth(1).ClickAsync();
+            dienstag = seite.Locator(".zl-reiter__inhalt");
+            await Assertions.Expect(dienstag.Locator("h2")).ToHaveTextAsync("Dienstag, 3. August 2027", new() { Timeout = 60_000 });
+        }
+        else
+        {
+            dienstag = seite.Locator(".zl-tagesspalte").Nth(1);
+            await Assertions.Expect(dienstag.Locator("h2")).ToHaveTextAsync("Di 03.08.");
+        }
+
+        // Das Geländespiel wurde von 14:00 auf 14:30 verschoben und noch nicht mitgeteilt.
+        var termin = TerminIn(dienstag, "Geländespiel");
+        await Assertions.Expect(termin.Locator(".elkw-kicker")).ToHaveTextAsync("14:30");
+        await Assertions.Expect(termin.Locator(".zl-hinweiszeile__text")).ToHaveTextAsync("Geändert, noch nicht mitgeteilt", new() { Timeout = 60_000 });
+        await Assertions.Expect(termin.GetByRole(AriaRole.Button, new() { Name = "Ausblenden" })).ToBeVisibleAsync();
+        await termin.GetByRole(AriaRole.Button, new() { Name = "Jetzt informieren" }).ClickAsync();
+        await Assertions.Expect(termin.Locator(".zl-bestaetigung__satz")).ToHaveTextAsync("Alle informieren? „Geländespiel am Di 03.08.: 14:30 statt 14:00“");
+        await Assertions.Expect(termin.GetByRole(AriaRole.Button, new() { Name = "Ja, informieren" })).ToBeVisibleAsync();
+        await Assertions.Expect(termin.GetByRole(AriaRole.Button, new() { Name = "Nein", Exact = true })).ToBeFocusedAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        // „Ja“ wird nicht getippt, damit der Demo-Stand für die anderen Bilder bleibt.
+        await termin.ScrollIntoViewIfNeededAsync();
+        await BildAsync(seite, "programm-mitteilen", geraet);
+    }
+
     [Theory]
     [MemberData(nameof(Geraete))]
     public async Task Programmpunkt(string geraet)

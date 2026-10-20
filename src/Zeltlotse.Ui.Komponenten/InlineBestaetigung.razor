@@ -1,7 +1,8 @@
 @attribute [NurInteraktiv]
 @* Inline-Bestätigung (EXPERIENCE.md → Interaction Primitives): Der Auslöser klappt an Ort und Stelle auf: Satz,
    „Ja, …“ ohne Pfeil, „Nein“ als Outline. Der Fokus springt auf „Nein“; „Nein“ oder Escape klappen zu und geben
-   den Fokus an den Auslöser zurück. Kein Dialog, kein Pop-up. *@
+   den Fokus an den Auslöser zurück. Kein Dialog, kein Pop-up. Story 6-2: Mit Offen beginnt sie aufgeklappt bzw. klappt auf, sobald Offen auf
+   true wechselt (z. B. „Alle informieren?“ direkt nach dem Verschieben). *@
 @if (_offen)
 {
     <div class="zl-bestaetigung" @onkeydown="Taste">
@@ -23,6 +24,7 @@ else
     private Knopf? _nein;
     private bool _fokusAufNein;
     private bool _fokusAufAusloeser;
+    private bool _offenVorher;
 
     /// <summary>Beschriftung des Auslösers, z. B. „Alle informieren“.</summary>
     [Parameter, EditorRequired] public string AusloeserText { get; set; } = "";
@@ -37,6 +39,22 @@ else
 
     /// <summary>Wird nach „Ja, …“ ausgelöst; danach klappt die Bestätigung zu.</summary>
     [Parameter] public EventCallback Bestaetigt { get; set; }
+
+    /// <summary>
+    /// Story 6-2: <c>true</c> klappt die Bestätigung auf (mit Fokus auf „Nein“), beim ersten Anzeigen oder sobald der Wert von <c>false</c> auf
+    /// <c>true</c> wechselt. Bleibt er <c>true</c>, klappt „Nein“ trotzdem zu.
+    /// </summary>
+    [Parameter] public bool Offen { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (Offen && !_offenVorher)
+        {
+            Aufklappen();
+        }
+
+        _offenVorher = Offen;
+    }
 
     private void Aufklappen()
     {

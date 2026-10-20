@@ -213,6 +213,9 @@ namespace Zeltlotse.Programm.Migrationen
                     b.Property<short?>("Mahlzeit")
                         .HasColumnType("smallint");
 
+                    b.Property<TimeOnly?>("MitgeteilterBeginn")
+                        .HasColumnType("time without time zone");
+
                     b.Property<Guid>("OrganisationId")
                         .HasColumnType("uuid");
 

@@ -1,0 +1,147 @@
+@attribute [NurInteraktiv]
+@using Zeltlotse.Api.Contracts.Kanaele
+@using Zeltlotse.Api.Contracts.Programm
+@inject KanaeleApiClient KanaeleApi
+@inject ProgrammApiClient ProgrammApi
+@* Story 6-2 (FR-62, AD-13; DESIGN.md → Hinweis „nicht mitgeteilt“, EXPERIENCE.md → „Änderung nicht mitgeteilt“): am verschobenen Programmpunkt die
+   Hinweiszeile „Geändert, noch nicht mitgeteilt“ mit „Jetzt informieren“ (Inline-Bestätigung „Alle informieren? „…““) und „Ausblenden“.
+   „Ja, informieren“ sendet den vorbereiteten Text bestätigt in den Kanal „Alle“ (Push über die Outbox) und meldet danach dem Programm
+   „mitgeteilt“; „Ausblenden“ meldet nur „mitgeteilt“. Scheitert das Senden, bleibt der Hinweis mit einer Meldung. Nach dem Abschluss nur der
+   Text. Ohne offene Verschiebung zeigt der Baustein nichts. *@
+@if (Punkt.MitgeteilterBeginn is not null)
+{
+    <Hinweiszeile Text="@ProgrammTexte.NichtMitgeteiltText">
+        @if (!NurLesen)
+        {
+            <InlineBestaetigung AusloeserText="Jetzt informieren" AusloeserArt="KnopfArt.Text" Satz="@ProgrammTexte.MitteilenSatz(Punkt)"
+                                JaText="Ja, informieren" Offen="Offen" Bestaetigt="InformierenAsync" />
+            <Knopf Art="KnopfArt.Text" Deaktiviert="@_uebertraegt" @onclick="AusblendenAsync">Ausblenden</Knopf>
+        }
+    </Hinweiszeile>
+    @if (_fehler is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_fehler</p>
+        </Meldung>
+    }
+}
+
+@code {
+    private bool _uebertraegt;
+    private string? _fehler;
+
+    /// <summary>Text, wenn das Senden in „Alle“ scheitert.</summary>
+    public const string NichtGesendetText = "Die Nachricht wurde nicht gesendet.";
+
+    /// <summary>Text, wenn die Nachricht gesendet ist, „mitgeteilt“ aber scheiterte: kein zweites Senden, nur ausblenden.</summary>
+    public const string GesendetHinweisBleibtText = "Die Nachricht ist gesendet, der Hinweis ließ sich aber nicht entfernen. Bitte „Ausblenden“ wählen.";
+
+    /// <summary>Text, wenn der Punkt inzwischen erneut verschoben wurde.</summary>
+    public const string ErneutVerschobenText = "Der Programmpunkt wurde inzwischen erneut verschoben.";
+
+    [Parameter, EditorRequired] public Guid FreizeitId { get; set; }
+
+    [Parameter, EditorRequired] public Programmpunkt Punkt { get; set; } = null!;
+
+    /// <summary>Nach dem Abschluss der Freizeit: nur der Hinweis, ohne Knöpfe.</summary>
+    [Parameter] public bool NurLesen { get; set; }
+
+    /// <summary>Die Bestätigung beginnt aufgeklappt (direkt nach dem Verschieben).</summary>
+    [Parameter] public bool Offen { get; set; }
+
+    /// <summary>
+    /// Nach „Ja, informieren“ (mit dem gesendeten Text) oder „Ausblenden“ (<c>null</c>), auch wenn „mitgeteilt“ scheiterte: Die Seite lädt den Punkt neu.
+    /// </summary>
+    [Parameter] public EventCallback<string?> Erledigt { get; set; }
+
+    private async Task InformierenAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _fehler = null;
+        var gesendet = false;
+        try
+        {
+            // Vor dem Senden den aktuellen Stand holen: Eine alte Ansicht soll keine veraltete Uhrzeit an alle schicken.
+            var aktuell = (await ProgrammApi.LadenAsync(FreizeitId))?.Punkte.FirstOrDefault(p => p.Id == Punkt.Id);
+            if (aktuell is null || aktuell.Beginn != Punkt.Beginn || aktuell.MitgeteilterBeginn != Punkt.MitgeteilterBeginn)
+            {
+                _fehler = ErneutVerschobenText;
+                await Erledigt.InvokeAsync(null);
+                return;
+            }
+
+            var text = ProgrammTexte.Mitteilung(Punkt);
+            var senden = await KanaeleApi.SendenAsync(FreizeitId, Kanal.Alle, new NachrichtNeu(text, true));
+            switch (senden.Ergebnis)
+            {
+                case KanalAktionErgebnis.Erfolg:
+                    gesendet = true;
+                    // Scheitert „mitgeteilt“ sonst, bleibt nur der Hinweis stehen; er lässt sich ausblenden.
+                    if (await ProgrammApi.MitgeteiltAsync(FreizeitId, Punkt.Id, Punkt.Beginn) == ProgrammAktionErgebnis.Konflikt)
+                    {
+                        _fehler = ErneutVerschobenText;
+                    }
+
+                    await Erledigt.InvokeAsync(text);
+                    break;
+                case KanalAktionErgebnis.Abgeschlossen:
+                    _fehler = ProgrammTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _fehler = NichtGesendetText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _fehler = gesendet ? GesendetHinweisBleibtText : NichtGesendetText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task AusblendenAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _fehler = null;
+        try
+        {
+            switch (await ProgrammApi.MitgeteiltAsync(FreizeitId, Punkt.Id, Punkt.Beginn))
+            {
+                case ProgrammAktionErgebnis.Erfolg:
+                    await Erledigt.InvokeAsync(null);
+                    break;
+                case ProgrammAktionErgebnis.Konflikt:
+                    _fehler = ErneutVerschobenText;
+                    await Erledigt.InvokeAsync(null);
+                    break;
+                case ProgrammAktionErgebnis.Abgeschlossen:
+                    _fehler = ProgrammTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _fehler = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _fehler = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

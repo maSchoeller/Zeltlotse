@@ -2,9 +2,11 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Zeltlotse.Api.Contracts.Betrieb;
 using Zeltlotse.Api.Contracts.Gemeinsam;
 using Zeltlotse.SharedKernel.Datenschutz;
+using Zeltlotse.SharedKernel.Push;
 using Zeltlotse.Testing;
 using static Zeltlotse.Api.Tests.AnmeldeHelfer;
 using static Zeltlotse.Api.Tests.TestHelfer;
@@ -15,13 +17,16 @@ namespace Zeltlotse.Api.Tests;
 /// Story 3-1, Wochenraster und Programmpunkte (CAP-19, FR-34, FR-35, AD-16, AD-19, AD-30) gegen echtes PostgreSQL: Laden mit den festen
 /// Mahlzeiten (auch gleichzeitig nichts doppelt), Anlegen mit Feldfehlern, Autosave mit Konfliktregel, Löschen (Mahlzeiten nicht), „Ich übernehme“
 /// und „Abgeben“ (auch gleichzeitig), abgeschlossene Freizeit, die Pflichtfälle der Freizeit-Route, Löschen mit der Person und nach der Frist
-/// sowie die Datenauskunft. Freizeit X geht vom 02. bis 13.08.2027 (12 Tage).
+/// sowie die Datenauskunft. Story 6-2: „Geändert, noch nicht mitgeteilt“ (<c>mitgeteilterBeginn</c>), „mitgeteilt“ und dass eine Verschiebung selbst
+/// nichts verschickt (AD-13). Freizeit X geht vom 02. bis 13.08.2027 (12 Tage).
 /// </summary>
 public sealed class ProgrammTests(PostgresContainer postgres) : IAsyncLifetime
 {
+    private readonly PushAufzeichnung _push = new();
     private FreizeitpassSzenario _s = null!;
 
-    public async ValueTask InitializeAsync() => _s = await FreizeitpassSzenario.AufbauenAsync(postgres);
+    public async ValueTask InitializeAsync() =>
+        _s = await FreizeitpassSzenario.AufbauenAsync(postgres, zusatzDienste: s => s.Replace(ServiceDescriptor.Singleton<IPushVersand>(_push)));
 
     public async ValueTask DisposeAsync() => await _s.DisposeAsync();
 
@@ -69,6 +74,23 @@ public sealed class ProgrammTests(PostgresContainer postgres) : IAsyncLifetime
 
     private static string? Text(JsonElement punkt, string feld) => punkt.GetProperty(feld).GetString();
 
+    private Task<HttpResponseMessage> MitgeteiltAsync(Guid punkt, string? beginn, HttpClient? client = null, Guid? freizeit = null) =>
+        PostAsync(client ?? _s.Miriam, $"{PunktPfad(freizeit ?? _s.X, punkt)}/mitgeteilt", new { beginn });
+
+    /// <summary>Story 6-2: Verschiebt einen Punkt über den Autosave (PATCH der Uhrzeit).</summary>
+    private async Task VerschiebenAsync(Guid punkt, string? alt, string? neu, HttpClient? client = null)
+    {
+        using var antwort = await PatchAsync(punkt, Koerper(0, alt, "beginn", neu), client);
+        Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
+    }
+
+    private async Task<string?> MitgeteilterBeginnAsync(Guid punkt, HttpClient? client = null) =>
+        Text(Assert.Single(await PunkteAsync(client), p => Id(p) == punkt), "mitgeteilterBeginn");
+
+    private async Task<long> OutboxAsync() =>
+        await WertAsync<long>(_s.Verbindung, "SELECT count(*) FROM programm.outbox")
+        + await WertAsync<long>(_s.Verbindung, "SELECT count(*) FROM kanaele.outbox");
+
     // ---------- Laden ----------
 
     [Fact]
@@ -80,7 +102,7 @@ public sealed class ProgrammTests(PostgresContainer postgres) : IAsyncLifetime
         Assert.Equal(("2027-08-02", "2027-08-13"), (Text(raster, "ersterTag"), Text(raster, "letzterTag")));
         var punkte = raster.GetProperty("punkte").EnumerateArray().ToList();
         Assert.Equal(36, punkte.Count);
-        Assert.Equal(["beginn", "id", "inBibliothek", "mahlzeit", "meins", "tag", "titel", "uebernommenVon", "version"], Namen(punkte[0]));
+        Assert.Equal(["beginn", "id", "inBibliothek", "mahlzeit", "meins", "mitgeteilterBeginn", "tag", "titel", "uebernommenVon", "version"], Namen(punkte[0]));
         Assert.Equal(
             ["2027-08-02 08:00 Frühstück Fruehstueck", "2027-08-02 12:30 Mittagessen Mittagessen", "2027-08-02 18:30 Abendessen Abendessen", "2027-08-03 08:00 Frühstück Fruehstueck"],
             punkte.Take(4).Select(p => $"{Text(p, "tag")} {Text(p, "beginn")} {Text(p, "titel")} {Text(p, "mahlzeit")}"));
@@ -325,6 +347,167 @@ public sealed class ProgrammTests(PostgresContainer postgres) : IAsyncLifetime
         }
 
         Assert.Equal(gewinner, Assert.Single(await PunkteAsync(), p => Id(p) == Id(punkt)).GetProperty("uebernommenVon").GetGuid());
+    }
+
+    // ---------- Story 6-2: „Geändert, noch nicht mitgeteilt“ ----------
+
+    [Fact]
+    public async Task Verschieben_merkt_die_alte_Uhrzeit_erneut_verschieben_behaelt_sie_zurueckschieben_leert_sie()
+    {
+        var punkt = Id(await NeuAsync("Mittagessen am Bach", "2027-08-03", "13:00"));
+        Assert.Null(await MitgeteilterBeginnAsync(punkt));
+
+        await VerschiebenAsync(punkt, "13:00", "13:30", _s.Tobias);
+        Assert.Equal("13:00", await MitgeteilterBeginnAsync(punkt));
+        // Auch für andere Teammitglieder und nach dem Neuladen.
+        Assert.Equal("13:00", await MitgeteilterBeginnAsync(punkt, _s.Tobias));
+
+        await VerschiebenAsync(punkt, "13:30", "14:00");
+        Assert.Equal("13:00", await MitgeteilterBeginnAsync(punkt));
+
+        await VerschiebenAsync(punkt, "14:00", "13:00");
+        Assert.Null(await MitgeteilterBeginnAsync(punkt));
+    }
+
+    [Fact]
+    public async Task Erste_Uhrzeit_kein_Hinweis_Uhrzeit_entfernt_merkt_die_alte_Titel_aendert_nichts()
+    {
+        var ohne = Id(await NeuAsync("Lagerfeuer"));
+        await VerschiebenAsync(ohne, null, "15:00");
+        Assert.Null(await MitgeteilterBeginnAsync(ohne));
+
+        var punkt = Id(await NeuAsync("Geländespiel", "2027-08-03", "13:00"));
+        await VerschiebenAsync(punkt, "13:00", "");
+        Assert.Equal("13:00", await MitgeteilterBeginnAsync(punkt));
+
+        using var titel = await PatchAsync(punkt, Koerper(0, "Geländespiel", "titel", "Schnitzeljagd"));
+        Assert.Equal(HttpStatusCode.OK, titel.StatusCode);
+        Assert.Equal("13:00", await MitgeteilterBeginnAsync(punkt));
+        using var titelOhne = await PatchAsync(ohne, Koerper(0, "Lagerfeuer", "titel", "Feuer"));
+        Assert.Equal(HttpStatusCode.OK, titelOhne.StatusCode);
+        Assert.Null(await MitgeteilterBeginnAsync(ohne));
+    }
+
+    [Fact]
+    public async Task Verschieben_verschickt_nichts_keine_Nachricht_kein_Push_kein_Auftrag_in_den_Outboxen_erst_Ja_informieren_schickt_einen_Push()
+    {
+        // Tobias hat Push eingeschaltet; Miriam verschiebt.
+        var p256dh = Convert.ToBase64String([0x04, .. Enumerable.Range(1, 64).Select(i => (byte)i)]).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var auth = Convert.ToBase64String([.. Enumerable.Range(1, 16).Select(i => (byte)i)]).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        using (var abo = await PostAsync(_s.Tobias, $"/api/freizeiten/{_s.X}/kanaele/push/abo", new { endpunkt = "https://fcm.googleapis.com/fcm/send/tobias", p256dh, auth }))
+        {
+            Assert.Equal(HttpStatusCode.NoContent, abo.StatusCode);
+        }
+
+        var mittag = (await PunkteAsync()).First(p => Text(p, "mahlzeit") == "Mittagessen");
+        await _s.ZustellenAsync();
+        var outboxVorher = await OutboxAsync();
+
+        await VerschiebenAsync(Id(mittag), "12:30", "13:30");
+        await _s.ZustellenAsync();
+
+        Assert.Equal("12:30", await MitgeteilterBeginnAsync(Id(mittag)));
+        Assert.Equal(0L, await WertAsync<long>(_s.Verbindung, "SELECT count(*) FROM kanaele.nachricht"));
+        Assert.Equal(outboxVorher, await OutboxAsync());
+        Assert.Empty(_push.Gesendet);
+
+        // Erst „Ja, informieren“ (Senden in „Alle“, bestätigt) schickt genau einen Push; „mitgeteilt“ nimmt den Hinweis weg.
+        using (var senden = await PostAsync(_s.Miriam, $"/api/freizeiten/{_s.X}/kanaele/alle/nachrichten",
+                   new { text = "Mittagessen am Mo 02.08.: 13:30 statt 12:30", bestaetigt = true }))
+        {
+            Assert.Equal(HttpStatusCode.Created, senden.StatusCode);
+        }
+
+        using (var mitgeteilt = await MitgeteiltAsync(Id(mittag), "13:30"))
+        {
+            Assert.Equal(HttpStatusCode.NoContent, mitgeteilt.StatusCode);
+        }
+
+        await _s.ZustellenAsync();
+        Assert.Equal("Mittagessen am Mo 02.08.: 13:30 statt 12:30", Assert.Single(_push.Gesendet).Inhalt.Text);
+        Assert.Null(await MitgeteilterBeginnAsync(Id(mittag)));
+    }
+
+    [Fact]
+    public async Task Mitgeteilt_204_auch_ohne_Hinweis_inzwischen_verschoben_409_konflikt_ungueltige_Uhrzeit_400_unbekannt_404()
+    {
+        var punkt = Id(await NeuAsync("Geländespiel", "2027-08-03", "13:00"));
+        await VerschiebenAsync(punkt, "13:00", "13:30");
+
+        using (var erledigt = await MitgeteiltAsync(punkt, "13:30", _s.Tobias))
+        {
+            Assert.Equal(HttpStatusCode.NoContent, erledigt.StatusCode);
+        }
+
+        Assert.Null(await MitgeteilterBeginnAsync(punkt));
+        using (var nochmal = await MitgeteiltAsync(punkt, "13:30"))
+        {
+            Assert.Equal(HttpStatusCode.NoContent, nochmal.StatusCode);
+        }
+
+        // Ohne offenen Hinweis ist auch eine veraltete Uhrzeit erledigt (z. B. „Ausblenden“ aus einer alten Ansicht).
+        using (var veraltet = await MitgeteiltAsync(punkt, "13:00"))
+        {
+            Assert.Equal(HttpStatusCode.NoContent, veraltet.StatusCode);
+        }
+
+        await VerschiebenAsync(punkt, "13:30", "14:00");
+        using (var konflikt = await MitgeteiltAsync(punkt, "13:30"))
+        {
+            Assert.Equal(HttpStatusCode.Conflict, konflikt.StatusCode);
+            Assert.Equal(Problemcodes.Konflikt, Code(await ProblemAsync(konflikt)));
+        }
+
+        Assert.Equal("13:30", await MitgeteilterBeginnAsync(punkt));
+
+        using (var ungueltig = await MitgeteiltAsync(punkt, "25:99"))
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, ungueltig.StatusCode);
+            Assert.True((await ProblemAsync(ungueltig)).GetProperty("errors").TryGetProperty("beginn", out _));
+        }
+
+        // Ohne Uhrzeit passt zu einem Punkt ohne Uhrzeit.
+        await VerschiebenAsync(punkt, "14:00", "");
+        using (var ohne = await MitgeteiltAsync(punkt, null))
+        {
+            Assert.Equal(HttpStatusCode.NoContent, ohne.StatusCode);
+        }
+
+        Assert.Null(await MitgeteilterBeginnAsync(punkt));
+        using var unbekannt = await MitgeteiltAsync(Guid.CreateVersion7(), "13:00");
+        Assert.Equal(HttpStatusCode.NotFound, unbekannt.StatusCode);
+    }
+
+    [Fact]
+    public async Task Mitgeteilt_Rechte_Org_Admin_ohne_Rolle_fremde_Organisation_andere_Freizeit_404_ohne_Sitzung_401_abgeschlossen_409()
+    {
+        var (orgC, sara) = await OrgHelfer.OrganisationMitOrgAdminAsync(_s.Factory, _s.Gerd, "Jugendwerk C", "sara.kochloeffel@example.org");
+        using var _ = sara;
+        var fremde = await FreizeitHelfer.AnlegenAsync(sara, orgC, "Fremdes Zeltlager");
+        var punkt = Id(await NeuAsync("Geländespiel", "2027-08-03", "13:00"));
+        await VerschiebenAsync(punkt, "13:00", "13:30");
+        var inZ = Id(await NeuAsync("Lagerfeuer", "2027-09-01", "20:00", freizeit: _s.Z));
+
+        var faelle = new (HttpClient Client, Guid Freizeit, Guid Punkt, HttpStatusCode Erwartet)[]
+        {
+            (_s.Andrea, _s.X, punkt, HttpStatusCode.NotFound),
+            (_s.Miriam, fremde, punkt, HttpStatusCode.NotFound),
+            (_s.Miriam, _s.X, inZ, HttpStatusCode.NotFound),
+            (_s.Anonym, _s.X, punkt, HttpStatusCode.Unauthorized),
+        };
+        foreach (var (client, freizeit, ziel, erwartet) in faelle)
+        {
+            using var antwort = await MitgeteiltAsync(ziel, "13:30", client, freizeit);
+            Assert.Equal(erwartet, antwort.StatusCode);
+        }
+
+        Assert.Equal("13:00", await MitgeteilterBeginnAsync(punkt));
+
+        await AusfuehrenAsync(_s.Verbindung, "UPDATE freizeiten.freizeit SET \"AbgeschlossenAm\" = now() WHERE \"Id\" = @f", ("f", _s.X));
+        using var abgeschlossen = await MitgeteiltAsync(punkt, "13:30", _s.Tobias);
+        Assert.Equal(HttpStatusCode.Conflict, abgeschlossen.StatusCode);
+        Assert.Equal(Problemcodes.FreizeitAbgeschlossen, Code(await ProblemAsync(abgeschlossen)));
+        Assert.Equal("13:00", await MitgeteilterBeginnAsync(punkt));
     }
 
     // ---------- Abgeschlossen ----------

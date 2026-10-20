@@ -17,6 +17,22 @@ internal static class ProgrammTexte
 
     public const string KonfliktText = "Jemand anderes hat diesen Programmpunkt inzwischen übernommen.";
 
+    /// <summary>Story 6-2: Hinweis am verschobenen Programmpunkt, solange niemand informiert oder ausgeblendet hat.</summary>
+    public const string NichtMitgeteiltText = "Geändert, noch nicht mitgeteilt";
+
+    /// <summary>
+    /// Story 6-2: vorbereiteter Text für den Kanal „Alle“, z. B. „Mittagessen am Di 03.08.: 13:30 statt 13:00“; ohne neue Uhrzeit „ohne Uhrzeit statt
+    /// 13:00“. Der Tag steht dabei, weil eine Freizeit viele Mittagessen hat.
+    /// </summary>
+    public static string Mitteilung(Programmpunkt punkt) =>
+        $"{punkt.Titel} am {Anzeige.TagKurz(punkt.Tag)}: {punkt.Beginn ?? "ohne Uhrzeit"} statt {punkt.MitgeteilterBeginn}";
+
+    /// <summary>Story 6-2: Satz der Inline-Bestätigung: „Alle informieren? „…““.</summary>
+    public static string MitteilenSatz(Programmpunkt punkt) => $"Alle informieren? „{Mitteilung(punkt)}“";
+
+    /// <summary>Story 6-2: Erfolgsmeldung nach „Ja, informieren“.</summary>
+    public static string InformiertText(string mitteilung) => $"Alle informiert: „{mitteilung}“";
+
     /// <summary>Je Person der Leitung und des Teams der Name; fehlt eine Quelle, fehlen nur ihre Namen.</summary>
     public static IReadOnlyDictionary<Guid, string> Namen(FreizeitAntwort? freizeit, IEnumerable<PersonenlisteZeile>? personen)
     {

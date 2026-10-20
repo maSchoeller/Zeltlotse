@@ -63,7 +63,8 @@ internal static class ProgrammLesen
         punkt.Mahlzeit,
         punkt.Uebernommen,
         ich is { } person && punkt.Uebernommen == person,
-        punkt.BibliotheksEintragId is not null);
+        punkt.BibliotheksEintragId is not null,
+        ProgrammpunktFelder.UhrzeitText(punkt.MitgeteilterBeginn));
 }
 
 /// <summary>Fehlerantworten <c>409</c> der Programm-Endpunkte mit Problemcode (AD-27).</summary>

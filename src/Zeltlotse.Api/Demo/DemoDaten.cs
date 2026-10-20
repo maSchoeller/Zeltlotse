@@ -107,7 +107,8 @@ namespace Zeltlotse.Api.Demo;
 /// Story 2-9: Andrea lädt das Org-Dokument „Schutzkonzept Jugendwerk Musterstadt“ hoch, die Freizeit bindet es ein (Sichtbarkeit Team) und
 /// wählt es als Schutzkonzept; Jonas bestätigt es als gelesen (je nur, wenn es fehlt).
 /// Story 3-1: Die festen Mahlzeiten der Demo-Freizeit und die Programmpunkte aus <see cref="DemoKatalog.Programmpunkte"/>; Lea und Jonas
-/// übernehmen je einen selbst (je nur, wenn es den Titel noch nicht gibt).
+/// übernehmen je einen selbst (je nur, wenn es den Titel noch nicht gibt). Story 6-2: Das Geländespiel wird von 14:00 auf 14:30 verschoben und
+/// nicht mitgeteilt (nur, solange es noch auf 14:00 steht).
 /// Story 3-2: Material an Geländespiel und Lagerfeuer aus <see cref="DemoKatalog.Material"/> mit Menge und Status; Miriam bringt die
 /// Taschenlampen mit (je nur, wenn es die Bezeichnung am Programmpunkt noch nicht gibt).
 /// Story 3-3: die zweite Freizeit <see cref="DemoKatalog.ZweiteFreizeit"/> mit Tim als Leitung (nur, wenn es sie noch nicht gibt), das Inventar
@@ -1202,7 +1203,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
     /// <summary>
     /// Story 3-1: Die festen Mahlzeiten der Demo-Freizeit und die Programmpunkte aus <see cref="DemoKatalog.Programmpunkte"/>, über die Commands
     /// des Moduls Programm. Idempotent nach Titel: Einen Punkt mit diesem Titel in der Freizeit legt das Einspielen nicht noch einmal an. Wer einen
-    /// Punkt übernimmt, tut das selbst (die Leitung teilt nichts zu).
+    /// Punkt übernimmt, tut das selbst (die Leitung teilt nichts zu). Story 6-2: Punkte mit „verschoben auf“ werden danach über das PATCH-Command
+    /// verschoben, solange sie noch auf der Uhrzeit aus dem Katalog stehen (idempotent).
     /// </summary>
     private async Task ProgrammAsync(CancellationToken abbruch)
     {
@@ -1219,7 +1221,7 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             .Where(p => p.FreizeitId == freizeitId)
             .Select(p => p.Titel)
             .ToListAsync(abbruch);
-        foreach (var (titel, tag, beginn, uebernommenVon) in DemoKatalog.Programmpunkte.Where(p => !vorhanden.Contains(p.Titel)))
+        foreach (var (titel, tag, beginn, uebernommenVon, _) in DemoKatalog.Programmpunkte.Where(p => !vorhanden.Contains(p.Titel)))
         {
             var beginnText = Api.Contracts.Programm.ProgrammpunktFelder.UhrzeitText(beginn);
             if (await sender.Send(new ProgrammpunktAnlegenCommand(freizeitId, titel, tag, beginnText), abbruch) is not ProgrammpunktAnlegen.Angelegt angelegt)
@@ -1237,6 +1239,37 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
                 is not ProgrammpunktUebergang.Erfolg)
             {
                 throw new InvalidOperationException($"Demo-Programm: {titel} ließ sich nicht übernehmen.");
+            }
+        }
+
+        await VerschiebenAsync(dienste, sender, freizeitId, abbruch);
+    }
+
+    /// <summary>Story 6-2: verschiebt die Punkte mit „verschoben auf“, die noch auf ihrer Katalog-Uhrzeit stehen, ohne es mitzuteilen.</summary>
+    private static async Task VerschiebenAsync(IServiceProvider dienste, ISender sender, Guid freizeitId, CancellationToken abbruch)
+    {
+        foreach (var (titel, tag, beginn, _, verschobenAuf) in DemoKatalog.Programmpunkte)
+        {
+            if (verschobenAuf is null)
+            {
+                continue;
+            }
+
+            var punkt = await dienste.GetRequiredService<ProgrammLeseDbContext>().Programmpunkte
+                .Where(p => p.FreizeitId == freizeitId && p.Titel == titel && p.Tag == tag && p.Beginn == beginn)
+                .Select(p => new { p.Id, p.Version })
+                .FirstOrDefaultAsync(abbruch);
+            if (punkt is null)
+            {
+                continue;
+            }
+
+            var alt = Api.Contracts.Programm.ProgrammpunktFelder.UhrzeitText(beginn);
+            var neu = Api.Contracts.Programm.ProgrammpunktFelder.UhrzeitText(verschobenAuf);
+            if (await sender.Send(new ProgrammpunktFeldAendernCommand(freizeitId, punkt.Id, Api.Contracts.Programm.ProgrammpunktFeld.Beginn, punkt.Version, alt, neu), abbruch)
+                is not ProgrammpunktAenderung.Gespeichert)
+            {
+                throw new InvalidOperationException($"Demo-Programm: {titel} ließ sich nicht verschieben.");
             }
         }
     }

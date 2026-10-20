@@ -549,6 +549,11 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
                 return $"{p.GetProperty("tag").GetString()} {p.GetProperty("beginn").GetString()} {p.GetProperty("titel").GetString()} {wer} {p.GetProperty("meins").GetBoolean()}";
             }));
         Assert.Equal(39L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM programm.programmpunkt WHERE \"FreizeitId\" = @f", ("f", freizeitId)));
+        // Story 6-2: Das Geländespiel wurde von 14:00 auf 14:30 verschoben und noch nicht mitgeteilt; die anderen Punkte nicht.
+        Assert.Equal(
+            ["Geländespiel 14:00"],
+            punkte.Where(p => p.GetProperty("mitgeteilterBeginn").ValueKind != System.Text.Json.JsonValueKind.Null)
+                .Select(p => $"{p.GetProperty("titel").GetString()} {p.GetProperty("mitgeteilterBeginn").GetString()}"));
 
         // Story 3-2: fünf Materialien an Geländespiel und Lagerfeuer mit Menge und Status; Miriam bringt die Taschenlampen mit (für Lea nicht
         // „meins“). Nichts doppelt, auch nach dem zweiten Einspielen.

@@ -137,6 +137,169 @@ public sealed class ProgrammpunktTests(PostgresContainer postgres)
         Assert.True(punkt.FeldAendern(ProgrammpunktFeld.Beginn, "", "20:15"));
     }
 
+    // ---------- Story 6-2: „Geändert, noch nicht mitgeteilt“ ----------
+
+    [Fact]
+    public void Verschieben_merkt_sich_die_zuletzt_mitgeteilte_Uhrzeit()
+    {
+        var punkt = Neu("Mittagessen", new TimeOnly(13, 0));
+        Assert.Null(punkt.MitgeteilterBeginn);
+
+        Assert.True(punkt.FeldAendern(ProgrammpunktFeld.Beginn, "13:00", "13:30"));
+
+        Assert.Equal(new TimeOnly(13, 0), punkt.MitgeteilterBeginn);
+    }
+
+    [Fact]
+    public void Erneutes_Verschieben_behaelt_die_mitgeteilte_Uhrzeit()
+    {
+        var punkt = Neu("Mittagessen", new TimeOnly(13, 0));
+        punkt.FeldAendern(ProgrammpunktFeld.Beginn, "13:00", "13:30");
+
+        Assert.True(punkt.FeldAendern(ProgrammpunktFeld.Beginn, "13:30", "14:00"));
+
+        Assert.Equal(new TimeOnly(13, 0), punkt.MitgeteilterBeginn);
+    }
+
+    [Fact]
+    public void Zurueckschieben_auf_die_mitgeteilte_Uhrzeit_leert_den_Hinweis()
+    {
+        var punkt = Neu("Mittagessen", new TimeOnly(13, 0));
+        punkt.FeldAendern(ProgrammpunktFeld.Beginn, "13:00", "14:00");
+
+        Assert.True(punkt.FeldAendern(ProgrammpunktFeld.Beginn, "14:00", "13:00"));
+
+        Assert.Null(punkt.MitgeteilterBeginn);
+    }
+
+    [Fact]
+    public void Die_erste_Uhrzeit_ist_keine_Verschiebung()
+    {
+        var punkt = Neu();
+
+        Assert.True(punkt.FeldAendern(ProgrammpunktFeld.Beginn, null, "15:00"));
+
+        Assert.Null(punkt.MitgeteilterBeginn);
+    }
+
+    [Fact]
+    public void Uhrzeit_entfernen_merkt_sich_die_alte_Uhrzeit()
+    {
+        var punkt = Neu("Mittagessen", new TimeOnly(13, 0));
+
+        Assert.True(punkt.FeldAendern(ProgrammpunktFeld.Beginn, "13:00", ""));
+
+        Assert.Equal(new TimeOnly(13, 0), punkt.MitgeteilterBeginn);
+        // Wieder auf die alte Uhrzeit: nichts mehr mitzuteilen.
+        Assert.True(punkt.FeldAendern(ProgrammpunktFeld.Beginn, "", "13:00"));
+        Assert.Null(punkt.MitgeteilterBeginn);
+    }
+
+    [Fact]
+    public void Titel_aendern_und_ein_Konflikt_beruehren_den_Hinweis_nicht()
+    {
+        var punkt = Neu("Mittagessen", new TimeOnly(13, 0));
+        Assert.True(punkt.FeldAendern(ProgrammpunktFeld.Titel, "Mittagessen", "Grillen"));
+        Assert.Null(punkt.MitgeteilterBeginn);
+
+        punkt.FeldAendern(ProgrammpunktFeld.Beginn, "13:00", "13:30");
+        Assert.True(punkt.FeldAendern(ProgrammpunktFeld.Titel, "Grillen", "Mittagessen"));
+        Assert.False(punkt.FeldAendern(ProgrammpunktFeld.Beginn, "12:00", "13:00"));
+
+        Assert.Equal(new TimeOnly(13, 0), punkt.MitgeteilterBeginn);
+    }
+
+    [Fact]
+    public void Gleiche_Uhrzeit_erneut_speichern_setzt_nichts()
+    {
+        var punkt = Neu("Mittagessen", new TimeOnly(13, 0));
+
+        Assert.True(punkt.FeldAendern(ProgrammpunktFeld.Beginn, "13:00", "13:00"));
+
+        Assert.Null(punkt.MitgeteilterBeginn);
+    }
+
+    [Fact]
+    public void Anlegen_und_Mahlzeiten_beginnen_ohne_Hinweis()
+    {
+        Assert.Null(Neu(beginn: new TimeOnly(9, 0)).MitgeteilterBeginn);
+        Assert.Null(Programmpunkt.MahlzeitAnlegen(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7(), Tag, Mahlzeit.Mittagessen).MitgeteilterBeginn);
+    }
+
+    [Fact]
+    public void Mitgeteilt_zur_aktuellen_Uhrzeit_leert_den_Hinweis_auch_wenn_keiner_offen_ist()
+    {
+        var punkt = Neu("Mittagessen", new TimeOnly(13, 0));
+        punkt.FeldAendern(ProgrammpunktFeld.Beginn, "13:00", "13:30");
+
+        Assert.True(punkt.Mitgeteilt(new TimeOnly(13, 30)));
+        Assert.Null(punkt.MitgeteilterBeginn);
+
+        Assert.True(punkt.Mitgeteilt(new TimeOnly(13, 30)));
+        Assert.Null(punkt.MitgeteilterBeginn);
+    }
+
+    [Fact]
+    public void Mitgeteilt_zu_einer_anderen_Uhrzeit_ist_ein_Konflikt_und_der_Hinweis_bleibt()
+    {
+        var punkt = Neu("Mittagessen", new TimeOnly(13, 0));
+        punkt.FeldAendern(ProgrammpunktFeld.Beginn, "13:00", "13:30");
+        punkt.FeldAendern(ProgrammpunktFeld.Beginn, "13:30", "14:00");
+
+        Assert.False(punkt.Mitgeteilt(new TimeOnly(13, 30)));
+        Assert.False(punkt.Mitgeteilt(null));
+
+        Assert.Equal(new TimeOnly(13, 0), punkt.MitgeteilterBeginn);
+    }
+
+    [Fact]
+    public void Mitgeteilt_ohne_offenen_Hinweis_ist_auch_mit_veralteter_Uhrzeit_erledigt()
+    {
+        var punkt = Neu("Mittagessen", new TimeOnly(13, 0));
+
+        Assert.True(punkt.Mitgeteilt(new TimeOnly(9, 0)));
+        Assert.True(punkt.Mitgeteilt(null));
+
+        Assert.Null(punkt.MitgeteilterBeginn);
+    }
+
+    [Fact]
+    public void Mitgeteilt_ohne_Uhrzeit_passt_zu_einem_Punkt_ohne_Uhrzeit()
+    {
+        var punkt = Neu("Mittagessen", new TimeOnly(13, 0));
+        punkt.FeldAendern(ProgrammpunktFeld.Beginn, "13:00", null);
+
+        Assert.True(punkt.Mitgeteilt(null));
+
+        Assert.Null(punkt.MitgeteilterBeginn);
+    }
+
+    [Theory]
+    [InlineData("13:30", true)]
+    [InlineData("", true)]
+    [InlineData(null, true)]
+    [InlineData("25:99", false)]
+    [InlineData("halb zwei", false)]
+    public void Der_Validator_von_Mitgeteilt_prueft_die_Uhrzeit(string? beginn, bool gueltig)
+    {
+        var ergebnis = new ProgrammpunktMitgeteiltValidator().Validate(new ProgrammpunktMitgeteiltCommand(Guid.CreateVersion7(), Guid.CreateVersion7(), beginn));
+
+        Assert.Equal(gueltig, ergebnis.IsValid);
+        if (!gueltig)
+        {
+            Assert.Equal("beginn", Assert.Single(ergebnis.Errors).PropertyName);
+        }
+    }
+
+    [Fact]
+    public void Der_Mitgeteilt_Command_ist_ein_Benutzer_und_Freizeit_Command()
+    {
+        var merkmale = typeof(ProgrammpunktMitgeteiltCommand).GetInterfaces();
+
+        Assert.Contains(typeof(SharedKernel.Commands.IBenutzerCommand), merkmale);
+        Assert.Contains(typeof(SharedKernel.Commands.IFreizeitCommand), merkmale);
+    }
+
     [Fact]
     public void Mahlzeiten_haben_Titel_und_Uhrzeit_und_sind_nicht_loeschbar()
     {

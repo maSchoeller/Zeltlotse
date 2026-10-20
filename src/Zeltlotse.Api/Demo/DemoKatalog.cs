@@ -269,13 +269,14 @@ internal static class DemoKatalog
 
     /// <summary>
     /// Story 3-1: Programmpunkte der Demo-Freizeit neben den festen Mahlzeiten (je nur, wenn es den Titel in der Freizeit noch nicht gibt), mit der
-    /// Person, die ihn übernommen hat (Mail-Adresse) oder ohne. „Ich übernehme“ führt die Person selbst aus.
+    /// Person, die ihn übernommen hat (Mail-Adresse) oder ohne. „Ich übernehme“ führt die Person selbst aus. Story 6-2: Mit „verschoben auf“ wird der
+    /// Punkt nach dem Anlegen über den Autosave verschoben und nicht mitgeteilt („Geändert, noch nicht mitgeteilt“).
     /// </summary>
-    public static IReadOnlyList<(string Titel, DateOnly Tag, TimeOnly Beginn, string? UebernommenVon)> Programmpunkte { get; } =
+    public static IReadOnlyList<(string Titel, DateOnly Tag, TimeOnly Beginn, string? UebernommenVon, TimeOnly? VerschobenAuf)> Programmpunkte { get; } =
     [
-        ("Anreise und Zeltaufbau", new DateOnly(2027, 8, 2), new TimeOnly(15, 0), null),
-        ("Lagerfeuer", new DateOnly(2027, 8, 2), new TimeOnly(20, 0), "lea.feuerstein@example.org"),
-        ("Geländespiel", new DateOnly(2027, 8, 3), new TimeOnly(14, 30), "jonas.huettner@example.org"),
+        ("Anreise und Zeltaufbau", new DateOnly(2027, 8, 2), new TimeOnly(15, 0), null, null),
+        ("Lagerfeuer", new DateOnly(2027, 8, 2), new TimeOnly(20, 0), "lea.feuerstein@example.org", null),
+        ("Geländespiel", new DateOnly(2027, 8, 3), new TimeOnly(14, 0), "jonas.huettner@example.org", new TimeOnly(14, 30)),
     ];
 
     /// <summary>

@@ -54,6 +54,12 @@ internal sealed class Programmpunkt : IOrganisationsEigen
     /// </summary>
     public Guid? Uebernommen => PersonId == GeloeschtePerson.Id ? null : PersonId;
 
+    /// <summary>
+    /// Story 6-2 (FR-62): die zuletzt mitgeteilte Uhrzeit, solange eine Verschiebung noch nicht mitgeteilt ist; gesetzt heißt „Geändert, noch
+    /// nicht mitgeteilt“. Die Regel steckt in <see cref="FeldAendern"/>, geleert wird sie auch über <see cref="Mitgeteilt"/>.
+    /// </summary>
+    public TimeOnly? MitgeteilterBeginn { get; private set; }
+
     /// <summary>Versionsnummer der Zeile (<c>xmin</c>, AD-19).</summary>
     public uint Version { get; private set; }
 
@@ -147,13 +153,52 @@ internal sealed class Programmpunkt : IOrganisationsEigen
                     throw new ArgumentException("Keine Uhrzeit im Format HH:mm.", nameof(neuerWert));
                 }
 
-                Beginn = beginn;
+                BeginnSetzen(beginn);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(feld), feld, null);
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Story 6-2: „mitgeteilt“ (nach „Ja, informieren“ oder „Ausblenden“): Ist <paramref name="beginn"/> die aktuelle Uhrzeit, ist nichts mehr
+    /// mitzuteilen (auch wiederholt). Ohne offenen Hinweis ist das immer erledigt. Wurde der Punkt inzwischen erneut verschoben, bleibt der
+    /// Hinweis, und das Ergebnis ist <c>false</c>.
+    /// </summary>
+    public bool Mitgeteilt(TimeOnly? beginn)
+    {
+        if (MitgeteilterBeginn is null)
+        {
+            return true;
+        }
+
+        if (beginn != Beginn)
+        {
+            return false;
+        }
+
+        MitgeteilterBeginn = null;
+        return true;
+    }
+
+    /// <summary>
+    /// Story 6-2: Die erste Verschiebung merkt sich die alte Uhrzeit; wer auf sie zurückschiebt, hat nichts mehr mitzuteilen. Ohne alte Uhrzeit
+    /// gibt es nichts zu korrigieren.
+    /// </summary>
+    private void BeginnSetzen(TimeOnly? neu)
+    {
+        if (MitgeteilterBeginn is null && Beginn is { } alt && neu != alt)
+        {
+            MitgeteilterBeginn = alt;
+        }
+        else if (MitgeteilterBeginn is { } mitgeteilt && neu == mitgeteilt)
+        {
+            MitgeteilterBeginn = null;
+        }
+
+        Beginn = neu;
     }
 
     /// <summary>Gleiche Werte gleich darstellen: Text getrimmt (leer = <c>null</c>), Uhrzeit als <c>HH:mm</c>.</summary>

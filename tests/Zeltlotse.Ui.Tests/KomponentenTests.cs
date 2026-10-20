@@ -507,6 +507,61 @@ public sealed class KomponentenTests : BunitContext
             .Add(p => p.JaText, "Ja, informieren").Add(p => p.Bestaetigt, () => ja?.Invoke()));
 
     [Fact]
+    public void Inline_Bestaetigung_mit_Offen_beginnt_aufgeklappt_mit_Fokus_auf_Nein_und_Nein_klappt_zu()
+    {
+        var cut = Render<InlineBestaetigung>(ps => ps.Add(p => p.AusloeserText, "Jetzt informieren").Add(p => p.Satz, "Alle informieren?")
+            .Add(p => p.JaText, "Ja, informieren").Add(p => p.Offen, true));
+
+        Assert.Equal("Alle informieren?", cut.Find(".zl-bestaetigung__satz").TextContent);
+        var fokus = JSInterop.VerifyFocusAsyncInvoke();
+        Assert.Equal(cut.FindAll("button")[1].GetAttribute("blazor:elementReference"), ((ElementReference)fokus.Arguments[0]!).Id);
+
+        cut.FindAll("button")[1].Click();
+        Assert.Equal("Jetzt informieren", cut.Find("button").TextContent);
+
+        // Bleibt Offen auf true, klappt sie nicht von selbst wieder auf.
+        cut.Render(ps => ps.Add(p => p.Offen, true));
+        Assert.Empty(cut.FindAll(".zl-bestaetigung"));
+    }
+
+    [Fact]
+    public void Inline_Bestaetigung_klappt_auf_sobald_Offen_auf_true_wechselt()
+    {
+        var cut = Render<InlineBestaetigung>(ps => ps.Add(p => p.AusloeserText, "Jetzt informieren").Add(p => p.Satz, "Alle informieren?")
+            .Add(p => p.JaText, "Ja, informieren").Add(p => p.Offen, false));
+        Assert.Empty(cut.FindAll(".zl-bestaetigung"));
+
+        cut.Render(ps => ps.Add(p => p.Offen, true));
+
+        Assert.Single(cut.FindAll(".zl-bestaetigung"));
+        var fokus = JSInterop.VerifyFocusAsyncInvoke();
+        Assert.Equal(cut.FindAll("button")[1].GetAttribute("blazor:elementReference"), ((ElementReference)fokus.Arguments[0]!).Id);
+    }
+
+    // ---------- Hinweiszeile ----------
+
+    [Fact]
+    public void Hinweiszeile_zeigt_den_Text_klein_und_dahinter_die_Textknoepfe()
+    {
+        var cut = Render<Hinweiszeile>(ps => ps.Add(p => p.Text, "Geändert, noch nicht mitgeteilt")
+            .AddChildContent("<button class=\"elkw-btn elkw-btn--text\">Ausblenden</button>"));
+
+        var zeile = cut.Find(".zl-hinweiszeile");
+        Assert.Equal("Geändert, noch nicht mitgeteilt", zeile.QuerySelector(".zl-hinweiszeile__text")!.TextContent);
+        Assert.Equal("Ausblenden", zeile.QuerySelector("button")!.TextContent);
+        Assert.Empty(cut.FindAll(".elkw-status"));
+    }
+
+    [Fact]
+    public void Hinweiszeile_ohne_Knoepfe_ist_nur_der_Text()
+    {
+        var cut = Render<Hinweiszeile>(ps => ps.Add(p => p.Text, "Geändert, noch nicht mitgeteilt"));
+
+        Assert.Equal("Geändert, noch nicht mitgeteilt", cut.Find(".zl-hinweiszeile__text").TextContent);
+        Assert.Empty(cut.FindAll("button"));
+    }
+
+    [Fact]
     public void Inline_Bestaetigung_klappt_an_Ort_und_Stelle_auf_mit_Satz_Ja_ohne_Pfeil_und_Nein_als_Outline()
     {
         var cut = Bestaetigung();

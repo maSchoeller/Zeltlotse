@@ -33,6 +33,8 @@ Die Nachricht ins Feld **Nachricht** schreiben (höchstens 1000 Zeichen, Zeilenu
 
 Ist das Feld leer, steht der Fehler direkt am Feld. Nachrichten lassen sich nicht bearbeiten oder einzeln löschen; eine Korrektur ist eine neue Nachricht.
 
+Wer im Programm die Uhrzeit eines Programmpunkts ändert, kann von dort aus mit **Ja, informieren** eine vorbereitete Nachricht in „Alle“ schreiben, zum Beispiel „Mittagessen am Di 03.08.: 13:30 statt 13:00“. Wie das geht, steht unter [Alle informieren](/mitarbeitende/programm/#alle-informieren).
+
 ![Kanal „Alle“ am Handy: nach „Senden“ steht an Ort und Stelle „An 4 Personen senden?“ mit „Ja, senden“ und „Nein“](../../../assets/screenshots/kanaele-alle-handy.png)
 
 ![Kanal „Alle“ am Laptop mit der offenen Rückfrage „An 4 Personen senden?“](../../../assets/screenshots/kanaele-alle-laptop.png)

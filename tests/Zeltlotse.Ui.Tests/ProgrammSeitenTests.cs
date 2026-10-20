@@ -21,7 +21,8 @@ namespace Zeltlotse.Ui.Tests;
 /// Story 3-1 in der Web-App mit nachgebildetem Server: der Wochenraster (Spalten je Tag, Reiter je Tag mit vorgewähltem Tag, Namen der
 /// übernehmenden Personen aus Freizeit und Personenliste, „Ich übernehme“ und „Abgeben“ ohne Bestätigung, Konflikt, Anlegen mit Feldfehlern,
 /// nur lesbar nach dem Abschluss, nicht verfügbar), die Detailseite (Autosave von Titel und Uhrzeit, Löschen nur ohne Mahlzeit), der Knopf auf
-/// der Startseite und der Client.
+/// der Startseite und der Client. Story 6-2: „Alle informieren?“ nach dem Verschieben auf der Detailseite und der Hinweis „Geändert, noch nicht
+/// mitgeteilt“ mit „Jetzt informieren“ und „Ausblenden“ an Detailseite und Termin.
 /// </summary>
 public sealed class ProgrammSeitenTests : BunitContext
 {
@@ -67,8 +68,9 @@ public sealed class ProgrammSeitenTests : BunitContext
     private static HttpResponseMessage Json(object inhalt, HttpStatusCode status = HttpStatusCode.OK) =>
         NachgebildeterHandler.Json(status, JsonSerializer.Serialize(inhalt, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
 
-    private static object Punkt(Guid id, string tag, string? beginn, string titel, string? mahlzeit = null, Guid? von = null, bool meins = false, uint version = 5) =>
-        new { id, version, tag, beginn, titel, mahlzeit, uebernommenVon = von, meins };
+    private static object Punkt(
+        Guid id, string tag, string? beginn, string titel, string? mahlzeit = null, Guid? von = null, bool meins = false, uint version = 5, string? mitgeteilt = null) =>
+        new { id, version, tag, beginn, titel, mahlzeit, uebernommenVon = von, meins, mitgeteilterBeginn = mitgeteilt };
 
     /// <summary>Drei Tage (02. bis 04.08.2027) mit Mahlzeiten nur am ersten Tag und vier Programmpunkten.</summary>
     private static object Raster(params object[] zusaetzlich) => new
@@ -475,6 +477,337 @@ public sealed class ProgrammSeitenTests : BunitContext
         var cut = DetailRendern(Guid.CreateVersion7());
 
         Assert.Equal("Diese Seite ist nicht verfügbar.", cut.Find("h1").TextContent);
+    }
+
+    // ---------- Story 6-2: „Alle informieren?“ ----------
+
+    private static string KanalAllePfad => $"/api/freizeiten/{Freizeit}/kanaele/alle/nachrichten";
+
+    private static string MitgeteiltPfad(Guid punkt) => $"{PunktPfad(punkt)}/mitgeteilt";
+
+    /// <summary>Der Raster mit dem Mittagessen am Montag; ist <paramref name="mitgeteilt"/> gesetzt, ist es verschoben und nicht mitgeteilt.</summary>
+    private static object RasterMitMittag(string beginn, Func<string?> mitgeteilt) => new
+    {
+        ersterTag = "2027-08-02",
+        letzterTag = "2027-08-04",
+        punkte = new[] { Punkt(Mittag, "2027-08-02", beginn, "Mittagessen", "Mittagessen", version: 6, mitgeteilt: mitgeteilt()) },
+    };
+
+    /// <summary>Antworten mit verschobenem Mittagessen (13:30 statt 12:30); „mitgeteilt“ leert den Hinweis, „Alle“ nimmt die Nachricht an.</summary>
+    private void VerschobenAntworten(string phase = "InVorbereitung", HttpStatusCode senden = HttpStatusCode.Created)
+    {
+        string? mitgeteilt = "12:30";
+        Antworten(phase, () => Json(RasterMitMittag("13:30", () => mitgeteilt)));
+        _server.Bei(HttpMethod.Post, KanalAllePfad, () => senden == HttpStatusCode.Created
+            ? Json(new { id = Guid.CreateVersion7(), autorPersonId = Ich, text = "x", gesendetAm = "2026-10-13T08:00:00Z" }, HttpStatusCode.Created)
+            : new HttpResponseMessage(senden));
+        _server.Bei(HttpMethod.Post, MitgeteiltPfad(Mittag), () =>
+        {
+            mitgeteilt = null;
+            return new HttpResponseMessage(HttpStatusCode.NoContent);
+        });
+    }
+
+    [Fact]
+    public void Texte_der_Mitteilung_nennen_Titel_Tag_neue_und_alte_Uhrzeit()
+    {
+        var punkt = new Programmpunkt(Gelaendespiel, 5, new DateOnly(2027, 8, 3), "14:30", "Geländespiel", null, null, false, MitgeteilterBeginn: "14:00");
+
+        Assert.Equal("Geländespiel am Di 03.08.: 14:30 statt 14:00", ProgrammTexte.Mitteilung(punkt));
+        Assert.Equal("Alle informieren? „Geländespiel am Di 03.08.: 14:30 statt 14:00“", ProgrammTexte.MitteilenSatz(punkt));
+        Assert.Equal("Geländespiel am Di 03.08.: ohne Uhrzeit statt 14:00", ProgrammTexte.Mitteilung(punkt with { Beginn = null }));
+    }
+
+    [Fact]
+    public async Task Client_mitgeteilt_schickt_die_Uhrzeit_und_ordnet_die_Antworten_zu()
+    {
+        Antworten();
+        var client = Services.GetRequiredService<ProgrammApiClient>();
+        _server.Bei(HttpMethod.Post, MitgeteiltPfad(Mittag), () => new HttpResponseMessage(HttpStatusCode.NoContent));
+        _server.Bei(HttpMethod.Post, MitgeteiltPfad(Anreise), () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, Problemcodes.Konflikt));
+        _server.Bei(HttpMethod.Post, MitgeteiltPfad(Abbau), () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, Problemcodes.FreizeitAbgeschlossen));
+
+        Assert.Equal(ProgrammAktionErgebnis.Erfolg, await client.MitgeteiltAsync(Freizeit, Mittag, "13:30", Abbruch));
+        Assert.Equal("""{"beginn":"13:30"}""", _server.Anfragen.Last().Koerper);
+        Assert.Equal(ProgrammAktionErgebnis.Konflikt, await client.MitgeteiltAsync(Freizeit, Anreise, null, Abbruch));
+        Assert.Equal(ProgrammAktionErgebnis.Abgeschlossen, await client.MitgeteiltAsync(Freizeit, Abbau, "08:00", Abbruch));
+        Assert.Equal(ProgrammAktionErgebnis.Fehler, await client.MitgeteiltAsync(Freizeit, Lagerfeuer, "20:00", Abbruch));
+    }
+
+    [Fact]
+    public void Detailseite_nach_dem_Verschieben_klappt_Alle_informieren_mit_vorbereitetem_Text_auf_Fokus_auf_Nein()
+    {
+        Antworten();
+        _server.Bei(HttpMethod.Patch, PunktPfad(Mittag), () => Json(new { version = 6u, beginn = "13:30" }));
+        var cut = DetailRendern(Mittag);
+        Assert.Empty(cut.FindAll(".zl-hinweiszeile"));
+        _server.Bei(HttpMethod.Get, RasterPfad, () => Json(RasterMitMittag("13:30", () => "12:30")));
+
+        var uhrzeit = cut.Find("#programmpunkt-beginn");
+        uhrzeit.Input("13:30");
+        uhrzeit.Blur();
+
+        cut.WaitForAssertion(() => Assert.Equal("Alle informieren? „Mittagessen am Mo 02.08.: 13:30 statt 12:30“", cut.Find(".zl-bestaetigung__satz").TextContent));
+        Assert.Equal("Geändert, noch nicht mitgeteilt", cut.Find(".zl-hinweiszeile__text").TextContent);
+        Assert.Contains(cut.FindAll("button"), b => b.TextContent == "Ja, informieren");
+        var nein = cut.FindAll("button").Single(b => b.TextContent == "Nein");
+        cut.WaitForAssertion(() =>
+        {
+            var fokus = JSInterop.Invocations.Last(i => i.Identifier == "Blazor._internal.domWrapper.focus");
+            Assert.Equal(nein.GetAttribute("blazor:elementReference"), ((ElementReference)fokus.Arguments[0]!).Id);
+        });
+        // Das Verschieben selbst verschickt nichts.
+        Assert.DoesNotContain(_server.Anfragen, a => a.Pfad == KanalAllePfad || a.Pfad == MitgeteiltPfad(Mittag));
+    }
+
+    [Fact]
+    public void Detailseite_Ja_informieren_sendet_in_Alle_meldet_mitgeteilt_und_laedt_neu()
+    {
+        VerschobenAntworten();
+        var cut = DetailRendern(Mittag);
+        // Beim Öffnen der Seite ist nur der Hinweis da, die Bestätigung bleibt zu.
+        Assert.Empty(cut.FindAll(".zl-bestaetigung"));
+        Assert.Equal("Geändert, noch nicht mitgeteilt", cut.Find(".zl-hinweiszeile__text").TextContent);
+
+        cut.FindAll("button").Single(b => b.TextContent == "Jetzt informieren").Click();
+        cut.FindAll("button").Single(b => b.TextContent == "Ja, informieren").Click();
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".zl-hinweiszeile")));
+        var senden = _server.Anfragen.FindIndex(a => a.Methode == HttpMethod.Post && a.Pfad == KanalAllePfad);
+        var mitgeteilt = _server.Anfragen.FindIndex(a => a.Methode == HttpMethod.Post && a.Pfad == MitgeteiltPfad(Mittag));
+        var neuGeladen = _server.Anfragen.FindLastIndex(a => a.Methode == HttpMethod.Get && a.Pfad == RasterPfad);
+        Assert.True(senden >= 0 && senden < mitgeteilt && mitgeteilt < neuGeladen, $"{senden} {mitgeteilt} {neuGeladen}");
+        Assert.Equal("""{"text":"Mittagessen am Mo 02.08.: 13:30 statt 12:30","bestaetigt":true}""", _server.Anfragen[senden].Koerper);
+        Assert.Equal("""{"beginn":"13:30"}""", _server.Anfragen[mitgeteilt].Koerper);
+        Assert.Contains("Alle informiert: „Mittagessen am Mo 02.08.: 13:30 statt 12:30“", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Detailseite_Fehler_beim_Senden_meldet_es_und_der_Hinweis_bleibt()
+    {
+        VerschobenAntworten(senden: HttpStatusCode.InternalServerError);
+        var cut = DetailRendern(Mittag);
+
+        cut.FindAll("button").Single(b => b.TextContent == "Jetzt informieren").Click();
+        cut.FindAll("button").Single(b => b.TextContent == "Ja, informieren").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Die Nachricht wurde nicht gesendet.", cut.Find("[role=alert]").TextContent, StringComparison.Ordinal));
+        Assert.Equal("Geändert, noch nicht mitgeteilt", cut.Find(".zl-hinweiszeile__text").TextContent);
+        Assert.DoesNotContain(_server.Anfragen, a => a.Pfad == MitgeteiltPfad(Mittag));
+    }
+
+    [Fact]
+    public void Detailseite_Nein_schickt_nichts_der_Hinweis_bleibt_mit_Jetzt_informieren_und_Ausblenden()
+    {
+        VerschobenAntworten();
+        var cut = DetailRendern(Mittag);
+
+        cut.FindAll("button").Single(b => b.TextContent == "Jetzt informieren").Click();
+        cut.FindAll("button").Single(b => b.TextContent == "Nein").Click();
+
+        Assert.Empty(cut.FindAll(".zl-bestaetigung"));
+        Assert.Equal("Geändert, noch nicht mitgeteilt", cut.Find(".zl-hinweiszeile__text").TextContent);
+        Assert.Equal(["Jetzt informieren", "Ausblenden"], cut.FindAll(".zl-hinweiszeile button").Select(b => b.TextContent));
+        Assert.DoesNotContain(_server.Anfragen, a => a.Methode == HttpMethod.Post);
+    }
+
+    [Fact]
+    public void Detailseite_Ausblenden_meldet_nur_mitgeteilt()
+    {
+        VerschobenAntworten();
+        var cut = DetailRendern(Mittag);
+
+        cut.FindAll("button").Single(b => b.TextContent == "Ausblenden").Click();
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".zl-hinweiszeile")));
+        Assert.Single(_server.Anfragen, a => a.Methode == HttpMethod.Post);
+        Assert.Single(_server.Anfragen, a => a.Pfad == MitgeteiltPfad(Mittag));
+    }
+
+    [Fact]
+    public void Detailseite_abgeschlossen_zeigt_den_Hinweis_ohne_Knoepfe()
+    {
+        VerschobenAntworten(phase: "Gelaufen");
+
+        var cut = DetailRendern(Mittag);
+
+        Assert.Equal("Geändert, noch nicht mitgeteilt", cut.Find(".zl-hinweiszeile__text").TextContent);
+        Assert.Empty(cut.FindAll("button"));
+    }
+
+    [Fact]
+    public void Wochenraster_zeigt_den_Hinweis_am_Termin_Ja_informieren_sendet_meldet_mitgeteilt_und_laedt_neu()
+    {
+        VerschobenAntworten();
+        var cut = RasterRendern();
+        var termin = Termin(Spalte(cut, "Mo 02.08."), "Mittagessen");
+        Assert.Equal("Geändert, noch nicht mitgeteilt", termin.QuerySelector(".zl-hinweiszeile__text")!.TextContent);
+        Assert.Equal(["Jetzt informieren", "Ausblenden"], termin.QuerySelectorAll(".zl-hinweiszeile button").Select(b => b.TextContent));
+
+        termin.QuerySelectorAll("button").Single(b => b.TextContent == "Jetzt informieren").Click();
+        termin = Termin(Spalte(cut, "Mo 02.08."), "Mittagessen");
+        Assert.Equal("Alle informieren? „Mittagessen am Mo 02.08.: 13:30 statt 12:30“", termin.QuerySelector(".zl-bestaetigung__satz")!.TextContent);
+        termin.QuerySelectorAll("button").Single(b => b.TextContent == "Ja, informieren").Click();
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".zl-hinweiszeile")));
+        Assert.Equal([KanalAllePfad, MitgeteiltPfad(Mittag)], _server.Anfragen.Where(a => a.Methode == HttpMethod.Post).Select(a => a.Pfad));
+        Assert.Contains("Alle informiert: „Mittagessen am Mo 02.08.: 13:30 statt 12:30“", cut.Find("[role=status]").TextContent, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Wochenraster_Ausblenden_meldet_nur_mitgeteilt()
+    {
+        VerschobenAntworten();
+        var cut = RasterRendern();
+
+        Termin(Spalte(cut, "Mo 02.08."), "Mittagessen").QuerySelectorAll("button").Single(b => b.TextContent == "Ausblenden").Click();
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".zl-hinweiszeile")));
+        Assert.Equal([MitgeteiltPfad(Mittag)], _server.Anfragen.Where(a => a.Methode == HttpMethod.Post).Select(a => a.Pfad));
+    }
+
+    [Fact]
+    public void Wochenraster_abgeschlossen_zeigt_den_Hinweis_ohne_Knoepfe()
+    {
+        VerschobenAntworten(phase: "Gelaufen");
+
+        var cut = RasterRendern();
+
+        var termin = Termin(Spalte(cut, "Mo 02.08."), "Mittagessen");
+        Assert.Equal("Geändert, noch nicht mitgeteilt", termin.QuerySelector(".zl-hinweiszeile__text")!.TextContent);
+        Assert.Empty(termin.QuerySelectorAll("button"));
+    }
+
+    [Fact]
+    public void Detailseite_ohne_Hinweis_nach_dem_Speichern_bleibt_Gespeichert_mit_Rueckgaengig_stehen()
+    {
+        Antworten();
+        _server.Bei(HttpMethod.Patch, PunktPfad(Lagerfeuer), () => Json(new { version = 6u, beginn = "20:30" }));
+        var cut = DetailRendern(Lagerfeuer);
+
+        var uhrzeit = cut.Find("#programmpunkt-beginn");
+        uhrzeit.Input("20:30");
+        uhrzeit.Blur();
+
+        cut.WaitForAssertion(() => Assert.Equal(2, _server.Anfragen.Count(a => a.Methode == HttpMethod.Get && a.Pfad == RasterPfad)));
+        cut.WaitForAssertion(() => Assert.Contains(cut.FindAll("button"), b => b.TextContent == "Rückgängig"));
+        Assert.Empty(cut.FindAll(".zl-hinweiszeile"));
+    }
+
+    [Fact]
+    public void Detailseite_ein_neuer_Titel_steht_im_vorbereiteten_Text()
+    {
+        VerschobenAntworten();
+        _server.Bei(HttpMethod.Patch, PunktPfad(Mittag), () => Json(new { version = 7u, titel = "Grillen" }));
+        var cut = DetailRendern(Mittag);
+
+        var titel = cut.Find("#programmpunkt-titel");
+        titel.Input("Grillen");
+        titel.Blur();
+        cut.WaitForAssertion(() => Assert.Contains(_server.Anfragen, a => a.Methode == HttpMethod.Patch));
+        cut.FindAll("button").Single(b => b.TextContent == "Jetzt informieren").Click();
+
+        Assert.Equal("Alle informieren? „Grillen am Mo 02.08.: 13:30 statt 12:30“", cut.Find(".zl-bestaetigung__satz").TextContent);
+    }
+
+    private void JaInformieren(IRenderedComponent<ProgrammpunktSeite> cut)
+    {
+        cut.FindAll("button").Single(b => b.TextContent == "Jetzt informieren").Click();
+        cut.FindAll("button").Single(b => b.TextContent == "Ja, informieren").Click();
+    }
+
+    [Fact]
+    public void Detailseite_veralteter_Punkt_sendet_nichts_meldet_es_und_laedt_neu()
+    {
+        VerschobenAntworten();
+        var cut = DetailRendern(Mittag);
+        // Inzwischen hat jemand anderes auf 14:00 verschoben.
+        _server.Bei(HttpMethod.Get, RasterPfad, () => Json(RasterMitMittag("14:00", () => "12:30")));
+
+        JaInformieren(cut);
+
+        cut.WaitForAssertion(() => Assert.Contains(MitteilungsHinweis.ErneutVerschobenText, cut.Find("[role=alert]").TextContent, StringComparison.Ordinal));
+        Assert.DoesNotContain(_server.Anfragen, a => a.Methode == HttpMethod.Post);
+        cut.FindAll("button").Single(b => b.TextContent == "Jetzt informieren").Click();
+        Assert.Equal("Alle informieren? „Mittagessen am Mo 02.08.: 14:00 statt 12:30“", cut.Find(".zl-bestaetigung__satz").TextContent);
+    }
+
+    [Fact]
+    public void Detailseite_mitgeteilt_409_nach_dem_Senden_meldet_erneut_verschoben()
+    {
+        VerschobenAntworten();
+        _server.Bei(HttpMethod.Post, MitgeteiltPfad(Mittag), () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, Problemcodes.Konflikt));
+        var cut = DetailRendern(Mittag);
+
+        JaInformieren(cut);
+
+        cut.WaitForAssertion(() => Assert.Contains(MitteilungsHinweis.ErneutVerschobenText, cut.Find("[role=alert]").TextContent, StringComparison.Ordinal));
+        Assert.Single(_server.Anfragen, a => a.Methode == HttpMethod.Post && a.Pfad == KanalAllePfad);
+    }
+
+    [Fact]
+    public void Detailseite_gesendet_aber_mitgeteilt_scheitert_meldet_es_ohne_zweites_Senden_anzubieten()
+    {
+        VerschobenAntworten();
+        _server.Bei(r => r.Method == HttpMethod.Post && r.RequestUri!.AbsolutePath == MitgeteiltPfad(Mittag), _ => throw new HttpRequestException("weg"));
+        var cut = DetailRendern(Mittag);
+
+        JaInformieren(cut);
+
+        cut.WaitForAssertion(() => Assert.Contains(MitteilungsHinweis.GesendetHinweisBleibtText, cut.Find("[role=alert]").TextContent, StringComparison.Ordinal));
+        Assert.DoesNotContain(MitteilungsHinweis.NichtGesendetText, cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Detailseite_verschieben_Nein_erneut_verschieben_klappt_die_Bestaetigung_mit_neuem_Text_wieder_auf()
+    {
+        var (beginn, mitgeteilt) = ("12:30", (string?)null);
+        Antworten(raster: () => Json(RasterMitMittag(beginn, () => mitgeteilt)));
+        _server.BeiDerReihe(HttpMethod.Patch, PunktPfad(Mittag),
+            () => Json(new { version = 6u, beginn = "13:30" }), () => Json(new { version = 6u, beginn = "14:00" }));
+        var cut = DetailRendern(Mittag);
+
+        (beginn, mitgeteilt) = ("13:30", "12:30");
+        cut.Find("#programmpunkt-beginn").Input("13:30");
+        cut.Find("#programmpunkt-beginn").Blur();
+        cut.WaitForAssertion(() => Assert.Equal("Alle informieren? „Mittagessen am Mo 02.08.: 13:30 statt 12:30“", cut.Find(".zl-bestaetigung__satz").TextContent));
+        cut.FindAll("button").Single(b => b.TextContent == "Nein").Click();
+        Assert.Empty(cut.FindAll(".zl-bestaetigung"));
+
+        beginn = "14:00";
+        cut.Find("#programmpunkt-beginn").Input("14:00");
+        cut.Find("#programmpunkt-beginn").Blur();
+
+        cut.WaitForAssertion(() => Assert.Equal("Alle informieren? „Mittagessen am Mo 02.08.: 14:00 statt 12:30“", cut.Find(".zl-bestaetigung__satz").TextContent));
+    }
+
+    [Fact]
+    public void Detailseite_zurueckschieben_auf_die_mitgeteilte_Uhrzeit_nimmt_den_Hinweis_weg()
+    {
+        VerschobenAntworten();
+        _server.Bei(HttpMethod.Patch, PunktPfad(Mittag), () => Json(new { version = 7u, beginn = "12:30" }));
+        var cut = DetailRendern(Mittag);
+        Assert.Single(cut.FindAll(".zl-hinweiszeile"));
+        _server.Bei(HttpMethod.Get, RasterPfad, () => Json(RasterMitMittag("12:30", () => null)));
+
+        cut.Find("#programmpunkt-beginn").Input("12:30");
+        cut.Find("#programmpunkt-beginn").Blur();
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".zl-hinweiszeile")));
+    }
+
+    [Fact]
+    public void Detailseite_Ausblenden_409_meldet_erneut_verschoben_und_laedt_neu()
+    {
+        VerschobenAntworten();
+        _server.Bei(HttpMethod.Post, MitgeteiltPfad(Mittag), () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, Problemcodes.Konflikt));
+        var cut = DetailRendern(Mittag);
+        var geladen = _server.Anfragen.Count(a => a.Methode == HttpMethod.Get && a.Pfad == RasterPfad);
+
+        cut.FindAll("button").Single(b => b.TextContent == "Ausblenden").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Der Programmpunkt wurde inzwischen erneut verschoben.", cut.Find("[role=alert]").TextContent, StringComparison.Ordinal));
+        Assert.Equal(geladen + 1, _server.Anfragen.Count(a => a.Methode == HttpMethod.Get && a.Pfad == RasterPfad));
     }
 
     // ---------- Startseite ----------

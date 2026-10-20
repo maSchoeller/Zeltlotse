@@ -30,6 +30,10 @@ public sealed record Wochenraster(DateOnly ErsterTag, DateOnly LetzterTag, IRead
 /// <param name="UebernommenVon">Die Person, die den Punkt übernommen hat; den Namen setzt der Client zusammen (AD-2).</param>
 /// <param name="Meins">Die angemeldete Person hat den Punkt übernommen.</param>
 /// <param name="InBibliothek">Story 3-6: Der Punkt ist mit einem noch vorhandenen Eintrag der Programmbibliothek verknüpft (abgelegt).</param>
+/// <param name="MitgeteilterBeginn">
+/// Story 6-2 (FR-62): Gesetzt heißt „Geändert, noch nicht mitgeteilt“: die zuletzt mitgeteilte Uhrzeit als <c>HH:mm</c> (der Wert für „statt …“).
+/// Bei einem Punkt, der vorher ohne Uhrzeit war, entsteht kein Hinweis.
+/// </param>
 public sealed record Programmpunkt(
     Guid Id,
     uint Version,
@@ -39,7 +43,14 @@ public sealed record Programmpunkt(
     Mahlzeit? Mahlzeit,
     Guid? UebernommenVon,
     bool Meins,
-    bool InBibliothek = false);
+    bool InBibliothek = false,
+    string? MitgeteilterBeginn = null);
+
+/// <summary>
+/// Story 6-2: Körper von <c>POST …/programm/punkte/{punktId}/mitgeteilt</c> („Ja, informieren“ nach dem Senden in „Alle“ oder „Ausblenden“).
+/// </summary>
+/// <param name="Beginn">Die mitgeteilte Uhrzeit als <c>HH:mm</c>, leer heißt ohne Uhrzeit; der Hinweis verschwindet nur, wenn sie noch aktuell ist.</param>
+public sealed record ProgrammpunktMitgeteilt(string? Beginn);
 
 /// <summary>Story 3-1: Körper von <c>POST /api/freizeiten/{freizeitId}/programm/punkte</c>: nur der Titel ist nötig (NS-5), dazu der Tag.</summary>
 /// <param name="Titel">1 bis <see cref="ProgrammpunktFelder.TitelMaximaleLaenge"/> Zeichen; wird getrimmt.</param>

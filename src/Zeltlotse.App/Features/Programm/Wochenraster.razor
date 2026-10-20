@@ -16,7 +16,9 @@
    ohne Bestätigung (nur für sich selbst). Namen der übernehmenden Personen setzt der Client zusammen (AD-2: Leitung aus der Freizeit, Team
    aus der Personenliste; fehlt ein Name, nur „Übernommen“). Darunter „Programmpunkt anlegen“ (Titel, Tag, Uhrzeit). In der Phase „gelaufen“
    nur lesbar. Kontext oder Raster nicht verfügbar → „Diese Seite ist nicht verfügbar.“; scheitern Freizeit oder Personenliste, fehlen nur
-   die Namen. Story 3-2: Link „Materialliste“ über dem Raster. Story 3-6: daneben der Link „Programmbibliothek“. *@
+   die Namen. Story 3-2: Link „Materialliste“ über dem Raster. Story 3-6: daneben der Link „Programmbibliothek“. Story 6-2: Am verschobenen,
+   nicht mitgeteilten Termin steht „Geändert, noch nicht mitgeteilt“ mit „Jetzt informieren“ und „Ausblenden“ (nach dem Abschluss ohne Knöpfe);
+   danach lädt der Raster neu, nach „Ja, informieren“ mit der Meldung „Alle informiert: …“. *@
 <PageTitle>Programm – Zeltlotse</PageTitle>
 
 @if (_nichtVerfuegbar)
@@ -52,7 +54,7 @@ else
         }
         @if (_meldung is not null)
         {
-            <Meldung Titel="@(_meldungFehler ? "Fehler" : "Gespeichert")" Art="@(_meldungFehler ? MeldungArt.Fehler : MeldungArt.Erfolg)">
+            <Meldung Titel="@(_meldungFehler ? "Fehler" : _meldungTitel)" Art="@(_meldungFehler ? MeldungArt.Fehler : MeldungArt.Erfolg)">
                 <p>@_meldung</p>
             </Meldung>
         }
@@ -93,6 +95,7 @@ else
     private bool _uebertraegt;
     private string? _meldung;
     private bool _meldungFehler;
+    private string _meldungTitel = "Gespeichert";
     private string? _titel;
     private string? _tagText;
     private string? _beginn;
@@ -130,6 +133,7 @@ else
         {
             <Termin @key="punkt.Id" Uhrzeit="@punkt.Beginn" Titel="@punkt.Titel" Href="@ProgrammTexte.DetailZiel(FreizeitId, punkt.Id)"
                     StatusWort="@ProgrammTexte.StatusWort(punkt, _namen)" StatusArt="StatusArt.Erfolg">
+                <MitteilungsHinweis FreizeitId="FreizeitId" Punkt="punkt" NurLesen="Abgeschlossen" Erledigt="MitgeteiltAsync" />
                 @if (!Abgeschlossen && punkt.UebernommenVon is null)
                 {
                     <Knopf Art="KnopfArt.Outline" Deaktiviert="@_uebertraegt" @onclick="@(() => UebergangAsync(punkt, uebernehmen: true))">Ich übernehme</Knopf>
@@ -269,7 +273,7 @@ else
                 case ProgrammAktionErgebnis.Erfolg:
                     _raster = await ProgrammApi.LadenAsync(FreizeitId) ?? _raster;
                     _meldung = $"Programmpunkt „{aktion.Punkt!.Titel}“ am {Anzeige.TagKurz(aktion.Punkt.Tag)} angelegt.";
-                    _meldungFehler = false;
+                    (_meldungFehler, _meldungTitel) = (false, "Gespeichert");
                     (_titel, _beginn) = (null, null);
                     // Am Handy auf den Tag des neuen Punkts wechseln, sonst bliebe er unsichtbar.
                     if (aktion.Punkt.Tag != _tag)
@@ -304,4 +308,22 @@ else
     }
 
     private void Fehler(string text) => (_meldung, _meldungFehler) = (text, true);
+
+    /// <summary>Story 6-2: Nach „Ja, informieren“ (mit Text) oder „Ausblenden“ den Raster neu laden.</summary>
+    private async Task MitgeteiltAsync(string? gesendet)
+    {
+        _meldung = null;
+        try
+        {
+            _raster = await ProgrammApi.LadenAsync(FreizeitId) ?? _raster;
+            if (gesendet is not null)
+            {
+                (_meldung, _meldungFehler, _meldungTitel) = (ProgrammTexte.InformiertText(gesendet), false, "Gesendet");
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            Fehler(AnmeldungAbschluss.FehlerText);
+        }
+    }
 }

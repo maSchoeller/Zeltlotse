@@ -258,6 +258,8 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 "DELETE /api/freizeiten/{freizeitId:guid}/programm/punkte/{punktId:guid}",
                 "POST /api/freizeiten/{freizeitId:guid}/programm/punkte/{punktId:guid}/uebernehmen",
                 "POST /api/freizeiten/{freizeitId:guid}/programm/punkte/{punktId:guid}/abgeben",
+                // Story 6-2: Verschiebung mitgeteilt oder Hinweis ausgeblendet (Programm), für Leitung und Team.
+                "POST /api/freizeiten/{freizeitId:guid}/programm/punkte/{punktId:guid}/mitgeteilt",
                 // Story 3-2: Material am Programmpunkt (Programm), alles für Leitung und Team.
                 "GET /api/freizeiten/{freizeitId:guid}/programm/material",
                 "POST /api/freizeiten/{freizeitId:guid}/programm/punkte/{punktId:guid}/material",

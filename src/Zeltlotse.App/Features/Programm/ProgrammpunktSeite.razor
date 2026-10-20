@@ -20,7 +20,10 @@
    Story 3-5: Card „Aufgaben“ mit den Aufgaben des Punkts (AufgabeZeile, ohne Hinweis auf den Punkt), ohne Aufgaben „Noch keine Aufgaben.“, darunter
    das Formular „Aufgabe hinzufügen“ (nur der Titel; Phase Vorbereitung). Scheitert der Abruf, zeigt die Card nur eine Meldung.
    Story 3-6: Card „Programmbibliothek“ (nicht bei Mahlzeiten) mit „In Bibliothek ablegen“ (ein Tipp, nicht nach dem Abschluss); ist der Punkt
-   abgelegt, steht dort „Steht in der Programmbibliothek der Organisation.“ Nach dem Abschluss ohne Ablage entfällt die Card. *@
+   abgelegt, steht dort „Steht in der Programmbibliothek der Organisation.“ Nach dem Abschluss ohne Ablage entfällt die Card.
+   Story 6-2: Nach dem Speichern der Uhrzeit lädt die Seite den Punkt neu; ist er verschoben und nicht mitgeteilt, steht unter der Uhrzeit
+   „Geändert, noch nicht mitgeteilt“ mit aufgeklappter Bestätigung „Alle informieren? „…““ (Fokus auf „Nein“). Beim Öffnen der Seite steht nur
+   der Hinweis da; nach dem Abschluss ohne Knöpfe. Nach „Ja, informieren“ steht die Meldung „Alle informiert: …“. *@
 <PageTitle>Programmpunkt – Zeltlotse</PageTitle>
 
 @if (_nichtVerfuegbar)
@@ -59,11 +62,18 @@ else
                 <p>@ProgrammTexte.AbgeschlossenText</p>
             </Meldung>
             <DetailsListe Eintraege="@([new DetailsEintrag("Titel", _punkt.Titel), new DetailsEintrag("Uhrzeit", _punkt.Beginn ?? "ohne Uhrzeit")])" />
+            <MitteilungsHinweis FreizeitId="FreizeitId" Punkt="_punkt" NurLesen="true" />
         }
         @if (_meldung is not null)
         {
             <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
                 <p>@_meldung</p>
+            </Meldung>
+        }
+        @if (_informiert is not null)
+        {
+            <Meldung Titel="Gesendet" Art="MeldungArt.Erfolg">
+                <p>@_informiert</p>
             </Meldung>
         }
         @if (ProgrammTexte.StatusWort(_punkt, _namen) is { } status)
@@ -83,10 +93,11 @@ else
         {
             <Card Titel="Bearbeiten">
                 <AutosaveFeld Label="Titel" Id="programmpunkt-titel" Feldname="@ProgrammpunktFelder.Titel" Pfad="@Pfad" Wert="@_punkt.Titel"
-                              Version="@_punkt.Version" Hinweis="@($"Höchstens {ProgrammpunktFelder.TitelMaximaleLaenge} Zeichen")" NeuLaden="NeuLadenAsync" />
+                              Version="@_punkt.Version" Hinweis="@($"Höchstens {ProgrammpunktFelder.TitelMaximaleLaenge} Zeichen")" NeuLaden="NeuLadenAsync" Gespeichert="TitelGespeichert" />
                 <AutosaveFeld Label="Uhrzeit" Id="programmpunkt-beginn" Typ="time" Feldname="@ProgrammpunktFelder.Beginn" Pfad="@Pfad"
                               Wert="@_punkt.Beginn" Version="@_punkt.Version" Hinweis="Ohne Uhrzeit steht der Programmpunkt am Ende des Tages."
-                              NeuLaden="NeuLadenAsync" />
+                              NeuLaden="NeuLadenAsync" Gespeichert="UhrzeitGespeichertAsync" />
+                <MitteilungsHinweis @key="_aufklappen" FreizeitId="FreizeitId" Punkt="HinweisPunkt" Offen="@(_aufklappen > 0)" Erledigt="MitgeteiltAsync" />
             </Card>
         }
         <Card Titel="Material" Id="material">
@@ -196,6 +207,9 @@ else
     private List<Aufgabe>? _aufgaben = [];
     private string? _aufgabeTitel;
     private string? _aufgabeTitelFehler;
+    private int _aufklappen;
+    private string? _gespeicherterTitel;
+    private string? _informiert;
 
     [Parameter] public Guid FreizeitId { get; set; }
 
@@ -248,11 +262,52 @@ else
         try
         {
             _punkt = (await ProgrammApi.LadenAsync(FreizeitId))?.Punkte.FirstOrDefault(p => p.Id == PunktId) ?? _punkt;
+            _gespeicherterTitel = null;
         }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
         {
             _meldung = AnmeldungAbschluss.FehlerText;
         }
+    }
+
+    /// <summary>
+    /// Story 6-2: Nach dem Speichern der Uhrzeit den Punkt neu laden; ist er nun verschoben und nicht mitgeteilt, klappt „Alle informieren?“ auf
+    /// (ein neuer Schlüssel baut die Bestätigung neu auf, auch beim zweiten Verschieben).
+    /// </summary>
+    private async Task UhrzeitGespeichertAsync(string? _)
+    {
+        _informiert = null;
+        try
+        {
+            var neu = (await ProgrammApi.LadenAsync(FreizeitId))?.Punkte.FirstOrDefault(p => p.Id == PunktId);
+            // Ohne Hinweis vorher und nachher bleibt der Punkt, wie er ist: so bleiben „Gespeichert · Rückgängig“ an den Feldern stehen.
+            if (neu is null || (neu.MitgeteilterBeginn is null && _punkt?.MitgeteilterBeginn is null))
+            {
+                return;
+            }
+
+            (_punkt, _gespeicherterTitel) = (neu, null);
+            if (neu.MitgeteilterBeginn is not null)
+            {
+                _aufklappen++;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Story 6-2: Der vorbereitete Text nennt den zuletzt gespeicherten Titel, ohne die Felder neu aufzubauen.</summary>
+    private void TitelGespeichert(string? titel) => _gespeicherterTitel = titel;
+
+    private Programmpunkt HinweisPunkt => _gespeicherterTitel is { } titel ? _punkt! with { Titel = titel } : _punkt!;
+
+    /// <summary>Story 6-2: Nach „Ja, informieren“ (mit Text) oder „Ausblenden“ den Punkt neu laden.</summary>
+    private async Task MitgeteiltAsync(string? gesendet)
+    {
+        _informiert = gesendet is null ? null : ProgrammTexte.InformiertText(gesendet);
+        await NeuLadenAsync();
     }
 
     /// <summary>Story 3-5: Scheitern die Aufgaben (Fehler oder nicht verfügbar), zeigt die Card nur diese Meldung.</summary>

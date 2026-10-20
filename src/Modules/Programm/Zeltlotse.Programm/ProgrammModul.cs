@@ -49,6 +49,7 @@ public static class ProgrammModul
     /// Aufgaben-Vorlagen der Organisation unter <c>/api/organisationen/{orgId}/aufgaben-vorlagen</c> nur für den Org-Admin. Story 3-6: die
     /// Programmbibliothek: Programmpunkt ablegen, Bibliothek lesen und Einträge übernehmen unter <c>…/programm</c> für Leitung und Team; die
     /// Bibliothek der Organisation unter <c>/api/organisationen/{orgId}/programmbibliothek</c> (lesen, Einträge entfernen) nur für den Org-Admin.
+    /// Story 6-2: „mitgeteilt“ an einem verschobenen Programmpunkt für Leitung und Team.
     /// </summary>
     public static IEndpointRouteBuilder MapProgrammEndpoints(this IEndpointRouteBuilder api)
     {
@@ -59,6 +60,7 @@ public static class ProgrammModul
         programm.MapDelete("/punkte/{punktId:guid}", ProgrammpunktLoeschenEndpunkt.Loeschen).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
         programm.MapPost("/punkte/{punktId:guid}/uebernehmen", ProgrammpunktUebergangEndpunkt.Uebernehmen).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
         programm.MapPost("/punkte/{punktId:guid}/abgeben", ProgrammpunktUebergangEndpunkt.Abgeben).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
+        programm.MapPost("/punkte/{punktId:guid}/mitgeteilt", ProgrammpunktMitgeteiltEndpunkt.Mitgeteilt).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
         programm.MapGet("/material", MaterialListeLadenEndpunkt.Laden).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
         programm.MapPost("/punkte/{punktId:guid}/material", MaterialAnlegenEndpunkt.Anlegen).NurFreizeitRolle(ProgrammRechte.Mitarbeit);
         programm.MapPatch("/material/{materialId:guid}", MaterialFeldAendernEndpunkt.Aendern).NurFreizeitRolle(ProgrammRechte.Mitarbeit);

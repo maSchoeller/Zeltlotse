@@ -1,0 +1,15 @@
+@* Hinweiszeile (DESIGN.md → Hinweis „nicht mitgeteilt“, Story 6-2): kleine Zeile in text-muted ohne Statusrot, z. B. „Geändert, noch nicht
+   mitgeteilt“, dahinter Platz für Textknöpfe („Jetzt informieren“, „Ausblenden“). Eine aufgeklappte Inline-Bestätigung darin nimmt die ganze
+   Breite ein. Statisch tauglich. *@
+<div class="zl-hinweiszeile">
+    <p class="zl-hinweiszeile__text">@Text</p>
+    @ChildContent
+</div>
+
+@code {
+    /// <summary>Der Hinweis, z. B. „Geändert, noch nicht mitgeteilt“.</summary>
+    [Parameter, EditorRequired] public string Text { get; set; } = "";
+
+    /// <summary>Textknöpfe hinter dem Hinweis; ohne Angabe nur der Text (z. B. nach dem Abschluss).</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

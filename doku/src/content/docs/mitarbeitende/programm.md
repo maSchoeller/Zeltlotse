@@ -48,13 +48,33 @@ Ein Tipp auf den Titel öffnet die Seite **Programmpunkt**. Sie zeigt den Tag un
 
 In der Card **Bearbeiten** lassen sich **Titel** und **Uhrzeit** ändern. Zeltlotse speichert beim Verlassen des Felds; darunter steht „Gespeichert“ mit „Rückgängig“. Hat jemand anderes dasselbe Feld inzwischen geändert, steht dort „Inzwischen geändert – neu laden?“.
 
-**Verschieben** heißt: die Uhrzeit ändern. Den Tag eines Programmpunkts ändert Zeltlotse nicht; für einen anderen Tag einen neuen Programmpunkt anlegen und den alten löschen.
+**Verschieben** heißt: die Uhrzeit ändern. Den Tag eines Programmpunkts ändert Zeltlotse nicht; für einen anderen Tag einen neuen Programmpunkt anlegen und den alten löschen. Nach dem Verschieben fragt Zeltlotse, ob alle informiert werden sollen (siehe [Alle informieren](#alle-informieren)).
 
 **Programmpunkt löschen** klappt eine Rückfrage auf („Diesen Programmpunkt löschen?“ – „Ja, löschen“ / „Nein“). Danach führt Zeltlotse zurück zum Wochenraster dieses Tages. Mahlzeiten haben keinen Löschen-Knopf.
 
 ![Seite des Programmpunkts „Lagerfeuer“ am Handy: Montag, 2. August 2027, übernommen von Lea Feuerstein, darunter die Card „Bearbeiten“ mit Titel „Lagerfeuer“ und Uhrzeit 20:00](../../../assets/screenshots/programmpunkt-handy.png)
 
 ![Seite des Programmpunkts „Lagerfeuer“ am Laptop mit der Card „Bearbeiten“ und darunter der Card „Material“ mit dem Feuerholz](../../../assets/screenshots/programmpunkt-laptop.png)
+
+## Alle informieren
+
+Wer die Uhrzeit eines Programmpunkts ändert, zum Beispiel das Mittagessen von 13:00 auf 13:30, bekommt direkt unter dem Feld **Uhrzeit** eine Rückfrage: „Alle informieren? „Mittagessen am Di 03.08.: 13:30 statt 13:00““. Den Text bereitet Zeltlotse vor, mit Titel, Tag, neuer und alter Uhrzeit. Wurde die Uhrzeit entfernt, steht dort „ohne Uhrzeit statt 13:00“.
+
+- **Ja, informieren** schreibt genau diesen Text in den Kanal **Alle**. Er geht wie jede Nachricht dort als Benachrichtigung aufs Handy (siehe [Kanäle Team und Alle](/mitarbeitende/kanaele/)). Danach steht oben „Alle informiert: …“, und der Hinweis am Programmpunkt verschwindet.
+- **Nein** schickt nichts. Auch wer die Seite einfach verlässt, schickt nichts.
+
+Weil die Seite nach dem Verschieben den Programmpunkt neu lädt, steht unter **Uhrzeit** danach kein „Rückgängig“. Wer die Verschiebung zurücknehmen will, trägt die alte Uhrzeit wieder ein; damit verschwindet auch der Hinweis.
+
+Das Ändern der Uhrzeit allein verschickt nie etwas. Solange niemand informiert hat, steht am Programmpunkt klein **„Geändert, noch nicht mitgeteilt“** – auf der Seite des Programmpunkts und am Termin im Wochenraster, für alle aus Leitung und Team, auch nach dem Neuladen. Dahinter stehen zwei Knöpfe:
+
+- **Jetzt informieren** klappt dieselbe Rückfrage wieder auf.
+- **Ausblenden** entfernt den Hinweis, ohne etwas zu schicken, zum Beispiel wenn alle schon mündlich Bescheid wissen.
+
+Wird der Punkt noch einmal verschoben, bevor jemand informiert hat, nennt der Text weiter die zuletzt mitgeteilte Uhrzeit („14:00 statt 13:00“). Wer ihn auf die alte Uhrzeit zurückschiebt, hat nichts mehr mitzuteilen; der Hinweis verschwindet von selbst. Bekommt ein Programmpunkt zum ersten Mal eine Uhrzeit, ist das keine Verschiebung, und es kommt keine Rückfrage. Eine Änderung am Titel löst ebenfalls keine Rückfrage aus. Den vorbereiteten Text kann man in der Rückfrage nicht ändern; eine eigene Nachricht schreibt man direkt im Kanal **Alle**.
+
+![Wochenraster am Handy, Dienstag 3. August: am Geländespiel um 14:30 steht „Geändert, noch nicht mitgeteilt“, darunter die aufgeklappte Rückfrage „Alle informieren? „Geländespiel am Di 03.08.: 14:30 statt 14:00““ mit „Ja, informieren“ und „Nein“](../../../assets/screenshots/programm-mitteilen-handy.png)
+
+![Wochenraster am Laptop: in der Spalte des Dienstags steht unter dem Geländespiel dieselbe aufgeklappte Rückfrage, darunter der Textknopf „Ausblenden“ und, davon getrennt, der Knopf „Abgeben“ des Termins](../../../assets/screenshots/programm-mitteilen-laptop.png)
 
 ## Material am Programmpunkt
 
@@ -68,10 +88,10 @@ Unter der Card **Aufgaben** (nicht bei Mahlzeiten) steht die Card **Programmbibl
 
 ## Nach dem Abschluss
 
-Nach dem Abschluss der Freizeit ist das Programm nur lesbar: Oben steht „Diese Freizeit ist abgeschlossen und nur lesbar.“; die Knöpfe, die Card „Programmpunkt anlegen“ und die Felder zum Bearbeiten fehlen. Die Seite eines Programmpunkts nennt Titel und Uhrzeit dann als Liste.
+Nach dem Abschluss der Freizeit ist das Programm nur lesbar: Oben steht „Diese Freizeit ist abgeschlossen und nur lesbar.“; die Knöpfe, die Card „Programmpunkt anlegen“ und die Felder zum Bearbeiten fehlen. Die Seite eines Programmpunkts nennt Titel und Uhrzeit dann als Liste. Ein Hinweis „Geändert, noch nicht mitgeteilt“ bleibt stehen, aber ohne „Jetzt informieren“ und „Ausblenden“.
 
 ## Noch nicht dabei
 
-Dokumente am Programmpunkt und „Alle informieren?“ nach einer geänderten Uhrzeit kommen mit späteren Versionen. Eine geänderte Uhrzeit teilt Zeltlotse heute niemandem mit.
+Dokumente am Programmpunkt kommen mit einer späteren Version. Teilnehmende lesen den Kanal „Alle“ und damit auch die Nachricht zu einer Verschiebung erst mit dem Teilnehmer-Zugang über den QR-Code.
 
 Wer einen Programmpunkt übernommen hat, steht auch in der Datenauskunft der Person unter „Programm“ – mehr dazu unter [Was passiert mit meinen Daten](/daten/#programm).

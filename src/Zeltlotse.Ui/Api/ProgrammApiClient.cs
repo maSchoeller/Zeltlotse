@@ -122,6 +122,17 @@ public sealed class ProgrammApiClient(HttpClient http)
         return await AktionAsync(antwort, abbruch);
     }
 
+    /// <summary>
+    /// Story 6-2: <c>POST …/punkte/{punktId}/mitgeteilt</c> („Ja, informieren“ nach dem Senden in „Alle“ oder „Ausblenden“): erledigt, inzwischen
+    /// erneut verschoben (<c>409 konflikt</c>), abgeschlossene Freizeit oder ein anderer Fehler.
+    /// </summary>
+    /// <param name="beginn">Die mitgeteilte Uhrzeit (<c>HH:mm</c>) oder <c>null</c> ohne Uhrzeit.</param>
+    public async Task<ProgrammAktionErgebnis> MitgeteiltAsync(Guid freizeitId, Guid punktId, string? beginn, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsJsonAsync($"{PunktPfad(freizeitId, punktId)}/mitgeteilt", new ProgrammpunktMitgeteilt(beginn), ApiJson.Optionen, abbruch);
+        return antwort.IsSuccessStatusCode ? ProgrammAktionErgebnis.Erfolg : await FehlerAsync(antwort, abbruch);
+    }
+
     /// <summary><c>DELETE …/punkte/{punktId}</c>: gelöscht, Mahlzeit (<c>409 konflikt</c>), abgeschlossene Freizeit oder ein anderer Fehler.</summary>
     public async Task<ProgrammAktionErgebnis> LoeschenAsync(Guid freizeitId, Guid punktId, CancellationToken abbruch = default)
     {
