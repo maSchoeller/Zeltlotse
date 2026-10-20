@@ -6,7 +6,7 @@ using Zeltlotse.Ui.Texte;
 
 namespace Zeltlotse.App.Features.Kanaele;
 
-/// <summary>Story 6-1: Texte, Ziele und Namen der Kanal-Seite.</summary>
+/// <summary>Story 6-1: Texte, Ziele und Namen der Kanal-Seite. Story 6-3: dazu Ansagen-Zettel und Besprechung.</summary>
 public static class KanaeleTexte
 {
     public const string AbgeschlossenText = "Diese Freizeit ist abgeschlossen. Die Kanäle sind nur noch lesbar.";
@@ -40,6 +40,27 @@ public static class KanaeleTexte
     /// <summary>Die Kanal-Seite: „Team“ ohne Zusatz, „Alle“ mit <c>?kanal=alle</c>.</summary>
     public static string Ziel(Guid freizeitId, Kanal kanal = Kanal.Team) =>
         $"freizeiten/{freizeitId}/kanaele" + (kanal == Kanal.Alle ? "?kanal=alle" : "");
+
+    /// <summary>Story 6-3: Die Seite einer Notiz-Liste (<c>…/kanaele/ansagen</c> oder <c>…/kanaele/besprechung</c>).</summary>
+    public static string NotizenZiel(Guid freizeitId, NotizArt art) => $"freizeiten/{freizeitId}/kanaele/{KanalFelder.NotizArtInRoute(art)}";
+
+    /// <summary>Story 6-3: Überschrift und Reiter einer Notiz-Liste.</summary>
+    public static string NotizenTitel(NotizArt art) => art == NotizArt.Besprechung ? "Besprechung" : "Ansagen-Zettel";
+
+    /// <summary>Story 6-3: Leer-Zustand einer Notiz-Liste.</summary>
+    public static string KeineNotizenText(NotizArt art) => art == NotizArt.Besprechung
+        ? "Noch keine Punkte für die Mitarbeiterbesprechung."
+        : "Noch keine Ansagen für das nächste Essen.";
+
+    /// <summary>Story 6-3: Unter „Offen“, wenn alle Punkte abgehakt sind.</summary>
+    public const string AllesAbgehaktText = "Alles abgehakt.";
+
+    /// <summary>Story 6-3: Erklärung über der Liste.</summary>
+    public const string NotizenErklaerungText = "Ein Tipp auf das Kästchen hakt einen Punkt ab. Ein weiterer Tipp holt ihn zurück.";
+
+    public const string NotizenAbgeschlossenText = "Diese Freizeit ist abgeschlossen. Ansagen-Zettel und Besprechung sind nur noch lesbar.";
+
+    public const string NichtGespeichertText = "Nicht gespeichert. Bitte noch einmal versuchen.";
 
     /// <summary>Die zwei Segmente.</summary>
     public static IReadOnlyList<AuswahlOption> KanalOptionen { get; } = [new("team", "Team"), new("alle", "Alle")];

@@ -56,6 +56,37 @@ public sealed record PushAbmelden(string? Endpunkt);
 /// <summary>Story 6-1: Antwort von <c>GET /api/freizeiten/{freizeitId}/kanaele/push/schluessel</c>: der öffentliche VAPID-Schlüssel (base64url).</summary>
 public sealed record PushSchluessel(string OeffentlicherSchluessel);
 
+/// <summary>
+/// Story 6-3 (CAP-37, FR-63): die zwei Notiz-Listen jeder Freizeit. In der Route steht <c>ansagen</c> bzw. <c>besprechung</c>, im JSON der Name. Werte
+/// sind gespeichert; nur anhängen.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<NotizArt>))]
+public enum NotizArt
+{
+    /// <summary>Der Ansagen-Zettel: was beim nächsten Essen angesagt wird.</summary>
+    Ansage = 1,
+
+    /// <summary>Die Punkte für die Mitarbeiterbesprechung.</summary>
+    Besprechung = 2,
+}
+
+/// <summary>
+/// Story 6-3: Ein Punkt auf dem Ansagen-Zettel oder der Besprechungsliste, in <see cref="NotizListe"/> und als Antwort auf Anlegen (<c>201</c>), Abhaken und
+/// Wieder öffnen (<c>200</c>). Ohne Personenangabe: Wer notiert oder abgehakt hat, wird nicht gespeichert.
+/// </summary>
+/// <param name="ErledigtAm">Wann der Punkt abgehakt wurde; <c>null</c>, solange er offen ist.</param>
+public sealed record KanalNotiz(Guid Id, NotizArt Art, string Text, DateTimeOffset AngelegtAm, DateTimeOffset? ErledigtAm);
+
+/// <summary>Story 6-3: Körper von <c>POST /api/freizeiten/{freizeitId}/kanaele/notizen/{art}</c>.</summary>
+/// <param name="Text">1 bis 500 Zeichen, ohne Leerzeichen am Anfang und Ende.</param>
+public sealed record NotizNeu(string? Text);
+
+/// <summary>
+/// Story 6-3: Antwort von <c>GET /api/freizeiten/{freizeitId}/kanaele/notizen/{art}</c>: alle offenen Punkte (älteste zuerst) und höchstens die 50 zuletzt
+/// abgehakten (zuletzt abgehakte zuerst).
+/// </summary>
+public sealed record NotizListe(NotizArt Art, IReadOnlyList<KanalNotiz> Offen, IReadOnlyList<KanalNotiz> Abgehakt);
+
 /// <summary>Story 6-1: JSON-Namen der Felder für Feldfehler, Grenzen und der Platzhalter für gelöschte Personen.</summary>
 public static class KanalFelder
 {
@@ -90,4 +121,21 @@ public static class KanalFelder
 
     /// <summary>Der Kanal in der Route.</summary>
     public static string InRoute(Kanal kanal) => kanal == Kanal.Alle ? "alle" : "team";
+
+    /// <summary>Story 6-3: Höchstens so viele Zeichen hat ein Punkt auf dem Ansagen-Zettel oder der Besprechungsliste.</summary>
+    public const int NotizTextMaximaleLaenge = 500;
+
+    /// <summary>Story 6-3: Höchstens so viele abgehakte Punkte liefert die Liste.</summary>
+    public const int HoechstzahlAbgehakt = 50;
+
+    /// <summary>Story 6-3: Die Notiz-Liste aus der Route (<c>ansagen</c> oder <c>besprechung</c>, ohne Rücksicht auf Groß- und Kleinschreibung); sonst <c>null</c>.</summary>
+    public static NotizArt? NotizArtAusRoute(string? wert) => wert?.ToLowerInvariant() switch
+    {
+        "ansagen" => NotizArt.Ansage,
+        "besprechung" => NotizArt.Besprechung,
+        _ => null,
+    };
+
+    /// <summary>Story 6-3: Die Notiz-Liste in der Route.</summary>
+    public static string NotizArtInRoute(NotizArt art) => art == NotizArt.Besprechung ? "besprechung" : "ansagen";
 }

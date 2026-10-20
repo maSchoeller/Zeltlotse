@@ -22,6 +22,7 @@ using Zeltlotse.Finanzen.Kalkulation;
 using Zeltlotse.Inventar.Artikel;
 using Zeltlotse.Kanaele.Daten;
 using Zeltlotse.Kanaele.Nachrichten;
+using Zeltlotse.Kanaele.Notizen;
 using Zeltlotse.Inventar.Daten;
 using Zeltlotse.Inventar.Reservierungen;
 using Zeltlotse.Inventar.Schaeden;
@@ -193,6 +194,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await BeitraegeAsync(abbruch);
         // Story 6-1: Nachrichten in den Kanälen „Team“ und „Alle“ (braucht Lea im Team).
         await KanaeleAsync(abbruch);
+        // Story 6-3: Ansagen-Zettel und Besprechungspunkte, einer abgehakt.
+        await NotizenAsync(abbruch);
         await MaterialAsync(abbruch);
         await ZweiteFreizeitAsync(abbruch);
         await InventarAsync(abbruch);
@@ -972,6 +975,39 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             if (await sender.Send(new NachrichtSendenCommand(freizeitId, kanal, autor, text, Bestaetigt: true), abbruch) is not NachrichtSendenErgebnis.Gesendet)
             {
                 throw new InvalidOperationException($"Demo-Nachricht im Kanal {kanal} ließ sich nicht senden.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Story 6-3: Punkte aus <see cref="DemoKatalog.KanalNotizen"/> über die Commands des Moduls Kanäle, abgehakte gleich danach. Idempotent: Hat die Freizeit
+    /// schon einen Punkt, kommt keiner dazu.
+    /// </summary>
+    private async Task NotizenAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var freizeitId = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name)
+            .Select(f => f.Id)
+            .SingleAsync(abbruch);
+        if (await dienste.GetRequiredService<KanaeleLeseDbContext>().Notizen.AnyAsync(n => n.FreizeitId == freizeitId, abbruch))
+        {
+            return;
+        }
+
+        foreach (var (art, text, abgehakt) in DemoKatalog.KanalNotizen)
+        {
+            if (await sender.Send(new NotizAnlegenCommand(freizeitId, art, text), abbruch) is not NotizAnlegenErgebnis.Angelegt angelegt)
+            {
+                throw new InvalidOperationException($"Demo-Notiz ({art}) ließ sich nicht anlegen.");
+            }
+
+            if (abgehakt && await sender.Send(new NotizUebergangCommand(freizeitId, angelegt.Notiz.Id, Erledigt: true), abbruch) is null)
+            {
+                throw new InvalidOperationException($"Demo-Notiz ({art}) ließ sich nicht abhaken.");
             }
         }
     }

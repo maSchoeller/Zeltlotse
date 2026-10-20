@@ -1,0 +1,18 @@
+@using Zeltlotse.Api.Contracts.Kanaele
+@* Kanäle-Reiter (Story 6-3, EXPERIENCE.md → Kanal-Nachrichten): „Nachrichten · Ansagen-Zettel · Besprechung“ als Links oben auf der Kanal-Seite und auf
+   den Notiz-Seiten; der aktive trägt aria-current. *@
+<Reiter Bezeichnung="Kanäle" Eintraege="Eintraege" />
+
+@code {
+    [Parameter, EditorRequired] public Guid FreizeitId { get; set; }
+
+    /// <summary>Die gewählte Seite: „nachrichten“, „ansagen“ oder „besprechung“.</summary>
+    [Parameter, EditorRequired] public string Aktiv { get; set; } = "";
+
+    private IReadOnlyList<ReiterEintrag> Eintraege =>
+    [
+        new("Nachrichten", KanaeleTexte.Ziel(FreizeitId), Aktiv == "nachrichten"),
+        new(KanaeleTexte.NotizenTitel(NotizArt.Ansage), KanaeleTexte.NotizenZiel(FreizeitId, NotizArt.Ansage), Aktiv == KanalFelder.NotizArtInRoute(NotizArt.Ansage)),
+        new(KanaeleTexte.NotizenTitel(NotizArt.Besprechung), KanaeleTexte.NotizenZiel(FreizeitId, NotizArt.Besprechung), Aktiv == KanalFelder.NotizArtInRoute(NotizArt.Besprechung)),
+    ];
+}

@@ -7,7 +7,7 @@ using Zeltlotse.SharedKernel.Datenschutz;
 namespace Zeltlotse.Kanaele.Datenschutz;
 
 /// <summary>
-/// Story 6-1: Täglicher Lösch-Lauf der Kanäle (AD-16): Nachrichten und Push-Abos der Freizeiten, deren Daten nach der Frist der Organisation abgelaufen
+/// Story 6-1: Täglicher Lösch-Lauf der Kanäle (AD-16): Nachrichten, Push-Abos und (Story 6-3) Notizen der Freizeiten, deren Daten nach der Frist der Organisation abgelaufen
 /// sind. Datenauskunft und Empfänger von <c>PersonGeloescht</c> stehen in <see cref="KanaeleAuskunft"/> und <see cref="KanaelePersonLoeschen"/>.
 /// </summary>
 internal sealed class KanaeleLoeschlauf(ISender sender) : ILoeschlauf
@@ -21,7 +21,7 @@ internal sealed class KanaeleLoeschlauf(ISender sender) : ILoeschlauf
     }
 }
 
-/// <summary>Nachrichten und Push-Abos der Freizeiten mit abgelaufener Frist endgültig löschen. Kein Benutzer-Command.</summary>
+/// <summary>Nachrichten, Push-Abos und Notizen der Freizeiten mit abgelaufener Frist endgültig löschen. Kein Benutzer-Command.</summary>
 internal sealed record KanaeleLoeschen(IReadOnlyList<Guid> FreizeitIds) : ICommand, IModulCommand<KanaeleDbContext>;
 
 internal sealed class KanaeleLoeschenHandler(KanaeleDbContext db) : ICommandHandler<KanaeleLoeschen>
@@ -31,6 +31,7 @@ internal sealed class KanaeleLoeschenHandler(KanaeleDbContext db) : ICommandHand
         var freizeiten = command.FreizeitIds.ToList();
         await db.Nachrichten.IgnoreQueryFilters().Where(n => freizeiten.Contains(n.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
         await db.PushAbos.IgnoreQueryFilters().Where(a => freizeiten.Contains(a.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
+        await db.Notizen.IgnoreQueryFilters().Where(n => freizeiten.Contains(n.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
         return Unit.Value;
     }
 }

@@ -1,0 +1,250 @@
+@page "/freizeiten/{FreizeitId:guid}/kanaele/{Art}"
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Kanaele
+@using Zeltlotse.Ui.Kontext
+@inject FreizeitKontextDienst Kontext
+@inject KanaeleApiClient KanaeleApi
+@* Ansagen-Zettel und Besprechung (CAP-37, FR-63, Story 6-3; EXPERIENCE.md → Kanal-Nachrichten, DESIGN.md: Liste mit Checkbox) für Leitung und Team,
+   erreicht über die Reiter „Nachrichten · Ansagen-Zettel · Besprechung“ der Kanäle; die Wahl steht in der Adresse (…/kanaele/ansagen, …/kanaele/besprechung).
+   - Card „Offen“: das Eingabefeld „Neuer Punkt“ mit „Hinzufügen“ (an Ort und Stelle, ohne Pop-up; danach leer und neu geladen), darunter die offenen Punkte
+     als Kästchen, älteste zuerst. Ohne Punkte der Leer-Zustand.
+   - Card „Abgehakt“ (nur mit abgehakten Punkten): die zuletzt abgehakten mit gesetztem Kästchen.
+   - Ein Tipp auf ein Kästchen hakt sofort ab bzw. öffnet wieder (POST …/erledigt oder …/offen) und lädt neu; ein Fehler steht am Punkt.
+   In der Phase „gelaufen“ eine Meldung, kein Eingabefeld, die Kästchen deaktiviert (AD-17). Unbekannte Liste, Kontext oder Liste nicht verfügbar →
+   „Diese Seite ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung. *@
+<PageTitle>@(_art is { } titel ? KanaeleTexte.NotizenTitel(titel) : "Kanäle") – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar || _art is not { } art)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Kanäle</Dachzeile>
+    <h1>@KanaeleTexte.NotizenTitel(art)</h1>
+    <KanaeleReiter FreizeitId="FreizeitId" Aktiv="@KanalFelder.NotizArtInRoute(art)" />
+
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+
+    @if (_liste is null || _kontext is null)
+    {
+        @if (_meldung is null)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@KanaeleTexte.NotizenAbgeschlossenText</p>
+            </Meldung>
+        }
+
+        <Card Titel="Offen" Id="offen">
+            @if (!Abgeschlossen)
+            {
+                <Formular Absenden="HinzufuegenAsync">
+                    <Feld Label="Neuer Punkt" Id="notiz-text" Wert="@_text" Fehler="@_textFehler" Deaktiviert="@_uebertraegt"
+                          Hinweis="@($"Höchstens {KanalFelder.NotizTextMaximaleLaenge} Zeichen")" @oninput="@(e => _text = e.Value?.ToString())" />
+                    <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Hinzufügen</Knopf>
+                </Formular>
+            }
+
+            @if (_liste.Offen.Count == 0)
+            {
+                <LeerZustand Satz="@(_liste.Abgehakt.Count == 0 ? KanaeleTexte.KeineNotizenText(art) : KanaeleTexte.AllesAbgehaktText)" />
+            }
+            else
+            {
+                <p>@KanaeleTexte.NotizenErklaerungText</p>
+                @foreach (var notiz in _liste.Offen)
+                {
+                    var id = notiz.Id;
+                    <Ankreuzfeld @key="@($"{id}-{_runde}")" Label="@notiz.Text" Id="@($"notiz-{id}")" Wert="false" Fehler="@_fehler.GetValueOrDefault(id)"
+                                 Deaktiviert="@(Abgeschlossen || _uebertraegt)" @onchange="@(() => UmschaltenAsync(id, erledigt: true))" />
+                }
+            }
+        </Card>
+
+        @if (_liste.Abgehakt.Count > 0)
+        {
+            <Card Titel="Abgehakt" Id="abgehakt">
+                @foreach (var notiz in _liste.Abgehakt)
+                {
+                    var id = notiz.Id;
+                    <Ankreuzfeld @key="@($"{id}-{_runde}")" Label="@notiz.Text" Id="@($"notiz-{id}")" Wert="true" Fehler="@_fehler.GetValueOrDefault(id)"
+                                 Deaktiviert="@(Abgeschlossen || _uebertraegt)" @onchange="@(() => UmschaltenAsync(id, erledigt: false))" />
+                }
+            </Card>
+        }
+    }
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    private NotizListe? _liste;
+    private NotizArt? _art;
+    private readonly Dictionary<Guid, string> _fehler = [];
+    private bool _nichtVerfuegbar;
+    private bool _uebertraegt;
+    private string? _meldung;
+    private string? _text;
+    private string? _textFehler;
+    // Zählt die Übergänge; als Teil des @key zeigt jedes Kästchen danach den Stand vom Server, auch wenn das Speichern scheiterte.
+    private int _runde;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    /// <summary>Die Liste aus der Adresse: <c>ansagen</c> oder <c>besprechung</c>.</summary>
+    [Parameter] public string? Art { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var art = KanalFelder.NotizArtAusRoute(Art);
+        if (art != _art)
+        {
+            // Ein Entwurf gehört zu seiner Liste.
+            _text = null;
+        }
+
+        _art = art;
+        _kontext = null;
+        _liste = null;
+        _nichtVerfuegbar = false;
+        _meldung = null;
+        _textFehler = null;
+        _fehler.Clear();
+        if (art is not { } gewaehlt)
+        {
+            return;
+        }
+
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var liste = KanaeleApi.NotizenLadenAsync(FreizeitId, gewaehlt);
+            await Task.WhenAll(kontext, liste);
+            if (kontext.Result is null || liste.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _liste) = (kontext.Result, liste.Result);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>„Hinzufügen“: sendet den Text; danach ist das Feld leer und die Liste neu geladen. Ein Fehler steht am Feld, der Text bleibt.</summary>
+    private async Task HinzufuegenAsync()
+    {
+        if (_uebertraegt || _art is not { } art || Abgeschlossen)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _textFehler = null;
+        _meldung = null;
+        try
+        {
+            var aktion = await KanaeleApi.NotizAnlegenAsync(FreizeitId, art, _text);
+            switch (aktion.Ergebnis)
+            {
+                case KanalAktionErgebnis.Erfolg:
+                    _text = "";
+                    await LadenAsync(art);
+                    break;
+                case KanalAktionErgebnis.Abgeschlossen:
+                    _kontext = await Kontext.LadenAsync(FreizeitId) ?? _kontext;
+                    _meldung = KanaeleTexte.NotizenAbgeschlossenText;
+                    break;
+                default:
+                    _textFehler = aktion.Feldfehler.GetValueOrDefault(KanalFelder.Text) ?? KanaeleTexte.NichtGespeichertText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _textFehler = KanaeleTexte.NichtGespeichertText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    /// <summary>Ein Tipp: sofort „erledigt“ oder „offen“ senden, danach neu laden; ein Fehler steht am Punkt.</summary>
+    private async Task UmschaltenAsync(Guid notiz, bool erledigt)
+    {
+        if (_uebertraegt || _art is not { } art || Abgeschlossen)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _fehler.Clear();
+        _meldung = null;
+        try
+        {
+            var aktion = await KanaeleApi.NotizUmschaltenAsync(FreizeitId, notiz, erledigt);
+            switch (aktion.Ergebnis)
+            {
+                case KanalAktionErgebnis.Erfolg:
+                    await LadenAsync(art);
+                    break;
+                case KanalAktionErgebnis.Abgeschlossen:
+                    _fehler[notiz] = KanaeleTexte.NotizenAbgeschlossenText;
+                    _kontext = await Kontext.LadenAsync(FreizeitId) ?? _kontext;
+                    break;
+                default:
+                    _fehler[notiz] = KanaeleTexte.NichtGespeichertText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _fehler[notiz] = KanaeleTexte.NichtGespeichertText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+            _runde++;
+        }
+    }
+
+    /// <summary>Lädt die Liste neu (nach jedem Hinzufügen und Tipp).</summary>
+    private async Task LadenAsync(NotizArt art)
+    {
+        try
+        {
+            if (await KanaeleApi.NotizenLadenAsync(FreizeitId, art) is { } liste)
+            {
+                _liste = liste;
+            }
+            else
+            {
+                _nichtVerfuegbar = true;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // Gespeichert ist schon; nur das Neuladen scheiterte.
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+}

@@ -153,6 +153,19 @@ internal static class DemoKatalog
         (Zeltlotse.Api.Contracts.Kanaele.Kanal.Alle, "miriam.zeltner@example.org", "Wandertag morgen: feste Schuhe, Regenjacke und eine volle Trinkflasche einpacken."),
     ];
 
+    /// <summary>
+    /// Story 6-3: Punkte auf Ansagen-Zettel und Besprechungsliste der Demo-Freizeit, in dieser Reihenfolge (Liste, Text, abgehakt). Zwei offene Ansagen und drei
+    /// Besprechungspunkte, davon einer abgehakt. Nur, solange die Freizeit noch keinen Punkt hat.
+    /// </summary>
+    public static IReadOnlyList<(Zeltlotse.Api.Contracts.Kanaele.NotizArt Art, string Text, bool Abgehakt)> KanalNotizen { get; } =
+    [
+        (Zeltlotse.Api.Contracts.Kanaele.NotizArt.Ansage, "Taschenlampen für die Nachtwanderung mitbringen.", false),
+        (Zeltlotse.Api.Contracts.Kanaele.NotizArt.Ansage, "Nach dem Abendessen Zeltkontrolle um 21 Uhr.", false),
+        (Zeltlotse.Api.Contracts.Kanaele.NotizArt.Besprechung, "Programm für den Regentag festlegen", true),
+        (Zeltlotse.Api.Contracts.Kanaele.NotizArt.Besprechung, "Nachtwache für Donnerstag einteilen", false),
+        (Zeltlotse.Api.Contracts.Kanaele.NotizArt.Besprechung, "Spülplan für die zweite Woche", false),
+    ];
+
     /// <summary>Story 4-4: Mahlzeiten, die die Küche als Restetag markiert (Tag, Titel der Mahlzeit).</summary>
     public static IReadOnlyList<(DateOnly Tag, string Mahlzeit)> Restetage { get; } = [(new DateOnly(2027, 8, 3), "Abendessen")];
 

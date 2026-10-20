@@ -567,6 +567,12 @@ public sealed class KanaeleTests(PostgresContainer postgres) : IAsyncLifetime
         await AbonnierenAsync(_s.Miriam, Endpunkt("miriam"));
         await GesendetAsync(_s.Miriam, "In Z", freizeit: _s.Z);
         await AbonnierenAsync(_s.Miriam, Endpunkt("miriam"), _s.Z);
+        // Story 6-3: Notizen sind Arbeitsdaten der Freizeit und gehen mit ihr.
+        foreach (var freizeit in new[] { _s.X, _s.Z })
+        {
+            using var notiz = await PostAsync(_s.Miriam, $"/api/freizeiten/{freizeit}/kanaele/notizen/ansagen", new { text = "Taschenlampen" });
+            Assert.Equal(HttpStatusCode.Created, notiz.StatusCode);
+        }
 
         await using (var scope = _s.Factory.Services.CreateAsyncScope())
         {
@@ -574,7 +580,7 @@ public sealed class KanaeleTests(PostgresContainer postgres) : IAsyncLifetime
             await lauf.LaufAsync(new LoeschAuftrag(_s.Factory.Uhr.GetUtcNow(), [_s.X], []), Abbruch);
         }
 
-        foreach (var tabelle in new[] { "nachricht", "push_abo" })
+        foreach (var tabelle in new[] { "nachricht", "push_abo", "notiz" })
         {
             Assert.Equal(0L, await AnzahlAsync(tabelle, "\"FreizeitId\" = @f", ("f", _s.X)));
             Assert.Equal(1L, await AnzahlAsync(tabelle, "\"FreizeitId\" = @f", ("f", _s.Z)));

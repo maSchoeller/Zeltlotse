@@ -413,6 +413,21 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal((2, 4), (alle.GetProperty("nachrichten").GetArrayLength(), alle.GetProperty("personenAlle").GetInt32()));
         Assert.Equal(5L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kanaele.nachricht"));
 
+        // Story 6-3: zwei offene Ansagen; drei Besprechungspunkte, davon einer abgehakt. Nichts doppelt, auch nach dem zweiten Einspielen.
+        var ansagen = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/kanaele/notizen/ansagen", Abbruch));
+        Assert.Equal(
+            [.. DemoKatalog.KanalNotizen.Where(n => n.Art == Zeltlotse.Api.Contracts.Kanaele.NotizArt.Ansage).Select(n => n.Text)],
+            ansagen.GetProperty("offen").EnumerateArray().Select(n => n.GetProperty("text").GetString()!));
+        Assert.Equal(0, ansagen.GetProperty("abgehakt").GetArrayLength());
+        var besprechung = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/kanaele/notizen/besprechung", Abbruch));
+        Assert.Equal(
+            ["Nachtwache für Donnerstag einteilen", "Spülplan für die zweite Woche"],
+            besprechung.GetProperty("offen").EnumerateArray().Select(n => n.GetProperty("text").GetString()!));
+        Assert.Equal(
+            ["Programm für den Regentag festlegen"],
+            besprechung.GetProperty("abgehakt").EnumerateArray().Select(n => n.GetProperty("text").GetString()!));
+        Assert.Equal(5L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kanaele.notiz"));
+
         // Story 2-5: Die Fragen-Auswahl kam vor den Anmeldungen: Emmas Freigabe (eingegangen) und Mias (bestätigt) tragen die Fragen für
         // Teilnehmende, Leas die für Mitarbeitende. Daniel hat für Mia drei Antworten gespeichert, Lea eine Team-Notiz zu Mia geschrieben
         // (genau eine, auch nach dem zweiten Einspielen, nur verschlüsselt). Emmas Anmeldung nennt „Einsicht bis“.

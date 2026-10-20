@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Kanaele.Daten;
 using Zeltlotse.Kanaele.Datenschutz;
 using Zeltlotse.Kanaele.Nachrichten;
+using Zeltlotse.Kanaele.Notizen;
 using Zeltlotse.Kanaele.Push;
 using Zeltlotse.Personen.Contracts.Events;
 using Zeltlotse.SharedKernel.Daten;
@@ -41,7 +42,7 @@ public static class KanaeleModul
     /// Bindet die Endpunkte des Moduls in die <c>/api</c>-Gruppe ein. Story 6-1: die zwei festen Kanäle unter
     /// <c>/api/freizeiten/{freizeitId}/kanaele/{team|alle}/nachrichten</c> (lesen, senden; „Alle“ nur mit Bestätigung) und das Push-Abo unter
     /// <c>…/kanaele/push</c> (öffentlicher Schlüssel, Abo speichern, abmelden), alle für Leitung und Team, ohne Funktions-Schalter; nach dem Abschluss nur
-    /// lesbar (AD-17).
+    /// lesbar (AD-17). Story 6-3: Ansagen-Zettel und Besprechungspunkte unter <c>…/kanaele/notizen</c> (lesen, anlegen, abhaken, wieder öffnen).
     /// </summary>
     public static IEndpointRouteBuilder MapKanaeleEndpoints(this IEndpointRouteBuilder api)
     {
@@ -51,6 +52,11 @@ public static class KanaeleModul
         kanaele.MapPost("/push/abo/abmelden", PushAboEndpunkte.Abmelden).NurFreizeitRolle(Mitarbeit);
         kanaele.MapGet("/{kanal}/nachrichten", NachrichtenLadenEndpunkt.Laden).NurFreizeitRolle(Mitarbeit);
         kanaele.MapPost("/{kanal}/nachrichten", NachrichtSendenEndpunkt.Senden).NurFreizeitRolle(Mitarbeit);
+        // Story 6-3: Ansagen-Zettel und Besprechungspunkte. Das Literal „notizen“ hat Vorrang vor dem Kanal-Parameter der Nachrichten.
+        kanaele.MapGet("/notizen/{art}", NotizenLadenEndpunkt.Laden).NurFreizeitRolle(Mitarbeit);
+        kanaele.MapPost("/notizen/{art}", NotizAnlegenEndpunkt.Anlegen).NurFreizeitRolle(Mitarbeit);
+        kanaele.MapPost("/notizen/{notizId:guid}/erledigt", NotizUebergangEndpunkt.Erledigt).NurFreizeitRolle(Mitarbeit);
+        kanaele.MapPost("/notizen/{notizId:guid}/offen", NotizUebergangEndpunkt.Offen).NurFreizeitRolle(Mitarbeit);
         return api;
     }
 }

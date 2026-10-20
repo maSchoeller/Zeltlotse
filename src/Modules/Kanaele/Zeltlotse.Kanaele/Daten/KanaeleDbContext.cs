@@ -8,6 +8,7 @@ using Zeltlotse.SharedKernel.Push;
 namespace Zeltlotse.Kanaele.Daten;
 
 using Nachricht = Zeltlotse.Kanaele.Nachrichten.Nachricht;
+using Notiz = Zeltlotse.Kanaele.Notizen.Notiz;
 using PushAbo = Zeltlotse.Kanaele.Push.PushAbo;
 
 /// <summary>Schreibender DbContext; nur Command-Handler erhalten ihn (AD-27).</summary>
@@ -19,6 +20,9 @@ internal sealed class KanaeleDbContext(DbContextOptions<KanaeleDbContext> option
 
     /// <summary>Story 6-1: die Push-Abos der Browser, höchstens eines je (Freizeit, Endpunkt).</summary>
     public DbSet<PushAbo> PushAbos => Set<PushAbo>();
+
+    /// <summary>Story 6-3: die Punkte von Ansagen-Zettel und Besprechungsliste.</summary>
+    public DbSet<Notiz> Notizen => Set<Notiz>();
 
     protected override string Schema => KanaeleModul.Schema;
 
@@ -49,6 +53,8 @@ internal sealed class KanaeleLeseDbContext(DbContextOptions<KanaeleLeseDbContext
     public DbSet<Nachricht> Nachrichten => Set<Nachricht>();
 
     public DbSet<PushAbo> PushAbos => Set<PushAbo>();
+
+    public DbSet<Notiz> Notizen => Set<Notiz>();
 
     protected override string Schema => KanaeleModul.Schema;
 
@@ -86,6 +92,17 @@ internal static class KanaeleModell
             e.HasIndex(a => new { a.FreizeitId, a.Endpunkt }).IsUnique();
             e.HasIndex(a => a.OrganisationId);
             e.HasIndex(a => a.PersonId);
+        });
+
+        // Story 6-3, FR-63: Ansagen-Zettel und Besprechungspunkte (Arbeitsdaten der Freizeit ohne Personenbezug, AD-16), gelesen je Liste.
+        modelBuilder.Entity<Notiz>(e =>
+        {
+            e.ToTable("notiz");
+            e.Property(n => n.Id).ValueGeneratedNever();
+            e.Property(n => n.Text).HasMaxLength(KanalFelder.NotizTextMaximaleLaenge);
+            e.Property(n => n.Laufnummer).UseIdentityByDefaultColumn();
+            e.HasIndex(n => new { n.FreizeitId, n.Art });
+            e.HasIndex(n => n.OrganisationId);
         });
     }
 }

@@ -21,9 +21,13 @@ public enum KanalAktionErgebnis
 /// <summary>Story 6-1: Ergebnis von „Senden“; bei Erfolg die Nachricht, sonst die Fehler je Feld (<c>text</c>, <c>bestaetigt</c>).</summary>
 public sealed record KanalSendenAktion(KanalAktionErgebnis Ergebnis, KanalNachricht? Nachricht, IReadOnlyDictionary<string, string> Feldfehler);
 
+/// <summary>Story 6-3: Ergebnis von „Hinzufügen“ und vom Abhaken; bei Erfolg der Punkt, sonst die Fehler je Feld (<c>text</c>).</summary>
+public sealed record KanalNotizAktion(KanalAktionErgebnis Ergebnis, KanalNotiz? Notiz, IReadOnlyDictionary<string, string> Feldfehler);
+
 /// <summary>
 /// Typisierter Client des Moduls Kanäle (AD-29, handgeschrieben). Story 6-1: die Nachrichten eines Kanals laden und senden („Alle“ nur mit Bestätigung),
-/// den öffentlichen VAPID-Schlüssel laden, das Push-Abo des Browsers speichern und abmelden.
+/// den öffentlichen VAPID-Schlüssel laden, das Push-Abo des Browsers speichern und abmelden. Story 6-3: Ansagen-Zettel und Besprechungspunkte laden,
+/// anlegen, abhaken und wieder öffnen.
 /// </summary>
 public sealed class KanaeleApiClient(HttpClient http)
 {
@@ -90,6 +94,48 @@ public sealed class KanaeleApiClient(HttpClient http)
     {
         using var antwort = await http.PostAsJsonAsync(AbmeldenPfad(freizeitId), new PushAbmelden(endpunkt), ApiJson.Optionen, abbruch);
         return antwort.IsSuccessStatusCode ? KanalAktionErgebnis.Erfolg : await FehlerAsync(antwort, abbruch);
+    }
+
+    /// <summary>Story 6-3: Pfad einer Notiz-Liste (<c>ansagen</c> oder <c>besprechung</c>).</summary>
+    public static string NotizenPfad(Guid freizeitId, NotizArt art) => $"/api/freizeiten/{freizeitId}/kanaele/notizen/{KanalFelder.NotizArtInRoute(art)}";
+
+    /// <summary>Story 6-3: Pfad zum Abhaken (<c>erledigt</c>) oder Wieder-Öffnen (<c>offen</c>) eines Punkts.</summary>
+    public static string NotizUebergangPfad(Guid freizeitId, Guid notizId, bool erledigt) =>
+        $"/api/freizeiten/{freizeitId}/kanaele/notizen/{notizId}/{(erledigt ? "erledigt" : "offen")}";
+
+    /// <summary>Story 6-3: <c>GET …/kanaele/notizen/{art}</c>: die Liste oder <c>null</c> bei <c>403</c>/<c>404</c>.</summary>
+    public async Task<NotizListe?> NotizenLadenAsync(Guid freizeitId, NotizArt art, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.GetAsync(NotizenPfad(freizeitId, art), abbruch);
+        if (antwort.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        return await antwort.Content.ReadFromJsonAsync<NotizListe>(ApiJson.Optionen, abbruch) ?? throw new HttpRequestException("Leere Antwort beim Laden: die Notizen.");
+    }
+
+    /// <summary>Story 6-3: <c>POST …/kanaele/notizen/{art}</c>: angelegt mit dem Punkt, Feldfehler (<c>400</c>), abgeschlossen oder ein anderer Fehler.</summary>
+    public Task<KanalNotizAktion> NotizAnlegenAsync(Guid freizeitId, NotizArt art, string? text, CancellationToken abbruch = default) =>
+        NotizAktionAsync(NotizenPfad(freizeitId, art), new NotizNeu(text), abbruch);
+
+    /// <summary>Story 6-3: <c>POST …/kanaele/notizen/{notizId}/erledigt</c> bzw. <c>…/offen</c>: der Punkt, abgeschlossen oder ein anderer Fehler.</summary>
+    public Task<KanalNotizAktion> NotizUmschaltenAsync(Guid freizeitId, Guid notizId, bool erledigt, CancellationToken abbruch = default) =>
+        NotizAktionAsync(NotizUebergangPfad(freizeitId, notizId, erledigt), null, abbruch);
+
+    private async Task<KanalNotizAktion> NotizAktionAsync(string pfad, NotizNeu? koerper, CancellationToken abbruch)
+    {
+        using var antwort = koerper is null
+            ? await http.PostAsync(pfad, null, abbruch)
+            : await http.PostAsJsonAsync(pfad, koerper, ApiJson.Optionen, abbruch);
+        if (antwort.IsSuccessStatusCode)
+        {
+            var notiz = await antwort.Content.ReadFromJsonAsync<KanalNotiz>(ApiJson.Optionen, abbruch) ?? throw new HttpRequestException("Leere Antwort zum Punkt.");
+            return new KanalNotizAktion(KanalAktionErgebnis.Erfolg, notiz, new Dictionary<string, string>());
+        }
+
+        return new KanalNotizAktion(await FehlerAsync(antwort, abbruch), null, await ApiFehler.AlleFeldFehlerAsync(antwort, abbruch));
     }
 
     /// <summary>Ordnet eine Fehlerantwort zu: <c>409 freizeit-abgeschlossen</c> ist „abgeschlossen“, alles andere ein Fehler.</summary>

@@ -69,6 +69,46 @@ namespace Zeltlotse.Kanaele.Migrationen
                     b.ToTable("nachricht", "kanaele");
                 });
 
+            modelBuilder.Entity("Zeltlotse.Kanaele.Notizen.Notiz", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AngelegtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Art")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("ErledigtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Laufnummer")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Laufnummer"));
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("FreizeitId", "Art");
+
+                    b.ToTable("notiz", "kanaele");
+                });
+
             modelBuilder.Entity("Zeltlotse.Kanaele.Push.PushAbo", b =>
                 {
                     b.Property<Guid>("Id")

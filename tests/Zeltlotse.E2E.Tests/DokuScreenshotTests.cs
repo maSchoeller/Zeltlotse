@@ -2609,6 +2609,65 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await BildAsync(seite, "kanaele-alle", geraet);
     }
 
+    // ---------- Story 6-3: Ansagen-Zettel und Besprechungsnotizen ----------
+
+    /// <summary>
+    /// Lea (Team) öffnet die Kanäle und tippt den Reiter „Ansagen-Zettel“: das Eingabefeld „Neuer Punkt“ mit „Hinzufügen“ und die zwei offenen Demo-Ansagen als
+    /// Kästchen. Nur lesend.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Kanaele_Ansagen(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await KanaeleAsync(seite);
+        await NotizReiterAsync(seite, "Ansagen-Zettel", "/kanaele/ansagen");
+        await Assertions.Expect(seite.Locator("#offen label.elkw-choice")).ToHaveTextAsync(
+            ["Taschenlampen für die Nachtwanderung mitbringen.", "Nach dem Abendessen Zeltkontrolle um 21 Uhr."], new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("#abgehakt")).ToHaveCountAsync(0);
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Hinzufügen", Exact = true })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "kanaele-ansagen", geraet);
+    }
+
+    /// <summary>
+    /// Reiter „Besprechung“: zwei offene Punkte als Kästchen und darunter „Abgehakt“ mit dem gesetzten Kästchen „Programm für den Regentag festlegen“. Nur lesend:
+    /// Lea hakt nichts ab, damit der Demo-Stand für die anderen Bilder bleibt.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Kanaele_Besprechung(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await KanaeleAsync(seite);
+        await NotizReiterAsync(seite, "Besprechung", "/kanaele/besprechung");
+        await Assertions.Expect(seite.Locator("#offen label.elkw-choice")).ToHaveTextAsync(
+            ["Nachtwache für Donnerstag einteilen", "Spülplan für die zweite Woche"], new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("#abgehakt label.elkw-choice")).ToHaveTextAsync(["Programm für den Regentag festlegen"]);
+        await Assertions.Expect(seite.Locator("#abgehakt input[type=checkbox]")).ToBeCheckedAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        // Am Handy steht „Abgehakt“ unter dem Bildrand; das Bild zeigt beide Cards.
+        await seite.Locator("#abgehakt").ScrollIntoViewIfNeededAsync();
+        await BildAsync(seite, "kanaele-besprechung", geraet);
+    }
+
+    /// <summary>Story 6-3: Tippt in den Kanälen den Reiter einer Notiz-Liste und wartet auf die Seite.</summary>
+    private static async Task NotizReiterAsync(IPage seite, string reiter, string adresse)
+    {
+        await seite.GetByRole(AriaRole.Navigation, new() { Name = "Kanäle" }).GetByRole(AriaRole.Link, new() { Name = reiter, Exact = true }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync(reiter, new() { Timeout = 60_000 });
+        await Assertions.Expect(seite).ToHaveURLAsync(new System.Text.RegularExpressions.Regex(System.Text.RegularExpressions.Regex.Escape(adresse) + "$"));
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = reiter, Exact = true })).ToHaveAttributeAsync("aria-current", "page");
+    }
+
     /// <summary>Lea (Team) meldet sich an, öffnet die Demo-Freizeit und tippt „Kanäle“.</summary>
     private async Task KanaeleAsync(IPage seite)
     {

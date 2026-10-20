@@ -9,7 +9,7 @@
 @inject IBrowser Browser
 @inject NavigationManager Navigation
 @* Kanäle „Team“ und „Alle“ (CAP-35, FR-61, Story 6-1; EXPERIENCE.md → Kanal-Nachrichten) für Leitung und Team, erreicht über den Knopf „Kanäle“ auf der
-   Startseite. Dachzeile „Kanäle“, Überschrift der Kanal, darunter die Segmente „Team / Alle“ (die Wahl steht in der Adresse, ?kanal=alle). Die Nachrichten
+   Startseite. Dachzeile „Kanäle“, Überschrift der Kanal, darunter die Reiter „Nachrichten · Ansagen-Zettel · Besprechung“ (Story 6-3) und die Segmente „Team / Alle“ (die Wahl steht in der Adresse, ?kanal=alle). Die Nachrichten
    stehen älteste zuerst, die neueste unten; die Seite öffnet am Ende. Darüber die Card „Benachrichtigungen“, darunter das Eingabefeld: In „Team“ geht „Senden“ direkt hinaus, in „Alle“ klappt es
    zuerst die Inline-Bestätigung „An N Personen senden?“ auf („Ja, senden“ / „Nein“). In der Card „Benachrichtigungen“: Die Erlaubnis für Push fragt die Seite
    erst nach einem Tipp auf „Benachrichtigungen einschalten“; ohne Push-Möglichkeit steht der passende Hinweis (iPhone ohne Home-Bildschirm, abgelehnt,
@@ -26,6 +26,7 @@ else
 {
     <Dachzeile>Kanäle</Dachzeile>
     <h1>@(Gewaehlt == Kanal.Alle ? "Alle" : "Team")</h1>
+    <KanaeleReiter FreizeitId="FreizeitId" Aktiv="nachrichten" />
     <Segmente Legende="Kanal" Optionen="KanaeleTexte.KanalOptionen" Wert="@KanalFelder.InRoute(Gewaehlt)" Gewaehlt="Wechseln" />
 
     @if (_meldung is not null)
