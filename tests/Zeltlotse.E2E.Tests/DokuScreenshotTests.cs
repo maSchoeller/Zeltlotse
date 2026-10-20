@@ -2372,6 +2372,117 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await BildAsync(seite, "beitragsrechner", geraet);
     }
 
+    // ---------- Story 5-2: Belege, Soll-Ist und Erstattung ----------
+
+    /// <summary>Lea (Team) öffnet „Finanzen“ und tippt einen Finanzen-Reiter.</summary>
+    private async Task FinanzenReiterAsync(IPage seite, string reiter)
+    {
+        await FinanzenAsync(seite);
+        await seite.GetByRole(AriaRole.Navigation, new() { Name = "Finanzen" }).GetByRole(AriaRole.Link, new() { Name = reiter, Exact = true }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync(reiter, new() { Timeout = 60_000 });
+    }
+
+    /// <summary>Die sechs Demo-Belege in der Liste (neueste zuerst), mit Namen, Foto und Haken; darüber die Card „Beleg erfassen“. Nur lesend.</summary>
+    private async Task BelegeListeAsync(IPage seite)
+    {
+        await FinanzenReiterAsync(seite, "Belege");
+        await Assertions.Expect(seite.Locator("#belege tbody tr")).ToHaveCountAsync(6, new() { Timeout = 60_000 });
+    }
+
+    /// <summary>
+    /// Die Belege: Card „Beleg erfassen“ (am Handy im Bild) und die Liste mit „Brötchen und Obst“ von Lea Feuerstein mit Foto, Jonas' Großeinkauf als
+    /// erstattet und der Summe 7.530,00 € (am Laptop im Bild).
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Belege(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await BelegeListeAsync(seite);
+        await Assertions.Expect(seite.Locator("#beleg-erfassen")).ToContainTextAsync("Betrag in € *");
+        await Assertions.Expect(seite.GetByLabel("Ich", new() { Exact = true })).ToBeCheckedAsync();
+        var brot = seite.Locator("#belege tbody tr").Filter(new() { HasText = "Brötchen und Obst" });
+        await Assertions.Expect(brot).ToContainTextAsync("Lea Feuerstein");
+        await Assertions.Expect(brot.GetByRole(AriaRole.Link, new() { Name = "Foto: Brötchen und Obst" })).ToBeVisibleAsync();
+        await Assertions.Expect(brot.GetByLabel("Erstattet")).Not.ToBeCheckedAsync();
+        var einkauf = seite.Locator("#belege tbody tr").Filter(new() { HasText = "Großeinkauf Lebensmittel" });
+        await Assertions.Expect(einkauf).ToContainTextAsync("3.854,20 €");
+        await Assertions.Expect(einkauf.GetByLabel("Erstattet")).ToBeCheckedAsync();
+        await Assertions.Expect(seite.Locator("#belege")).ToContainTextAsync("Summe: 7.530,00 €");
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        // Am Handy zeigt das Bild das Formular oben, am Laptop die Liste.
+        if (geraet == "laptop")
+        {
+            await seite.Locator("#belege").ScrollIntoViewIfNeededAsync();
+        }
+
+        await BildAsync(seite, "belege", geraet);
+    }
+
+    /// <summary>
+    /// Ein Beleg: Lea tippt „Brötchen und Obst“. Betrag, Kategorie, Bezeichnung und „Bezahlt von“ als Felder, der Haken „Erstattet“ und das Foto vom
+    /// Kassenbon (am Laptop im Bild). Nur lesend.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Beleg(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await BelegeListeAsync(seite);
+        await seite.Locator("#belege").GetByRole(AriaRole.Link, new() { Name = "Brötchen und Obst", Exact = true }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Brötchen und Obst", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByLabel("Betrag in €")).ToHaveValueAsync("23,4", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("#beleg-kategorie").GetByLabel("Verpflegung")).ToBeCheckedAsync();
+        await Assertions.Expect(seite.Locator("#beleg-bezahlt-von").GetByLabel("Lea Feuerstein")).ToBeCheckedAsync();
+        await Assertions.Expect(seite.Locator("#beleg-erstattet")).Not.ToBeCheckedAsync();
+        var foto = seite.Locator("#datei img");
+        await Assertions.Expect(foto).ToBeVisibleAsync();
+        await seite.WaitForFunctionAsync("() => { const b = document.querySelector('#datei img'); return b && b.complete && b.naturalWidth > 0; }", null, new() { Timeout = 60_000 });
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        // Am Handy zeigt das Bild die Felder oben, am Laptop das Foto.
+        if (geraet == "laptop")
+        {
+            await seite.Locator("#datei").ScrollIntoViewIfNeededAsync();
+        }
+
+        await BildAsync(seite, "beleg", geraet);
+    }
+
+    /// <summary>
+    /// Soll-Ist: Verpflegung 3.900 € von 4.200 € „Knapp“, Fahrt 1.950 € von 1.800 € „Überschritten“, der Rest „Im Plan“; bei den Erstattungen zuerst Lea mit
+    /// „noch 45,80 €“ („Bekommt noch Geld“), Jonas und Miriam „Alles erstattet“. Nur lesend.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Soll_Ist(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await FinanzenReiterAsync(seite, "Soll-Ist");
+        var balken = seite.Locator("#soll-ist .zl-balken");
+        await Assertions.Expect(balken).ToHaveCountAsync(7, new() { Timeout = 60_000 });
+        await Assertions.Expect(balken.Locator(".elkw-status")).ToHaveTextAsync(["Im Plan", "Im Plan", "Knapp", "Überschritten", "Im Plan", "Im Plan", "Im Plan"]);
+        await Assertions.Expect(balken.Nth(2).Locator(".zl-zahl")).ToHaveTextAsync("3.900,00 € von 4.200,00 € (93 %)");
+        await Assertions.Expect(balken.Nth(3).Locator(".zl-zahl")).ToHaveTextAsync("1.950,00 € von 1.800,00 € (108 %)");
+        var erstattungen = seite.Locator("#erstattungen .zl-balken");
+        await Assertions.Expect(erstattungen.Locator("strong")).ToHaveTextAsync(["Lea Feuerstein", "Jonas Hüttner", "Miriam Zeltner"]);
+        await Assertions.Expect(erstattungen.Nth(0).Locator(".zl-zahl")).ToHaveTextAsync("noch 45,80 €");
+        await Assertions.Expect(erstattungen.Locator(".elkw-status")).ToHaveTextAsync(["Bekommt noch Geld", "Alles erstattet", "Alles erstattet"]);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "soll-ist", geraet);
+    }
+
     /// <summary>Story 3-6: „Abgelegt am …“ hängt vom Tag des Einspielens ab; im Bild steht ein festes Datum.</summary>
     private static Task AbgelegtAmFestAsync(IPage seite) =>
         seite.EvaluateAsync("() => document.querySelectorAll('.elkw-card p').forEach(p => { if (p.textContent.startsWith('Abgelegt am ')) p.textContent = 'Abgelegt am 14.10.2026'; })");

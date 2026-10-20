@@ -78,7 +78,7 @@ public sealed class DokuTests
                 "Seite leitung/freizeit-abschliessen.md fehlt.",
                 "Seite kueche/rezepte.md fehlt.", "Seite kueche/essensplan.md fehlt.", "Seite kueche/einkaufsliste.md fehlt.", "Seite kueche/einkauf.md fehlt.",
                 "Seite kueche/tagesansicht.md fehlt.",
-                "Seite finanzen/index.md fehlt.", "Seite finanzen/kalkulation.md fehlt.", "Seite finanzen/beitragsrechner.md fehlt.",
+                "Seite finanzen/index.md fehlt.", "Seite finanzen/kalkulation.md fehlt.", "Seite finanzen/beitragsrechner.md fehlt.", "Seite finanzen/belege.md fehlt.", "Seite finanzen/soll-ist.md fehlt.",
             ],
             fehlend);
     }

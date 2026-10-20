@@ -62,9 +62,12 @@ public sealed class TypRegelnTests
         Assert.Empty(verstoesse);
     }
 
-    /// <summary>Story 3-8 (AD-17): <see cref="ErlaubtNachAbschlussAttribute"/> steht nur an den Anschaffungswünschen in Inventar (Finanzen folgt).</summary>
+    /// <summary>
+    /// Story 3-8 (AD-17): <see cref="ErlaubtNachAbschlussAttribute"/> steht nur an den Anschaffungswünschen in Inventar und (Story 5-2) am
+    /// Erstattungsvermerk der Belege in Finanzen.
+    /// </summary>
     [Fact]
-    public void ErlaubtNachAbschluss_steht_nur_an_Schaeden_und_Anschaffungswuenschen()
+    public void ErlaubtNachAbschluss_steht_nur_an_Schaeden_Anschaffungswuenschen_und_dem_Erstattungsvermerk()
     {
         var erlaubt = Loesung.ModulAssemblies
             .SelectMany(AlleTypen)
@@ -75,6 +78,7 @@ public sealed class TypRegelnTests
 
         Assert.Equal(
             [
+                "Zeltlotse.Finanzen.Belege.BelegErstattetCommand",
                 "Zeltlotse.Inventar.Schaeden.AnschaffungswunschErledigtCommand",
                 "Zeltlotse.Inventar.Schaeden.SchadenEintragenCommand",
                 "Zeltlotse.Inventar.Schaeden.SchadenEntfernenCommand",

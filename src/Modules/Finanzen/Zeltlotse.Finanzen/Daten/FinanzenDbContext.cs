@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Zeltlotse.Api.Contracts.Finanzen;
 using Zeltlotse.SharedKernel.Daten;
+using Zeltlotse.SharedKernel.Dateien;
 using Zeltlotse.SharedKernel.Mandanten;
 
 namespace Zeltlotse.Finanzen.Daten;
@@ -9,6 +10,7 @@ namespace Zeltlotse.Finanzen.Daten;
 using Einnahmeposten = Zeltlotse.Finanzen.Kalkulation.Einnahmeposten;
 using Kalkulation = Zeltlotse.Finanzen.Kalkulation.Kalkulation;
 using KategoriePosten = Zeltlotse.Finanzen.Kalkulation.KategoriePosten;
+using Beleg = Zeltlotse.Finanzen.Belege.Beleg;
 
 /// <summary>Schreibender DbContext; nur Command-Handler erhalten ihn (AD-27).</summary>
 internal sealed class FinanzenDbContext(DbContextOptions<FinanzenDbContext> optionen, IMandantenKontext mandantenKontext)
@@ -22,6 +24,9 @@ internal sealed class FinanzenDbContext(DbContextOptions<FinanzenDbContext> opti
 
     /// <summary>Story 5-1: die Einnahmeposten der Kalkulationen.</summary>
     public DbSet<Einnahmeposten> Einnahmeposten => Set<Einnahmeposten>();
+
+    /// <summary>Story 5-2: die Belege der Freizeiten.</summary>
+    public DbSet<Beleg> Belege => Set<Beleg>();
 
     protected override string Schema => FinanzenModul.Schema;
 
@@ -61,6 +66,13 @@ internal sealed class FinanzenDbContext(DbContextOptions<FinanzenDbContext> opti
             .ToListAsync(abbruch))
         .SingleOrDefault();
 
+    /// <summary>Story 5-2: Lädt einen Beleg der Freizeit unter dem Mandantenfilter mit Zeilensperre (FOR UPDATE); <c>null</c>, wenn es ihn nicht (mehr) gibt.</summary>
+    public async Task<Beleg?> BelegSperrenAsync(Guid freizeitId, Guid belegId, CancellationToken abbruch) =>
+        (await Belege
+            .FromSql($"SELECT *, xmin FROM finanzen.beleg WHERE \"Id\" = {belegId} AND \"FreizeitId\" = {freizeitId} FOR UPDATE")
+            .ToListAsync(abbruch))
+        .SingleOrDefault();
+
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => FinanzenModell.Konfigurieren(modelBuilder);
 }
 
@@ -73,6 +85,8 @@ internal sealed class FinanzenLeseDbContext(DbContextOptions<FinanzenLeseDbConte
     public DbSet<KategoriePosten> KategoriePosten => Set<KategoriePosten>();
 
     public DbSet<Einnahmeposten> Einnahmeposten => Set<Einnahmeposten>();
+
+    public DbSet<Beleg> Belege => Set<Beleg>();
 
     protected override string Schema => FinanzenModul.Schema;
 
@@ -119,6 +133,20 @@ internal static class FinanzenModell
             e.Property(p => p.Version).IsRowVersion();
             e.HasIndex(p => p.FreizeitId);
             e.HasIndex(p => p.OrganisationId);
+        });
+
+        // Story 5-2, FR-58: Belege (aufbewahrungspflichtig, AD-16); die Datei liegt im Dateispeicher unter finanzen/<Id>.
+        modelBuilder.Entity<Beleg>(e =>
+        {
+            e.ToTable("beleg");
+            e.Property(b => b.Id).ValueGeneratedNever();
+            e.Property(b => b.Betrag).HasPrecision(BetragStellen, KategorieFelder.BetragNachkommastellen);
+            e.Property(b => b.Bezeichnung).HasMaxLength(BelegFelder.BezeichnungMaximaleLaenge);
+            e.Property(b => b.Dateiname).HasMaxLength(DokumentDateien.TitelMaximaleLaenge + 5);
+            e.Property(b => b.Version).IsRowVersion();
+            e.HasIndex(b => b.FreizeitId);
+            e.HasIndex(b => b.OrganisationId);
+            e.HasIndex(b => b.PersonId);
         });
     }
 }

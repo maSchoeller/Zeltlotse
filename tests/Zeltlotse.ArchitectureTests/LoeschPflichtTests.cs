@@ -22,7 +22,7 @@ public sealed class LoeschPflichtTests
             .Where(m => LoeschPflichtRegeln.EntitaetenMitPersonId(Loesung.AssemblyVon(m.Projekt)!.GetTypes()).Count > 0)
             .Select(m => m.Name);
 
-        Assert.Equal(["Konten", "Personen", "Organisationen", "Freizeiten", "Sicherheit", "Programm"], mitBezug);
+        Assert.Equal(["Konten", "Personen", "Organisationen", "Freizeiten", "Sicherheit", "Programm", "Finanzen"], mitBezug);
     }
 
     [Fact]

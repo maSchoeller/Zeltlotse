@@ -44,4 +44,4 @@ Nach dem Abschluss der Freizeit steht oben „Diese Freizeit ist abgeschlossen u
 
 ## Noch nicht dabei
 
-Reglerstellungen speichern, mehrere Szenarien vergleichen und eine Aufteilung der Kosten als Torte gibt es nicht. Belege und der Vermerk „Beitrag bezahlt“ kommen mit einer späteren Version.
+Reglerstellungen speichern, mehrere Szenarien vergleichen und eine Aufteilung der Kosten als Torte gibt es nicht. Der Vermerk „Beitrag bezahlt“ kommt mit einer späteren Version. Was tatsächlich ausgegeben wurde, steht in den [Belegen](/finanzen/belege/).

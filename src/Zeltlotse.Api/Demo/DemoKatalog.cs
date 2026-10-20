@@ -116,6 +116,21 @@ internal static class DemoKatalog
         ("Rabatt der Organisation", "1000"),
     ];
 
+    /// <summary>
+    /// Story 5-2: Belege der Demo-Freizeit (Bezeichnung, Kategorie, Betrag als Text, wer bezahlt hat, ob erstattet, ob mit Foto). Gegen die Kalkulation ist
+    /// Verpflegung mit 3.900 € von 4.200 € „Knapp“, Fahrt mit 1.950 € von 1.800 € „Überschritten“, der Rest „Im Plan“. Lea hat zwei offene Belege
+    /// (45,80 €), Jonas und Miriam sind ganz erstattet. Je Bezeichnung nur, wenn es sie noch nicht gibt; Vermerk und Foto nur beim Anlegen.
+    /// </summary>
+    public static IReadOnlyList<(string Bezeichnung, Zeltlotse.Api.Contracts.Finanzen.Kostenkategorie Kategorie, string Betrag, string Mail, bool Erstattet, bool Foto)> Belege { get; } =
+    [
+        ("Anzahlung Zeltplatz", Zeltlotse.Api.Contracts.Finanzen.Kostenkategorie.Unterkunft, "1500", "miriam.zeltner@example.org", true, false),
+        ("Busfahrt Hin- und Rückweg", Zeltlotse.Api.Contracts.Finanzen.Kostenkategorie.Fahrt, "1950", "miriam.zeltner@example.org", true, false),
+        ("Großeinkauf Lebensmittel", Zeltlotse.Api.Contracts.Finanzen.Kostenkategorie.Verpflegung, "3854,20", "jonas.huettner@example.org", true, false),
+        ("Bastelmaterial", Zeltlotse.Api.Contracts.Finanzen.Kostenkategorie.ProgrammUndMaterial, "180", "jonas.huettner@example.org", true, false),
+        ("Getränke", Zeltlotse.Api.Contracts.Finanzen.Kostenkategorie.Verpflegung, "22,40", "lea.feuerstein@example.org", false, false),
+        ("Brötchen und Obst", Zeltlotse.Api.Contracts.Finanzen.Kostenkategorie.Verpflegung, "23,40", "lea.feuerstein@example.org", false, true),
+    ];
+
     /// <summary>Story 4-4: Mahlzeiten, die die Küche als Restetag markiert (Tag, Titel der Mahlzeit).</summary>
     public static IReadOnlyList<(DateOnly Tag, string Mahlzeit)> Restetage { get; } = [(new DateOnly(2027, 8, 3), "Abendessen")];
 

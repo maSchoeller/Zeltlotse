@@ -1,0 +1,110 @@
+@page "/freizeiten/{FreizeitId:guid}/finanzen/soll-ist"
+@using Zeltlotse.Api.Contracts.Finanzen
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Ui.Kontext
+@using ApiSollIst = Zeltlotse.Api.Contracts.Finanzen.SollIst
+@inject FreizeitKontextDienst Kontext
+@inject FinanzenApiClient FinanzenApi
+@inject FreizeitenApiClient Freizeiten
+@* Soll-Ist (FR-59, NS-8, Story 5-2) für Leitung und Team, unter den Finanzen-Reitern. Bei jedem Öffnen neu gerechnet, ohne Abrechnungsabschluss.
+   - Card „Soll und Ist“: oben groß der Balken „Gesamt“, darunter je Kategorie ein Balken mit „Ist von Soll“ als Zahl und dem Statuswort „Im Plan“, „Knapp“
+     (Warnung, über 90 % vom Soll) oder „Überschritten“ (Fehler, über dem Soll) (NFR-16).
+   - Card „Erstattungen“: je Person, die bezahlt hat, ein Balken mit dem erstatteten Anteil, „noch 45,80 €“ und „Bekommt noch Geld“ (Warnung) oder „Alles
+     erstattet“; ohne Belege der Leer-Zustand.
+   Auch nach dem Abschluss lesbar. Kontext oder Vergleich nicht verfügbar (auch ohne Modul Finanzen) → „Diese Seite ist nicht verfügbar.“ *@
+<PageTitle>Soll-Ist – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Finanzen</Dachzeile>
+    <h1>Soll-Ist</h1>
+    <FinanzenReiter FreizeitId="FreizeitId" Aktiv="soll-ist" />
+
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+
+    @if (_sollIst is null || _kontext is null)
+    {
+        @if (_meldung is null)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        <Card Titel="Soll und Ist" Id="soll-ist">
+            <p>Soll ist die Kalkulation, Ist die Summe der Belege. Bis 90 % vom Soll ist eine Kategorie im Plan, bis 100 % knapp, darüber überschritten.</p>
+            <Balken Bezeichnung="Gesamt" Zahl="@FinanzenTexte.IstVonSoll(_sollIst.Gesamt)" Gross="true" Prozent="@FinanzenTexte.IstProzent(_sollIst.Gesamt)"
+                    Statuswort="@FinanzenTexte.StatusWort(_sollIst.Gesamt.Status)" Art="@FinanzenTexte.Art(_sollIst.Gesamt.Status)" />
+            <h3>Je Kategorie</h3>
+            @foreach (var zeile in _sollIst.Zeilen)
+            {
+                <Balken @key="zeile.Kategorie" Bezeichnung="@Kostenkategorien.Text(zeile.Kategorie!.Value)" Zahl="@FinanzenTexte.IstVonSoll(zeile)"
+                        Prozent="@FinanzenTexte.IstProzent(zeile)" Statuswort="@FinanzenTexte.StatusWort(zeile.Status)" Art="@FinanzenTexte.Art(zeile.Status)" />
+            }
+        </Card>
+
+        <Card Titel="Erstattungen" Id="erstattungen">
+            @if (_sollIst.Erstattungen.Count == 0)
+            {
+                <LeerZustand Satz="Noch keine Belege." />
+            }
+            else
+            {
+                <p>Je Person, die etwas ausgelegt hat: wie viel noch zu erstatten ist. Der Balken zeigt den erstatteten Anteil.</p>
+                @foreach (var erstattung in _sollIst.Erstattungen)
+                {
+                    <Balken @key="erstattung.PersonId" Bezeichnung="@FinanzenTexte.Zahler(erstattung.PersonId, _namen)" Zahl="@FinanzenTexte.ErstattungZahl(erstattung)"
+                            Prozent="@FinanzenTexte.ErstattetProzent(erstattung)" Statuswort="@FinanzenTexte.ErstattungWort(erstattung)"
+                            Art="@FinanzenTexte.ErstattungArt(erstattung)" />
+                }
+                <p><a href="@FinanzenTexte.BelegeZiel(FreizeitId)">Zu den Belegen</a> – dort steht an jedem Beleg der Haken „Erstattet“.</p>
+            }
+        </Card>
+    }
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    private ApiSollIst? _sollIst;
+    private IReadOnlyDictionary<Guid, string> _namen = new Dictionary<Guid, string>();
+    private bool _nichtVerfuegbar;
+    private string? _meldung;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _sollIst = null;
+        _nichtVerfuegbar = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var sollIst = FinanzenApi.SollIstLadenAsync(FreizeitId);
+            var namen = FinanzenTexte.NamenLadenAsync(Freizeiten, FreizeitId);
+            await Task.WhenAll(kontext, sollIst, namen);
+            if (kontext.Result is null || sollIst.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _sollIst, _namen) = (kontext.Result, sollIst.Result, namen.Result);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+}

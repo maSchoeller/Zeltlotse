@@ -11,7 +11,7 @@ using Zeltlotse.Finanzen.Daten;
 namespace Zeltlotse.Finanzen.Migrationen
 {
     [DbContext(typeof(FinanzenDbContext))]
-    internal partial class FinanzenDbContextModelSnapshot : ModelSnapshot
+    partial class FinanzenDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -22,6 +22,61 @@ namespace Zeltlotse.Finanzen.Migrationen
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Zeltlotse.Finanzen.Belege.Beleg", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Betrag")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("Bezeichnung")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int?>("DateiArt")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Dateiname")
+                        .HasMaxLength(205)
+                        .HasColumnType("character varying(205)");
+
+                    b.Property<DateTimeOffset>("ErfasstAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Erstattet")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Kategorie")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FreizeitId");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("PersonId");
+
+                    b.ToTable("beleg", "finanzen");
+                });
 
             modelBuilder.Entity("Zeltlotse.Finanzen.Kalkulation.Einnahmeposten", b =>
                 {

@@ -370,6 +370,28 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal(6L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM finanzen.kalkulation_kategorie"));
         Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM finanzen.einnahmeposten"));
 
+        // Story 5-2: sechs Belege von Miriam, Jonas und Lea; Verpflegung knapp (3.900 € von 4.200 €), Fahrt überschritten, der Rest im Plan. Lea bekommt
+        // noch 45,80 €, Jonas und Miriam sind erstattet. Ein Beleg hat ein Foto. Nichts doppelt, auch nach dem zweiten Einspielen.
+        var belege = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/finanzen/belege", Abbruch));
+        Assert.Equal(
+            DemoKatalog.Belege.Select(b => b.Bezeichnung).Order(StringComparer.Ordinal),
+            belege.EnumerateArray().Select(b => b.GetProperty("bezeichnung").GetString()!).Order(StringComparer.Ordinal));
+        var foto = Assert.Single(belege.EnumerateArray(), b => b.GetProperty("datei").ValueKind != System.Text.Json.JsonValueKind.Null);
+        Assert.Equal(("Brötchen und Obst", true, false), (foto.GetProperty("bezeichnung").GetString(), foto.GetProperty("datei").GetProperty("istBild").GetBoolean(), foto.GetProperty("erstattet").GetBoolean()));
+        using (var bild = await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/finanzen/belege/{foto.GetProperty("id").GetGuid()}/datei", Abbruch))
+        {
+            Assert.Equal(("image/png", "inline"), (bild.Content.Headers.ContentType?.MediaType, bild.Content.Headers.ContentDisposition?.DispositionType));
+        }
+
+        var sollIst = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/finanzen/soll-ist", Abbruch));
+        Assert.Equal(
+            ["Unterkunft 1500 ImPlan", "Verpflegung 3900 Knapp", "Fahrt 1950 Ueberschritten", "ProgrammUndMaterial 180 ImPlan", "Mitarbeitende 0 ImPlan", "Sonstiges 0 ImPlan"],
+            sollIst.GetProperty("zeilen").EnumerateArray().Select(z => $"{z.GetProperty("kategorie").GetString()} {z.GetProperty("ist").GetDecimal().ToString(System.Globalization.CultureInfo.InvariantCulture)} {z.GetProperty("status").GetString()}"));
+        var erstattungen = sollIst.GetProperty("erstattungen").EnumerateArray().ToList();
+        Assert.Equal((lea, 45.8m), (erstattungen[0].GetProperty("personId").GetGuid(), erstattungen[0].GetProperty("offen").GetDecimal()));
+        Assert.Equal([0m, 0m], erstattungen.Skip(1).Select(e => e.GetProperty("offen").GetDecimal()));
+        Assert.Equal(6L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM finanzen.beleg"));
+
         // Story 2-5: Die Fragen-Auswahl kam vor den Anmeldungen: Emmas Freigabe (eingegangen) und Mias (bestätigt) tragen die Fragen für
         // Teilnehmende, Leas die für Mitarbeitende. Daniel hat für Mia drei Antworten gespeichert, Lea eine Team-Notiz zu Mia geschrieben
         // (genau eine, auch nach dem zweiten Einspielen, nur verschlüsselt). Emmas Anmeldung nennt „Einsicht bis“.

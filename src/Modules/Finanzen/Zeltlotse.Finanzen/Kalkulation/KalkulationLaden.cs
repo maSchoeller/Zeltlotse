@@ -17,11 +17,24 @@ namespace Zeltlotse.Finanzen.Kalkulation;
 /// </summary>
 internal static class KalkulationLadenEndpunkt
 {
-    public static async Task<Results<Ok<ApiKalkulation>, NotFound>> Laden(Guid freizeitId, IFreizeitTageLesen tageLesen, FinanzenLeseDbContext db, CancellationToken abbruch)
+    public static async Task<Results<Ok<ApiKalkulation>, NotFound>> Laden(Guid freizeitId, IFreizeitTageLesen tageLesen, FinanzenLeseDbContext db, CancellationToken abbruch) =>
+        await KalkulationAbfrage.LadenAsync(freizeitId, tageLesen, db, abbruch) is { } kalkulation ? TypedResults.Ok(kalkulation) : TypedResults.NotFound();
+
+    /// <summary>Ein Einnahmeposten, wie die API ihn liefert (Betrag ohne Null-Nachkommastellen).</summary>
+    public static ApiEinnahmeposten AlsApi(Einnahmeposten posten) => new(posten.Id, posten.Version, posten.Bezeichnung, FinanzenWerte.OhneNullen(posten.Betrag));
+}
+
+/// <summary>
+/// Die Rechnung der Kalkulation einer Freizeit, gemeinsam für <c>GET …/kalkulation</c> und (Story 5-2) das Soll in <c>GET …/soll-ist</c>; <c>null</c>, wenn
+/// es die Freizeit hier nicht gibt.
+/// </summary>
+internal static class KalkulationAbfrage
+{
+    public static async Task<ApiKalkulation?> LadenAsync(Guid freizeitId, IFreizeitTageLesen tageLesen, FinanzenLeseDbContext db, CancellationToken abbruch)
     {
         if (!(await tageLesen.TageAsync([freizeitId], abbruch)).TryGetValue(freizeitId, out var freizeitTage))
         {
-            return TypedResults.NotFound();
+            return null;
         }
 
         var kalkulation = await db.Kalkulationen.Where(k => k.FreizeitId == freizeitId).SingleOrDefaultAsync(abbruch);
@@ -36,7 +49,7 @@ internal static class KalkulationLadenEndpunkt
             .Select(k => (k.Kategorie, k.Stand, Ansatz: new Kostenansatz(
                 FinanzenWerte.OhneNullen(k.Stand?.Fixkosten ?? 0m), FinanzenWerte.OhneNullen(k.Stand?.ProPersonUndTag ?? 0m))))
             .ToList();
-        return TypedResults.Ok(new ApiKalkulation(
+        return new ApiKalkulation(
             kalkulation?.Version ?? 0u,
             teilnehmende,
             mitarbeitende,
@@ -45,10 +58,7 @@ internal static class KalkulationLadenEndpunkt
                 .. ansaetze.Select(a => new KalkulationKategorie(
                     a.Kategorie, a.Stand?.Version ?? 0u, a.Ansatz.Fixkosten, a.Ansatz.ProPersonUndTag, Beitragsrechnung.Kosten(a.Ansatz, teilnehmende, mitarbeitende, tage))),
             ],
-            [.. einnahmen.Select(AlsApi)],
-            Beitragsrechnung.Rechnen(teilnehmende, mitarbeitende, tage, ansaetze.Select(a => a.Ansatz), einnahmen.Select(e => FinanzenWerte.OhneNullen(e.Betrag)))));
+            [.. einnahmen.Select(KalkulationLadenEndpunkt.AlsApi)],
+            Beitragsrechnung.Rechnen(teilnehmende, mitarbeitende, tage, ansaetze.Select(a => a.Ansatz), einnahmen.Select(e => FinanzenWerte.OhneNullen(e.Betrag))));
     }
-
-    /// <summary>Ein Einnahmeposten, wie die API ihn liefert (Betrag ohne Null-Nachkommastellen).</summary>
-    public static ApiEinnahmeposten AlsApi(Einnahmeposten posten) => new(posten.Id, posten.Version, posten.Bezeichnung, FinanzenWerte.OhneNullen(posten.Betrag));
 }

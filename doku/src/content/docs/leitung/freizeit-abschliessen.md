@@ -51,4 +51,4 @@ Auf der Seite der Organisation stehen alle Freizeiten in der Card **Freizeiten**
 
 ## Noch nicht dabei
 
-Belege und Erstattungen gehören zum Modul Finanzen; sie kommen mit einer späteren Version. Dann nennt die Rückfrage auch Belege, die noch nicht erstattet sind.
+Die Rückfrage vor dem Abschluss nennt keine Belege, die noch nicht erstattet sind; wer noch Geld bekommt, zeigt [Soll-Ist](/finanzen/soll-ist/#erstattungen). Der Haken „Erstattet“ an den [Belegen](/finanzen/belege/) lässt sich auch nach dem Abschluss noch setzen.

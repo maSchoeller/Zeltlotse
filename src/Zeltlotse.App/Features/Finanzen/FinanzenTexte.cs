@@ -1,10 +1,16 @@
 using System.Globalization;
 using Zeltlotse.Api.Contracts.Finanzen;
+using Zeltlotse.Api.Contracts.Freizeiten;
+using Zeltlotse.Ui.Api;
+using Zeltlotse.Ui.Komponenten;
 using Zeltlotse.Ui.Texte;
 
 namespace Zeltlotse.App.Features.Finanzen;
 
-/// <summary>Story 5-1: Gemeinsames der Finanzen-Seiten: Texte, Ziele der Links und die Rechnung für die Balken.</summary>
+/// <summary>
+/// Story 5-1: Gemeinsames der Finanzen-Seiten: Texte, Ziele der Links und die Rechnung für die Balken. Story 5-2: Ziele, Namen der Zahlenden und die Balken
+/// von Soll-Ist und Erstattungen.
+/// </summary>
 internal static class FinanzenTexte
 {
     public const string AbgeschlossenText = "Diese Freizeit ist abgeschlossen und nur lesbar.";
@@ -83,4 +89,134 @@ internal static class FinanzenTexte
     }
 
     public const decimal TagessatzSchritt = 0.5m;
+
+    // ---------- Story 5-2: Belege, Soll-Ist und Erstattung ----------
+
+    /// <summary>Nach dem Abschluss: nur der Haken „Erstattet“ lässt sich noch setzen (AD-17).</summary>
+    public const string NurErstattetText = "Diese Freizeit ist abgeschlossen. Nur „Erstattet“ lässt sich noch ändern.";
+
+    public const string GeloeschtePersonText = "Gelöschte Person";
+
+    public const string OhneNamenText = "Ohne Namen";
+
+    /// <summary>Text der Meldung, wenn der Upload scheitert; „Erneut versuchen“ lädt an denselben Beleg.</summary>
+    public const string NichtHochgeladenText = "Datei nicht hochgeladen.";
+
+    /// <summary>Die Belege der Freizeit.</summary>
+    public static string BelegeZiel(Guid freizeitId) => $"freizeiten/{freizeitId}/finanzen/belege";
+
+    /// <summary>Ein Beleg der Freizeit.</summary>
+    public static string BelegZiel(Guid freizeitId, Guid belegId) => $"freizeiten/{freizeitId}/finanzen/belege/{belegId}";
+
+    /// <summary>Der Soll-Ist-Vergleich der Freizeit.</summary>
+    public static string SollIstZiel(Guid freizeitId) => $"freizeiten/{freizeitId}/finanzen/soll-ist";
+
+    /// <summary>
+    /// Je Person der Leitung (aus der Freizeit) und des Teams (bestätigte Mitarbeitende der Personenliste) der Name, wie <c>ProgrammTexte.Namen</c> (AD-2:
+    /// Finanzen kennt keine Namen). Fehlt eine Quelle, fehlen nur ihre Namen.
+    /// </summary>
+    public static IReadOnlyDictionary<Guid, string> Namen(FreizeitAntwort? freizeit, IEnumerable<PersonenlisteZeile>? personen)
+    {
+        var namen = new Dictionary<Guid, string>();
+        foreach (var person in (personen ?? []).Where(p => p.Art == AnmeldungArt.Mitarbeitende && p.Status == AnmeldungStatus.Bestaetigt))
+        {
+            namen[person.PersonId] = Anzeige.Name(person.Vorname, person.Nachname);
+        }
+
+        foreach (var leitung in freizeit?.Leitung ?? [])
+        {
+            namen[leitung.PersonId] = Anzeige.Name(leitung.Vorname, leitung.Nachname);
+        }
+
+        return namen;
+    }
+
+    /// <summary>Lädt Freizeit und Personenliste für die Namen; scheitert ein Teil, fehlen nur dessen Namen.</summary>
+    public static async Task<IReadOnlyDictionary<Guid, string>> NamenLadenAsync(FreizeitenApiClient freizeiten, Guid freizeitId)
+    {
+        var freizeit = Leise(freizeiten.LadenAsync(freizeitId));
+        var personen = Leise(freizeiten.PersonenlisteLadenAsync(freizeitId));
+        await Task.WhenAll(freizeit, personen);
+        return Namen(freizeit.Result, personen.Result);
+    }
+
+    private static async Task<T?> Leise<T>(Task<T?> abruf)
+        where T : class
+    {
+        try
+        {
+            return await abruf;
+        }
+        catch (Exception fehler) when (Zeltlotse.App.Features.Konten.AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Der Name der Person, die bezahlt hat: nach dem Löschen „Gelöschte Person“, ohne bekannten Namen „Ohne Namen“ (AD-2: Namen setzt der Client zusammen).</summary>
+    public static string Zahler(Guid personId, IReadOnlyDictionary<Guid, string> namen) =>
+        personId == BelegFelder.GeloeschtePerson ? GeloeschtePersonText : namen.GetValueOrDefault(personId) is { Length: > 0 } name ? name : OhneNamenText;
+
+    /// <summary>Die Überschrift eines Belegs: die Bezeichnung oder, ohne Bezeichnung, die Kategorie.</summary>
+    public static string Titel(Beleg beleg) => beleg.Bezeichnung ?? Kostenkategorien.Text(beleg.Kategorie);
+
+    /// <summary>„Foto“ oder „PDF“ für den Link zur Datei.</summary>
+    public static string DateiText(BelegDatei datei) => datei.IstBild ? "Foto" : "PDF";
+
+    /// <summary>Die Optionen „Kategorie“ in fester Reihenfolge.</summary>
+    public static IReadOnlyList<AuswahlOption> KategorieOptionen { get; } =
+        [.. Kostenkategorien.Alle.Select(k => new AuswahlOption(k.ToString(), Kostenkategorien.Text(k)))];
+
+    /// <summary>
+    /// Die Optionen „Bezahlt von“: je Person der Leitung und des Teams der Name, alphabetisch; ist der aktuelle Zahler keiner davon (z. B. eine gelöschte
+    /// Person), steht er vorne.
+    /// </summary>
+    public static IReadOnlyList<AuswahlOption> ZahlerOptionen(IReadOnlyDictionary<Guid, string> namen, Guid? aktuell = null)
+    {
+        var optionen = namen.OrderBy(n => n.Value, StringComparer.Create(Deutsch, ignoreCase: true)).Select(n => new AuswahlOption(n.Key.ToString("D"), n.Value)).ToList();
+        if (aktuell is { } person && !namen.ContainsKey(person))
+        {
+            optionen.Insert(0, new AuswahlOption(person.ToString("D"), Zahler(person, namen)));
+        }
+
+        return optionen;
+    }
+
+    /// <summary>Das Statuswort einer Soll-Ist-Zeile (NFR-16).</summary>
+    public static string StatusWort(SollIstStatus status) => status switch
+    {
+        SollIstStatus.Knapp => "Knapp",
+        SollIstStatus.Ueberschritten => "Überschritten",
+        _ => "Im Plan",
+    };
+
+    /// <summary>Die Art des Balkens: Knapp ist eine Warnung, Überschritten ein Fehler.</summary>
+    public static BalkenArt Art(SollIstStatus status) => status switch
+    {
+        SollIstStatus.Knapp => BalkenArt.Warnung,
+        SollIstStatus.Ueberschritten => BalkenArt.Fehler,
+        _ => BalkenArt.Normal,
+    };
+
+    /// <summary>„3.900,00 € von 4.200,00 € (93 %)“; ohne Soll ohne Prozent.</summary>
+    public static string IstVonSoll(SollIstZeile zeile) =>
+        zeile.Soll > 0
+            ? $"{Anzeige.Euro(zeile.Ist)} von {Anzeige.Euro(zeile.Soll)} ({Math.Round(zeile.Ist / zeile.Soll * 100m, 0, MidpointRounding.AwayFromZero).ToString(CultureInfo.InvariantCulture)} %)"
+            : $"{Anzeige.Euro(zeile.Ist)} von {Anzeige.Euro(zeile.Soll)}";
+
+    /// <summary>Die Füllung: Ist im Verhältnis zum Soll; ohne Soll mit Ist ganz voll.</summary>
+    public static double IstProzent(SollIstZeile zeile) => zeile.Soll > 0 ? Prozent(zeile.Ist, zeile.Soll) : zeile.Ist > 0 ? 100 : 0;
+
+    /// <summary>Statuswort einer Erstattung: „Bekommt noch Geld“ (Warnung) oder „Alles erstattet“.</summary>
+    public static string ErstattungWort(Erstattung erstattung) => erstattung.Offen > 0 ? "Bekommt noch Geld" : "Alles erstattet";
+
+    public static BalkenArt ErstattungArt(Erstattung erstattung) => erstattung.Offen > 0 ? BalkenArt.Warnung : BalkenArt.Normal;
+
+    /// <summary>Die Zahl einer Erstattung, z. B. „noch 45,80 €“.</summary>
+    public static string ErstattungZahl(Erstattung erstattung) => $"noch {Anzeige.Euro(erstattung.Offen)}";
+
+    /// <summary>Der Anteil, der schon erstattet ist.</summary>
+    public static double ErstattetProzent(Erstattung erstattung) => Prozent(erstattung.Erstattet, erstattung.Offen + erstattung.Erstattet);
+
+    private static readonly CultureInfo Deutsch = CultureInfo.GetCultureInfo("de-DE");
 }

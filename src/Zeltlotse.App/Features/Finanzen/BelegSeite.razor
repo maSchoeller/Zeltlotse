@@ -1,0 +1,336 @@
+@page "/freizeiten/{FreizeitId:guid}/finanzen/belege/{BelegId:guid}"
+@using Microsoft.AspNetCore.Components.Forms
+@using Zeltlotse.Api.Contracts.Finanzen
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Ui.Kontext
+@inject FreizeitKontextDienst Kontext
+@inject FinanzenApiClient FinanzenApi
+@inject FreizeitenApiClient Freizeiten
+@inject NavigationManager Navigation
+@* Ein Beleg (CAP-33, FR-58, Story 5-2) für Leitung und Team, erreicht über die Belegliste. Dachzeile „Finanzen“, Überschrift die Bezeichnung (ohne
+   Bezeichnung die Kategorie), darunter „erfasst am“.
+   - Card „Beleg“: Betrag, Kategorie, Bezeichnung und „Bezahlt von“ als Autosave-Felder (AD-19); der Haken „Erstattet“ speichert sofort.
+   - Card „Datei“: ein Foto als Bild vom API-Pfad, ein PDF als Link zum Herunterladen; Datei wählen lädt sofort hoch und ersetzt die alte, scheitert das, gibt es
+     „Erneut versuchen“; „Datei entfernen“ per Inline-Bestätigung.
+   - „Beleg löschen“ per Inline-Bestätigung, danach zurück zur Liste.
+   In der Phase „gelaufen“ stehen die Werte als Text da, nur „Erstattet“ bleibt bedienbar (AD-17). Kontext oder Beleg nicht verfügbar → „Diese Seite ist
+   nicht verfügbar.“ *@
+<PageTitle>Beleg – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Finanzen</Dachzeile>
+    @if (_beleg is null || _felder is null || _kontext is null)
+    {
+        <h1>Beleg</h1>
+        @if (_meldung is not null)
+        {
+            <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                <p>@_meldung</p>
+            </Meldung>
+        }
+        else
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        <h1>@FinanzenTexte.Titel(_beleg)</h1>
+        <p>Erfasst am @Anzeige.Datum(_beleg.ErfasstAm) · @Anzeige.Euro(_beleg.Betrag) · Bezahlt von @FinanzenTexte.Zahler(_beleg.BezahltVon, _namen)</p>
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@FinanzenTexte.NurErstattetText</p>
+            </Meldung>
+        }
+        @if (_meldung is not null)
+        {
+            <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                <p>@_meldung</p>
+            </Meldung>
+        }
+
+        <Card Titel="Beleg" Id="beleg">
+            @if (Abgeschlossen)
+            {
+                <DetailsListe Eintraege="NurLesen" />
+            }
+            else
+            {
+                <AutosaveFeld @key="@($"betrag-{_ladung}")" Label="Betrag in €" Id="beleg-betrag" Feldname="@BelegFelder.Betrag" Pfad="@BelegPfad"
+                              Wert="@KategorieFelder.BetragText(_felder.Betrag)" Version="@_felder.Version" Hinweis="z. B. 23,40"
+                              NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                <AutosaveAuswahlgruppe @key="@($"kategorie-{_ladung}")" Legende="Kategorie" Id="beleg-kategorie" Feldname="@BelegFelder.Kategorie" Pfad="@BelegPfad"
+                                       Optionen="FinanzenTexte.KategorieOptionen" Mehrfach="false" Wert="@_felder.Kategorie.ToString()" Version="@_felder.Version"
+                                       NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                <AutosaveFeld @key="@($"bezeichnung-{_ladung}")" Label="Bezeichnung" Id="beleg-bezeichnung" Feldname="@BelegFelder.Bezeichnung" Pfad="@BelegPfad"
+                              Wert="@_felder.Bezeichnung" Version="@_felder.Version"
+                              Hinweis="@($"z. B. Großeinkauf Lebensmittel, höchstens {BelegFelder.BezeichnungMaximaleLaenge} Zeichen")"
+                              NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                <AutosaveAuswahlgruppe @key="@($"zahler-{_ladung}")" Legende="Bezahlt von" Id="beleg-bezahlt-von" Feldname="@BelegFelder.BezahltVon" Pfad="@BelegPfad"
+                                       Optionen="@FinanzenTexte.ZahlerOptionen(_namen, _felder.BezahltVon)" Mehrfach="false" Wert="@_felder.BezahltVon.ToString("D")"
+                                       Version="@_felder.Version" NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+            }
+            <AutosaveAnkreuzfeld @key="@($"erstattet-{_ladung}")" Label="Erstattet" Id="beleg-erstattet" Feldname="@BelegFelder.Erstattet"
+                                 Pfad="@FinanzenApiClient.ErstattetPfad(FreizeitId, BelegId)" Wert="@_felder.Erstattet" Version="@_felder.Version"
+                                 NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+        </Card>
+
+        <Card Titel="Datei" Id="datei">
+            @if (_beleg.Datei is { IstBild: true } foto)
+            {
+                <img src="@DateiQuelle" alt="@($"Foto des Belegs „{FinanzenTexte.Titel(_beleg)}“")" />
+                <p><a href="@DateiQuelle" target="_blank" rel="noopener">Foto öffnen (@foto.Dateiname)</a></p>
+            }
+            else if (_beleg.Datei is { } pdf)
+            {
+                <p><a href="@DateiQuelle" download>PDF herunterladen (@pdf.Dateiname)</a></p>
+            }
+            else
+            {
+                <LeerZustand Satz="Noch keine Datei." />
+            }
+
+            @if (!Abgeschlossen)
+            {
+                @if (_uploadGescheitert)
+                {
+                    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                        <p>@FinanzenTexte.NichtHochgeladenText</p>
+                        <Knopf Deaktiviert="@_uebertraegt" @onclick="HochladenAsync">Erneut versuchen</Knopf>
+                    </Meldung>
+                }
+                <DateiFeld @key="_dateiFeld" Id="beleg-datei" Label="@(_beleg.Datei is null ? "Foto aufnehmen oder Datei wählen" : "Datei ersetzen")"
+                           Hinweis="JPEG, PNG, WebP oder PDF bis 10 MB" Fehler="@_dateiFehler" Deaktiviert="@_uebertraegt" DateiGewaehlt="DateiGewaehltAsync" />
+                @if (_beleg.Datei is not null)
+                {
+                    <InlineBestaetigung AusloeserText="Datei entfernen" AusloeserArt="KnopfArt.Outline" Satz="Die Datei entfernen? Der Beleg bleibt."
+                                        JaText="Ja, entfernen" Bestaetigt="DateiEntfernenAsync" />
+                }
+            }
+        </Card>
+
+        @if (!Abgeschlossen)
+        {
+            <InlineBestaetigung AusloeserText="Beleg löschen" AusloeserArt="KnopfArt.Outline" Satz="@($"„{FinanzenTexte.Titel(_beleg)}“ löschen? Die Datei wird mitgelöscht.")"
+                                JaText="Ja, löschen" Bestaetigt="LoeschenAsync" />
+        }
+    }
+    <p><a href="@FinanzenTexte.BelegeZiel(FreizeitId)">Zurück zu den Belegen</a></p>
+}
+
+@code {
+    /// <summary>Höchstgröße beim Lesen im Browser: eine größere Datei lehnt der Server ab, ohne dass alles gelesen wird.</summary>
+    private const long Hoechstgroesse = (10 * 1024 * 1024) + 1;
+
+    private const string ZuGrossText = "Die Datei ist größer als 10 MB.";
+
+    private FreizeitKontext? _kontext;
+    // Der zuletzt geladene Stand für Überschrift, Zeile und Datei.
+    private Beleg? _beleg;
+    // Der Stand der Autosave-Felder: nur beim Öffnen und nach „Neu laden“ neu, damit ein gespeichertes Feld „Gespeichert · Rückgängig“ behält.
+    private Beleg? _felder;
+    private int _ladung;
+    private IReadOnlyDictionary<Guid, string> _namen = new Dictionary<Guid, string>();
+    private bool _nichtVerfuegbar;
+    private bool _uebertraegt;
+    private bool _uploadGescheitert;
+    private string? _meldung;
+    private string? _dateiFehler;
+    private IBrowserFile? _datei;
+    private int _dateiFeld;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    [Parameter] public Guid BelegId { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    private string BelegPfad => FinanzenApiClient.BelegPfad(FreizeitId, BelegId);
+
+    /// <summary>Der Pfad der Datei mit dem Stand, damit nach dem Ersetzen das neue Bild erscheint.</summary>
+    private string DateiQuelle => $"{FinanzenApiClient.DateiPfad(FreizeitId, BelegId)}?stand={_beleg!.Version}";
+
+    private IReadOnlyList<DetailsEintrag> NurLesen =>
+    [
+        new("Betrag", Anzeige.Euro(_beleg!.Betrag)),
+        new("Kategorie", Kostenkategorien.Text(_beleg.Kategorie)),
+        new("Bezeichnung", _beleg.Bezeichnung ?? "–"),
+        new("Bezahlt von", FinanzenTexte.Zahler(_beleg.BezahltVon, _namen)),
+    ];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _beleg = null;
+        _felder = null;
+        _nichtVerfuegbar = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var belege = FinanzenApi.BelegeLadenAsync(FreizeitId);
+            var namen = FinanzenTexte.NamenLadenAsync(Freizeiten, FreizeitId);
+            await Task.WhenAll(kontext, belege, namen);
+            var beleg = belege.Result?.FirstOrDefault(b => b.Id == BelegId);
+            if (kontext.Result is null || beleg is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _beleg, _felder, _namen) = (kontext.Result, beleg, beleg, namen.Result);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Lädt den Beleg neu; mit <paramref name="felder"/> bekommen auch die Autosave-Felder den neuen Stand. Ist er weg, ist die Seite nicht verfügbar.</summary>
+    private async Task LadenAsync(bool felder)
+    {
+        try
+        {
+            if ((await FinanzenApi.BelegeLadenAsync(FreizeitId))?.FirstOrDefault(b => b.Id == BelegId) is { } beleg)
+            {
+                _beleg = beleg;
+                if (felder)
+                {
+                    _felder = beleg;
+                    _ladung++;
+                }
+            }
+            else
+            {
+                _nichtVerfuegbar = true;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    private Task NachSpeichernAsync(string? _) => LadenAsync(felder: false);
+
+    private Task NeuLadenAsync() => LadenAsync(felder: true);
+
+    private Task DateiGewaehltAsync(IBrowserFile? datei)
+    {
+        _datei = datei;
+        return datei is null ? Task.CompletedTask : HochladenAsync();
+    }
+
+    /// <summary>Lädt die gewählte Datei hoch (ersetzt die alte); ein Netzfehler zeigt „Datei nicht hochgeladen.“ mit „Erneut versuchen“.</summary>
+    private async Task HochladenAsync()
+    {
+        if (_datei is not { } datei || _uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _uploadGescheitert = false;
+        _dateiFehler = null;
+        _meldung = null;
+        try
+        {
+            BelegDateiErgebnis ergebnis;
+            if (datei.Size >= Hoechstgroesse)
+            {
+                ergebnis = new BelegDateiErgebnis(null, ZuGrossText);
+            }
+            else
+            {
+                try
+                {
+                    await using var strom = datei.OpenReadStream(Hoechstgroesse);
+                    ergebnis = await FinanzenApi.DateiHochladenAsync(FreizeitId, BelegId, strom, datei.Name, datei.ContentType);
+                }
+                catch (IOException)
+                {
+                    ergebnis = new BelegDateiErgebnis(null, ZuGrossText);
+                }
+            }
+
+            _dateiFehler = ergebnis.DateiFehler;
+            if (ergebnis.Abgeschlossen)
+            {
+                _kontext = await Kontext.LadenAsync(FreizeitId) ?? _kontext;
+                _meldung = FinanzenTexte.AbgeschlossenText;
+            }
+            else if (ergebnis.NichtVerfuegbar)
+            {
+                _nichtVerfuegbar = true;
+            }
+            else if (ergebnis.Beleg is not null)
+            {
+                _datei = null;
+                _dateiFeld++;
+                await LadenAsync(felder: false);
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _uploadGescheitert = true;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task DateiEntfernenAsync()
+    {
+        _meldung = null;
+        try
+        {
+            switch (await FinanzenApi.DateiEntfernenAsync(FreizeitId, BelegId))
+            {
+                case FinanzenAktionErgebnis.Erfolg:
+                    await LadenAsync(felder: false);
+                    break;
+                case FinanzenAktionErgebnis.Abgeschlossen:
+                    _meldung = FinanzenTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    private async Task LoeschenAsync()
+    {
+        _meldung = null;
+        try
+        {
+            switch (await FinanzenApi.BelegLoeschenAsync(FreizeitId, BelegId))
+            {
+                case FinanzenAktionErgebnis.Erfolg:
+                    Navigation.NavigateTo(FinanzenTexte.BelegeZiel(FreizeitId));
+                    break;
+                case FinanzenAktionErgebnis.Abgeschlossen:
+                    _meldung = FinanzenTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _meldung = AnmeldungAbschluss.FehlerText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+}

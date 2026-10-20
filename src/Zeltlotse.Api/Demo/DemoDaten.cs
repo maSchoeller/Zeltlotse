@@ -15,6 +15,7 @@ using Zeltlotse.Freizeiten.Leitung;
 using Zeltlotse.Freizeiten.Module;
 using Zeltlotse.Freizeiten.TeamNotizen;
 using Zeltlotse.Freizeiten.Verwaltung;
+using Zeltlotse.Finanzen.Belege;
 using Zeltlotse.Finanzen.Daten;
 using Zeltlotse.Finanzen.Kalkulation;
 using Zeltlotse.Inventar.Artikel;
@@ -182,6 +183,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await RestetagAsync(abbruch);
         // Story 5-1: die Kalkulation (Modul Finanzen ist an).
         await FinanzenAsync(abbruch);
+        // Story 5-2: Belege mit einem Foto, teils erstattet (braucht die Kalkulation für Soll-Ist und Lea im Team).
+        await BelegeAsync(abbruch);
         await MaterialAsync(abbruch);
         await ZweiteFreizeitAsync(abbruch);
         await InventarAsync(abbruch);
@@ -857,6 +860,54 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             if (await sender.Send(new EinnahmeAnlegenCommand(freizeitId, bezeichnung, betrag), abbruch) is not EinnahmeAnlegen.Angelegt)
             {
                 throw new InvalidOperationException($"Demo-Kalkulation: Die Einnahme {bezeichnung} ließ sich nicht anlegen.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Story 5-2: Belege der Demo-Freizeit aus <see cref="DemoKatalog.Belege"/> über die Commands des Moduls Finanzen: anlegen (bezahlt von der jeweiligen
+    /// Person), danach der Erstattungsvermerk und das Foto (<see cref="DemoDateien.Png"/>). Idempotent: je Bezeichnung nur, wenn es sie noch nicht gibt.
+    /// Gehört die Person nicht (mehr) zum Team, bleibt ihr Beleg weg.
+    /// </summary>
+    private async Task BelegeAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var freizeitId = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name)
+            .Select(f => f.Id)
+            .SingleAsync(abbruch);
+        var vorhanden = await dienste.GetRequiredService<FinanzenLeseDbContext>().Belege
+            .Where(b => b.FreizeitId == freizeitId && b.Bezeichnung != null)
+            .Select(b => b.Bezeichnung!)
+            .ToListAsync(abbruch);
+        foreach (var (bezeichnung, kategorie, betrag, mail, erstattet, foto) in DemoKatalog.Belege.Where(b => !vorhanden.Contains(b.Bezeichnung)))
+        {
+            var person = (await sender.Send(new KontoSicherstellen(mail), abbruch)).PersonId;
+            var ergebnis = await sender.Send(new BelegAnlegenCommand(freizeitId, person, kategorie.ToString(), betrag, bezeichnung, null), abbruch);
+            if (ergebnis is BelegAenderung.FremderZahler)
+            {
+                continue;
+            }
+
+            if (ergebnis is not BelegAenderung.Gespeichert angelegt)
+            {
+                throw new InvalidOperationException($"Demo-Beleg: {bezeichnung} ließ sich nicht anlegen.");
+            }
+
+            if (erstattet
+                && await sender.Send(new BelegErstattetCommand(freizeitId, angelegt.Beleg.Id, angelegt.Beleg.Version, "false", "true"), abbruch) is not BelegAenderung.Gespeichert)
+            {
+                throw new InvalidOperationException($"Demo-Beleg: {bezeichnung} ließ sich nicht als erstattet vermerken.");
+            }
+
+            if (foto
+                && await sender.Send(new BelegDateiHochladenCommand(freizeitId, angelegt.Beleg.Id, DemoDateien.Png(), SharedKernel.Dateien.DateiArt.Png, "Kassenbon.png"), abbruch)
+                    is not BelegAenderung.Gespeichert)
+            {
+                throw new InvalidOperationException($"Demo-Beleg: Das Foto zu {bezeichnung} ließ sich nicht hochladen.");
             }
         }
     }

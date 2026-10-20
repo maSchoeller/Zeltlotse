@@ -1,0 +1,339 @@
+@page "/freizeiten/{FreizeitId:guid}/finanzen/belege"
+@using Microsoft.AspNetCore.Components.Forms
+@using Zeltlotse.Api.Contracts.Finanzen
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Ui.Kontext
+@inject FreizeitKontextDienst Kontext
+@inject FinanzenApiClient FinanzenApi
+@inject FreizeitenApiClient Freizeiten
+@* Belege (CAP-33, FR-58, Story 5-2) für Leitung und Team, unter den Finanzen-Reitern „Kalkulation · Beitragsrechner · Belege · Soll-Ist“.
+   - Card „Beleg erfassen“: Betrag und Kategorie (Pflicht), Bezeichnung, „Bezahlt von“ (Vorgabe „Ich“, sonst eine Person aus Leitung oder Team) und auf Wunsch
+     ein Foto oder PDF. Gespeichert wird zuerst der Beleg, danach die Datei. Scheitert der Upload, bleibt der Beleg, und „Erneut versuchen“ lädt die Datei
+     an denselben Beleg; ein Fehler der Datei (Typ, Größe) steht am Feld.
+   - Card „Belege“: Tabelle mit Beleg (Link zur Detailseite), Kategorie, Betrag, Bezahlt von, Datei und dem Haken „Erstattet“ (Autosave), darunter die Summe.
+   Namen setzt der Client aus Freizeit und Personenliste zusammen (AD-2); eine gelöschte Person heißt „Gelöschte Person“, ein unbekannter Name „Ohne Namen“.
+   In der Phase „gelaufen“ fehlt „Beleg erfassen“, nur „Erstattet“ bleibt bedienbar (AD-17). Kontext oder Belege nicht verfügbar (auch ohne Modul Finanzen) →
+   „Diese Seite ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung. *@
+<PageTitle>Belege – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Finanzen</Dachzeile>
+    <h1>Belege</h1>
+    <FinanzenReiter FreizeitId="FreizeitId" Aktiv="belege" />
+
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+
+    @if (_belege is null || _kontext is null)
+    {
+        @if (_meldung is null)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@FinanzenTexte.NurErstattetText</p>
+            </Meldung>
+        }
+        else
+        {
+            <Card Titel="Beleg erfassen" Id="beleg-erfassen">
+                @if (_erfolg is not null)
+                {
+                    <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+                        <p>@_erfolg</p>
+                    </Meldung>
+                }
+                @if (_offenerUpload is not null)
+                {
+                    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                        <p>@FinanzenTexte.NichtHochgeladenText Der Beleg ist gespeichert.</p>
+                        <Knopf Deaktiviert="@_uebertraegt" @onclick="ErneutHochladenAsync">Erneut versuchen</Knopf>
+                    </Meldung>
+                }
+                <Formular Absenden="AnlegenAsync">
+                    <Fehleruebersicht Fehler="FehlerListe" />
+                    <Feld Label="Betrag in € *" Id="beleg-betrag" Wert="@_betrag" Fehler="@_betragFehler" autocomplete="off" inputmode="decimal"
+                          Hinweis="z. B. 23,40" @oninput="@(e => _betrag = e.Value?.ToString())" />
+                    <div id="beleg-kategorie">
+                        <Auswahl Legende="Kategorie *" Gruppe="beleg-kategorie" Optionen="FinanzenTexte.KategorieOptionen" Wert="@_kategorie" Fehler="@_kategorieFehler"
+                                 WertGeaendert="@(w => _kategorie = w)" />
+                    </div>
+                    <Feld Label="Bezeichnung" Id="beleg-bezeichnung" Wert="@_bezeichnung" Fehler="@_bezeichnungFehler" autocomplete="off"
+                          Hinweis="@($"z. B. Großeinkauf Lebensmittel, höchstens {BelegFelder.BezeichnungMaximaleLaenge} Zeichen")"
+                          @oninput="@(e => _bezeichnung = e.Value?.ToString())" />
+                    <div id="beleg-bezahlt-von">
+                        <Auswahl Legende="Bezahlt von" Gruppe="beleg-bezahlt-von" Optionen="ZahlerOptionen" Wert="@(_bezahltVon ?? "")" Fehler="@_bezahltVonFehler"
+                                 WertGeaendert="@(w => _bezahltVon = w.Length == 0 ? null : w)" />
+                    </div>
+                    <DateiFeld @key="_dateiFeld" Id="beleg-datei" Label="Foto oder PDF (optional)" Fehler="@_dateiFehler" Deaktiviert="@_uebertraegt"
+                               Hinweis="Foto aufnehmen oder Datei wählen: JPEG, PNG, WebP oder PDF bis 10 MB" DateiGewaehlt="@(d => _datei = d)" />
+                    <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Beleg speichern</Knopf>
+                </Formular>
+                <p>* Pflichtfeld</p>
+            </Card>
+        }
+
+        <Card Titel="Belege" Id="belege">
+            @if (_belege.Count == 0)
+            {
+                <LeerZustand Satz="Noch keine Belege." />
+            }
+            else
+            {
+                <Datentabelle TZeile="Beleg" Beschriftung="Belege der Freizeit" Spalten="Spalten" Zeilen="_belege" />
+                <p><strong>Summe: @Anzeige.Euro(_belege.Sum(b => b.Betrag))</strong></p>
+            }
+        </Card>
+    }
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+}
+
+@code {
+    /// <summary>Höchstgröße beim Lesen im Browser: eine größere Datei lehnt der Server ab, ohne dass alles gelesen wird.</summary>
+    private const long Hoechstgroesse = (10 * 1024 * 1024) + 1;
+
+    private const string ZuGrossText = "Die Datei ist größer als 10 MB.";
+
+    private FreizeitKontext? _kontext;
+    private List<Beleg>? _belege;
+    private IReadOnlyDictionary<Guid, string> _namen = new Dictionary<Guid, string>();
+    private bool _nichtVerfuegbar;
+    private bool _uebertraegt;
+    private string? _meldung;
+    private string? _erfolg;
+    private string? _betrag;
+    private string? _kategorie;
+    private string? _bezeichnung;
+    private string? _bezahltVon;
+    private IBrowserFile? _datei;
+    // Zählt das Zurücksetzen des Datei-Felds; als @key leert es die Auswahl.
+    private int _dateiFeld;
+    // Der gespeicherte Beleg und die Datei, deren Upload scheiterte: „Erneut versuchen“ lädt sie an denselben Beleg.
+    private (Guid Beleg, IBrowserFile Datei)? _offenerUpload;
+    private string? _betragFehler;
+    private string? _kategorieFehler;
+    private string? _bezeichnungFehler;
+    private string? _bezahltVonFehler;
+    private string? _dateiFehler;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    private IReadOnlyList<AuswahlOption> ZahlerOptionen => [new AuswahlOption("", "Ich"), .. FinanzenTexte.ZahlerOptionen(_namen)];
+
+    private IReadOnlyList<Spalte<Beleg>> Spalten =>
+    [
+        new("Beleg", b => @<a href="@FinanzenTexte.BelegZiel(FreizeitId, b.Id)">@FinanzenTexte.Titel(b)</a>),
+        new("Kategorie", b => @<text>@Kostenkategorien.Text(b.Kategorie)</text>),
+        new("Betrag", b => @<text>@Anzeige.Euro(b.Betrag)</text>),
+        new("Bezahlt von", b => @<text>@FinanzenTexte.Zahler(b.BezahltVon, _namen)</text>),
+        new("Datei", b => b.Datei is { } datei
+            ? @<a href="@FinanzenApiClient.DateiPfad(FreizeitId, b.Id)" target="_blank" rel="noopener" aria-label="@($"{FinanzenTexte.DateiText(datei)}: {FinanzenTexte.Titel(b)}")">@FinanzenTexte.DateiText(datei)</a>
+            : @<text>–</text>),
+        new("Erstattet", b => @<AutosaveAnkreuzfeld @key="@($"{b.Id}-{b.Version}")" Label="Erstattet" Id="@($"erstattet-{b.Id}")" Feldname="@BelegFelder.Erstattet"
+                                                    Pfad="@FinanzenApiClient.ErstattetPfad(FreizeitId, b.Id)" Wert="@b.Erstattet" Version="@b.Version"
+                                                    NeuLaden="LadenAsync" />),
+    ];
+
+    private IReadOnlyList<FeldFehler> FehlerListe =>
+    [
+        .. new[]
+        {
+            ("beleg-betrag", "Betrag", _betragFehler), ("beleg-kategorie", "Kategorie", _kategorieFehler), ("beleg-bezeichnung", "Bezeichnung", _bezeichnungFehler),
+            ("beleg-bezahlt-von", "Bezahlt von", _bezahltVonFehler),
+        }.Where(f => f.Item3 is not null).Select(f => new FeldFehler(f.Item1, $"{f.Item2}: {f.Item3}")),
+    ];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _belege = null;
+        _nichtVerfuegbar = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var belege = FinanzenApi.BelegeLadenAsync(FreizeitId);
+            var namen = FinanzenTexte.NamenLadenAsync(Freizeiten, FreizeitId);
+            await Task.WhenAll(kontext, belege, namen);
+            if (kontext.Result is null || belege.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _belege, _namen) = (kontext.Result, belege.Result, namen.Result);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Lädt die Belege neu (nach Anlegen, Upload und „Neu laden“ beim Konflikt).</summary>
+    private async Task LadenAsync()
+    {
+        try
+        {
+            if (await FinanzenApi.BelegeLadenAsync(FreizeitId) is { } belege)
+            {
+                _belege = belege;
+            }
+            else
+            {
+                _nichtVerfuegbar = true;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>„Beleg speichern“: erst der Beleg, dann die gewählte Datei; danach ist das Formular leer.</summary>
+    private async Task AnlegenAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        (_betragFehler, _kategorieFehler, _bezeichnungFehler, _bezahltVonFehler, _dateiFehler, _meldung, _erfolg) = (null, null, null, null, null, null, null);
+        _offenerUpload = null;
+        try
+        {
+            var aktion = await FinanzenApi.BelegAnlegenAsync(FreizeitId, new BelegNeu(_kategorie, _betrag, _bezeichnung, _bezahltVon));
+            switch (aktion.Ergebnis)
+            {
+                case FinanzenAktionErgebnis.Erfolg:
+                    (_betrag, _kategorie, _bezeichnung, _bezahltVon) = (null, null, null, null);
+                    _erfolg = $"{FinanzenTexte.Titel(aktion.Beleg!)}: {Anzeige.Euro(aktion.Beleg!.Betrag)}.";
+                    if (_datei is { } datei)
+                    {
+                        await HochladenAsync(aktion.Beleg.Id, datei);
+                    }
+
+                    // Das Datei-Feld erst leeren, wenn kein Upload mehr aussteht: „Erneut versuchen“ liest die Datei aus demselben Feld.
+                    DateiFeldLeeren();
+
+                    await LadenAsync();
+                    break;
+                case FinanzenAktionErgebnis.Abgeschlossen:
+                    _meldung = FinanzenTexte.AbgeschlossenText;
+                    _kontext = await Kontext.LadenAsync(FreizeitId) ?? _kontext;
+                    break;
+                default:
+                    _betragFehler = aktion.Feldfehler.GetValueOrDefault(BelegFelder.Betrag);
+                    _kategorieFehler = aktion.Feldfehler.GetValueOrDefault(BelegFelder.Kategorie);
+                    _bezeichnungFehler = aktion.Feldfehler.GetValueOrDefault(BelegFelder.Bezeichnung);
+                    _bezahltVonFehler = aktion.Feldfehler.GetValueOrDefault(BelegFelder.BezahltVon);
+                    if (FehlerListe.Count == 0)
+                    {
+                        _meldung = AnmeldungAbschluss.FehlerText;
+                    }
+
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    /// <summary>„Erneut versuchen“: dieselbe Datei an denselben Beleg.</summary>
+    private async Task ErneutHochladenAsync()
+    {
+        if (_offenerUpload is not { } offen || _uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        try
+        {
+            await HochladenAsync(offen.Beleg, offen.Datei);
+            DateiFeldLeeren();
+            await LadenAsync();
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    /// <summary>Leert das Datei-Feld (neuer @key), solange kein Upload auf „Erneut versuchen“ wartet.</summary>
+    private void DateiFeldLeeren()
+    {
+        if (_offenerUpload is null && _datei is not null)
+        {
+            _datei = null;
+            _dateiFeld++;
+        }
+    }
+
+    /// <summary>Lädt die Datei an den Beleg; ein Netzfehler merkt sich beides für „Erneut versuchen“, ein Fehler der Datei steht am Feld.</summary>
+    private async Task HochladenAsync(Guid beleg, IBrowserFile datei)
+    {
+        _offenerUpload = null;
+        _dateiFehler = null;
+        if (datei.Size >= Hoechstgroesse)
+        {
+            _dateiFehler = ZuGrossText;
+            return;
+        }
+
+        try
+        {
+            BelegDateiErgebnis ergebnis;
+            try
+            {
+                await using var strom = datei.OpenReadStream(Hoechstgroesse);
+                ergebnis = await FinanzenApi.DateiHochladenAsync(FreizeitId, beleg, strom, datei.Name, datei.ContentType);
+            }
+            catch (IOException)
+            {
+                // Größer als erlaubt: der Browser liest nicht weiter.
+                ergebnis = new BelegDateiErgebnis(null, ZuGrossText);
+            }
+
+            if (ergebnis.DateiFehler is { } fehler)
+            {
+                _dateiFehler = $"{fehler} Der Beleg ist ohne Datei gespeichert.";
+            }
+            else if (ergebnis.Abgeschlossen)
+            {
+                _meldung = FinanzenTexte.AbgeschlossenText;
+            }
+            else if (ergebnis.NichtVerfuegbar)
+            {
+                _meldung = AnmeldungAbschluss.FehlerText;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _offenerUpload = (beleg, datei);
+        }
+    }
+}

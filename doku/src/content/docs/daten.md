@@ -79,7 +79,11 @@ Nach Ablauf der Löschfrist der Organisation für Freizeit-Daten löscht Zeltlot
 
 ## Finanzen
 
-Die [Kalkulation](/finanzen/kalkulation/) einer Freizeit enthält keine Personendaten: geplante Anzahlen von Teilnehmenden und Mitarbeitenden, Beträge je Kategorie und die Einnahmen mit Bezeichnung und Betrag. Sie rechnet nicht mit den Anmeldungen. Zeltlotse merkt sich nicht, wer einen Wert geändert hat; Namen gehören nicht in die Bezeichnungen. Der [Beitragsrechner](/finanzen/beitragsrechner/) speichert nichts. Nach Ablauf der Löschfrist der Organisation für Freizeit-Daten löscht Zeltlotse die Kalkulation endgültig, zusammen mit den übrigen Arbeitsdaten der Freizeit. Abschalten des Moduls Finanzen löscht nichts.
+Die [Kalkulation](/finanzen/kalkulation/) einer Freizeit enthält keine Personendaten: geplante Anzahlen von Teilnehmenden und Mitarbeitenden, Beträge je Kategorie und die Einnahmen mit Bezeichnung und Betrag. Sie rechnet nicht mit den Anmeldungen. Zeltlotse merkt sich nicht, wer einen Wert geändert hat; Namen gehören nicht in die Bezeichnungen. Der [Beitragsrechner](/finanzen/beitragsrechner/) speichert nichts.
+
+Ein [Beleg](/finanzen/belege/) speichert Betrag, Kategorie, Bezeichnung, wann er erfasst wurde, ob er erstattet ist und wer bezahlt hat – als Verweis auf die Person, den Namen holt die Seite aus der Freizeit. Dazu kommt auf Wunsch ein Foto oder PDF; es liegt nur in Zeltlotse und lässt sich nur von Leitung und Team der Freizeit öffnen. Belege muss die Organisation aufbewahren: Löscht eine Person ihr Konto, bleiben ihre Belege erhalten, und bei „Bezahlt von“ steht „Gelöschte Person“. In der eigenen Datenauskunft stehen unter „Belege“ alle Belege, die die Person bezahlt hat, mit Kategorie, Betrag, Bezeichnung, Datum und ob erstattet.
+
+Nach Ablauf der Löschfrist der Organisation für Freizeit-Daten löscht Zeltlotse die Kalkulation und die Belege samt Fotos und PDFs endgültig, zusammen mit den übrigen Daten der Freizeit. Eine eigene Frist für Belege gibt es nicht. Abschalten des Moduls Finanzen löscht nichts.
 
 ## Nachweise: nur eine einmalige Einsicht
 

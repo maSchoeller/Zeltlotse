@@ -225,7 +225,10 @@ public sealed class KalkulationTests(PostgresContainer postgres)
     [Fact]
     public void Jeder_Benutzer_Command_gehoert_zu_Finanzen_und_hat_keine_Ausnahme_nach_dem_Abschluss()
     {
-        var commands = typeof(KalkulationFeldAendernCommand).Assembly.GetTypes().Where(t => typeof(IBenutzerCommand).IsAssignableFrom(t) && !t.IsInterface).ToList();
+        // Story 5-2: Die Commands der Belege prüft BelegeTests; dort gilt der Erstattungsvermerk auch nach dem Abschluss.
+        var commands = typeof(KalkulationFeldAendernCommand).Assembly.GetTypes()
+            .Where(t => t.Namespace == typeof(KalkulationFeldAendernCommand).Namespace && typeof(IBenutzerCommand).IsAssignableFrom(t) && !t.IsInterface)
+            .ToList();
 
         Assert.Equal(
             ["EinnahmeAnlegenCommand", "EinnahmeFeldAendernCommand", "EinnahmeLoeschenCommand", "KalkulationFeldAendernCommand", "KategorieFeldAendernCommand"],

@@ -68,10 +68,11 @@ public sealed class PersonGeloeschtTests(PostgresContainer postgres)
         Assert.Equal(0L, await WertAsync<long>(verbindung, "SELECT count(*) FROM organisationen.org_rolle WHERE \"PersonId\" = @p", ("p", jonasId)));
         Assert.Equal(0L, await WertAsync<long>(verbindung, "SELECT count(*) FROM freizeiten.freizeit_rolle WHERE \"PersonId\" = @p", ("p", jonasId)));
         Assert.Equal(0L, await WertAsync<long>(verbindung, "SELECT count(*) FROM sicherheit.schutzkonzept_bestaetigung WHERE \"PersonId\" = @p", ("p", jonasId)));
-        Assert.Equal(5L, await WertAsync<long>(
+        // Story 5-2: dazu Finanzen (Belege).
+        Assert.Equal(6L, await WertAsync<long>(
             verbindung,
             "SELECT count(*) FROM personen.outbox_zustellung z JOIN personen.outbox o ON o.\"Id\" = z.\"EreignisId\" WHERE o.\"Typ\" LIKE '%.PersonGeloescht' AND z.\"ErledigtAm\" IS NOT NULL"));
-        foreach (var schema in new[] { "konten", "organisationen", "freizeiten", "sicherheit", "programm" })
+        foreach (var schema in new[] { "konten", "organisationen", "freizeiten", "sicherheit", "programm", "finanzen" })
         {
             Assert.Equal(1L, await WertAsync<long>(verbindung, $"SELECT count(*) FROM {schema}.inbox WHERE \"Empfaenger\" LIKE '%PersonLoeschen' OR \"Empfaenger\" LIKE '%KontoLoeschen'"));
         }
@@ -79,7 +80,7 @@ public sealed class PersonGeloeschtTests(PostgresContainer postgres)
         // Ein zweites Zustellen desselben Ereignisses verwirft die Inbox (Zustellstand zurücksetzen und erneut zustellen).
         await AusfuehrenAsync(verbindung, "UPDATE personen.outbox_zustellung SET \"ErledigtAm\" = NULL");
         await factory.OutboxJetztZustellenAsync(Abbruch);
-        foreach (var schema in new[] { "konten", "organisationen", "freizeiten", "sicherheit", "programm" })
+        foreach (var schema in new[] { "konten", "organisationen", "freizeiten", "sicherheit", "programm", "finanzen" })
         {
             Assert.Equal(1L, await WertAsync<long>(verbindung, $"SELECT count(*) FROM {schema}.inbox WHERE \"Empfaenger\" LIKE '%PersonLoeschen' OR \"Empfaenger\" LIKE '%KontoLoeschen'"));
         }

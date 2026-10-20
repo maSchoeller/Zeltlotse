@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using Bunit;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Zeltlotse.Api.Contracts.Finanzen;
@@ -13,6 +14,9 @@ using Zeltlotse.Ui.Api;
 using Zeltlotse.Ui.Texte;
 using Zeltlotse.Ui.Transport;
 using BeitragsrechnerSeite = Zeltlotse.App.Features.Finanzen.Beitragsrechner;
+using BelegeSeite = Zeltlotse.App.Features.Finanzen.Belege;
+using BelegSeite = Zeltlotse.App.Features.Finanzen.BelegSeite;
+using SollIstSeite = Zeltlotse.App.Features.Finanzen.SollIst;
 using KalkulationSeite = Zeltlotse.App.Features.Finanzen.Kalkulation;
 
 namespace Zeltlotse.Ui.Tests;
@@ -21,7 +25,9 @@ namespace Zeltlotse.Ui.Tests;
 /// Story 5-1 in der Web-App mit nachgebildetem Server: die Kalkulation (Reiter, Ergebnis mit Teilnehmerbeitrag als Zahl und Balken, Anteile der
 /// Kategorien, Planzahlen und Beträge als Autosave-Felder mit Neuladen des Ergebnisses, Einnahme anlegen und löschen, 0 Teilnehmende, nur lesbar,
 /// Ladefehler, nicht verfügbar), der Beitragsrechner (Regler ändern den Beitrag sofort ohne Serveraufruf, Zurücksetzen, 0 Teilnehmende, nach dem
-/// Abschluss bedienbar), der Knopf „Finanzen“ auf der Startseite nur mit dem Modul Finanzen, der Client und der Euro-Text.
+/// Abschluss bedienbar), der Knopf „Finanzen“ auf der Startseite nur mit dem Modul Finanzen, der Client und der Euro-Text. Story 5-2: die Belege (Liste
+/// mit Namen, Datei und Haken „Erstattet“, Anlegen mit und ohne Foto, Upload-Fehler mit „Erneut versuchen“, Feldfehler), die Seite eines Belegs (Autosave,
+/// Bild, Löschen), Soll-Ist mit den drei Statuswörtern und den Erstattungen, nach dem Abschluss nur „Erstattet“ bedienbar, nicht verfügbar und Ladefehler.
 /// </summary>
 public sealed class FinanzenSeitenTests : BunitContext
 {
@@ -136,7 +142,7 @@ public sealed class FinanzenSeitenTests : BunitContext
         Assert.Equal("Finanzen", cut.Find(".elkw-kicker").TextContent);
         Assert.Equal("Kalkulation", cut.Find("h1").TextContent);
         var reiter = cut.FindAll("nav[aria-label=Finanzen] a");
-        Assert.Equal(["Kalkulation", "Beitragsrechner"], reiter.Select(a => a.TextContent));
+        Assert.Equal(["Kalkulation", "Beitragsrechner", "Belege", "Soll-Ist"], reiter.Select(a => a.TextContent));
         Assert.Equal(($"freizeiten/{Freizeit}/finanzen/kalkulation", "page"), (reiter[0].GetAttribute("href"), reiter[0].GetAttribute("aria-current")));
         Assert.Equal($"freizeiten/{Freizeit}/finanzen/beitragsrechner", reiter[1].GetAttribute("href"));
 
@@ -558,5 +564,480 @@ public sealed class FinanzenSeitenTests : BunitContext
     {
         Assert.Equal(("1.234,50 €", "0,00 €", "275,00 €", "−25,00 €"), (Anzeige.Euro(1234.5m), Anzeige.Euro(0m), Anzeige.Euro(275m), Anzeige.Euro(-25m)));
         Assert.Equal("1.000.000,00 €", Anzeige.Euro(1_000_000m));
+    }
+
+    // ---------- Story 5-2: Belege, Soll-Ist und Erstattung ----------
+
+    private static readonly Guid Brot = Guid.Parse("0199f700-0000-7000-8000-0000000008a1");
+    private static readonly Guid Bus = Guid.Parse("0199f700-0000-7000-8000-0000000008a2");
+    private static readonly Guid Neu = Guid.Parse("0199f700-0000-7000-8000-0000000008a3");
+    private static readonly Guid Lea = Guid.Parse("0199f700-0000-7000-8000-0000000008b1");
+    private static readonly Guid Jonas = Guid.Parse("0199f700-0000-7000-8000-0000000008b2");
+    private static readonly Guid Unbekannt = Guid.Parse("0199f700-0000-7000-8000-0000000008b3");
+
+    private static string BelegePfad => $"/api/freizeiten/{Freizeit}/finanzen/belege";
+
+    private static object BelegJson(Guid id, string kategorie, decimal betrag, string? bezeichnung, Guid bezahltVon, bool erstattet = false, object? datei = null, uint version = 5) =>
+        new { id, version, kategorie, betrag, bezeichnung, bezahltVon, erstattet, erfasstAm = "2026-10-19T08:00:00+00:00", datei };
+
+    private static object[] Belegliste() =>
+    [
+        BelegJson(Brot, "Verpflegung", 23.40m, "Brötchen", Lea, datei: new { dateiname = "Kassenbon.png", istBild = true }),
+        BelegJson(Bus, "Fahrt", 1950m, null, Jonas, erstattet: true),
+        BelegJson(Neu, "Sonstiges", 5m, "Gaffa-Tape", BelegFelder.GeloeschtePerson),
+    ];
+
+    /// <summary>Kontext, Freizeit (Leitung Jonas) und Personenliste (Lea bestätigt, Tobias nur eingegangen) und die Belege.</summary>
+    private void BelegeAntworten(string phase = "InVorbereitung", Func<HttpResponseMessage>? belege = null)
+    {
+        Kontext(phase);
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{Freizeit}", () => Json(new
+        {
+            id = Freizeit, name = "Zeltlager Sommer 2027", ersterTag = "2027-08-02", letzterTag = "2027-08-13", phase, freigabeBis = "2027-09-12",
+            leitung = new[] { new { vorname = "Jonas", nachname = "Hüttner", personId = Jonas } },
+        }));
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{Freizeit}/personenliste", () => Json(new object[]
+        {
+            new { anmeldungId = Guid.CreateVersion7(), personId = Lea, vorname = "Lea", nachname = "Feuerstein", art = "Mitarbeitende", status = "Bestaetigt" },
+            new { anmeldungId = Guid.CreateVersion7(), personId = Unbekannt, vorname = "Tobias", nachname = "Wanderer", art = "Mitarbeitende", status = "Eingegangen" },
+        }));
+        _server.Bei(HttpMethod.Get, BelegePfad, belege ?? (() => Json(Belegliste())));
+    }
+
+    private IRenderedComponent<BelegeSeite> BelegeRendern()
+    {
+        var cut = Render<BelegeSeite>(ps => ps.Add(p => p.FreizeitId, Freizeit));
+        cut.WaitForAssertion(() => Assert.DoesNotContain("Wird geladen", cut.Markup, StringComparison.Ordinal));
+        return cut;
+    }
+
+    private IRenderedComponent<BelegSeite> BelegRendern(Guid beleg)
+    {
+        var cut = Render<BelegSeite>(ps => ps.Add(p => p.FreizeitId, Freizeit).Add(p => p.BelegId, beleg));
+        cut.WaitForAssertion(() => Assert.DoesNotContain("Wird geladen", cut.Markup, StringComparison.Ordinal));
+        return cut;
+    }
+
+    private IRenderedComponent<SollIstSeite> SollIstRendern()
+    {
+        var cut = Render<SollIstSeite>(ps => ps.Add(p => p.FreizeitId, Freizeit));
+        cut.WaitForAssertion(() => Assert.DoesNotContain("Wird geladen", cut.Markup, StringComparison.Ordinal));
+        return cut;
+    }
+
+    private static List<string> Zeile(AngleSharp.Dom.IElement zeile) => [.. zeile.QuerySelectorAll("td").Select(t => t.TextContent.Trim())];
+
+    private static string Normal(string text) => string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+    [Fact]
+    public void Belege_Liste_mit_Namen_Datei_Haken_Erstattet_und_Summe()
+    {
+        BelegeAntworten();
+
+        var cut = BelegeRendern();
+
+        Assert.Equal(("Finanzen", "Belege"), (cut.Find(".elkw-kicker").TextContent, cut.Find("h1").TextContent));
+        var reiter = cut.FindAll("nav[aria-label=Finanzen] a");
+        Assert.Equal(($"freizeiten/{Freizeit}/finanzen/belege", "page"), (reiter[2].GetAttribute("href"), reiter[2].GetAttribute("aria-current")));
+        var zeilen = cut.FindAll("#belege tbody tr");
+        Assert.Equal(3, zeilen.Count);
+        Assert.Equal(["Brötchen", "Verpflegung", "23,40 €", "Lea Feuerstein", "Foto"], Zeile(zeilen[0]).Take(5));
+        Assert.Equal(["Fahrt", "Fahrt", "1.950,00 €", "Jonas Hüttner", "–"], Zeile(zeilen[1]).Take(5));
+        Assert.Equal(["Gaffa-Tape", "Sonstiges", "5,00 €", "Gelöschte Person"], Zeile(zeilen[2]).Take(4));
+        Assert.Equal($"freizeiten/{Freizeit}/finanzen/belege/{Brot}", zeilen[0].QuerySelector("a")!.GetAttribute("href"));
+        Assert.Equal($"/api/freizeiten/{Freizeit}/finanzen/belege/{Brot}/datei", zeilen[0].QuerySelectorAll("a")[1].GetAttribute("href"));
+        Assert.False(cut.Find($"#erstattet-{Brot}").HasAttribute("checked"));
+        Assert.True(cut.Find($"#erstattet-{Bus}").HasAttribute("checked"));
+        Assert.Contains("Summe: 1.978,40 €", cut.Find("#belege").TextContent, StringComparison.Ordinal);
+        // „Bezahlt von“: „Ich“ vorgewählt, dazu Leitung und bestätigtes Team, nicht die nur eingegangene Anmeldung.
+        Assert.Equal(["Ich", "Jonas Hüttner", "Lea Feuerstein"], cut.FindAll("#beleg-bezahlt-von label").Select(l => l.TextContent.Trim()));
+        Assert.True(cut.Find("#beleg-bezahlt-von input[value='']").HasAttribute("checked"));
+        Assert.Equal(
+            ["Unterkunft", "Verpflegung", "Fahrt", "Programm und Material", "Mitarbeitende", "Sonstiges"],
+            cut.FindAll("#beleg-kategorie label").Select(l => l.TextContent.Trim()));
+    }
+
+    [Fact]
+    public void Ohne_Belege_steht_der_Leer_Zustand_und_ein_unbekannter_Zahler_heisst_Ohne_Namen()
+    {
+        BelegeAntworten(belege: () => Json(Array.Empty<object>()));
+        var leer = BelegeRendern();
+        Assert.Contains("Noch keine Belege.", leer.Find("#belege").TextContent, StringComparison.Ordinal);
+
+        Assert.Equal(
+            ("Ohne Namen", "Gelöschte Person", "Lea Feuerstein"),
+            (FinanzenTexte.Zahler(Unbekannt, new Dictionary<Guid, string>()), FinanzenTexte.Zahler(BelegFelder.GeloeschtePerson, new Dictionary<Guid, string>()),
+                FinanzenTexte.Zahler(Lea, new Dictionary<Guid, string> { [Lea] = "Lea Feuerstein" })));
+    }
+
+    [Fact]
+    public void Erstattet_ankreuzen_speichert_sofort_ueber_den_eigenen_Pfad()
+    {
+        BelegeAntworten();
+        _server.Bei(HttpMethod.Patch, $"{BelegePfad}/{Brot}/erstattet", () => Json(new { version = 6u, erstattet = "true" }));
+        var cut = BelegeRendern();
+
+        cut.Find($"#erstattet-{Brot}").Change(true);
+
+        cut.WaitForAssertion(() => Assert.Single(_server.Anfragen, a => a.Methode == HttpMethod.Patch));
+        using var koerper = JsonDocument.Parse(_server.Anfragen.Single(a => a.Methode == HttpMethod.Patch).Koerper!);
+        Assert.Equal((5u, "false", "true"), (
+            koerper.RootElement.GetProperty("version").GetUInt32(), koerper.RootElement.GetProperty("alterWert").GetString(), koerper.RootElement.GetProperty("erstattet").GetString()));
+    }
+
+    [Fact]
+    public void Beleg_anlegen_ohne_Foto_mit_Vorgabe_Ich_danach_steht_er_in_der_Liste_und_das_Formular_ist_leer()
+    {
+        BelegeAntworten();
+        _server.BeiDerReihe(HttpMethod.Get, BelegePfad, () => Json(Belegliste().Skip(1).ToArray()), () => Json(Belegliste()));
+        _server.Bei(HttpMethod.Post, BelegePfad, () => Json(Belegliste()[0], HttpStatusCode.Created));
+        var cut = BelegeRendern();
+
+        cut.Find("#beleg-betrag").Input("23,40");
+        cut.Find("#beleg-kategorie input[value=Verpflegung]").Change(true);
+        cut.Find("#beleg-bezeichnung").Input("Brötchen");
+        cut.Find("#beleg-erfassen form").Submit();
+
+        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll("#belege tbody tr").Count));
+        using var koerper = JsonDocument.Parse(_server.Anfragen.Single(a => a.Methode == HttpMethod.Post).Koerper!);
+        Assert.Equal(("Verpflegung", "23,40", "Brötchen", JsonValueKind.Null), (koerper.RootElement.GetProperty("kategorie").GetString(),
+            koerper.RootElement.GetProperty("betrag").GetString(), koerper.RootElement.GetProperty("bezeichnung").GetString(), koerper.RootElement.GetProperty("bezahltVon").ValueKind));
+        Assert.Contains("Brötchen: 23,40 €.", cut.Find(".elkw-alert--erfolg").TextContent, StringComparison.Ordinal);
+        Assert.Null(cut.Find("#beleg-betrag").GetAttribute("value"));
+        Assert.DoesNotContain(_server.Anfragen, a => a.Pfad.EndsWith("/datei", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Beleg_anlegen_mit_Foto_fuer_Lea_laedt_die_Datei_danach_an_den_neuen_Beleg()
+    {
+        BelegeAntworten();
+        _server.Bei(HttpMethod.Post, BelegePfad, () => Json(BelegJson(Brot, "Verpflegung", 23.40m, null, Lea), HttpStatusCode.Created));
+        _server.Bei(HttpMethod.Post, $"{BelegePfad}/{Brot}/datei", () => Json(Belegliste()[0]));
+        var cut = BelegeRendern();
+
+        cut.Find("#beleg-betrag").Input("23,40");
+        cut.Find("#beleg-kategorie input[value=Verpflegung]").Change(true);
+        cut.Find($"#beleg-bezahlt-von input[value='{Lea}']").Change(true);
+        cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromBinary([0x89, 0x50, 0x4E, 0x47], "Kassenbon.png", contentType: "image/png"));
+        cut.Find("#beleg-erfassen form").Submit();
+
+        cut.WaitForAssertion(() => Assert.Single(_server.Anfragen, a => a.Methode == HttpMethod.Post && a.Pfad == $"{BelegePfad}/{Brot}/datei"));
+        using (var koerper = JsonDocument.Parse(_server.Anfragen.First(a => a.Methode == HttpMethod.Post && a.Pfad == BelegePfad).Koerper!))
+        {
+            Assert.Equal(Lea.ToString(), koerper.RootElement.GetProperty("bezahltVon").GetString());
+        }
+
+        var reihenfolge = _server.Anfragen.Where(a => a.Methode == HttpMethod.Post).Select(a => a.Pfad).ToList();
+        Assert.Equal([BelegePfad, $"{BelegePfad}/{Brot}/datei"], reihenfolge);
+        Assert.Contains("name=datei", _server.Anfragen.Last(a => a.Methode == HttpMethod.Post).Koerper!, StringComparison.Ordinal);
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".elkw-alert--fehler")));
+    }
+
+    [Fact]
+    public void Upload_scheitert_der_Beleg_bleibt_und_Erneut_versuchen_laedt_an_denselben_Beleg()
+    {
+        BelegeAntworten();
+        _server.Bei(HttpMethod.Post, BelegePfad, () => Json(BelegJson(Brot, "Verpflegung", 23.40m, null, Lea), HttpStatusCode.Created));
+        _server.BeiDerReihe(HttpMethod.Post, $"{BelegePfad}/{Brot}/datei", () => throw new HttpRequestException("offline"), () => Json(Belegliste()[0]));
+        var cut = BelegeRendern();
+
+        cut.Find("#beleg-betrag").Input("23,40");
+        cut.Find("#beleg-kategorie input[value=Verpflegung]").Change(true);
+        var feld = cut.FindComponent<InputFile>();
+        var feldInstanz = feld.Instance;
+        feld.UploadFiles(InputFileContent.CreateFromBinary([0x89, 0x50, 0x4E, 0x47], "Kassenbon.png", contentType: "image/png"));
+        cut.Find("#beleg-erfassen form").Submit();
+
+        cut.WaitForAssertion(() => Assert.Contains("Fehler: Datei nicht hochgeladen. Der Beleg ist gespeichert.", Normal(cut.Find(".elkw-alert--fehler").TextContent), StringComparison.Ordinal));
+        // Solange „Erneut versuchen“ angeboten wird, bleibt das Datei-Feld dasselbe (die Datei wird daraus erneut gelesen).
+        Assert.Same(feldInstanz, cut.FindComponent<InputFile>().Instance);
+        cut.FindAll("button").Single(b => b.TextContent == "Erneut versuchen").Click();
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".elkw-alert--fehler")));
+        Assert.NotSame(feldInstanz, cut.FindComponent<InputFile>().Instance);
+        Assert.Single(_server.Anfragen, a => a.Methode == HttpMethod.Post && a.Pfad == BelegePfad);
+        Assert.Equal(2, _server.Anfragen.Count(a => a.Methode == HttpMethod.Post && a.Pfad == $"{BelegePfad}/{Brot}/datei"));
+    }
+
+    [Fact]
+    public void Feldfehler_stehen_in_der_Uebersicht_und_am_Feld_ein_Fehler_der_Datei_am_Datei_Feld()
+    {
+        BelegeAntworten();
+        _server.BeiDerReihe(
+            HttpMethod.Post, BelegePfad,
+            () => NachgebildeterHandler.Json(HttpStatusCode.BadRequest, """{"status":400,"errors":{"betrag":["Betrag fehlt."],"kategorie":["Kategorie fehlt."]}}""", "application/problem+json"),
+            () => Json(BelegJson(Brot, "Fahrt", 10m, null, Lea), HttpStatusCode.Created));
+        _server.Bei(HttpMethod.Post, $"{BelegePfad}/{Brot}/datei", () => NachgebildeterHandler.Json(
+            HttpStatusCode.BadRequest, """{"status":400,"errors":{"datei":["Erlaubt sind nur Fotos (JPEG, PNG, WebP) und PDF."]}}""", "application/problem+json"));
+        var cut = BelegeRendern();
+
+        cut.Find("#beleg-erfassen form").Submit();
+        cut.WaitForAssertion(() => Assert.Equal(
+            ["Betrag: Betrag fehlt.", "Kategorie: Kategorie fehlt."], cut.FindAll(".zl-fehleruebersicht li a").Select(a => a.TextContent)));
+        Assert.Equal(["#beleg-betrag", "#beleg-kategorie"], cut.FindAll(".zl-fehleruebersicht li a").Select(a => a.GetAttribute("href")));
+        Assert.Equal("true", cut.Find("#beleg-betrag").GetAttribute("aria-invalid"));
+
+        cut.Find("#beleg-betrag").Input("10");
+        cut.Find("#beleg-kategorie input[value=Fahrt]").Change(true);
+        cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromBinary([1, 2, 3], "text.png", contentType: "image/png"));
+        cut.Find("#beleg-erfassen form").Submit();
+
+        cut.WaitForAssertion(() => Assert.Equal(
+            "Fehler: Erlaubt sind nur Fotos (JPEG, PNG, WebP) und PDF. Der Beleg ist ohne Datei gespeichert.", cut.Find("#beleg-erfassen .elkw-field-error").TextContent));
+        Assert.Empty(cut.FindAll(".zl-fehleruebersicht"));
+    }
+
+    [Fact]
+    public void Gelaufen_ohne_Erfassen_der_Haken_Erstattet_bleibt_bedienbar()
+    {
+        BelegeAntworten("Gelaufen");
+
+        var cut = BelegeRendern();
+
+        Assert.Contains(FinanzenTexte.NurErstattetText, cut.Markup, StringComparison.Ordinal);
+        Assert.Empty(cut.FindAll("#beleg-erfassen"));
+        Assert.Empty(cut.FindAll("form"));
+        Assert.Equal(3, cut.FindAll("#belege input[type=checkbox]").Count);
+        Assert.All(cut.FindAll("#belege input[type=checkbox]"), k => Assert.False(k.HasAttribute("disabled")));
+
+        var beleg = BelegRendern(Brot);
+        Assert.Empty(beleg.FindAll("input[type=text], input[type=radio], input[type=file]"));
+        Assert.Contains("23,40 €", beleg.Find("#beleg dl").TextContent, StringComparison.Ordinal);
+        Assert.NotNull(beleg.Find("#beleg-erstattet"));
+        Assert.DoesNotContain(beleg.FindAll("button"), b => b.TextContent is "Beleg löschen" or "Datei entfernen");
+        Assert.NotNull(beleg.Find("#datei img"));
+    }
+
+    [Fact]
+    public void Beleg_Seite_zeigt_Autosave_Felder_das_Foto_und_loescht_per_Inline_Bestaetigung()
+    {
+        BelegeAntworten();
+        _server.Bei(HttpMethod.Patch, $"{BelegePfad}/{Brot}", () => Json(new { version = 6u, betrag = "24,5" }));
+        _server.Bei(HttpMethod.Delete, $"{BelegePfad}/{Brot}", () => new HttpResponseMessage(HttpStatusCode.NoContent));
+        var cut = BelegRendern(Brot);
+
+        Assert.Equal("Brötchen", cut.Find("h1").TextContent);
+        Assert.Contains("Bezahlt von Lea Feuerstein", Normal(cut.Markup), StringComparison.Ordinal);
+        Assert.Equal("23,4", cut.Find("#beleg-betrag").GetAttribute("value"));
+        Assert.Equal("Brötchen", cut.Find("#beleg-bezeichnung").GetAttribute("value"));
+        Assert.True(cut.Find("#beleg-kategorie input[value=Verpflegung]").HasAttribute("checked"));
+        Assert.True(cut.Find($"#beleg-bezahlt-von input[value='{Lea}']").HasAttribute("checked"));
+        Assert.StartsWith($"/api/freizeiten/{Freizeit}/finanzen/belege/{Brot}/datei", cut.Find("#datei img").GetAttribute("src"), StringComparison.Ordinal);
+        Assert.Equal("Foto des Belegs „Brötchen“", cut.Find("#datei img").GetAttribute("alt"));
+        Assert.Contains("Datei ersetzen", cut.Find("#datei").TextContent, StringComparison.Ordinal);
+
+        var feld = cut.Find("#beleg-betrag");
+        feld.Focus();
+        feld.Input("24,50");
+        feld.Blur();
+        cut.WaitForAssertion(() => Assert.Single(_server.Anfragen, a => a.Methode == HttpMethod.Patch));
+        using (var koerper = JsonDocument.Parse(_server.Anfragen.Single(a => a.Methode == HttpMethod.Patch).Koerper!))
+        {
+            Assert.Equal(("23,4", "24,50"), (koerper.RootElement.GetProperty("alterWert").GetString(), koerper.RootElement.GetProperty("betrag").GetString()));
+        }
+
+        cut.FindAll("button").Single(b => b.TextContent == "Beleg löschen").Click();
+        Assert.Contains("„Brötchen“ löschen? Die Datei wird mitgelöscht.", cut.Markup, StringComparison.Ordinal);
+        cut.FindAll("button").Single(b => b.TextContent == "Ja, löschen").Click();
+
+        cut.WaitForAssertion(() => Assert.EndsWith($"freizeiten/{Freizeit}/finanzen/belege", Navigation.Uri, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Beleg_Seite_ohne_Datei_laedt_ein_Foto_hoch_und_ein_unbekannter_Beleg_ist_nicht_verfuegbar()
+    {
+        BelegeAntworten();
+        _server.BeiDerReihe(HttpMethod.Get, BelegePfad, () => Json(Belegliste()), () => Json(new[] { BelegJson(Bus, "Fahrt", 1950m, null, Jonas, true, new { dateiname = "Busrechnung.pdf", istBild = false }, 6) }));
+        _server.Bei(HttpMethod.Post, $"{BelegePfad}/{Bus}/datei", () => Json(BelegJson(Bus, "Fahrt", 1950m, null, Jonas, true, new { dateiname = "Busrechnung.pdf", istBild = false }, 6)));
+        var cut = BelegRendern(Bus);
+
+        Assert.Equal("Fahrt", cut.Find("h1").TextContent);
+        Assert.Contains("Noch keine Datei.", cut.Find("#datei").TextContent, StringComparison.Ordinal);
+        cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromBinary([0x25, 0x50, 0x44, 0x46], "Busrechnung.pdf", contentType: "application/pdf"));
+
+        cut.WaitForAssertion(() => Assert.Contains("PDF herunterladen (Busrechnung.pdf)", cut.Find("#datei").TextContent, StringComparison.Ordinal));
+        Assert.Empty(cut.FindAll("#datei img"));
+
+        var fehlt = BelegRendern(Guid.CreateVersion7());
+        Assert.Contains("Diese Seite ist nicht verfügbar.", fehlt.Markup, StringComparison.Ordinal);
+    }
+
+    private void SollIstAntworten(object? sollIst = null)
+    {
+        BelegeAntworten();
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{Freizeit}/finanzen/soll-ist", () => Json(sollIst ?? new
+        {
+            zeilen = new object[]
+            {
+                new { kategorie = "Unterkunft", soll = 6300m, ist = 1500m, status = "ImPlan" },
+                new { kategorie = "Verpflegung", soll = 4200m, ist = 3900m, status = "Knapp" },
+                new { kategorie = "Fahrt", soll = 1800m, ist = 1950m, status = "Ueberschritten" },
+                new { kategorie = "ProgrammUndMaterial", soll = 1200m, ist = 0m, status = "ImPlan" },
+                new { kategorie = "Mitarbeitende", soll = 500m, ist = 0m, status = "ImPlan" },
+                new { kategorie = "Sonstiges", soll = 0m, ist = 0m, status = "ImPlan" },
+            },
+            gesamt = new { kategorie = (string?)null, soll = 14000m, ist = 7350m, status = "ImPlan" },
+            erstattungen = new object[]
+            {
+                new { personId = Lea, offen = 45.80m, erstattet = 0m },
+                new { personId = Jonas, offen = 0m, erstattet = 5804.20m },
+            },
+        }));
+    }
+
+    [Fact]
+    public void Soll_Ist_zeigt_Balken_mit_Ist_von_Soll_den_drei_Statuswoertern_und_die_Erstattungen()
+    {
+        SollIstAntworten();
+
+        var cut = SollIstRendern();
+
+        Assert.Equal("Soll-Ist", cut.Find("h1").TextContent);
+        var gesamt = Balken(cut, "Gesamt");
+        Assert.Equal(("7.350,00 € von 14.000,00 € (53 %)", "52.5%", "Im Plan"), (Zahl(gesamt), Breite(gesamt), gesamt.QuerySelector(".elkw-status")!.TextContent));
+        var verpflegung = Balken(cut, "Verpflegung");
+        Assert.Equal(("3.900,00 € von 4.200,00 € (93 %)", "Knapp"), (Zahl(verpflegung), verpflegung.QuerySelector(".elkw-status")!.TextContent));
+        Assert.Contains("zl-balken--warnung", verpflegung.ClassName, StringComparison.Ordinal);
+        var fahrt = Balken(cut, "Fahrt");
+        Assert.Equal(("1.950,00 € von 1.800,00 € (108 %)", "100%", "Überschritten"), (Zahl(fahrt), Breite(fahrt), fahrt.QuerySelector(".elkw-status")!.TextContent));
+        Assert.Contains("zl-balken--fehler", fahrt.ClassName, StringComparison.Ordinal);
+        Assert.Equal(("0,00 € von 0,00 €", "0%", "Im Plan"), (Zahl(Balken(cut, "Sonstiges")), Breite(Balken(cut, "Sonstiges")), Balken(cut, "Sonstiges").QuerySelector(".elkw-status")!.TextContent));
+        Assert.Equal(
+            ["Unterkunft", "Verpflegung", "Fahrt", "Programm und Material", "Mitarbeitende", "Sonstiges"],
+            cut.FindAll("#soll-ist .zl-balken strong").Skip(1).Select(s => s.TextContent));
+
+        var lea = Balken(cut, "Lea Feuerstein");
+        Assert.Equal(("noch 45,80 €", "0%", "Bekommt noch Geld"), (Zahl(lea), Breite(lea), lea.QuerySelector(".elkw-status")!.TextContent));
+        Assert.Contains("zl-balken--warnung", lea.ClassName, StringComparison.Ordinal);
+        var jonas = Balken(cut, "Jonas Hüttner");
+        Assert.Equal(("noch 0,00 €", "100%", "Alles erstattet"), (Zahl(jonas), Breite(jonas), jonas.QuerySelector(".elkw-status")!.TextContent));
+        Assert.Equal(["Lea Feuerstein", "Jonas Hüttner"], cut.FindAll("#erstattungen .zl-balken strong").Select(s => s.TextContent));
+    }
+
+    [Fact]
+    public void Soll_Ist_ohne_Belege_zeigt_den_Leer_Zustand_bei_den_Erstattungen()
+    {
+        SollIstAntworten(new
+        {
+            zeilen = Kostenkategorien.Alle.Select(k => new { kategorie = k.ToString(), soll = 0m, ist = 0m, status = "ImPlan" }).ToArray(),
+            gesamt = new { kategorie = (string?)null, soll = 0m, ist = 0m, status = "ImPlan" },
+            erstattungen = Array.Empty<object>(),
+        });
+
+        var cut = SollIstRendern();
+
+        Assert.Contains("Noch keine Belege.", cut.Find("#erstattungen").TextContent, StringComparison.Ordinal);
+        Assert.Empty(cut.FindAll("#erstattungen .zl-balken"));
+    }
+
+    [Fact]
+    public void Ohne_Modul_Finanzen_sind_Belege_Beleg_und_Soll_Ist_nicht_verfuegbar_und_ein_Ladefehler_zeigt_die_Meldung()
+    {
+        BelegeAntworten(belege: () => new HttpResponseMessage(HttpStatusCode.NotFound));
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{Freizeit}/finanzen/soll-ist", () => new HttpResponseMessage(HttpStatusCode.NotFound));
+
+        Assert.Contains("Diese Seite ist nicht verfügbar.", BelegeRendern().Markup, StringComparison.Ordinal);
+        Assert.Contains("Diese Seite ist nicht verfügbar.", BelegRendern(Brot).Markup, StringComparison.Ordinal);
+        Assert.Contains("Diese Seite ist nicht verfügbar.", SollIstRendern().Markup, StringComparison.Ordinal);
+
+        _server.Bei(HttpMethod.Get, BelegePfad, () => new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{Freizeit}/finanzen/soll-ist", () => throw new HttpRequestException("offline"));
+        var belege = BelegeRendern();
+        Assert.Contains(AnmeldungAbschluss.FehlerText, belege.Find(".elkw-alert").TextContent, StringComparison.Ordinal);
+        Assert.Empty(belege.FindAll("#belege"));
+        Assert.Contains(AnmeldungAbschluss.FehlerText, BelegRendern(Brot).Find(".elkw-alert").TextContent, StringComparison.Ordinal);
+        var sollIst = SollIstRendern();
+        Assert.Contains(AnmeldungAbschluss.FehlerText, sollIst.Find(".elkw-alert").TextContent, StringComparison.Ordinal);
+        Assert.Empty(sollIst.FindAll("#soll-ist"));
+    }
+
+    [Fact]
+    public async Task Client_Belege_und_Soll_Ist_403_404_heissen_nicht_verfuegbar_und_der_Upload_ordnet_Antworten_zu()
+    {
+        SollIstAntworten();
+        _server.Bei(HttpMethod.Post, $"{BelegePfad}/{Brot}/datei", () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, "freizeit-abgeschlossen"));
+        _server.Bei(HttpMethod.Post, $"{BelegePfad}/{Bus}/datei", () => new HttpResponseMessage(HttpStatusCode.NotFound));
+        _server.Bei(HttpMethod.Delete, $"{BelegePfad}/{Brot}/datei", () => new HttpResponseMessage(HttpStatusCode.NoContent));
+        var client = Services.GetRequiredService<FinanzenApiClient>();
+
+        Assert.Equal(3, (await client.BelegeLadenAsync(Freizeit, Abbruch))!.Count);
+        Assert.Null(await client.BelegeLadenAsync(Guid.CreateVersion7(), Abbruch));
+        Assert.Equal(SollIstStatus.Knapp, (await client.SollIstLadenAsync(Freizeit, Abbruch))!.Zeilen[1].Status);
+        Assert.True((await client.DateiHochladenAsync(Freizeit, Brot, new MemoryStream([1]), "x.png", "image/png", Abbruch)).Abgeschlossen);
+        Assert.True((await client.DateiHochladenAsync(Freizeit, Bus, new MemoryStream([1]), "x.png", null, Abbruch)).NichtVerfuegbar);
+        Assert.Equal(FinanzenAktionErgebnis.Erfolg, await client.DateiEntfernenAsync(Freizeit, Brot, Abbruch));
+        Assert.Equal(
+            ($"{BelegePfad}/{Brot}", $"{BelegePfad}/{Brot}/erstattet", $"{BelegePfad}/{Brot}/datei", $"/api/freizeiten/{Freizeit}/finanzen/soll-ist"),
+            (FinanzenApiClient.BelegPfad(Freizeit, Brot), FinanzenApiClient.ErstattetPfad(Freizeit, Brot), FinanzenApiClient.DateiPfad(Freizeit, Brot), FinanzenApiClient.SollIstPfad(Freizeit)));
+    }
+
+    [Theory]
+    [InlineData("Gelaufen")]
+    [InlineData("InVorbereitung")]
+    public void Beleg_Seite_Erstattet_ankreuzen_speichert_ueber_den_eigenen_Pfad(string phase)
+    {
+        BelegeAntworten(phase);
+        _server.Bei(HttpMethod.Patch, $"{BelegePfad}/{Brot}/erstattet", () => Json(new { version = 6u, erstattet = "true" }));
+        var cut = BelegRendern(Brot);
+
+        cut.Find("#beleg-erstattet").Change(true);
+
+        cut.WaitForAssertion(() => Assert.Single(_server.Anfragen, a => a.Methode == HttpMethod.Patch));
+        var anfrage = _server.Anfragen.Single(a => a.Methode == HttpMethod.Patch);
+        Assert.Equal($"{BelegePfad}/{Brot}/erstattet", anfrage.Pfad);
+        using var koerper = JsonDocument.Parse(anfrage.Koerper!);
+        Assert.Equal(("false", "true"), (koerper.RootElement.GetProperty("alterWert").GetString(), koerper.RootElement.GetProperty("erstattet").GetString()));
+    }
+
+    [Fact]
+    public void Beleg_Seite_Datei_entfernen_schickt_DELETE_danach_steht_Noch_keine_Datei()
+    {
+        BelegeAntworten();
+        _server.BeiDerReihe(HttpMethod.Get, BelegePfad, () => Json(Belegliste()), () => Json(new[] { BelegJson(Brot, "Verpflegung", 23.40m, "Brötchen", Lea, version: 6) }));
+        _server.Bei(HttpMethod.Delete, $"{BelegePfad}/{Brot}/datei", () => new HttpResponseMessage(HttpStatusCode.NoContent));
+        var cut = BelegRendern(Brot);
+        Assert.NotNull(cut.Find("#datei img"));
+
+        cut.FindAll("button").Single(b => b.TextContent == "Datei entfernen").Click();
+        Assert.Contains("Die Datei entfernen? Der Beleg bleibt.", cut.Markup, StringComparison.Ordinal);
+        cut.FindAll("button").Single(b => b.TextContent == "Ja, entfernen").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Noch keine Datei.", cut.Find("#datei").TextContent, StringComparison.Ordinal));
+        Assert.Empty(cut.FindAll("#datei img"));
+        Assert.Single(_server.Anfragen, a => a.Methode == HttpMethod.Delete && a.Pfad == $"{BelegePfad}/{Brot}/datei");
+    }
+
+    [Fact]
+    public void Beleg_Seite_Upload_scheitert_Erneut_versuchen_laedt_an_denselben_Beleg()
+    {
+        BelegeAntworten();
+        _server.BeiDerReihe(
+            HttpMethod.Post, $"{BelegePfad}/{Bus}/datei",
+            () => throw new HttpRequestException("offline"),
+            () => Json(BelegJson(Bus, "Fahrt", 1950m, null, Jonas, true, new { dateiname = "Busrechnung.pdf", istBild = false }, 6)));
+        var cut = BelegRendern(Bus);
+
+        cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromBinary([0x25, 0x50, 0x44, 0x46], "Busrechnung.pdf", contentType: "application/pdf"));
+
+        cut.WaitForAssertion(() => Assert.Contains("Datei nicht hochgeladen.", cut.Find("#datei .elkw-alert--fehler").TextContent, StringComparison.Ordinal));
+        cut.FindAll("button").Single(b => b.TextContent == "Erneut versuchen").Click();
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("#datei .elkw-alert--fehler")));
+        Assert.Equal(2, _server.Anfragen.Count(a => a.Methode == HttpMethod.Post && a.Pfad == $"{BelegePfad}/{Bus}/datei"));
+    }
+
+    [Fact]
+    public void Scheitert_die_Personenliste_stehen_die_Namen_der_Leitung_und_sonst_Ohne_Namen()
+    {
+        BelegeAntworten();
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{Freizeit}/personenliste", () => throw new HttpRequestException("offline"));
+
+        var cut = BelegeRendern();
+
+        var zeilen = cut.FindAll("#belege tbody tr");
+        Assert.Equal(3, zeilen.Count);
+        Assert.Equal("Ohne Namen", Zeile(zeilen[0])[3]);
+        Assert.Equal("Jonas Hüttner", Zeile(zeilen[1])[3]);
+        Assert.Empty(cut.FindAll(".elkw-alert--fehler"));
     }
 }
