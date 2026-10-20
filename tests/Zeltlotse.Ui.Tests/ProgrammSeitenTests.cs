@@ -758,6 +758,20 @@ public sealed class ProgrammSeitenTests : BunitContext
         Assert.DoesNotContain(MitteilungsHinweis.NichtGesendetText, cut.Markup, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(HttpStatusCode.InternalServerError, Problemcodes.Konflikt)]
+    [InlineData(HttpStatusCode.Conflict, Problemcodes.FreizeitAbgeschlossen)]
+    public void Detailseite_gesendet_aber_mitgeteilt_antwortet_mit_Fehler_meldet_es_ohne_zweites_Senden_anzubieten(HttpStatusCode status, string code)
+    {
+        VerschobenAntworten();
+        _server.Bei(HttpMethod.Post, MitgeteiltPfad(Mittag), () => NachgebildeterHandler.Problem(status, code));
+        var cut = DetailRendern(Mittag);
+
+        JaInformieren(cut);
+
+        cut.WaitForAssertion(() => Assert.Contains(MitteilungsHinweis.GesendetHinweisBleibtText, cut.Find("[role=alert]").TextContent, StringComparison.Ordinal));
+    }
+
     [Fact]
     public void Detailseite_verschieben_Nein_erneut_verschieben_klappt_die_Bestaetigung_mit_neuem_Text_wieder_auf()
     {

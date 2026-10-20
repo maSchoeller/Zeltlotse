@@ -60,7 +60,7 @@ In der Card **Bearbeiten** lassen sich **Titel** und **Uhrzeit** ändern. Zeltlo
 
 Wer die Uhrzeit eines Programmpunkts ändert, zum Beispiel das Mittagessen von 13:00 auf 13:30, bekommt direkt unter dem Feld **Uhrzeit** eine Rückfrage: „Alle informieren? „Mittagessen am Di 03.08.: 13:30 statt 13:00““. Den Text bereitet Zeltlotse vor, mit Titel, Tag, neuer und alter Uhrzeit. Wurde die Uhrzeit entfernt, steht dort „ohne Uhrzeit statt 13:00“.
 
-- **Ja, informieren** schreibt genau diesen Text in den Kanal **Alle**. Er geht wie jede Nachricht dort als Benachrichtigung aufs Handy (siehe [Kanäle Team und Alle](/mitarbeitende/kanaele/)). Danach steht oben „Alle informiert: …“, und der Hinweis am Programmpunkt verschwindet.
+- **Ja, informieren** schreibt genau diesen Text in den Kanal **Alle**. Er geht wie jede Nachricht dort als Benachrichtigung aufs Handy (siehe [Kanäle Team und Alle](/mitarbeitende/kanaele/)). Danach steht oben „Alle informiert: …“, und der Hinweis am Programmpunkt verschwindet. Klappt nur das Entfernen des Hinweises nicht, meldet Zeltlotse „Die Nachricht ist gesendet, der Hinweis ließ sich aber nicht entfernen.“ Dann nicht erneut informieren, sondern **Ausblenden** wählen.
 - **Nein** schickt nichts. Auch wer die Seite einfach verlässt, schickt nichts.
 
 Weil die Seite nach dem Verschieben den Programmpunkt neu lädt, steht unter **Uhrzeit** danach kein „Rückgängig“. Wer die Verschiebung zurücknehmen will, trägt die alte Uhrzeit wieder ein; damit verschwindet auch der Hinweis.

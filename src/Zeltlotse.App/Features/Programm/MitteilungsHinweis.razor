@@ -81,10 +81,11 @@
             {
                 case KanalAktionErgebnis.Erfolg:
                     gesendet = true;
-                    // Scheitert „mitgeteilt“ sonst, bleibt nur der Hinweis stehen; er lässt sich ausblenden.
-                    if (await ProgrammApi.MitgeteiltAsync(FreizeitId, Punkt.Id, Punkt.Beginn) == ProgrammAktionErgebnis.Konflikt)
+                    // Scheitert „mitgeteilt“, bleibt der Hinweis stehen; die Meldung bietet kein zweites Senden an, nur das Ausblenden.
+                    var mitgeteilt = await ProgrammApi.MitgeteiltAsync(FreizeitId, Punkt.Id, Punkt.Beginn);
+                    if (mitgeteilt != ProgrammAktionErgebnis.Erfolg)
                     {
-                        _fehler = ErneutVerschobenText;
+                        _fehler = mitgeteilt == ProgrammAktionErgebnis.Konflikt ? ErneutVerschobenText : GesendetHinweisBleibtText;
                     }
 
                     await Erledigt.InvokeAsync(text);

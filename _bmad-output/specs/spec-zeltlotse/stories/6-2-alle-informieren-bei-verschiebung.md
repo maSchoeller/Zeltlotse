@@ -5,7 +5,7 @@ created: '2026-10-20'
 baseline_revision: '975eac124ed2fbd075bd38be37d6042bf60a44b3'
 status: 'done'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/specs/spec-zeltlotse/stories/6-1-kanaele-team-und-alle-mit-push.md'
@@ -179,6 +179,43 @@ Wurzel: `src/` = S, `tests/` = T.
   - `[false]` `[reject]` Intent: Testreihenfolge, Komplettlauf und Doku-Build sind im Diff nicht sichtbar — Kein Mangel des Codes; die Läufe stehen unter Auto Run Result.
   - `[maybe-false]` `[reject]` Intent: Demo-Idempotenz bei alter Datenbank — gleich wie Blind 9; höchstens low.
 
+### 2026-10-20 — Review pass (Folgedurchlauf)
+- verdicts: 33 findings — high 0, medium 5, low 20, false 6, maybe-false 2
+- findings:
+  - `[medium]` `[patch]` Blind: Nach gelungenem Senden in „Alle“ werden `Fehler` (500/404) und `Abgeschlossen` von „mitgeteilt“ verschluckt; die Seite meldet „Alle informiert“, der Hinweis bleibt ohne Erklärung, ein zweites Senden liegt nahe — `MitteilungsHinweis.InformierenAsync` setzt bei jedem Ergebnis außer `Erfolg` eine Meldung: `Konflikt` → „erneut verschoben“, sonst `GesendetHinweisBleibtText`; bUnit-Theorie (500, 409 `freizeit-abgeschlossen`) zuerst rot, dann grün; Satz in `programm.md` ergänzt.
+  - `[low]` `[reject]` Blind: Nach 409 von „mitgeteilt“ steht neben der Fehlermeldung die grüne Meldung mit der alten Uhrzeit — Beide Aussagen stimmen (gesendet wurde der alte Text, der Punkt ist erneut verschoben); der Hinweis mit „Jetzt informieren“ zur neuen Uhrzeit bleibt als Korrekturweg.
+  - `carried` `[low]` `[reject]` Blind: Zwei gleichzeitige „Ja, informieren“ senden doppelt — carried: wie Edge-Zeile „Zwei Teammitglieder tippen gleichzeitig“ im ersten Durchlauf; Code unverändert.
+  - `[low]` `[reject]` Blind: Prüfung vor dem Senden meldet bei gelöschtem oder schon mitgeteiltem Punkt „erneut verschoben“ — Nur bei gleichzeitigem Löschen bzw. Informieren durch andere; im zweiten Fall verschwindet der Hinweis, das Ergebnis stimmt. Eigene Texte bräuchten weitere Zweige.
+  - `[low]` `[reject]` Blind: Die Prüfung vor dem Senden lädt den ganzen Wochenraster — Einmal pro Klick, rund 40 Punkte; ein Einzelpunkt-Endpunkt wäre neue öffentliche Fläche.
+  - `[low]` `[reject]` Blind: Der Server prüft nur `Beginn`, nicht den „statt“-Wert — Abweichung setzt eine Kette aus Verschieben, Informieren und Zurückschieben auf genau die alte Uhrzeit voraus; der Client prüft vor dem Senden beide Werte. Ein zweiter Parameter änderte den Vertrag.
+  - `carried` `[low]` `[patch]` Blind: „Rückgängig“ verschwindet nach dem Verschieben — carried: wie Blind 4 im ersten Durchlauf (Doku nennt den Weg); Code unverändert.
+  - `[false]` `[reject]` Blind: Der Fokus springt ungefragt auf „Nein“, keine Live-Region — Der Fokus auf „Nein“ nach dem Speichern ist ausdrücklich Teil des Intents (EXPERIENCE.md); mit dem Fokus liest der Screenreader die Bestätigung samt Satz vor.
+  - `carried` `[low]` `[reject]` Blind: Gleich lautende Knöpfe im Wochenraster — carried: wie Blind 6 im ersten Durchlauf.
+  - `[false]` `[reject]` Blind: Tippziele mit 32 px zu klein — EXPERIENCE.md verlangt mindestens 24 × 24 px (WCAG 2.5.8); 44 px gelten nur für Notfall-Button und untere Navigation.
+  - `[low]` `[reject]` Blind: Fehlerpfade im Wochenraster ungetestet — Der Raster nutzt denselben Baustein `MitteilungsHinweis`, dessen Pfade über die Detailseite getestet sind; nur das Neuladen danach unterscheidet sich und ist getestet.
+  - `carried` `[low]` `[reject]` Blind: Bestehende Demo-Datenbanken bekommen die Verschiebung nicht — carried: wie Blind 9 im ersten Durchlauf.
+  - `[low]` `[reject]` Blind: Konflikttext doppelt in Endpunkt und Baustein — Der Server-Text ist das `detail` der ProblemDetails, die Oberfläche zeigt eigenen Text; Auseinanderlaufen schadet niemandem.
+  - `[low]` `[reject]` Blind: Doku schweigt zu Protokoll von „Ausblenden“, Löschfrist, gleichzeitigem Informieren, Push nur mit Abo — `MitgeteilterBeginn` ist keine personenbezogene Angabe; Push-Voraussetzungen stehen in `kanaele.md`, auf das verlinkt ist.
+  - `[medium]` `[patch]` Edge: `Fehler`/`Abgeschlossen` von „mitgeteilt“ nach dem Senden ohne Meldung — gleiche Ursache und Korrektur wie Blind 1.
+  - `carried` `[low]` `[reject]` Edge: Senden und „mitgeteilt“ nicht atomar → doppelte oder veraltete Nachricht — carried: wie Edge-Zeile „Zwei Teammitglieder“ im ersten Durchlauf.
+  - `[low]` `[reject]` Edge: Server ignoriert den angezeigten „statt“-Wert — gleich wie Blind 6 dieses Durchlaufs.
+  - `[low]` `[reject]` Edge: „Ausblenden“ aus veralteter Ansicht blendet eine neuere Verschiebung aus — Nur wenn jemand anderes zwischen Anzeige und Klick erneut verschiebt; ausgeblendet wird nichts versendet, und ein Neuladen davor wäre ein weiterer Zweig.
+  - `[low]` `[reject]` Edge: Gelöschter oder schon mitgeteilter Punkt → irreführende Meldung — gleich wie Blind 4 dieses Durchlaufs.
+  - `[low]` `[reject]` Edge: Text nutzt den lokalen Titel, der inzwischen umbenannt sein kann — Gesendet wird genau der Satz, den die Person bestätigt hat; einen anderen Text zu senden widerspräche der Bestätigung.
+  - `carried` `[maybe-false]` `[reject]` Edge: `Offen` klappt nach späterem Neuladen von selbst auf — carried: wie Edge-Zeile zu `Offen` im ersten Durchlauf; Code unverändert.
+  - `carried` `[low]` `[reject]` Edge (claim): AC „genau eine Nachricht“ bei gleichzeitigem Informieren — carried: wie Edge-Zeile „Zwei Teammitglieder“ im ersten Durchlauf.
+  - `[medium]` `[patch]` Edge (claim): Doku verspricht, der Hinweis verschwinde; bei `Fehler` bleibt er ohne Meldung — gleiche Ursache und Korrektur wie Blind 1; Doku nennt jetzt den Fall.
+  - `[medium]` `[patch]` Gap: Kein Test für eine Fehlerantwort (nicht Ausnahme, nicht Konflikt) von „mitgeteilt“ nach dem Senden — Theorie `Detailseite_gesendet_aber_mitgeteilt_antwortet_mit_Fehler_meldet_es_ohne_zweites_Senden_anzubieten` ergänzt.
+  - `[medium]` `[patch]` Gap (other): `Fehler`/`Abgeschlossen` werden als Erfolg behandelt — gleich wie Blind 1.
+  - `[low]` `[reject]` Gap (other): `aktuell is null` meldet „erneut verschoben“ — gleich wie Blind 4 dieses Durchlaufs.
+  - `carried` `[maybe-false]` `[reject]` Intent: Die Kette „Ja“ → Nachricht → Push läuft nicht am Stück — carried: wie Intent-Zeile im ersten Durchlauf.
+  - `[low]` `[reject]` Intent: Automatisches Aufklappen nach echtem Speichern nur in bUnit, nicht im E2E — Ein E2E-Speichern veränderte den Demo-Stand der übrigen Bilder; bUnit deckt PATCH, Neuladen, Aufklappen und Fokus ab.
+  - `[low]` `[reject]` Intent: Escape bei aufgeklappt beginnender Bestätigung ungetestet — Escape ist vorhandenes Verhalten von `InlineBestaetigung` und unabhängig davon, wie sie aufklappte.
+  - `[false]` `[reject]` Intent: „mitgeteilt“ ohne offenen Hinweis 204 auch bei anderer Uhrzeit weicht ab — Die Matrix verlangt ausdrücklich „auch ohne offenen Hinweis 204“.
+  - `carried` `[false]` `[reject]` Intent: Kein 403- und kein Token-Test — carried: wie Intent-Zeile im ersten Durchlauf (Design Notes).
+  - `[false]` `[reject]` Intent: Gleichen Wert erneut speichern setzt nichts — Ohne neuen Wert gibt es keine Änderung von `Beginn`; die Regel spricht von einer Änderung.
+  - `carried` `[false]` `[reject]` Intent: Doku-Build im Diff nicht sichtbar — carried: wie Intent-Zeile im ersten Durchlauf.
+
 ## Design Notes
 
 - **Zusammensetzen im Client statt neuem Ereignis:** Programm und Kanäle haben keinen Pfeil zueinander (AD-2). Ein Ereignis „ProgrammpunktVerschoben“ mit Empfänger in Kanäle würde eine neue Zeile in der Spine verlangen und einen Versand aus einem Ereignis statt aus einer bestätigten Aktion erzeugen. Der Client verbindet zwei bestehende Aktionen: Senden in „Alle“, das der Server bestätigt verlangt, und „mitgeteilt“ im Programm. Scheitert der zweite Schritt, bleibt der Hinweis stehen. Das ist harmlos, man kann ausblenden.
@@ -236,3 +273,27 @@ Status: done
 **Restrisiken:**
 - Eine bestehende Demo-Datenbank aus der Zeit vor dieser Story zeigt den Hinweis nicht (Geländespiel steht dort schon auf 14:30); eine frische Demo-Datenbank schon.
 - Nach einer Verschiebung mit Hinweis ist „Rückgängig“ am Feld weg; die Doku nennt den Weg über die alte Uhrzeit.
+
+### Folgedurchlauf 2026-10-20
+
+**Umgesetzt:** Korrektur in `MitteilungsHinweis.InformierenAsync`. Ist die Nachricht in „Alle“ gesendet und antwortet „mitgeteilt“ danach mit einem Fehler (z. B. 500) oder mit `freizeit-abgeschlossen`, steht jetzt „Die Nachricht ist gesendet, der Hinweis ließ sich aber nicht entfernen. Bitte „Ausblenden“ wählen.“ Bisher stand dort nur „Alle informiert“ ohne Erklärung, und ein zweites Senden lag nahe.
+
+**Dateien:**
+- `src/Zeltlotse.App/Features/Programm/MitteilungsHinweis.razor`: Jedes Ergebnis von „mitgeteilt“ außer `Erfolg` setzt eine Meldung (`Konflikt` → erneut verschoben, sonst gesendet/Hinweis bleibt).
+- `tests/Zeltlotse.Ui.Tests/ProgrammSeitenTests.cs`: Theorie `Detailseite_gesendet_aber_mitgeteilt_antwortet_mit_Fehler_meldet_es_ohne_zweites_Senden_anzubieten` (500 und 409 `freizeit-abgeschlossen`), erst rot, dann grün.
+- `doku/src/content/docs/mitarbeitende/programm.md`: Satz zu diesem Fall („nicht erneut informieren, sondern Ausblenden“).
+
+**Review:** 33 Funde von vier Prüfern (Details im Triage-Log, Abschnitt „Folgedurchlauf“).
+- Gepatcht: 1 Eintrag mit Verdikt medium (5 Zeilen gleicher Ursache aus allen Prüfern außer Intent). Kein high.
+- Zurückgestellt: nichts.
+- Verworfen: 6 false (u. a. Tippziele: EXPERIENCE.md verlangt 24 px, vorhanden sind 32 px; Fokus auf „Nein“ ist Intent; 204 ohne offenen Hinweis steht in der Matrix), 2 maybe-false (carried) und 20 low (davon 7 carried aus dem ersten Durchlauf). Alle Gründe stehen im Triage-Log.
+
+**Folge-Review empfohlen:** nein. Im Folgedurchlauf wurde kein high gepatcht (0 high, 1 medium); die Arbeit ist konvergiert.
+
+**Verifikation:**
+- Alle Testprojekte einzeln, zusammen 3034 von 3034 grün: Ui 836, Api 1028, E2E 193 (mit Doku-Screenshots Handy und Laptop), Architektur 136 und die Modulprojekte.
+- Ein erster Gesamtlauf `dotnet test` meldete einen Verbindungsfehler zur Datenbank in Konten.Tests unter Last; das Projekt allein lief 26/26 grün, und Konten ist von der Story nicht berührt.
+- `npm run build` in `doku/` fehlerfrei (67 Seiten, nur der bekannte Sitemap-Hinweis).
+- 29 Screenshots, die der E2E-Lauf nur mit Rendering-Rauschen neu erzeugt hatte, sind zurückgesetzt; die Korrektur betrifft keinen abgebildeten Zustand.
+
+**Restrisiken:** unverändert gegenüber dem ersten Durchlauf. Senden und „mitgeteilt“ sind zwei Aufrufe des Clients, sodass zwei gleichzeitige „Ja, informieren“ doppelt senden können (selten, bewusst verworfen). Eine alte Demo-Datenbank zeigt den Hinweis nicht.
