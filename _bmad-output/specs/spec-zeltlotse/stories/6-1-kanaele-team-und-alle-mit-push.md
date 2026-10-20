@@ -5,7 +5,7 @@ created: '2026-10-20'
 baseline_revision: 'b6be44ba62e07f2ee77fc2bf7ff2ddaacfdad3ae'
 status: 'done'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/specs/spec-zeltlotse/stories/5-3-beitrag-bezahlt-abhaken.md'
@@ -32,6 +32,13 @@ deferred:
     location: >-
       src/Zeltlotse.App/wwwroot/service-worker*.js, src/Zeltlotse.App/wwwroot/js/zeltlotse.js
     severity: low
+  - summary: >-
+      Der Vertrag der Push-Nutzlast (titel, text, url) zwischen Server und Service Worker sowie die Push-Erkennung in zeltlotse.js sind durch keinen Test gebunden.
+    evidence: |-
+      PushVersand.cs serialisiert ein anonymes Objekt; service-worker*.js liest daten.titel/text/url, pushBeobachten erwartet typ 'push'. KanaeleTests prüfen nur den C#-Datensatz PushInhalt, die UI-Tests nutzen NachgebildeterBrowser, ein JS-Testaufbau fehlt. Ein Umbenennen bliebe unbemerkt. Erster billiger Schritt: die Serialisierung in eine testbare Methode ziehen und die Feldnamen in C# festnageln.
+    location: >-
+      src/Zeltlotse.Api/Adapter/PushVersand.cs, src/Zeltlotse.App/wwwroot/service-worker*.js, src/Zeltlotse.App/wwwroot/js/zeltlotse.js
+    severity: medium
 ---
 
 <intent-contract>
@@ -224,6 +231,43 @@ Wurzel: `src/` = S, `tests/` = T.
   - `[low]` `[reject]` Edge: Bricht das Einspielen der Demo-Daten mitten ab, fehlen danach Nachrichten — Gleiches Muster der Idempotenz wie bei den anderen Schritten der Demo-Daten.
   - `[low]` `[reject]` Edge: „sub“ fehlt bei nicht-https entgegen dem Spec — Ein VAPID-„sub“ muss mailto oder https sein; ein nicht-https-Wert wäre ungültig.
 
+### 2026-10-20 — Review pass (Folgedurchlauf)
+- verdicts: 33 findings — high 0, medium 4, low 27, false 2, maybe-false 0
+- findings:
+  - `[low]` `[defer]` Intent A: Die Push-Zustellung bis aufs Gerät ist nur mit Nachbildungen getestet (PushAufzeichnung, Handler, NachgebildeterBrowser) — carried: gleicher Befund wie der zurückgestellte zur Kette Push → Service Worker → Neuladen.
+  - `[low]` `[defer]` Intent B: Die Browser-Erkennung in JS (iPhone, Permissions-API, „abgelehnt“) ist nur über nachgebildete Status-Werte getestet — gleiche Ursache wie Gap 3 (kein JS-Testaufbau); mit dem neuen Eintrag in `deferred` zurückgestellt.
+  - `[low]` `[reject]` Intent C: Zustände wie „gelaufen“ und „aus dem Team entfernt“ entstehen in den Tests per SQL — Geprüft wird die Reaktion von Kanäle; die Wege dorthin sind im Modul Freizeiten getestet. Kein Fehler für Nutzer.
+  - `[false]` `[reject]` Intent D: Abmelden reicht über die Matrix hinaus (alle Freizeiten der Organisation, 409 bei gelaufen) — Die Matrix sagt „Abo der eigenen Person gelöscht“ und „POST Nachricht oder Abo“ → 409; beides hält. Die Ausweitung stammt aus dem Patch des ersten Durchlaufs.
+  - `[low]` `[reject]` Intent E: Das Konto-Abmelden beendet das Push-Abo im Browser — carried: bewusster Patch des ersten Durchlaufs (Edge „Gerät behält das Abo“), damit ein Gerät keine Nachrichten der abgemeldeten Person zeigt.
+  - `[low]` `[reject]` Intent F: N der Bestätigung zählt mehr Personen als heute Push bekommen — carried: folgt EXPERIENCE.md, mit 6-4 lesen Teilnehmende mit.
+  - `[low]` `[reject]` Intent G: Push-JS steht auch in den Service-Worker-Dateien — Ein Service Worker muss eine eigene Datei sein; die Regel „nur zeltlotse.js hinter IBrowser“ betrifft das JS-Interop der Blazor-Seiten.
+  - `[low]` `[reject]` Edge: Lehnt der Server das Abo ab, bleibt der Browser abonniert — carried: wie im ersten Durchlauf (Fehlermeldung sichtbar, ein Rückbau bräuchte einen weiteren Zweig).
+  - `[low]` `[reject]` Edge: Das Ergebnis des stillen Erneuerns wird ignoriert — carried.
+  - `[low]` `[reject]` Edge: Wettlauf beim schnellen Kanalwechsel — carried.
+  - `[low]` `[reject]` Edge: Entsorgung während `PushBeobachtenAsync` — carried.
+  - `[low]` `[reject]` Edge: Ein NUL-Zeichen im Text führt in PostgreSQL zu 500 statt 400 — Real, aber im Alltag tippt niemand ein NUL-Zeichen; die Korrektur wäre eine zusätzliche Validierungsregel.
+  - `[low]` `[reject]` Edge: Abbruch mitten in der Ziel-Schleife führt zu doppelten Pushes — carried.
+  - `[low]` `[reject]` Edge: Ohne https-Adresse fehlt „sub“ — carried.
+  - `[low]` `[reject]` Edge: Das Ergebnis von `AbmeldenAsync` wird ignoriert, Server-Zeilen bleiben bis zum nächsten 410 — Schon als Restrisiko vermerkt; eine Rückmeldung bräuchte einen zusätzlichen Fehlerzweig, und das Gerät ist trotzdem abgemeldet.
+  - `[low]` `[reject]` Edge (claim): „sub“ ist nicht immer `OeffentlicheAdresse` — carried: ein VAPID-„sub“ muss mailto oder https sein.
+  - `[low]` `[reject]` Blind: Ein gescheiterter Push wird nicht wiederholt — carried.
+  - `[medium]` `[patch]` Blind: Ziele gehen nacheinander mit je 10 s Timeout hinaus und blockieren die Outbox — carried: Timeout im ersten Durchlauf gesetzt; kein erneuter Patch.
+  - `[low]` `[defer]` Blind: Ein Wechsel des VAPID-Schlüssels wird nie behandelt — carried (steht bereits in `deferred`).
+  - `[low]` `[reject]` Blind: Das stille Erneuern zeigt trotz Fehler „eingeschaltet“ — carried.
+  - `[low]` `[reject]` Blind: „An N Personen“ übertreibt die Reichweite — carried.
+  - `[low]` `[reject]` Blind: Keine Begrenzung von Senden und Abos — carried.
+  - `[low]` `[reject]` Blind: Abmelden und Ausschalten lassen Server-Zeilen liegen, die Doku stelle das als sofortiges Aufräumen dar — Die Doku sagt nur, dass die Benachrichtigungen auf dem Gerät enden, und daten.md beschreibt das Abräumen beim nächsten Versand; beides stimmt. Das Liegenbleiben ist als Restrisiko vermerkt.
+  - `[low]` `[patch]` Blind: Die Grenze von 200 Nachrichten steht nirgends in der Doku — Satz in `mitarbeitende/kanaele.md` ergänzt (neueste 200 je Kanal, ältere bleiben gespeichert).
+  - `[low]` `[reject]` Blind: Der Push-Code steht doppelt in beiden Service-Worker-Dateien — carried.
+  - `[low]` `[reject]` Blind: `notificationclick` öffnet ein neues Fenster, wenn keine Adresse genau passt — Ein Umbau auf `navigate` bräuchte weitere Zweige für nicht gesteuerte Fenster und ist ohne JS-Testaufbau nicht prüfbar; die Folge ist nur ein zusätzliches Fenster.
+  - `[low]` `[reject]` Blind: Wer das Team verlassen hat, erscheint als „Ohne Namen“ — Selten; die Namen kommen bewusst aus der Freizeit (Kanäle hat keinen Pfeil zu Personen), ein weiterer Weg zu Namen wäre neue Logik.
+  - `[low]` `[reject]` Blind: In „Alle“ kommt die Rückfrage vor der Prüfung des Textes — Ein leeres Absenden ist selten, der Fehler steht danach am Feld; eine Vorprüfung im Client wäre ein zusätzlicher Zweig.
+  - `[false]` `[reject]` Blind: `ON CONFLICT … WHERE OrganisationId` meldet bei fremder Organisation Erfolg, ohne zu speichern — Der Konflikt-Schlüssel ist (FreizeitId, Endpunkt); eine Freizeit gehört genau einer Organisation, und die RechtePruefung lässt nur die eigene zu. Ein Konflikt über Organisationen hinweg kann nicht entstehen.
+  - `[low]` `[reject]` Blind: Fehlende Tests (401/403/429, Aufräumen beim Abmelden, Service Worker, 200er-Grenze, „Ohne Namen“) — Sammelbefund; jeder Punkt hat in diesem Log eine eigene Zeile mit Entscheidung.
+  - `[medium]` `[patch]` Gap: Dass der registrierte Push-Client keinen Weiterleitungen folgt, prüft kein Test — `Registrierung_…` prüft jetzt über `IHttpMessageHandlerFactory` den innersten Handler des registrierten Clients (`SocketsHttpHandler`, `AllowAutoRedirect = false`).
+  - `[medium]` `[patch]` Gap: VAPID-„sub“, „aud“ und der Schlüssel im Authorization-Header sind nicht geprüft — Neuer Test `VAPID_traegt_die_oeffentliche_Adresse_als_sub_…` liest `t=` (JWT) und `k=` aus und prüft sub, aud und den öffentlichen Schlüssel.
+  - `[medium]` `[defer]` Gap: Der Vertrag der Push-Nutzlast zwischen Server und Service Worker ist ungeprüft — Kein JS-Testaufbau; als neuer Eintrag in `deferred` zurückgestellt, mit einem billigen ersten Schritt.
+
 ## Design Notes
 
 - **Push wie Mail statt als Ereignis:** Ein eigenes Ereignis `NachrichtGesendet` hätte eine neue Zeile in der Tabelle *Ereignis-Fluss* der Spine verlangt. Die Outbox kennt mit Mails schon ein Muster „Versand nach außen mit fester Zustellung“. `IPushAuftrag` spiegelt es und erfüllt AD-13 (nur über die Outbox) ohne Änderung der Architektur.
@@ -293,3 +337,15 @@ Status: done
 **Restrisiken:**
 - Ein Push-Abo fremder Freizeiten bleibt nach dem Abmelden des Geräts auf dem Server, bis der nächste Push ein 410 liefert.
 - Die Erkennung von iPhone und iPad läuft über den User-Agent.
+
+### Folgedurchlauf 2026-10-20
+
+- **Review:** 33 Funde von vier Prüfern (Blind, Edge, Verifikationslücken, Intent); 17 davon carried aus dem ersten Durchlauf.
+- **Patches in diesem Durchlauf (2 medium, 1 low), nur Tests und Doku:**
+  - `tests/Zeltlotse.Api.Tests/WebPushVersandTests.cs`: Der Test der Registrierung prüft den Handler, den der registrierte Client wirklich nutzt (keine Weiterleitungen). Ein neuer Test prüft VAPID-„sub“, „aud“ und den Schlüssel im Authorization-Header.
+  - `doku/src/content/docs/mitarbeitende/kanaele.md`: Hinweis auf die neuesten 200 Nachrichten je Kanal.
+- **Zurückgestellt:** neu der Vertrag der Push-Nutzlast und die JS-Erkennung (medium, kein JS-Testaufbau); carried die VAPID-Rotation und die Service-Worker-Kette.
+- **Verworfen:** 25 Funde, jeweils mit Grund im Triage-Log (2 davon false).
+- **Folge-Review empfohlen:** nein. Im Folgedurchlauf wurde kein high-Fund gepatcht; gepatcht 0 high, 2 medium, 1 low.
+- **Verifikation:** `WebPushVersandTests` 11/11 grün; `tests/Zeltlotse.ArchitectureTests` 136/136 grün; `npm run build` in `doku/` fehlerfrei (67 Seiten, nur der bekannte Sitemap-Hinweis). Produktcode blieb unverändert, deshalb kein erneuter Komplettlauf mit E2E.
+- **Restrisiken:** wie oben, dazu die ungeprüfte Nutzlast zwischen Server und Service Worker.

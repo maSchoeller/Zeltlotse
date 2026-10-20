@@ -18,7 +18,7 @@ So laufen Absprachen nicht mehr über eine Chat-App nebenher, und jede Nachricht
 
 Startseite der Freizeit → Knopf **Kanäle**. Über der Überschrift steht „Kanäle“. Mit den zwei Knöpfen **Team** und **Alle** wechselt die Seite zwischen den Kanälen; der gewählte Kanal steht in der Adresse, eine Benachrichtigung aus „Alle“ öffnet also direkt diesen Kanal.
 
-Die Nachrichten stehen untereinander, die **neueste unten**. Die Seite öffnet am Ende, beim Eingabefeld. Zu jeder Nachricht stehen die Initialen und der Name der Person, die sie geschrieben hat, dazu Tag und Uhrzeit. Es gibt keine Zähler für ungelesene Nachrichten und kein „gelesen“.
+Die Nachrichten stehen untereinander, die **neueste unten**. Die Seite öffnet am Ende, beim Eingabefeld. Zu jeder Nachricht stehen die Initialen und der Name der Person, die sie geschrieben hat, dazu Tag und Uhrzeit. Es gibt keine Zähler für ungelesene Nachrichten und kein „gelesen“. Die Seite zeigt je Kanal die neuesten 200 Nachrichten; ältere bleiben gespeichert, stehen aber nicht mehr auf der Seite.
 
 ![Kanal „Team“ am Handy: Knöpfe „Team“ und „Alle“, Nachrichten von Jonas Hüttner, Lea Feuerstein und Miriam Zeltner, darunter das Feld „Nachricht“ mit „Senden“](../../../assets/screenshots/kanaele-team-handy.png)
 

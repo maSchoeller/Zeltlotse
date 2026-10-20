@@ -1,5 +1,7 @@
 using System.Net;
 using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Api.Adapter;
@@ -11,11 +13,13 @@ namespace Zeltlotse.Api.Tests;
 /// <summary>
 /// Story 6-1: der echte Web-Push-Adapter <see cref="WebPushVersand"/> mit einem aufzeichnenden Handler statt des Netzes: 404 und 410 heißen „Ziel ungültig“,
 /// andere Fehler werfen, ein nicht erlaubter Endpunkt geht nie hinaus, Weiterleitungen gelten nicht als Erfolg, die Anfrage trägt VAPID und TTL; dazu die
-/// Registrierung (kurze Wartezeit, keine Weiterleitungen).
+/// Registrierung (kurze Wartezeit, der registrierte Client folgt keinen Weiterleitungen).
 /// </summary>
 public sealed class WebPushVersandTests
 {
     private readonly Aufzeichnung _handler = new();
+
+    private readonly VapidSchluessel _vapid = VapidSchluessel.AusBase64(ZeltlotseApiFactory.NeuerVapidSchluessel());
 
     private static CancellationToken Abbruch => TestContext.Current.CancellationToken;
 
@@ -46,7 +50,7 @@ public sealed class WebPushVersandTests
             .AddInMemoryCollection(new Dictionary<string, string?> { ["Zeltlotse:OeffentlicheAdresse"] = "https://zeltlotse.example.org" })
             .Build();
         var dienste = services.BuildServiceProvider();
-        return new WebPushVersand(dienste.GetRequiredService<IHttpClientFactory>(), VapidSchluessel.AusBase64(ZeltlotseApiFactory.NeuerVapidSchluessel()), konfiguration);
+        return new WebPushVersand(dienste.GetRequiredService<IHttpClientFactory>(), _vapid, konfiguration);
     }
 
     private static PushZiel Ziel(string endpunkt = "https://fcm.googleapis.com/fcm/send/geraet")
@@ -57,6 +61,12 @@ public sealed class WebPushVersandTests
     }
 
     private static string Base64Url(byte[] bytes) => Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+    private static byte[] AusBase64Url(string wert)
+    {
+        var base64 = wert.Replace('-', '+').Replace('_', '/');
+        return Convert.FromBase64String(base64.PadRight(base64.Length + ((4 - (base64.Length % 4)) % 4), '='));
+    }
 
     private static PushInhalt Inhalt => new("Zeltlager · Team", "Feuerholz holen", "/app/freizeiten/x/kanaele");
 
@@ -71,6 +81,21 @@ public sealed class WebPushVersandTests
         Assert.Equal("vapid", anfrage.Headers.Authorization?.Scheme, ignoreCase: true);
         Assert.True(anfrage.Headers.TryGetValues("TTL", out var ttl));
         Assert.Equal("86400", Assert.Single(ttl));
+    }
+
+    [Fact]
+    public async Task VAPID_traegt_die_oeffentliche_Adresse_als_sub_den_Push_Dienst_als_aud_und_den_eigenen_Schluessel()
+    {
+        await Versand().SendenAsync(Ziel(), Inhalt, Abbruch);
+
+        var teile = Assert.Single(_handler.Anfragen).Headers.Authorization!.Parameter!
+            .Split(',', StringSplitOptions.TrimEntries)
+            .Select(teil => teil.Split('=', 2))
+            .ToDictionary(teil => teil[0], teil => teil[1]);
+        Assert.Equal(_vapid.Oeffentlich, teile["k"]);
+        using var nutzlast = JsonDocument.Parse(Encoding.UTF8.GetString(AusBase64Url(teile["t"].Split('.')[1])));
+        Assert.Equal("https://zeltlotse.example.org", nutzlast.RootElement.GetProperty("sub").GetString());
+        Assert.Equal("https://fcm.googleapis.com", nutzlast.RootElement.GetProperty("aud").GetString());
     }
 
     [Theory]
@@ -115,7 +140,15 @@ public sealed class WebPushVersandTests
 
         using var client = dienste.GetRequiredService<IHttpClientFactory>().CreateClient(WebPushVersand.ClientName);
         Assert.Equal(TimeSpan.FromSeconds(10), client.Timeout);
-        using var handler = PushRegistrierung.PrimaerHandler();
-        Assert.False(handler.AllowAutoRedirect);
+
+        // Der Handler, den der registrierte Client wirklich nutzt: die Kette bis zum innersten Handler.
+        HttpMessageHandler handler = dienste.GetRequiredService<IHttpMessageHandlerFactory>().CreateHandler(WebPushVersand.ClientName);
+        while (handler is DelegatingHandler kette)
+        {
+            handler = kette.InnerHandler!;
+        }
+
+        var primaer = Assert.IsType<SocketsHttpHandler>(handler);
+        Assert.False(primaer.AllowAutoRedirect);
     }
 }
