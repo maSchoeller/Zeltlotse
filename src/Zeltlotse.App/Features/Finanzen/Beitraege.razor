@@ -1,0 +1,197 @@
+@page "/freizeiten/{FreizeitId:guid}/finanzen/beitraege"
+@using Zeltlotse.Api.Contracts.Finanzen
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Ui.Kontext
+@using ApiBeitraege = Zeltlotse.Api.Contracts.Finanzen.Beitraege
+@inject FreizeitKontextDienst Kontext
+@inject FinanzenApiClient FinanzenApi
+@inject FreizeitenApiClient Freizeiten
+@* Beiträge (CAP-34, FR-60, Story 5-3) für Leitung und Team, unter den Finanzen-Reitern.
+   - Card „Beiträge“: oben der Balken „x von y bezahlt“ mit dem Statuswort „Alle bezahlt“ oder „Offen“ (Warnung), darunter je bestätigter teilnehmender
+     Person ein Haken „bezahlt“ mit ihrem Namen. Ist er gesetzt, steht darunter „Abgehakt von … am …“.
+   - Ein Tipp sendet sofort (POST …/bezahlt oder …/offen, ohne Bestätigung) und lädt neu; ein Fehler steht am Haken, der Haken zeigt wieder den alten Stand.
+   - Ohne bestätigte Teilnehmende der Leer-Zustand.
+   Namen der Teilnehmenden kommen aus der Personenliste, die derer, die abgehakt haben, aus Freizeit und Personenliste (AD-2); eine gelöschte Person heißt
+   „Gelöschte Person“, ein unbekannter Name „Ohne Namen“. In der Phase „gelaufen“ sind die Haken sichtbar, aber deaktiviert (AD-17). Kontext oder Beiträge
+   nicht verfügbar (auch ohne Modul Finanzen) → „Diese Seite ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung. *@
+<PageTitle>Beiträge – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Finanzen</Dachzeile>
+    <h1>Beiträge</h1>
+    <FinanzenReiter FreizeitId="FreizeitId" Aktiv="beitraege" />
+
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+
+    @if (_beitraege is null || _kontext is null)
+    {
+        @if (_meldung is null)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@FinanzenTexte.AbgeschlossenText</p>
+            </Meldung>
+        }
+
+        <Card Titel="Beiträge" Id="beitraege">
+            @if (_beitraege.Gesamt == 0)
+            {
+                <LeerZustand Satz="@FinanzenTexte.KeineTeilnehmendenText" />
+            }
+            else
+            {
+                <Balken Bezeichnung="Bezahlt" Zahl="@FinanzenTexte.BezahltZahl(_beitraege)" Gross="true" Prozent="@FinanzenTexte.BezahltProzent(_beitraege)"
+                        Statuswort="@FinanzenTexte.BezahltWort(_beitraege)" Art="@FinanzenTexte.BezahltArt(_beitraege)" />
+                <p>Ein Haken heißt: Der Beitrag ist bezahlt. Ein Tipp setzt oder entfernt ihn sofort.</p>
+                @foreach (var zeile in FinanzenTexte.NachNamen(_beitraege.Zeilen, _teilnehmende))
+                {
+                    var person = zeile.PersonId;
+                    <Ankreuzfeld @key="@($"{person}-{_runde}")" Label="@FinanzenTexte.Name(person, _teilnehmende)" Id="@($"beitrag-{person}")"
+                                 Wert="@zeile.Bezahlt" Hinweis="@FinanzenTexte.AbgehaktHinweis(zeile, _namen)" Fehler="@_fehler.GetValueOrDefault(person)"
+                                 Deaktiviert="@(Abgeschlossen || _uebertraegt)" @onchange="@(e => UmschaltenAsync(person, e.Value is true))" />
+                }
+            }
+        </Card>
+    }
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    private ApiBeitraege? _beitraege;
+    // Namen der bestätigten Teilnehmenden (Personenliste) und von Leitung und Team (wer abgehakt hat).
+    private IReadOnlyDictionary<Guid, string> _teilnehmende = new Dictionary<Guid, string>();
+    private IReadOnlyDictionary<Guid, string> _namen = new Dictionary<Guid, string>();
+    private readonly Dictionary<Guid, string> _fehler = [];
+    private bool _nichtVerfuegbar;
+    private bool _uebertraegt;
+    private string? _meldung;
+    // Zählt die Übergänge; als Teil des @key zeigt jeder Haken danach den Stand vom Server, auch wenn das Speichern scheiterte.
+    private int _runde;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _beitraege = null;
+        _nichtVerfuegbar = false;
+        _meldung = null;
+        _fehler.Clear();
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var beitraege = FinanzenApi.BeitraegeLadenAsync(FreizeitId);
+            var personen = PersonenlisteAsync();
+            var namen = FinanzenTexte.NamenLadenAsync(Freizeiten, FreizeitId);
+            await Task.WhenAll(kontext, beitraege, personen, namen);
+            if (kontext.Result is null || beitraege.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _beitraege, _teilnehmende, _namen) = (kontext.Result, beitraege.Result, FinanzenTexte.TeilnehmendeNamen(personen.Result), namen.Result);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Die Personenliste für die Namen; scheitert sie, fehlen nur die Namen („Ohne Namen“).</summary>
+    private async Task<List<Zeltlotse.Api.Contracts.Freizeiten.PersonenlisteZeile>?> PersonenlisteAsync()
+    {
+        try
+        {
+            return await Freizeiten.PersonenlisteLadenAsync(FreizeitId);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Ein Tipp: sofort „bezahlt“ oder „offen“ senden, danach neu laden; ein Fehler steht am Haken.</summary>
+    private async Task UmschaltenAsync(Guid person, bool bezahlt)
+    {
+        if (_uebertraegt || Abgeschlossen)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _fehler.Clear();
+        _meldung = null;
+        try
+        {
+            var aktion = bezahlt
+                ? await FinanzenApi.BeitragBezahltAsync(FreizeitId, person)
+                : await FinanzenApi.BeitragOffenAsync(FreizeitId, person);
+            switch (aktion.Ergebnis)
+            {
+                case FinanzenAktionErgebnis.Erfolg:
+                    await LadenAsync();
+                    break;
+                case FinanzenAktionErgebnis.Abgeschlossen:
+                    _fehler[person] = FinanzenTexte.AbgeschlossenText;
+                    _kontext = await Kontext.LadenAsync(FreizeitId) ?? _kontext;
+                    break;
+                default:
+                    // Z. B. 404, weil die Person nicht mehr bestätigt teilnimmt: die Liste zeigt danach den Stand vom Server.
+                    _fehler[person] = FinanzenTexte.BeitragNichtGespeichertText;
+                    await LadenAsync();
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _fehler[person] = FinanzenTexte.BeitragNichtGespeichertText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+            _runde++;
+        }
+    }
+
+    /// <summary>Lädt die Beiträge neu (nach jedem Tipp).</summary>
+    private async Task LadenAsync()
+    {
+        try
+        {
+            if (await FinanzenApi.BeitraegeLadenAsync(FreizeitId) is { } beitraege)
+            {
+                _beitraege = beitraege;
+            }
+            else
+            {
+                _nichtVerfuegbar = true;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // Gespeichert ist der Haken schon; nur das Neuladen scheiterte.
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+}

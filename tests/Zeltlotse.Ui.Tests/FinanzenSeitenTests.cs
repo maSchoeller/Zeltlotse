@@ -18,6 +18,7 @@ using BelegeSeite = Zeltlotse.App.Features.Finanzen.Belege;
 using BelegSeite = Zeltlotse.App.Features.Finanzen.BelegSeite;
 using SollIstSeite = Zeltlotse.App.Features.Finanzen.SollIst;
 using KalkulationSeite = Zeltlotse.App.Features.Finanzen.Kalkulation;
+using BeitraegeSeite = Zeltlotse.App.Features.Finanzen.Beitraege;
 
 namespace Zeltlotse.Ui.Tests;
 
@@ -28,6 +29,8 @@ namespace Zeltlotse.Ui.Tests;
 /// Abschluss bedienbar), der Knopf „Finanzen“ auf der Startseite nur mit dem Modul Finanzen, der Client und der Euro-Text. Story 5-2: die Belege (Liste
 /// mit Namen, Datei und Haken „Erstattet“, Anlegen mit und ohne Foto, Upload-Fehler mit „Erneut versuchen“, Feldfehler), die Seite eines Belegs (Autosave,
 /// Bild, Löschen), Soll-Ist mit den drei Statuswörtern und den Erstattungen, nach dem Abschluss nur „Erstattet“ bedienbar, nicht verfügbar und Ladefehler.
+/// Story 5-3: die Beiträge (Namen, Balken „x von y bezahlt“, Hinweis „Abgehakt von …“, ein Tipp setzt und entfernt den Haken, Fehler am Feld, Leer-Zustand,
+/// nach dem Abschluss deaktiviert, nicht verfügbar und Ladefehler).
 /// </summary>
 public sealed class FinanzenSeitenTests : BunitContext
 {
@@ -142,7 +145,7 @@ public sealed class FinanzenSeitenTests : BunitContext
         Assert.Equal("Finanzen", cut.Find(".elkw-kicker").TextContent);
         Assert.Equal("Kalkulation", cut.Find("h1").TextContent);
         var reiter = cut.FindAll("nav[aria-label=Finanzen] a");
-        Assert.Equal(["Kalkulation", "Beitragsrechner", "Belege", "Soll-Ist"], reiter.Select(a => a.TextContent));
+        Assert.Equal(["Kalkulation", "Beitragsrechner", "Belege", "Soll-Ist", "Beiträge"], reiter.Select(a => a.TextContent));
         Assert.Equal(($"freizeiten/{Freizeit}/finanzen/kalkulation", "page"), (reiter[0].GetAttribute("href"), reiter[0].GetAttribute("aria-current")));
         Assert.Equal($"freizeiten/{Freizeit}/finanzen/beitragsrechner", reiter[1].GetAttribute("href"));
 
@@ -1039,5 +1042,245 @@ public sealed class FinanzenSeitenTests : BunitContext
         Assert.Equal("Ohne Namen", Zeile(zeilen[0])[3]);
         Assert.Equal("Jonas Hüttner", Zeile(zeilen[1])[3]);
         Assert.Empty(cut.FindAll(".elkw-alert--fehler"));
+    }
+    // ---------- Story 5-3: Beitrag bezahlt abhaken ----------
+
+    private static readonly Guid Mia = Guid.Parse("0199f700-0000-7000-8000-0000000009a1");
+    private static readonly Guid Paul = Guid.Parse("0199f700-0000-7000-8000-0000000009a2");
+    private static readonly Guid Emma = Guid.Parse("0199f700-0000-7000-8000-0000000009a3");
+
+    private static string BeitraegePfad => $"/api/freizeiten/{Freizeit}/finanzen/beitraege";
+
+    private static (object Json, bool Bezahlt) BeitragJson(Guid personId, Guid? abgehaktVon = null) =>
+        (new { personId, bezahlt = abgehaktVon is not null, abgehaktVon, abgehaktAm = abgehaktVon is null ? null : "2026-10-20T08:00:00+00:00" }, abgehaktVon is not null);
+
+    private static object BeitraegeJson(params (object Json, bool Bezahlt)[] zeilen) =>
+        new { zeilen = zeilen.Select(z => z.Json).ToArray(), bezahlt = zeilen.Count(z => z.Bezahlt), gesamt = zeilen.Length };
+
+    private static object KontextJson(string phase) =>
+        new { freizeitId = Freizeit, name = "Zeltlager Sommer 2027", phase, rollen = new[] { "Team" }, schalter = new[] { "Finanzen" }, erlaubt = Array.Empty<string>() };
+
+    /// <summary>
+    /// Kontext, Freizeit (Leitung Jonas), Personenliste (Lea Team, Mia und Paul bestätigte Teilnehmende, Emma nur eingegangen) und die Beiträge: Mia von Lea
+    /// abgehakt, Paul offen.
+    /// </summary>
+    private void BeitraegeAntworten(string phase = "InVorbereitung", Func<HttpResponseMessage>? beitraege = null)
+    {
+        Kontext(phase);
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{Freizeit}", () => Json(new
+        {
+            id = Freizeit, name = "Zeltlager Sommer 2027", ersterTag = "2027-08-02", letzterTag = "2027-08-13", phase, freigabeBis = "2027-09-12",
+            leitung = new[] { new { vorname = "Jonas", nachname = "Hüttner", personId = Jonas } },
+        }));
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{Freizeit}/personenliste", () => Json(new object[]
+        {
+            new { anmeldungId = Guid.CreateVersion7(), personId = Mia, vorname = "Mia", nachname = "Probst", art = "Teilnehmende", status = "Bestaetigt" },
+            new { anmeldungId = Guid.CreateVersion7(), personId = Paul, vorname = "Paul", nachname = "Beispiel", art = "Teilnehmende", status = "Bestaetigt" },
+            new { anmeldungId = Guid.CreateVersion7(), personId = Emma, vorname = "Emma", nachname = "Muster", art = "Teilnehmende", status = "Eingegangen" },
+            new { anmeldungId = Guid.CreateVersion7(), personId = Lea, vorname = "Lea", nachname = "Feuerstein", art = "Mitarbeitende", status = "Bestaetigt" },
+        }));
+        _server.Bei(HttpMethod.Get, BeitraegePfad, beitraege ?? (() => Json(BeitraegeJson(BeitragJson(Mia, Lea), BeitragJson(Paul)))));
+    }
+
+    private IRenderedComponent<BeitraegeSeite> BeitraegeRendern()
+    {
+        var cut = Render<BeitraegeSeite>(ps => ps.Add(p => p.FreizeitId, Freizeit));
+        cut.WaitForAssertion(() => Assert.DoesNotContain("Wird geladen", cut.Markup, StringComparison.Ordinal));
+        return cut;
+    }
+
+    private static AngleSharp.Dom.IElement Haken<T>(IRenderedComponent<T> cut, Guid person)
+        where T : IComponent =>
+        cut.Find($"#beitrag-{person}");
+
+    [Fact]
+    public void Beitraege_zeigen_Reiter_Balken_x_von_y_bezahlt_Namen_und_wer_abgehakt_hat()
+    {
+        BeitraegeAntworten();
+
+        var cut = BeitraegeRendern();
+
+        Assert.Equal(("Finanzen", "Beiträge"), (cut.Find(".elkw-kicker").TextContent, cut.Find("h1").TextContent));
+        var reiter = cut.FindAll("nav[aria-label=Finanzen] a");
+        Assert.Equal(5, reiter.Count);
+        Assert.Equal(("Beiträge", $"freizeiten/{Freizeit}/finanzen/beitraege", "page"), (reiter[4].TextContent, reiter[4].GetAttribute("href"), reiter[4].GetAttribute("aria-current")));
+        var balken = cut.Find("#beitraege .zl-balken");
+        Assert.Equal(("1 von 2 bezahlt", "50%", "Offen"), (Zahl(balken), Breite(balken), balken.QuerySelector(".elkw-status")!.TextContent));
+        Assert.Contains("zl-balken--warnung", balken.ClassName, StringComparison.Ordinal);
+        // Sortiert nach Namen; nur bestätigte Teilnehmende (Emma fehlt).
+        Assert.Equal(["Mia Probst", "Paul Beispiel"], cut.FindAll("#beitraege label.elkw-choice").Select(l => l.TextContent.Trim()));
+        Assert.True(Haken(cut, Mia).HasAttribute("checked"));
+        Assert.False(Haken(cut, Paul).HasAttribute("checked"));
+        Assert.Equal("Abgehakt von Lea Feuerstein am 20.10.2026", cut.Find($"#beitrag-{Mia}-hinweis").TextContent);
+        Assert.Empty(cut.FindAll($"#beitrag-{Paul}-hinweis"));
+        Assert.All(cut.FindAll("#beitraege input[type=checkbox]"), k => Assert.False(k.HasAttribute("disabled")));
+    }
+
+    [Fact]
+    public void Ein_Tipp_setzt_den_Haken_sofort_und_laedt_neu_ein_zweiter_Tipp_macht_ihn_wieder_offen()
+    {
+        BeitraegeAntworten();
+        _server.BeiDerReihe(
+            HttpMethod.Get, BeitraegePfad,
+            () => Json(BeitraegeJson(BeitragJson(Mia, Lea), BeitragJson(Paul))),
+            () => Json(BeitraegeJson(BeitragJson(Mia, Lea), BeitragJson(Paul, Jonas))),
+            () => Json(BeitraegeJson(BeitragJson(Mia), BeitragJson(Paul, Jonas))));
+        _server.Bei(HttpMethod.Post, $"{BeitraegePfad}/{Paul}/bezahlt", () => Json(BeitragJson(Paul, Jonas).Json));
+        _server.Bei(HttpMethod.Post, $"{BeitraegePfad}/{Mia}/offen", () => Json(BeitragJson(Mia).Json));
+        var cut = BeitraegeRendern();
+
+        Haken(cut, Paul).Change(true);
+
+        cut.WaitForAssertion(() => Assert.Equal("Alle bezahlt", cut.Find("#beitraege .zl-balken .elkw-status").TextContent));
+        Assert.Single(_server.Anfragen, a => a.Methode == HttpMethod.Post && a.Pfad == $"{BeitraegePfad}/{Paul}/bezahlt");
+        Assert.Equal("2 von 2 bezahlt", Zahl(cut.Find("#beitraege .zl-balken")));
+        Assert.DoesNotContain("zl-balken--warnung", cut.Find("#beitraege .zl-balken").ClassName, StringComparison.Ordinal);
+        Assert.True(Haken(cut, Paul).HasAttribute("checked"));
+        Assert.Equal("Abgehakt von Jonas Hüttner am 20.10.2026", cut.Find($"#beitrag-{Paul}-hinweis").TextContent);
+
+        Haken(cut, Mia).Change(false);
+
+        cut.WaitForAssertion(() => Assert.False(Haken(cut, Mia).HasAttribute("checked")));
+        Assert.Single(_server.Anfragen, a => a.Methode == HttpMethod.Post && a.Pfad == $"{BeitraegePfad}/{Mia}/offen");
+        Assert.Equal("1 von 2 bezahlt", Zahl(cut.Find("#beitraege .zl-balken")));
+        Assert.Empty(cut.FindAll($"#beitrag-{Mia}-hinweis"));
+        Assert.Equal(3, _server.Anfragen.Count(a => a.Methode == HttpMethod.Get && a.Pfad == BeitraegePfad));
+    }
+
+    [Fact]
+    public void Ein_Fehler_beim_Speichern_steht_am_Feld_der_Haken_bleibt_wie_vorher()
+    {
+        BeitraegeAntworten();
+        _server.Bei(HttpMethod.Post, $"{BeitraegePfad}/{Paul}/bezahlt", () => throw new HttpRequestException("offline"));
+        var cut = BeitraegeRendern();
+
+        Haken(cut, Paul).Change(true);
+
+        cut.WaitForAssertion(() => Assert.Equal($"Fehler: {FinanzenTexte.BeitragNichtGespeichertText}", cut.Find($"#beitrag-{Paul}-fehler").TextContent));
+        Assert.False(Haken(cut, Paul).HasAttribute("checked"));
+        Assert.Equal("true", Haken(cut, Paul).GetAttribute("aria-invalid"));
+        Assert.Empty(cut.FindAll($"#beitrag-{Mia}-fehler"));
+        Assert.Empty(cut.FindAll(".elkw-alert--fehler"));
+    }
+
+    [Fact]
+    public void Die_Zeilen_stehen_nach_Namen_sortiert_auch_wenn_die_API_sie_anders_liefert()
+    {
+        BeitraegeAntworten(beitraege: () => Json(BeitraegeJson(BeitragJson(Paul), BeitragJson(Mia, Lea))));
+
+        var cut = BeitraegeRendern();
+
+        Assert.Equal(["Mia Probst", "Paul Beispiel"], cut.FindAll("#beitraege label.elkw-choice").Select(l => l.TextContent.Trim()));
+    }
+
+    [Fact]
+    public void Nicht_gefunden_beim_Speichern_steht_am_Feld_und_die_Liste_laedt_neu()
+    {
+        BeitraegeAntworten();
+        _server.BeiDerReihe(
+            HttpMethod.Get, BeitraegePfad,
+            () => Json(BeitraegeJson(BeitragJson(Mia, Lea), BeitragJson(Paul))),
+            () => Json(BeitraegeJson(BeitragJson(Mia, Lea), BeitragJson(Paul))));
+        _server.Bei(HttpMethod.Post, $"{BeitraegePfad}/{Paul}/bezahlt", () => new HttpResponseMessage(HttpStatusCode.NotFound));
+        var cut = BeitraegeRendern();
+
+        Haken(cut, Paul).Change(true);
+
+        cut.WaitForAssertion(() => Assert.Equal($"Fehler: {FinanzenTexte.BeitragNichtGespeichertText}", cut.Find($"#beitrag-{Paul}-fehler").TextContent));
+        Assert.Equal(2, _server.Anfragen.Count(a => a.Methode == HttpMethod.Get && a.Pfad == BeitraegePfad));
+        Assert.False(Haken(cut, Paul).HasAttribute("checked"));
+    }
+
+    [Fact]
+    public void Scheitert_das_Neuladen_nach_dem_Speichern_steht_die_Meldung()
+    {
+        BeitraegeAntworten();
+        _server.BeiDerReihe(
+            HttpMethod.Get, BeitraegePfad,
+            () => Json(BeitraegeJson(BeitragJson(Mia, Lea), BeitragJson(Paul))),
+            () => new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        _server.Bei(HttpMethod.Post, $"{BeitraegePfad}/{Paul}/bezahlt", () => Json(BeitragJson(Paul, Jonas).Json));
+        var cut = BeitraegeRendern();
+
+        Haken(cut, Paul).Change(true);
+
+        cut.WaitForAssertion(() => Assert.Contains(AnmeldungAbschluss.FehlerText, cut.Find(".elkw-alert").TextContent, StringComparison.Ordinal));
+        Assert.Empty(cut.FindAll($"#beitrag-{Paul}-fehler"));
+    }
+
+    [Fact]
+    public void Abgeschlossen_beim_Speichern_zeigt_den_Hinweis_am_Feld_und_deaktiviert_die_Haken()
+    {
+        BeitraegeAntworten();
+        _server.BeiDerReihe(HttpMethod.Get, $"/api/freizeiten/{Freizeit}/kontext", () => Json(KontextJson("InVorbereitung")), () => Json(KontextJson("Gelaufen")));
+        _server.Bei(HttpMethod.Post, $"{BeitraegePfad}/{Paul}/bezahlt", () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, "freizeit-abgeschlossen"));
+        var cut = BeitraegeRendern();
+
+        Haken(cut, Paul).Change(true);
+
+        cut.WaitForAssertion(() => Assert.Equal($"Fehler: {FinanzenTexte.AbgeschlossenText}", cut.Find($"#beitrag-{Paul}-fehler").TextContent));
+        cut.WaitForAssertion(() => Assert.All(cut.FindAll("#beitraege input[type=checkbox]"), k => Assert.True(k.HasAttribute("disabled"))));
+    }
+
+    [Fact]
+    public void Nach_dem_Abschluss_sind_die_Haken_sichtbar_aber_deaktiviert()
+    {
+        BeitraegeAntworten("Gelaufen");
+
+        var cut = BeitraegeRendern();
+
+        Assert.Contains(FinanzenTexte.AbgeschlossenText, cut.Markup, StringComparison.Ordinal);
+        Assert.True(Haken(cut, Mia).HasAttribute("checked"));
+        Assert.Equal("Abgehakt von Lea Feuerstein am 20.10.2026", cut.Find($"#beitrag-{Mia}-hinweis").TextContent);
+        Assert.All(cut.FindAll("#beitraege input[type=checkbox]"), k => Assert.True(k.HasAttribute("disabled")));
+    }
+
+    [Fact]
+    public void Ohne_bestaetigte_Teilnehmende_steht_der_Leer_Zustand_unbekannte_Namen_heissen_Ohne_Namen()
+    {
+        BeitraegeAntworten(beitraege: () => Json(BeitraegeJson()));
+        var leer = BeitraegeRendern();
+        Assert.Contains("Noch keine bestätigten Teilnehmenden.", leer.Find("#beitraege").TextContent, StringComparison.Ordinal);
+        Assert.Empty(leer.FindAll("#beitraege .zl-balken"));
+
+        BeitraegeAntworten(beitraege: () => Json(BeitraegeJson(BeitragJson(Unbekannt, BelegFelder.GeloeschtePerson))));
+        var cut = BeitraegeRendern();
+        Assert.Equal("Ohne Namen", cut.Find("#beitraege label.elkw-choice").TextContent.Trim());
+        Assert.Equal("Abgehakt von Gelöschte Person am 20.10.2026", cut.Find($"#beitrag-{Unbekannt}-hinweis").TextContent);
+        Assert.Equal("Alle bezahlt", cut.Find("#beitraege .zl-balken .elkw-status").TextContent);
+    }
+
+    [Fact]
+    public void Ohne_Modul_Finanzen_nicht_verfuegbar_ein_Ladefehler_zeigt_die_Meldung()
+    {
+        BeitraegeAntworten(beitraege: () => new HttpResponseMessage(HttpStatusCode.NotFound));
+        Assert.Contains("Diese Seite ist nicht verfügbar.", BeitraegeRendern().Markup, StringComparison.Ordinal);
+
+        _server.Bei(HttpMethod.Get, BeitraegePfad, () => new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        var cut = BeitraegeRendern();
+        Assert.Contains(AnmeldungAbschluss.FehlerText, cut.Find(".elkw-alert").TextContent, StringComparison.Ordinal);
+        Assert.Empty(cut.FindAll("#beitraege"));
+    }
+
+    [Fact]
+    public async Task Client_Beitraege_laden_abhaken_und_oeffnen_ordnet_die_Antworten_zu()
+    {
+        BeitraegeAntworten();
+        _server.Bei(HttpMethod.Post, $"{BeitraegePfad}/{Paul}/bezahlt", () => Json(BeitragJson(Paul, Jonas).Json));
+        _server.Bei(HttpMethod.Post, $"{BeitraegePfad}/{Mia}/offen", () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, "freizeit-abgeschlossen"));
+        _server.Bei(HttpMethod.Post, $"{BeitraegePfad}/{Emma}/bezahlt", () => new HttpResponseMessage(HttpStatusCode.NotFound));
+        var client = Services.GetRequiredService<FinanzenApiClient>();
+
+        var beitraege = (await client.BeitraegeLadenAsync(Freizeit, Abbruch))!;
+        Assert.Equal((1, 2, Lea), (beitraege.Bezahlt, beitraege.Gesamt, beitraege.Zeilen[0].AbgehaktVon!.Value));
+        Assert.Null(await client.BeitraegeLadenAsync(Guid.CreateVersion7(), Abbruch));
+        var bezahlt = await client.BeitragBezahltAsync(Freizeit, Paul, Abbruch);
+        Assert.Equal((FinanzenAktionErgebnis.Erfolg, true, Jonas), (bezahlt.Ergebnis, bezahlt.Zeile!.Bezahlt, bezahlt.Zeile.AbgehaktVon!.Value));
+        Assert.Equal(FinanzenAktionErgebnis.Abgeschlossen, (await client.BeitragOffenAsync(Freizeit, Mia, Abbruch)).Ergebnis);
+        var fehler = await client.BeitragBezahltAsync(Freizeit, Emma, Abbruch);
+        Assert.Equal((FinanzenAktionErgebnis.Fehler, (BeitragZeile?)null), (fehler.Ergebnis, fehler.Zeile));
+        Assert.Equal(
+            ($"{BeitraegePfad}/{Paul}/bezahlt", $"{BeitraegePfad}/{Paul}/offen"),
+            (FinanzenApiClient.BeitragBezahltPfad(Freizeit, Paul), FinanzenApiClient.BeitragOffenPfad(Freizeit, Paul)));
     }
 }

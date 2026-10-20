@@ -43,5 +43,5 @@ Soll-Ist bleibt nach dem Abschluss lesbar. Ändern lässt sich danach nur noch d
 
 ## Noch nicht dabei
 
-- Die Teilnehmerbeiträge fließen nicht in Soll-Ist ein; ob ein Beitrag bezahlt ist, lässt sich mit einer späteren Version vermerken.
+- Die Teilnehmerbeiträge fließen nicht in Soll-Ist ein; ob ein Beitrag bezahlt ist, steht unter [Beiträge](/finanzen/beitraege/).
 - Überweisungen, eine Abschlussmappe und ein Budget-Balken im Leitungs-Cockpit gibt es nicht.

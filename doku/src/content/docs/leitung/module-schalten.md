@@ -12,7 +12,7 @@ Von den Modulen gibt es heute die **Verpflegung** mit der Küche und die **Finan
 ## Die drei Module
 
 - **Verpflegung** – die Küche: die [Tagesansicht](/kueche/tagesansicht/), die [Rezepte](/kueche/rezepte/) mit hochgerechneten Mengen, der [Essensplan](/kueche/essensplan/) mit Gerichten an den Mahlzeiten und die [Einkaufsliste](/kueche/einkaufsliste/) mit Allergen-Abgleich, auf der Startseite der Knopf **Küche** (siehe [Küche](/kueche/)).
-- **Finanzen** – die [Kalkulation](/finanzen/kalkulation/) mit Kosten, Einnahmen und Teilnehmerbeitrag, der [Beitragsrechner](/finanzen/beitragsrechner/), die [Belege](/finanzen/belege/) und [Soll-Ist](/finanzen/soll-ist/), auf der Startseite der Knopf **Finanzen**; später der Vermerk „Beitrag bezahlt“ (siehe [Finanzen](/finanzen/)).
+- **Finanzen** – die [Kalkulation](/finanzen/kalkulation/) mit Kosten, Einnahmen und Teilnehmerbeitrag, der [Beitragsrechner](/finanzen/beitragsrechner/), die [Belege](/finanzen/belege/), [Soll-Ist](/finanzen/soll-ist/) und die [Beiträge](/finanzen/beitraege/), auf der Startseite der Knopf **Finanzen**.
 - **Teilnehmer-Zugang** – der QR-Code, mit dem Teilnehmende ohne Konto die Wochenübersicht, allgemeine Infos und den Kanal „Alle“ sehen; er endet mit der Freizeit.
 
 Alles andere gehört immer dazu und lässt sich nicht abschalten: Anmeldungen, Freizeitpass, Sicherheit, Programm mit den Mahlzeiten im Wochenraster, Material, Aufgaben und Dokumente.
@@ -38,4 +38,4 @@ Das Team sieht die Card „Module“ nicht; die Einstellungen sind für das Team
 
 ## Noch nicht dabei
 
-Von den Finanzen gibt es heute Kalkulation, Beitragsrechner, Belege und Soll-Ist; der Vermerk „Beitrag bezahlt“ folgt. Der Teilnehmer-Zugang per QR-Code kommt später; für ihn lässt sich heute nur schon festlegen, ob die Freizeit ihn nutzen soll. Sobald ein Modul da ist, erscheint es nur in Freizeiten, in denen es eingeschaltet ist.
+Der Teilnehmer-Zugang per QR-Code kommt später; für ihn lässt sich heute nur schon festlegen, ob die Freizeit ihn nutzen soll. Sobald ein Modul da ist, erscheint es nur in Freizeiten, in denen es eingeschaltet ist.

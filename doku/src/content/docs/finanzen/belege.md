@@ -13,7 +13,7 @@ Die Belege gibt es nur, wenn die Leitung das Modul **Finanzen** eingeschaltet ha
 
 ## Der Weg zu den Belegen
 
-Startseite der Freizeit → Knopf **Finanzen** → Reiter **Belege**. Oben stehen die Reiter **Kalkulation · Beitragsrechner · Belege · Soll-Ist**.
+Startseite der Freizeit → Knopf **Finanzen** → Reiter **Belege**. Oben stehen die Reiter **Kalkulation · Beitragsrechner · Belege · Soll-Ist · Beiträge**.
 
 ## Einen Beleg erfassen
 
@@ -69,4 +69,4 @@ Belege muss die Organisation aufbewahren. Löscht eine Person ihr Konto, bleibt 
 ## Noch nicht dabei
 
 - Den Text eines Kassenbons liest Zeltlotse nicht aus; Betrag und Kategorie trägt jemand von Hand ein.
-- Der Vermerk **„Beitrag bezahlt“** je Anmeldung kommt mit einer späteren Version.
+- Teilnehmerbeiträge sind keine Belege; ob ein Beitrag bezahlt ist, steht unter [Beiträge](/finanzen/beitraege/).

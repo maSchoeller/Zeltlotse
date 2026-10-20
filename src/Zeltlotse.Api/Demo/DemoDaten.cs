@@ -15,6 +15,7 @@ using Zeltlotse.Freizeiten.Leitung;
 using Zeltlotse.Freizeiten.Module;
 using Zeltlotse.Freizeiten.TeamNotizen;
 using Zeltlotse.Freizeiten.Verwaltung;
+using Zeltlotse.Finanzen.Beitraege;
 using Zeltlotse.Finanzen.Belege;
 using Zeltlotse.Finanzen.Daten;
 using Zeltlotse.Finanzen.Kalkulation;
@@ -185,6 +186,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await FinanzenAsync(abbruch);
         // Story 5-2: Belege mit einem Foto, teils erstattet (braucht die Kalkulation für Soll-Ist und Lea im Team).
         await BelegeAsync(abbruch);
+        // Story 5-3: Lea hakt Mias Beitrag als bezahlt ab (braucht Mias bestätigte Anmeldung und Lea im Team).
+        await BeitraegeAsync(abbruch);
         await MaterialAsync(abbruch);
         await ZweiteFreizeitAsync(abbruch);
         await InventarAsync(abbruch);
@@ -908,6 +911,33 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
                     is not BelegAenderung.Gespeichert)
             {
                 throw new InvalidOperationException($"Demo-Beleg: Das Foto zu {bezeichnung} ließ sich nicht hochladen.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Story 5-3: Vermerke „Beitrag bezahlt“ aus <see cref="DemoKatalog.BeitraegeBezahlt"/> über den Command des Moduls Finanzen, als die Person, die abhakt.
+    /// Idempotent: Ein zweiter Haken ändert einen vorhandenen Vermerk nicht. Ist das Kind (nicht mehr) bestätigte Teilnehmende, bleibt es ohne Vermerk.
+    /// </summary>
+    private async Task BeitraegeAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var freizeitId = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name)
+            .Select(f => f.Id)
+            .SingleAsync(abbruch);
+        foreach (var (elternMail, kindName, abgehaktVonMail) in DemoKatalog.BeitraegeBezahlt)
+        {
+            var eltern = (await sender.Send(new KontoSicherstellen(elternMail), abbruch)).PersonId;
+            var kind = await KindAsync(dienste.GetRequiredService<PersonenLeseDbContext>(), eltern, kindName, abbruch);
+            var abgehaktVon = (await sender.Send(new KontoSicherstellen(abgehaktVonMail), abbruch)).PersonId;
+            var ergebnis = await sender.Send(new BeitragUebergangCommand(freizeitId, kind, abgehaktVon, BeitragUebergang.Bezahlt), abbruch);
+            if (ergebnis is BeitragErgebnis.Abgeschlossen)
+            {
+                throw new InvalidOperationException($"Demo-Beitrag: {kindName} ließ sich nicht als bezahlt abhaken.");
             }
         }
     }

@@ -392,6 +392,16 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal([0m, 0m], erstattungen.Skip(1).Select(e => e.GetProperty("offen").GetDecimal()));
         Assert.Equal(6L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM finanzen.beleg"));
 
+        // Story 5-3: Lea hat Mias Beitrag als bezahlt abgehakt; Mia ist die einzige bestätigte Teilnehmende („1 von 1 bezahlt“). Genau ein Vermerk, auch nach
+        // dem zweiten Einspielen.
+        var beitraege = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/finanzen/beitraege", Abbruch));
+        Assert.Equal((1, 1), (beitraege.GetProperty("bezahlt").GetInt32(), beitraege.GetProperty("gesamt").GetInt32()));
+        var beitrag = Assert.Single(beitraege.GetProperty("zeilen").EnumerateArray());
+        Assert.Equal(
+            (await AnmeldeHelfer.WertAsync<Guid>(verbindung, "SELECT \"Id\" FROM personen.person WHERE \"Vorname\" = 'Mia'"), true, lea),
+            (beitrag.GetProperty("personId").GetGuid(), beitrag.GetProperty("bezahlt").GetBoolean(), beitrag.GetProperty("abgehaktVon").GetGuid()));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM finanzen.beitrag_vermerk"));
+
         // Story 2-5: Die Fragen-Auswahl kam vor den Anmeldungen: Emmas Freigabe (eingegangen) und Mias (bestätigt) tragen die Fragen für
         // Teilnehmende, Leas die für Mitarbeitende. Daniel hat für Mia drei Antworten gespeichert, Lea eine Team-Notiz zu Mia geschrieben
         // (genau eine, auch nach dem zweiten Einspielen, nur verschlüsselt). Emmas Anmeldung nennt „Einsicht bis“.

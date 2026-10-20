@@ -4,12 +4,13 @@ using Zeltlotse.Api.Contracts.Freizeiten;
 using Zeltlotse.Ui.Api;
 using Zeltlotse.Ui.Komponenten;
 using Zeltlotse.Ui.Texte;
+using ApiBeitraege = Zeltlotse.Api.Contracts.Finanzen.Beitraege;
 
 namespace Zeltlotse.App.Features.Finanzen;
 
 /// <summary>
 /// Story 5-1: Gemeinsames der Finanzen-Seiten: Texte, Ziele der Links und die Rechnung für die Balken. Story 5-2: Ziele, Namen der Zahlenden und die Balken
-/// von Soll-Ist und Erstattungen.
+/// von Soll-Ist und Erstattungen. Story 5-3: Ziel, Namen der Teilnehmenden, Balken und Hinweis der Beiträge.
 /// </summary>
 internal static class FinanzenTexte
 {
@@ -154,7 +155,10 @@ internal static class FinanzenTexte
     }
 
     /// <summary>Der Name der Person, die bezahlt hat: nach dem Löschen „Gelöschte Person“, ohne bekannten Namen „Ohne Namen“ (AD-2: Namen setzt der Client zusammen).</summary>
-    public static string Zahler(Guid personId, IReadOnlyDictionary<Guid, string> namen) =>
+    public static string Zahler(Guid personId, IReadOnlyDictionary<Guid, string> namen) => Name(personId, namen);
+
+    /// <summary>Der Name einer Person: nach dem Löschen „Gelöschte Person“, ohne bekannten Namen „Ohne Namen“.</summary>
+    public static string Name(Guid personId, IReadOnlyDictionary<Guid, string> namen) =>
         personId == BelegFelder.GeloeschtePerson ? GeloeschtePersonText : namen.GetValueOrDefault(personId) is { Length: > 0 } name ? name : OhneNamenText;
 
     /// <summary>Die Überschrift eines Belegs: die Bezeichnung oder, ohne Bezeichnung, die Kategorie.</summary>
@@ -217,6 +221,47 @@ internal static class FinanzenTexte
 
     /// <summary>Der Anteil, der schon erstattet ist.</summary>
     public static double ErstattetProzent(Erstattung erstattung) => Prozent(erstattung.Erstattet, erstattung.Offen + erstattung.Erstattet);
+
+    // ---------- Story 5-3: Beitrag bezahlt abhaken ----------
+
+    /// <summary>Fehler am Haken, wenn das Speichern scheitert (Netz, Server).</summary>
+    public const string BeitragNichtGespeichertText = "Nicht gespeichert. Bitte noch einmal tippen.";
+
+    public const string KeineTeilnehmendenText = "Noch keine bestätigten Teilnehmenden.";
+
+    /// <summary>Die Beiträge der Freizeit.</summary>
+    public static string BeitraegeZiel(Guid freizeitId) => $"freizeiten/{freizeitId}/finanzen/beitraege";
+
+    /// <summary>Je bestätigter teilnehmender Person der Personenliste der Name (AD-2: Finanzen kennt keine Namen).</summary>
+    public static IReadOnlyDictionary<Guid, string> TeilnehmendeNamen(IEnumerable<PersonenlisteZeile>? personen)
+    {
+        var namen = new Dictionary<Guid, string>();
+        foreach (var person in (personen ?? []).Where(p => p.Art == AnmeldungArt.Teilnehmende && p.Status == AnmeldungStatus.Bestaetigt))
+        {
+            namen[person.PersonId] = Anzeige.Name(person.Vorname, person.Nachname);
+        }
+
+        return namen;
+    }
+
+    /// <summary>Die Zeilen nach dem Namen der teilnehmenden Person sortiert.</summary>
+    public static IReadOnlyList<BeitragZeile> NachNamen(IEnumerable<BeitragZeile> zeilen, IReadOnlyDictionary<Guid, string> namen) =>
+        [.. zeilen.OrderBy(z => Name(z.PersonId, namen), StringComparer.Create(Deutsch, ignoreCase: true)).ThenBy(z => z.PersonId)];
+
+    /// <summary>Die Zahl des Balkens, z. B. „1 von 2 bezahlt“.</summary>
+    public static string BezahltZahl(ApiBeitraege beitraege) => $"{beitraege.Bezahlt.ToString(Deutsch)} von {beitraege.Gesamt.ToString(Deutsch)} bezahlt";
+
+    /// <summary>Statuswort des Balkens: „Alle bezahlt“ oder „Offen“ (NFR-16).</summary>
+    public static string BezahltWort(ApiBeitraege beitraege) => beitraege.Bezahlt >= beitraege.Gesamt ? "Alle bezahlt" : "Offen";
+
+    /// <summary>Solange Beiträge offen sind, ist der Balken eine Warnung.</summary>
+    public static BalkenArt BezahltArt(ApiBeitraege beitraege) => beitraege.Bezahlt >= beitraege.Gesamt ? BalkenArt.Normal : BalkenArt.Warnung;
+
+    public static double BezahltProzent(ApiBeitraege beitraege) => Prozent(beitraege.Bezahlt, beitraege.Gesamt);
+
+    /// <summary>Der Hinweis am Haken, z. B. „Abgehakt von Lea Feuerstein am 20.10.2026“; ohne Haken <c>null</c>.</summary>
+    public static string? AbgehaktHinweis(BeitragZeile zeile, IReadOnlyDictionary<Guid, string> namen) =>
+        zeile is { Bezahlt: true, AbgehaktVon: { } von, AbgehaktAm: { } am } ? $"Abgehakt von {Name(von, namen)} am {Anzeige.Datum(am)}" : null;
 
     private static readonly CultureInfo Deutsch = CultureInfo.GetCultureInfo("de-DE");
 }

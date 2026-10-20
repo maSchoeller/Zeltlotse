@@ -59,6 +59,8 @@ public static class FreizeitenModul
         services.AddScoped<IFreizeitPersonenzahlLesen, FreizeitPersonenzahlLesen>();
         // Story 4-2: ob eine Freizeit die Allergie-Frage abfragt (Pfeil Küche → Freizeiten).
         services.AddScoped<IFreizeitFragenLesen, FreizeitFragenLesen>();
+        // Story 5-3: die bestätigten Teilnehmenden für den Haken „Beitrag bezahlt“ (Pfeil Finanzen → Freizeiten).
+        services.AddScoped<IFreizeitTeilnehmendeLesen, FreizeitTeilnehmendeLesen>();
         // Story 3-1: die Tage einer Freizeit für Wochenraster und Mahlzeiten (Pfeil Programm → Freizeiten).
         services.AddScoped<IFreizeitTageLesen, FreizeitTageLesen>();
         services.AddScoped<IBestaetigteTeilnehmende, BestaetigteTeilnehmendeZaehlen>();

@@ -83,7 +83,9 @@ Die [Kalkulation](/finanzen/kalkulation/) einer Freizeit enthält keine Personen
 
 Ein [Beleg](/finanzen/belege/) speichert Betrag, Kategorie, Bezeichnung, wann er erfasst wurde, ob er erstattet ist und wer bezahlt hat – als Verweis auf die Person, den Namen holt die Seite aus der Freizeit. Dazu kommt auf Wunsch ein Foto oder PDF; es liegt nur in Zeltlotse und lässt sich nur von Leitung und Team der Freizeit öffnen. Belege muss die Organisation aufbewahren: Löscht eine Person ihr Konto, bleiben ihre Belege erhalten, und bei „Bezahlt von“ steht „Gelöschte Person“. In der eigenen Datenauskunft stehen unter „Belege“ alle Belege, die die Person bezahlt hat, mit Kategorie, Betrag, Bezeichnung, Datum und ob erstattet.
 
-Nach Ablauf der Löschfrist der Organisation für Freizeit-Daten löscht Zeltlotse die Kalkulation und die Belege samt Fotos und PDFs endgültig, zusammen mit den übrigen Daten der Freizeit. Eine eigene Frist für Belege gibt es nicht. Abschalten des Moduls Finanzen löscht nichts.
+Der Haken „bezahlt“ unter [Beiträge](/finanzen/beitraege/) speichert die teilnehmende Person, wer den Haken gesetzt hat – beides als Verweis auf die Person – und wann; Namen holt die Seite aus der Freizeit. Einen Verlauf gibt es nicht: Wird der Haken entfernt, ist der Vermerk weg. Auch diese Vermerke muss die Organisation aufbewahren: Löscht eine Person ihr Konto, bleibt der Vermerk gespeichert: Eine gelöschte teilnehmende Person steht nicht mehr in der Liste, und wo die gelöschte Person den Haken gesetzt hat, steht „Abgehakt von Gelöschte Person“. In der eigenen Datenauskunft stehen unter „Beiträge“ der eigene Beitrag („Beitrag bezahlt“, vermerkt am …) und die Haken, die die Person selbst gesetzt hat – nur mit Datum, ohne die Namen der anderen.
+
+Nach Ablauf der Löschfrist der Organisation für Freizeit-Daten löscht Zeltlotse die Kalkulation, die Belege samt Fotos und PDFs und die Vermerke „Beitrag bezahlt“ endgültig, zusammen mit den übrigen Daten der Freizeit. Eine eigene Frist für Belege gibt es nicht. Abschalten des Moduls Finanzen löscht nichts.
 
 ## Nachweise: nur eine einmalige Einsicht
 

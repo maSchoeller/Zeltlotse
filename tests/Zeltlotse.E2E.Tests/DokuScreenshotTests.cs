@@ -2483,6 +2483,34 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await BildAsync(seite, "soll-ist", geraet);
     }
 
+    // ---------- Story 5-3: Beitrag bezahlt abhaken ----------
+
+    /// <summary>
+    /// Beiträge: Lea tippt den Reiter „Beiträge“. Der Balken zeigt „1 von 1 bezahlt“ mit „Alle bezahlt“, darunter Mia Probst mit gesetztem Haken und
+    /// „Abgehakt von Lea Feuerstein am …“ (das Demo-Datum hängt vom Tag des Einspielens ab; im Bild steht ein festes Datum). Nur lesend.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Beitraege(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await FinanzenReiterAsync(seite, "Beiträge");
+        var balken = seite.Locator("#beitraege .zl-balken");
+        await Assertions.Expect(balken.Locator(".zl-zahl")).ToHaveTextAsync("1 von 1 bezahlt", new() { Timeout = 60_000 });
+        await Assertions.Expect(balken.Locator(".elkw-status")).ToHaveTextAsync("Alle bezahlt");
+        var mia = seite.GetByLabel("Mia Probst", new() { Exact = true });
+        await Assertions.Expect(mia).ToBeCheckedAsync();
+        await Assertions.Expect(mia).ToBeEnabledAsync();
+        await Assertions.Expect(seite.Locator("#beitraege .elkw-hint")).ToHaveTextAsync(new System.Text.RegularExpressions.Regex(@"^Abgehakt von Lea Feuerstein am \d{2}\.\d{2}\.\d{4}$"));
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await seite.EvaluateAsync("() => document.querySelectorAll('#beitraege .elkw-hint').forEach(h => { if (h.textContent.startsWith('Abgehakt von ')) h.textContent = h.textContent.replace(/am .*$/, 'am 20.10.2026'); })");
+        await BildAsync(seite, "beitraege", geraet);
+    }
+
     /// <summary>Story 3-6: „Abgelegt am …“ hängt vom Tag des Einspielens ab; im Bild steht ein festes Datum.</summary>
     private static Task AbgelegtAmFestAsync(IPage seite) =>
         seite.EvaluateAsync("() => document.querySelectorAll('.elkw-card p').forEach(p => { if (p.textContent.startsWith('Abgelegt am ')) p.textContent = 'Abgelegt am 14.10.2026'; })");

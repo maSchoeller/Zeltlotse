@@ -11,7 +11,7 @@ namespace Zeltlotse.Finanzen.Datenschutz;
 /// <summary>
 /// Story 5-1: Täglicher Lösch-Lauf der Finanzen (AD-16): Planzahlen, Kategorien und Einnahmeposten der Kalkulation der Freizeiten, deren Daten nach der
 /// Frist der Organisation abgelaufen sind. Story 5-2: dazu die Belege (aufbewahrungspflichtig) samt ihren Dateien, zuerst die Dateien, dann die Zeilen. Eine
-/// eigene Belegfrist gibt es nicht; es gilt die Frist der Freizeit-Daten. Datenauskunft und Empfänger von <c>PersonGeloescht</c> stehen in
+/// eigene Belegfrist gibt es nicht; es gilt die Frist der Freizeit-Daten. Story 5-3: dazu die Vermerke „Beitrag bezahlt“ (aufbewahrungspflichtig). Datenauskunft und Empfänger von <c>PersonGeloescht</c> stehen in
 /// <see cref="FinanzenAuskunft"/> und <see cref="FinanzenPersonLoeschen"/>.
 /// </summary>
 internal sealed class FinanzenLoeschlauf(ISender sender) : ILoeschlauf
@@ -26,7 +26,7 @@ internal sealed class FinanzenLoeschlauf(ISender sender) : ILoeschlauf
 }
 
 /// <summary>
-/// Kalkulation und Belege (mit Dateien) der Freizeiten, deren Daten nach der Frist der Organisation abgelaufen sind, endgültig löschen. Kein
+/// Kalkulation, Belege (mit Dateien) und Vermerke „Beitrag bezahlt“ der Freizeiten, deren Daten nach der Frist der Organisation abgelaufen sind, endgültig löschen. Kein
 /// Benutzer-Command.
 /// </summary>
 internal sealed record KalkulationenLoeschen(IReadOnlyList<Guid> FreizeitIds) : ICommand, IModulCommand<FinanzenDbContext>;
@@ -46,6 +46,7 @@ internal sealed class KalkulationenLoeschenHandler(FinanzenDbContext db, IDateiS
         }
 
         await db.Belege.IgnoreQueryFilters().Where(b => freizeiten.Contains(b.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
+        await db.BeitragVermerke.IgnoreQueryFilters().Where(v => freizeiten.Contains(v.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
         await db.Einnahmeposten.IgnoreQueryFilters().Where(e => freizeiten.Contains(e.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
         await db.KategoriePosten.IgnoreQueryFilters().Where(k => freizeiten.Contains(k.FreizeitId)).ExecuteDeleteAsync(cancellationToken);
         await db.Kalkulationen.IgnoreQueryFilters().Where(k => freizeiten.Contains(k.FreizeitId)).ExecuteDeleteAsync(cancellationToken);

@@ -51,4 +51,4 @@ Auf der Seite der Organisation stehen alle Freizeiten in der Card **Freizeiten**
 
 ## Noch nicht dabei
 
-Die Rückfrage vor dem Abschluss nennt keine Belege, die noch nicht erstattet sind; wer noch Geld bekommt, zeigt [Soll-Ist](/finanzen/soll-ist/#erstattungen). Der Haken „Erstattet“ an den [Belegen](/finanzen/belege/) lässt sich auch nach dem Abschluss noch setzen.
+Die Rückfrage vor dem Abschluss nennt keine Belege, die noch nicht erstattet sind; wer noch Geld bekommt, zeigt [Soll-Ist](/finanzen/soll-ist/#erstattungen). Der Haken „Erstattet“ an den [Belegen](/finanzen/belege/) lässt sich auch nach dem Abschluss noch setzen. Die Haken „bezahlt“ unter [Beiträge](/finanzen/beitraege/) dagegen nicht: Offene Beiträge klärt die Leitung darum vor dem Abschluss.

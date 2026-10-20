@@ -23,6 +23,41 @@ namespace Zeltlotse.Finanzen.Migrationen
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Zeltlotse.Finanzen.Beitraege.BeitragVermerk", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AbgehaktAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("AbgehaktVon")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AbgehaktVon");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("FreizeitId", "PersonId")
+                        .IsUnique()
+                        .HasFilter("\"PersonId\" <> '00000000-0000-7000-8000-0000000de1e7'");
+
+                    b.ToTable("beitrag_vermerk", "finanzen");
+                });
+
             modelBuilder.Entity("Zeltlotse.Finanzen.Belege.Beleg", b =>
                 {
                     b.Property<Guid>("Id")

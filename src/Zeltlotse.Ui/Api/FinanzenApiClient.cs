@@ -31,12 +31,15 @@ public sealed record BelegAktion(FinanzenAktionErgebnis Ergebnis, Beleg? Beleg, 
 /// </summary>
 public sealed record BelegDateiErgebnis(Beleg? Beleg, string? DateiFehler, bool Abgeschlossen = false, bool NichtVerfuegbar = false);
 
+/// <summary>Story 5-3: Ergebnis von „bezahlt“ oder „offen“; bei Erfolg der neue Stand der Zeile.</summary>
+public sealed record BeitragAktion(FinanzenAktionErgebnis Ergebnis, BeitragZeile? Zeile);
+
 /// <summary>
 /// Typisierter Client des Moduls Finanzen (AD-29, handgeschrieben). Story 5-1: die Kalkulation einer Freizeit (nur mit dem Modul Finanzen; sonst wie nicht
 /// verfügbar), Einnahmen anlegen und entfernen. Den Autosave von Planzahlen, Kategorien und Einnahmen übernimmt der Autosave-Baustein mit
 /// <see cref="KalkulationPfad"/>, <see cref="KategoriePfad"/> und <see cref="EinnahmePfad"/>. Der Beitragsrechner ruft den Server nicht. Story 5-2: Belege
 /// laden, anlegen und löschen, Datei hochladen und entfernen, Soll-Ist laden; Autosave über <see cref="BelegPfad"/> und <see cref="ErstattetPfad"/>, das Bild
-/// über <see cref="DateiPfad"/>.
+/// über <see cref="DateiPfad"/>. Story 5-3: Beiträge laden, als bezahlt abhaken und wieder öffnen.
 /// </summary>
 public sealed class FinanzenApiClient(HttpClient http)
 {
@@ -66,6 +69,15 @@ public sealed class FinanzenApiClient(HttpClient http)
 
     /// <summary>Story 5-2: Pfad des Soll-Ist-Vergleichs.</summary>
     public static string SollIstPfad(Guid freizeitId) => $"/api/freizeiten/{freizeitId}/finanzen/soll-ist";
+
+    /// <summary>Story 5-3: Pfad der Beiträge.</summary>
+    public static string BeitraegePfad(Guid freizeitId) => $"/api/freizeiten/{freizeitId}/finanzen/beitraege";
+
+    /// <summary>Story 5-3: Pfad des Übergangs „bezahlt“ (<c>POST</c>, AD-28).</summary>
+    public static string BeitragBezahltPfad(Guid freizeitId, Guid personId) => $"{BeitraegePfad(freizeitId)}/{personId}/bezahlt";
+
+    /// <summary>Story 5-3: Pfad des Übergangs „offen“ (<c>POST</c>).</summary>
+    public static string BeitragOffenPfad(Guid freizeitId, Guid personId) => $"{BeitraegePfad(freizeitId)}/{personId}/offen";
 
     /// <summary><c>GET …/finanzen/kalkulation</c>: die Kalkulation oder <c>null</c> bei <c>403</c>/<c>404</c> (auch ohne Modul Finanzen).</summary>
     public async Task<Kalkulation?> KalkulationLadenAsync(Guid freizeitId, CancellationToken abbruch = default)
@@ -160,6 +172,30 @@ public sealed class FinanzenApiClient(HttpClient http)
     {
         using var antwort = await http.DeleteAsync(DateiPfad(freizeitId, belegId), abbruch);
         return antwort.IsSuccessStatusCode ? FinanzenAktionErgebnis.Erfolg : await FehlerAsync(antwort, abbruch);
+    }
+
+    /// <summary>Story 5-3: <c>GET …/finanzen/beitraege</c>: die Beiträge oder <c>null</c> bei <c>403</c>/<c>404</c> (auch ohne Modul Finanzen).</summary>
+    public Task<Beitraege?> BeitraegeLadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
+        LadenAsync<Beitraege>(BeitraegePfad(freizeitId), abbruch);
+
+    /// <summary>Story 5-3: <c>POST …/beitraege/{personId}/bezahlt</c>: der neue Stand, abgeschlossen oder ein anderer Fehler.</summary>
+    public Task<BeitragAktion> BeitragBezahltAsync(Guid freizeitId, Guid personId, CancellationToken abbruch = default) =>
+        BeitragUebergangAsync(BeitragBezahltPfad(freizeitId, personId), abbruch);
+
+    /// <summary>Story 5-3: <c>POST …/beitraege/{personId}/offen</c>: der neue Stand, abgeschlossen oder ein anderer Fehler.</summary>
+    public Task<BeitragAktion> BeitragOffenAsync(Guid freizeitId, Guid personId, CancellationToken abbruch = default) =>
+        BeitragUebergangAsync(BeitragOffenPfad(freizeitId, personId), abbruch);
+
+    private async Task<BeitragAktion> BeitragUebergangAsync(string pfad, CancellationToken abbruch)
+    {
+        using var antwort = await http.PostAsync(pfad, null, abbruch);
+        if (antwort.IsSuccessStatusCode)
+        {
+            var zeile = await antwort.Content.ReadFromJsonAsync<BeitragZeile>(ApiJson.Optionen, abbruch) ?? throw new HttpRequestException("Leere Antwort zum Beitrag.");
+            return new BeitragAktion(FinanzenAktionErgebnis.Erfolg, zeile);
+        }
+
+        return new BeitragAktion(await FehlerAsync(antwort, abbruch), null);
     }
 
     private async Task<T?> LadenAsync<T>(string pfad, CancellationToken abbruch)

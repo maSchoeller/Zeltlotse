@@ -131,6 +131,15 @@ internal static class DemoKatalog
         ("Brötchen und Obst", Zeltlotse.Api.Contracts.Finanzen.Kostenkategorie.Verpflegung, "23,40", "lea.feuerstein@example.org", false, true),
     ];
 
+    /// <summary>
+    /// Story 5-3: Beiträge, die als bezahlt abgehakt sind (Mail der Eltern, Vorname des Kindes, Mail der Person, die abhakt): Lea hakt Mia ab. Mia ist die
+    /// einzige bestätigte Teilnehmende, also „1 von 1 bezahlt“. Nur, solange es noch keinen Vermerk gibt.
+    /// </summary>
+    public static IReadOnlyList<(string ElternMail, string Kind, string AbgehaktVonMail)> BeitraegeBezahlt { get; } =
+    [
+        ("daniel.probst@example.org", "Mia", "lea.feuerstein@example.org"),
+    ];
+
     /// <summary>Story 4-4: Mahlzeiten, die die Küche als Restetag markiert (Tag, Titel der Mahlzeit).</summary>
     public static IReadOnlyList<(DateOnly Tag, string Mahlzeit)> Restetage { get; } = [(new DateOnly(2027, 8, 3), "Abendessen")];
 

@@ -62,6 +62,20 @@ internal sealed class FreizeitPersonenzahlLesen(FreizeitenLeseDbContext db) : IF
 }
 
 /// <summary>
+/// Story 5-3: <see cref="IFreizeitTeilnehmendeLesen"/> über den Lese-Kontext unter dem Mandantenfilter: bestätigte Anmeldungen von Teilnehmenden, jede Person
+/// einmal, ohne den Platzhalter einer gelöschten Person.
+/// </summary>
+internal sealed class FreizeitTeilnehmendeLesen(FreizeitenLeseDbContext db) : IFreizeitTeilnehmendeLesen
+{
+    public async Task<IReadOnlyList<Guid>> TeilnehmendeAsync(Guid freizeitId, CancellationToken abbruch = default) =>
+        await db.Anmeldungen
+            .Where(a => a.FreizeitId == freizeitId && a.Art == AnmeldeArt.Teilnehmende && a.Status == AnmeldeStatus.Bestaetigt && a.PersonId != GeloeschtePerson.Id)
+            .Select(a => a.PersonId)
+            .Distinct()
+            .ToListAsync(abbruch);
+}
+
+/// <summary>
 /// Story 4-2: <see cref="IFreizeitFragenLesen"/> über den Lese-Kontext unter dem Mandantenfilter: die Kennung steht in den Fragen für Teilnehmende
 /// oder für Mitarbeitende.
 /// </summary>

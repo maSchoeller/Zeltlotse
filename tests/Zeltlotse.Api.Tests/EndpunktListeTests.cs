@@ -331,6 +331,10 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 "GET /api/freizeiten/{freizeitId:guid}/finanzen/belege/{belegId:guid}/datei",
                 "DELETE /api/freizeiten/{freizeitId:guid}/finanzen/belege/{belegId:guid}/datei",
                 "GET /api/freizeiten/{freizeitId:guid}/finanzen/soll-ist",
+                // Story 5-3: Beitrag bezahlt abhaken und wieder öffnen (Finanzen), für Leitung und Team, nur mit dem Modul Finanzen.
+                "GET /api/freizeiten/{freizeitId:guid}/finanzen/beitraege",
+                "POST /api/freizeiten/{freizeitId:guid}/finanzen/beitraege/{personId:guid}/bezahlt",
+                "POST /api/freizeiten/{freizeitId:guid}/finanzen/beitraege/{personId:guid}/offen",
             }.Order(StringComparer.Ordinal),
             freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
         Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));
@@ -351,8 +355,8 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         // Story 3-7 (AD-20): Leitplanke für V4 und V5: Jeder Endpunkt dort erklärt seinen Schalter. Story 4-1: die acht Routen der Rezepte;
         // Story 4-2: zehn Routen für Essensplan, Gerichte und Einkaufsliste; Story 4-3: Tages-Freigabe und die Seite der Einkaufenden.
         Assert.Equal(22, endpunkte.Count(e => e.Pfad.Contains("/kueche/", StringComparison.Ordinal)));
-        // Story 5-1: die sechs Routen der Kalkulation; Story 5-2: die neun Routen der Belege und des Soll-Ist-Vergleichs.
-        Assert.Equal(15, endpunkte.Count(e => e.Pfad.Contains("/finanzen/", StringComparison.Ordinal)));
+        // Story 5-1: die sechs Routen der Kalkulation; Story 5-2: die neun Routen der Belege und des Soll-Ist-Vergleichs; Story 5-3: die drei Routen der Beiträge.
+        Assert.Equal(18, endpunkte.Count(e => e.Pfad.Contains("/finanzen/", StringComparison.Ordinal)));
         foreach (var (bereich, schalter) in new[] { ("kueche", FunktionsSchalter.Verpflegung), ("finanzen", FunktionsSchalter.Finanzen) })
         {
             var praefix = $"/api/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/{bereich}";

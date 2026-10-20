@@ -13,7 +13,7 @@ Die Kalkulation gibt es nur, wenn die Leitung das Modul **Finanzen** eingeschalt
 
 ## Der Weg zur Kalkulation
 
-Startseite der Freizeit → Knopf **Finanzen**. Oben stehen die Reiter **Kalkulation · Beitragsrechner · Belege · Soll-Ist**.
+Startseite der Freizeit → Knopf **Finanzen**. Oben stehen die Reiter **Kalkulation · Beitragsrechner · Belege · Soll-Ist · Beiträge**.
 
 ## Was die Seite zeigt
 
@@ -65,5 +65,5 @@ Die Kalkulation enthält keine Personendaten: nur Zahlen, Beträge und die Bezei
 ## Noch nicht dabei
 
 - Was tatsächlich ausgegeben wurde, steht in den [Belegen](/finanzen/belege/); den Vergleich mit der Kalkulation zeigt [Soll-Ist](/finanzen/soll-ist/).
-- Der Vermerk **„Beitrag bezahlt“** je Anmeldung kommt mit einer späteren Version.
+- Ob ein Teilnehmerbeitrag bezahlt ist, steht unter [Beiträge](/finanzen/beitraege/); die Kalkulation rechnet nicht mit diesen Haken.
 - Eine Kalkulation aus dem Vorjahr übernehmen und mehrere Szenarien speichern gibt es nicht; zum Ausprobieren dient der [Beitragsrechner](/finanzen/beitragsrechner/).

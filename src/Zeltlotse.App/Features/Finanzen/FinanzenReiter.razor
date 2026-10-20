@@ -1,11 +1,11 @@
-@* Finanzen-Reiter (Story 5-1, Story 5-2): „Kalkulation · Beitragsrechner · Belege · Soll-Ist“ als Links oben auf den Finanzen-Seiten; der aktive trägt
-   aria-current. *@
+@* Finanzen-Reiter (Story 5-1, Story 5-2, Story 5-3): „Kalkulation · Beitragsrechner · Belege · Soll-Ist · Beiträge“ als Links oben auf den Finanzen-Seiten;
+   der aktive trägt aria-current. *@
 <Reiter Bezeichnung="Finanzen" Eintraege="Eintraege" />
 
 @code {
     [Parameter, EditorRequired] public Guid FreizeitId { get; set; }
 
-    /// <summary>Die gewählte Seite: „kalkulation“, „beitragsrechner“, „belege“ oder „soll-ist“.</summary>
+    /// <summary>Die gewählte Seite: „kalkulation“, „beitragsrechner“, „belege“, „soll-ist“ oder „beitraege“.</summary>
     [Parameter, EditorRequired] public string Aktiv { get; set; } = "";
 
     private IReadOnlyList<ReiterEintrag> Eintraege =>
@@ -14,5 +14,6 @@
         new("Beitragsrechner", FinanzenTexte.BeitragsrechnerZiel(FreizeitId), Aktiv == "beitragsrechner"),
         new("Belege", FinanzenTexte.BelegeZiel(FreizeitId), Aktiv == "belege"),
         new("Soll-Ist", FinanzenTexte.SollIstZiel(FreizeitId), Aktiv == "soll-ist"),
+        new("Beiträge", FinanzenTexte.BeitraegeZiel(FreizeitId), Aktiv == "beitraege"),
     ];
 }

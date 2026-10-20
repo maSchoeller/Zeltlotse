@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Zeltlotse.Finanzen.Beitraege;
 using Zeltlotse.Finanzen.Belege;
 using Zeltlotse.Finanzen.Daten;
 using Zeltlotse.Finanzen.Datenschutz;
@@ -23,7 +24,7 @@ public static class FinanzenModul
 
     /// <summary>
     /// Story 5-1: Die Kalkulation steht nicht auf der Leitungsliste (rollen-und-rechte.md): Leitung und Team dürfen alles. Story 5-2: ebenso Belege, Soll-Ist
-    /// und Erstattungen.
+    /// und Erstattungen. Story 5-3: ebenso der Haken „Beitrag bezahlt“.
     /// </summary>
     internal static readonly FreizeitRolle[] Mitarbeit = [FreizeitRolle.Leitung, FreizeitRolle.Team];
 
@@ -32,6 +33,7 @@ public static class FinanzenModul
         services.AddModul<FinanzenDbContext, FinanzenLeseDbContext>(Name, Schema);
         // Story 5-1: Die Kalkulation ist Arbeitsdatum der Freizeit und wird nach der Frist gelöscht (AD-16). Story 5-2: Belege sind aufbewahrungspflichtig:
         // Bei PersonGeloescht wird „bezahlt von“ zum Platzhalter, nach der Frist löscht der Lösch-Lauf Belege und Dateien; die Auskunft nennt die Belege.
+        // Story 5-3: ebenso die Vermerke „Beitrag bezahlt“ (teilnehmende Person und wer abgehakt hat).
         services.EmpfaengtEreignis<PersonGeloescht, FinanzenPersonLoeschen>();
         services.AddScoped<IDatenauskunft, FinanzenAuskunft>();
         services.AddScoped<ILoeschlauf, FinanzenLoeschlauf>();
@@ -43,7 +45,9 @@ public static class FinanzenModul
     /// <c>/api/freizeiten/{freizeitId}/finanzen/kalkulation</c> für Leitung und Team, nur mit eingeschaltetem Modul Finanzen (sonst <c>404</c>, AD-20):
     /// lesen (mit Ergebnis), Planzahlen und Kategorien per Autosave ändern (AD-19), Einnahmeposten anlegen, ändern und entfernen. Story 5-2: Belege unter
     /// <c>…/finanzen/belege</c> (lesen, anlegen, Autosave, löschen, Erstattungsvermerk auch nach dem Abschluss, Datei hochladen, ausliefern und entfernen) und
-    /// der Soll-Ist-Vergleich unter <c>…/finanzen/soll-ist</c>, ebenfalls für Leitung und Team und nur mit dem Modul Finanzen.
+    /// der Soll-Ist-Vergleich unter <c>…/finanzen/soll-ist</c>, ebenfalls für Leitung und Team und nur mit dem Modul Finanzen. Story 5-3: die
+    /// Beiträge der bestätigten Teilnehmenden unter <c>…/finanzen/beitraege</c> (lesen, „bezahlt“ abhaken und wieder öffnen per POST, AD-19/AD-28), ebenso
+    /// für Leitung und Team und nur mit dem Modul Finanzen; nach dem Abschluss nur lesbar (AD-17).
     /// </summary>
     public static IEndpointRouteBuilder MapFinanzenEndpoints(this IEndpointRouteBuilder api)
     {
@@ -66,6 +70,10 @@ public static class FinanzenModul
         belege.MapGet("/{belegId:guid}/datei", BelegDateiEndpunkte.Ausliefern).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Finanzen);
         belege.MapDelete("/{belegId:guid}/datei", BelegDateiEndpunkte.Entfernen).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Finanzen);
         finanzen.MapGet("/soll-ist", SollIstLadenEndpunkt.Laden).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Finanzen);
+        var beitraege = finanzen.MapGroup("/beitraege");
+        beitraege.MapGet("", BeitraegeLadenEndpunkt.Laden).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Finanzen);
+        beitraege.MapPost("/{personId:guid}/bezahlt", BeitragUebergangEndpunkt.Bezahlt).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Finanzen);
+        beitraege.MapPost("/{personId:guid}/offen", BeitragUebergangEndpunkt.Offen).NurFreizeitRolle(Mitarbeit).GehoertZuSchalter(FunktionsSchalter.Finanzen);
         return api;
     }
 }
