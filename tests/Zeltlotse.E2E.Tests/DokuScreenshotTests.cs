@@ -2511,6 +2511,76 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await BildAsync(seite, "beitraege", geraet);
     }
 
+    // ---------- Story 6-1: Kanäle Team und Alle mit Push ----------
+
+    /// <summary>
+    /// Lea (Team) öffnet die Demo-Freizeit und tippt „Kanäle“: Kanal „Team“ mit den drei Demo-Nachrichten von Jonas, Lea und Miriam (neueste unten), darüber die
+    /// Card „Benachrichtigungen“ mit „Benachrichtigungen einschalten“ (der Browser darf Mitteilungen zeigen, hat aber noch kein Abo; Zeltlotse fragt nicht von
+    /// selbst). Tag und Uhrzeit der Nachrichten hängen vom Einspielen ab; im Bild stehen feste. Nur lesend.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Kanaele_Team(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet, ["notifications"]);
+        var seite = await kontext.NewPageAsync();
+
+        await KanaeleAsync(seite);
+        var nachrichten = seite.Locator("ol.zl-kanal li");
+        await Assertions.Expect(nachrichten.Locator("strong")).ToHaveTextAsync(["Jonas Hüttner", "Lea Feuerstein", "Miriam Zeltner"], new() { Timeout = 60_000 });
+        await Assertions.Expect(nachrichten.Locator(".elkw-avatar")).ToHaveTextAsync(["JH", "LF", "MZ"]);
+        await Assertions.Expect(nachrichten.Last.Locator(".zl-kanal__text")).ToHaveTextAsync("Passt. Morgen um 7:30 kurze Teambesprechung am Lagerfeuerplatz.");
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Benachrichtigungen einschalten" })).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Senden", Exact = true })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await ZeitenFestAsync(seite, "03.08. 21:40", "03.08. 21:42", "03.08. 21:45");
+        await BildAsync(seite, "kanaele-team", geraet);
+    }
+
+    /// <summary>
+    /// Kanal „Alle“: Lea wechselt mit dem Segment „Alle“, schreibt eine Nachricht und tippt „Senden“. An Ort und Stelle klappt „An 4 Personen senden?“ mit
+    /// „Ja, senden“ und „Nein“ auf (Mia sowie Jonas, Miriam und Lea). Nur lesend: Lea sendet nicht, damit der Demo-Stand für die anderen Bilder bleibt.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Kanaele_Alle(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet, ["notifications"]);
+        var seite = await kontext.NewPageAsync();
+
+        await KanaeleAsync(seite);
+        await seite.Locator(".elkw-segments").GetByRole(AriaRole.Button, new() { Name = "Alle", Exact = true }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Alle", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite).ToHaveURLAsync(new System.Text.RegularExpressions.Regex(@"/kanaele\?kanal=alle$"));
+        await Assertions.Expect(seite.Locator("ol.zl-kanal .zl-kanal__text")).ToHaveTextAsync(
+            ["Mittagessen heute um 13:30 statt 13:00.", "Wandertag morgen: feste Schuhe, Regenjacke und eine volle Trinkflasche einpacken."], new() { Timeout = 60_000 });
+        await seite.GetByLabel("Nachricht", new() { Exact = true }).FillAsync("Lagerfeuer heute um 20 Uhr am Bach.");
+        await seite.GetByRole(AriaRole.Button, new() { Name = "Senden", Exact = true }).ClickAsync();
+        await Assertions.Expect(seite.Locator(".zl-bestaetigung__satz")).ToHaveTextAsync("An 4 Personen senden?");
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Ja, senden" })).ToBeVisibleAsync();
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Nein", Exact = true })).ToBeFocusedAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await ZeitenFestAsync(seite, "03.08. 11:02", "03.08. 18:30");
+        await BildAsync(seite, "kanaele-alle", geraet);
+    }
+
+    /// <summary>Lea (Team) meldet sich an, öffnet die Demo-Freizeit und tippt „Kanäle“.</summary>
+    private async Task KanaeleAsync(IPage seite)
+    {
+        await LeaStartseiteAsync(seite);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Kanäle", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("main .elkw-kicker").First).ToHaveTextAsync("Kanäle", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Team");
+    }
+
+    /// <summary>Story 6-1: Tag und Uhrzeit der Nachrichten hängen vom Einspielen ab; im Bild stehen feste, in dieser Reihenfolge.</summary>
+    private static Task ZeitenFestAsync(IPage seite, params string[] zeiten) =>
+        seite.EvaluateAsync("zeiten => document.querySelectorAll('ol.zl-kanal time').forEach((t, i) => { if (i < zeiten.length) t.textContent = zeiten[i]; })", zeiten);
+
     /// <summary>Story 3-6: „Abgelegt am …“ hängt vom Tag des Einspielens ab; im Bild steht ein festes Datum.</summary>
     private static Task AbgelegtAmFestAsync(IPage seite) =>
         seite.EvaluateAsync("() => document.querySelectorAll('.elkw-card p').forEach(p => { if (p.textContent.startsWith('Abgelegt am ')) p.textContent = 'Abgelegt am 14.10.2026'; })");
@@ -2682,7 +2752,8 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         _ => throw new ArgumentOutOfRangeException(nameof(geraet), geraet, "Unbekanntes Gerät."),
     };
 
-    private Task<IBrowserContext> KontextAsync(string geraet)
+    /// <param name="erlaubnisse">Story 6-1: Erlaubnisse des Browsers, z. B. <c>notifications</c>; ohne Angabe keine.</param>
+    private Task<IBrowserContext> KontextAsync(string geraet, IEnumerable<string>? erlaubnisse = null)
     {
         var (breite, hoehe) = Groesse(geraet);
         return host.KontextAsync(new BrowserNewContextOptions
@@ -2692,6 +2763,7 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
             ColorScheme = ColorScheme.Light,
             Locale = "de-DE",
             TimezoneId = "Europe/Berlin",
+            Permissions = erlaubnisse,
         });
     }
 

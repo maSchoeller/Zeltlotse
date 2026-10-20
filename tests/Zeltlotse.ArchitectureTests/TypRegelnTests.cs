@@ -3,6 +3,7 @@ using FluentValidation;
 using Mediator;
 using Zeltlotse.SharedKernel.Commands;
 using Zeltlotse.SharedKernel.Mail;
+using Zeltlotse.SharedKernel.Push;
 
 namespace Zeltlotse.ArchitectureTests;
 
@@ -159,6 +160,35 @@ public sealed class TypRegelnTests
             {
                 // Kein Namensraum ist erlaubt: Unter-Typen gibt es in Mail-Aufträgen nicht.
                 if (!IstErlaubterEreignisWert(mitgliedTyp, "\0"))
+                {
+                    verstoesse.Add($"{typ.FullName}.{name}: {mitgliedTyp}");
+                }
+            }
+        }
+
+        Assert.Empty(verstoesse);
+    }
+
+    [Fact]
+    public void Push_Auftraege_bestehen_nur_aus_Guid_Zahlen_Datumswerten_und_Enums()
+    {
+        // Story 6-1 (AD-13, AD-21, AD-22): Text, Ziele und Schlüssel entstehen erst beim Versand; in der Outbox stehen nur Kennungen.
+        var auftraege = ModulUndTestmodul
+            .SelectMany(AlleTypen)
+            .Where(t => typeof(IPushAuftrag).IsAssignableFrom(t) && !t.IsInterface)
+            .ToList();
+        Assert.Contains(auftraege, t => t.Assembly.GetName().Name == "Zeltlotse.Testmodul");
+        Assert.Contains(auftraege, t => t.FullName == "Zeltlotse.Kanaele.Nachrichten.NachrichtPush");
+
+        var verstoesse = new List<string>();
+        foreach (var typ in auftraege)
+        {
+            var mitglieder = typ.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Select(p => (p.Name, Typ: p.PropertyType))
+                .Concat(typ.GetFields(BindingFlags.Public | BindingFlags.Instance).Select(f => (f.Name, Typ: f.FieldType)))
+                .Where(m => m.Name != "EqualityContract");
+            foreach (var (name, mitgliedTyp) in mitglieder)
+            {
+                if (!IstErlaubterEreignisWert(mitgliedTyp, " "))
                 {
                     verstoesse.Add($"{typ.FullName}.{name}: {mitgliedTyp}");
                 }

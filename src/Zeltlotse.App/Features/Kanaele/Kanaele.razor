@@ -1,0 +1,352 @@
+@page "/freizeiten/{FreizeitId:guid}/kanaele"
+@implements IAsyncDisposable
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Kanaele
+@using Zeltlotse.Ui.Kontext
+@inject FreizeitKontextDienst Kontext
+@inject KanaeleApiClient KanaeleApi
+@inject FreizeitenApiClient Freizeiten
+@inject IBrowser Browser
+@inject NavigationManager Navigation
+@* Kanäle „Team“ und „Alle“ (CAP-35, FR-61, Story 6-1; EXPERIENCE.md → Kanal-Nachrichten) für Leitung und Team, erreicht über den Knopf „Kanäle“ auf der
+   Startseite. Dachzeile „Kanäle“, Überschrift der Kanal, darunter die Segmente „Team / Alle“ (die Wahl steht in der Adresse, ?kanal=alle). Die Nachrichten
+   stehen älteste zuerst, die neueste unten; die Seite öffnet am Ende. Darüber die Card „Benachrichtigungen“, darunter das Eingabefeld: In „Team“ geht „Senden“ direkt hinaus, in „Alle“ klappt es
+   zuerst die Inline-Bestätigung „An N Personen senden?“ auf („Ja, senden“ / „Nein“). In der Card „Benachrichtigungen“: Die Erlaubnis für Push fragt die Seite
+   erst nach einem Tipp auf „Benachrichtigungen einschalten“; ohne Push-Möglichkeit steht der passende Hinweis (iPhone ohne Home-Bildschirm, abgelehnt,
+   Browser ohne Push), die Kanäle bleiben lesbar und beschreibbar. Hat das Gerät schon ein Abo, erneuert die Seite es still für diese Freizeit. Geht ein
+   Push ein, lädt der Kanal neu. Keine Zähler. In der Phase „gelaufen“ nur lesbar, ohne Eingabefeld und ohne Benachrichtigungen. Kontext oder Kanal nicht
+   verfügbar → „Diese Seite ist nicht verfügbar.“. Namen kommen aus Freizeit und Personenliste (AD-2). *@
+<PageTitle>Kanäle – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Kanäle</Dachzeile>
+    <h1>@(Gewaehlt == Kanal.Alle ? "Alle" : "Team")</h1>
+    <Segmente Legende="Kanal" Optionen="KanaeleTexte.KanalOptionen" Wert="@KanalFelder.InRoute(Gewaehlt)" Gewaehlt="Wechseln" />
+
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+
+    @if (_ansicht is null || _kontext is null)
+    {
+        @if (_meldung is null)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@KanaeleTexte.AbgeschlossenText</p>
+            </Meldung>
+        }
+
+        @if (!Abgeschlossen)
+        {
+            <Card Titel="Benachrichtigungen" Id="benachrichtigungen">
+                @switch (_push)
+                {
+                    case PushStatus.An:
+                        <p>@KanaeleTexte.PushAnText</p>
+                        <Knopf Art="KnopfArt.Outline" @onclick="AusschaltenAsync">Benachrichtigungen ausschalten</Knopf>
+                        break;
+                    case PushStatus.Aus:
+                        <p>@KanaeleTexte.PushAusText</p>
+                        <Knopf Art="KnopfArt.Outline" @onclick="EinschaltenAsync">Benachrichtigungen einschalten</Knopf>
+                        break;
+                    case PushStatus.Abgelehnt:
+                        <p><strong>@KanaeleTexte.PushAbgelehntText</strong> @KanaeleTexte.KanaeleBleibenText</p>
+                        <p>So geht es wieder an:</p>
+                        <ol>
+                            <li>In den Einstellungen des Geräts oder des Browsers die Mitteilungen für Zeltlotse erlauben.</li>
+                            <li>Diese Seite neu laden und „Benachrichtigungen einschalten“ tippen.</li>
+                        </ol>
+                        break;
+                    case PushStatus.NurMitHomeBildschirm:
+                        <p><strong>@KanaeleTexte.PushHomeBildschirmText</strong> @KanaeleTexte.KanaeleBleibenText</p>
+                        <ol>
+                            <li>In Safari unten auf „Teilen“ tippen.</li>
+                            <li>„Zum Home-Bildschirm“ wählen und „Hinzufügen“ tippen.</li>
+                            <li>Zeltlotse über das neue Symbol öffnen, hierher wechseln und „Benachrichtigungen einschalten“ tippen.</li>
+                        </ol>
+                        break;
+                    default:
+                        <p><strong>@KanaeleTexte.PushNichtMoeglichText</strong> @KanaeleTexte.KanaeleBleibenText</p>
+                        break;
+                }
+                @if (_pushFehler)
+                {
+                    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                        <p>@KanaeleTexte.PushFehlerText</p>
+                    </Meldung>
+                }
+            </Card>
+        }
+
+        <KanalNachrichten Nachrichten="@([.. _ansicht.Nachrichten.Select(n => KanaeleTexte.Eintrag(n, _personen))])" />
+
+        @if (!Abgeschlossen)
+        {
+            <Formular Absenden="@(() => Gewaehlt == Kanal.Team ? SendenAsync(bestaetigt: null) : Task.CompletedTask)">
+                <Feld Label="Nachricht" Id="kanal-text" Mehrzeilig="true" Zeilen="3" Wert="@_text" Fehler="@_textFehler" Deaktiviert="@_sendet"
+                      Hinweis="@($"Höchstens {KanalFelder.TextMaximaleLaenge} Zeichen")" @oninput="@(e => _text = e.Value?.ToString())" />
+                @if (Gewaehlt == Kanal.Alle)
+                {
+                    <InlineBestaetigung AusloeserText="Senden" Satz="@KanaeleTexte.BestaetigungSatz(_ansicht.PersonenAlle)" JaText="Ja, senden"
+                                        Bestaetigt="@(() => SendenAsync(bestaetigt: true))" />
+                }
+                else
+                {
+                    <Knopf @onclick="@(() => SendenAsync(bestaetigt: null))">Senden</Knopf>
+                }
+            </Formular>
+        }
+    }
+    <p id="kanal-ende"><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    private KanalAnsicht? _ansicht;
+    private IReadOnlyDictionary<Guid, (string? Vorname, string? Nachname)> _personen = new Dictionary<Guid, (string?, string?)>();
+    private PushStatus _push = PushStatus.Aus;
+    private IAsyncDisposable? _pushBeobachtung;
+    private bool _nichtVerfuegbar;
+    private bool _sendet;
+    private bool _pushFehler;
+    private bool _ansEnde;
+    private string? _meldung;
+    private string? _text;
+    // Der Kanal, zu dem der Entwurf gehört: Ein Entwurf aus „Team“ darf nach dem Wechsel nicht mit einem Tipp an alle gehen.
+    private (Guid Freizeit, Kanal Kanal)? _entwurfFuer;
+    private string? _textFehler;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    /// <summary>Der Kanal aus der Adresse: <c>?kanal=alle</c>, sonst „Team“.</summary>
+    [SupplyParameterFromQuery(Name = "kanal")] public string? KanalWahl { get; set; }
+
+    private Kanal Gewaehlt => KanalFelder.AusRoute(KanalWahl) ?? Kanal.Team;
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_entwurfFuer != (FreizeitId, Gewaehlt))
+        {
+            _text = null;
+            _textFehler = null;
+            _entwurfFuer = (FreizeitId, Gewaehlt);
+        }
+
+        _ansicht = null;
+        _nichtVerfuegbar = false;
+        _meldung = null;
+        _textFehler = null;
+        _pushFehler = false;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var ansicht = KanaeleApi.LadenAsync(FreizeitId, Gewaehlt);
+            var personen = KanaeleTexte.PersonenLadenAsync(Freizeiten, FreizeitId);
+            await Task.WhenAll(kontext, ansicht, personen);
+            if (kontext.Result is null || ansicht.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _ansicht, _personen) = (kontext.Result, ansicht.Result, personen.Result);
+            _ansEnde = true;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _meldung = AnmeldungAbschluss.FehlerText;
+            return;
+        }
+
+        if (!Abgeschlossen)
+        {
+            await PushPruefenAsync();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _pushBeobachtung = await Browser.PushBeobachtenAsync(PushEingegangenAsync);
+        }
+
+        if (_ansEnde && _ansicht is not null)
+        {
+            _ansEnde = false;
+            await Browser.AnsEndeScrollenAsync("kanal-ende");
+        }
+    }
+
+    /// <summary>Was das Gerät kann; hat es schon ein Abo, wird es still für diese Freizeit erneuert (auch nach einem Wechsel der Freizeit).</summary>
+    private async Task PushPruefenAsync()
+    {
+        _push = await Browser.PushStatusAsync();
+        if (_push == PushStatus.An && await Browser.PushAboLesenAsync() is { } abo)
+        {
+            try
+            {
+                await KanaeleApi.AboSpeichernAsync(FreizeitId, new PushAboNeu(abo.Endpunkt, abo.P256dh, abo.Auth));
+            }
+            catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+            {
+                // Still: Beim nächsten Öffnen wird es erneut versucht.
+            }
+        }
+    }
+
+    private void Wechseln(string wert)
+    {
+        // Der Entwurf gehört zum bisherigen Kanal.
+        _text = null;
+        _textFehler = null;
+        Navigation.NavigateTo(KanaeleTexte.Ziel(FreizeitId, KanalFelder.AusRoute(wert) ?? Kanal.Team));
+    }
+
+    private async Task SendenAsync(bool? bestaetigt)
+    {
+        if (_sendet || _ansicht is null)
+        {
+            return;
+        }
+
+        _sendet = true;
+        _textFehler = null;
+        _meldung = null;
+        try
+        {
+            var aktion = await KanaeleApi.SendenAsync(FreizeitId, Gewaehlt, new NachrichtNeu(_text, bestaetigt));
+            switch (aktion.Ergebnis)
+            {
+                case KanalAktionErgebnis.Erfolg:
+                    _text = "";
+                    await LadenAsync();
+                    break;
+                case KanalAktionErgebnis.Abgeschlossen:
+                    _kontext = await Kontext.LadenAsync(FreizeitId) ?? _kontext;
+                    _meldung = KanaeleTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _textFehler = aktion.Feldfehler.GetValueOrDefault(KanalFelder.Text)
+                                  ?? aktion.Feldfehler.GetValueOrDefault(KanalFelder.Bestaetigt)
+                                  ?? KanaeleTexte.NichtGesendetText;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _textFehler = KanaeleTexte.NichtGesendetText;
+        }
+        finally
+        {
+            _sendet = false;
+        }
+    }
+
+    /// <summary>Lädt den Kanal neu (nach dem Senden und bei einem eingehenden Push) und scrollt ans Ende.</summary>
+    private async Task LadenAsync()
+    {
+        try
+        {
+            if (await KanaeleApi.LadenAsync(FreizeitId, Gewaehlt) is { } ansicht)
+            {
+                _ansicht = ansicht;
+                _ansEnde = true;
+            }
+            else
+            {
+                _nichtVerfuegbar = true;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    private async Task PushEingegangenAsync()
+    {
+        if (_ansicht is null)
+        {
+            return;
+        }
+
+        await LadenAsync();
+        StateHasChanged();
+    }
+
+    /// <summary>Erst hier fragt der Browser nach der Erlaubnis; danach speichert der Server das Abo.</summary>
+    private async Task EinschaltenAsync()
+    {
+        _pushFehler = false;
+        try
+        {
+            if (await KanaeleApi.SchluesselLadenAsync(FreizeitId) is not { } schluessel)
+            {
+                _pushFehler = true;
+                return;
+            }
+
+            if (await Browser.PushAbonnierenAsync(schluessel) is not { } abo)
+            {
+                _push = await Browser.PushStatusAsync();
+                return;
+            }
+
+            var ergebnis = await KanaeleApi.AboSpeichernAsync(FreizeitId, new PushAboNeu(abo.Endpunkt, abo.P256dh, abo.Auth));
+            _pushFehler = ergebnis != KanalAktionErgebnis.Erfolg;
+            _push = ergebnis == KanalAktionErgebnis.Erfolg ? PushStatus.An : await Browser.PushStatusAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _pushFehler = true;
+        }
+    }
+
+    /// <summary>Beendet das Abo im Browser und meldet es beim Server ab.</summary>
+    private async Task AusschaltenAsync()
+    {
+        _pushFehler = false;
+        var endpunkt = await Browser.PushAbmeldenAsync();
+        _push = await Browser.PushStatusAsync();
+        if (endpunkt is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await KanaeleApi.AbmeldenAsync(FreizeitId, endpunkt);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // Der Browser hat kein Abo mehr; der Push-Dienst meldet das alte Abo beim nächsten Push als abgelaufen.
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_pushBeobachtung is not null)
+        {
+            await _pushBeobachtung.DisposeAsync();
+        }
+    }
+}

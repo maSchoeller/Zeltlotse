@@ -66,6 +66,9 @@ public sealed record AuswahlOption(string Wert, string Text);
 /// <param name="Href">Story 2-8: optionales Ziel; dann ist der Name ein Link.</param>
 public sealed record PersonenEintrag(string Initialen, string Name, string? Zeile, string? Href = null);
 
+/// <summary>Story 6-1: Eine Nachricht der <see cref="KanalNachrichten"/>: Initialen für den Avatar, Name, Zeitpunkt (angezeigt in Europe/Berlin) und Text.</summary>
+public sealed record KanalNachrichtEintrag(string Initialen, string Name, DateTimeOffset Zeitpunkt, string Text);
+
 /// <summary>Ein Eintrag einer <see cref="Fehleruebersicht"/>: Kennung des Feldes (Ziel des Sprunglinks) und der Fehlertext ohne Präfix.</summary>
 public sealed record FeldFehler(string FeldId, string Text);
 

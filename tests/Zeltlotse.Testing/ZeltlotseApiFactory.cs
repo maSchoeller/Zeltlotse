@@ -53,7 +53,16 @@ public sealed class ZeltlotseApiFactory : WebApplicationFactory<Program>
     {
         ["Zeltlotse:Verschluesselung:Hauptschluessel"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
         ["Zeltlotse:Protokoll:HmacSchluessel"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
+        // Story 6-1: VAPID-Schlüssel für Web-Push (AD-21).
+        ["Zeltlotse:Push:VapidSchluessel"] = NeuerVapidSchluessel(),
     };
+
+    /// <summary>Ein gültiger privater P-256-Schlüssel als Base64 (32 Bytes).</summary>
+    public static string NeuerVapidSchluessel()
+    {
+        using var ec = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        return Convert.ToBase64String(ec.ExportParameters(includePrivateParameters: true).D!);
+    }
 
     /// <summary>
     /// Ordner des Mail-Adapters <c>Ordner</c> (je Factory neu): Hier landen die Mails als <c>.eml</c>, siehe <see cref="Mails"/>.

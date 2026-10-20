@@ -65,6 +65,8 @@ public sealed class VeroeffentlichterHost : IAsyncLifetime
                 ["ConnectionStrings__zeltlotse"] = verbindung,
                 ["Zeltlotse__Verschluesselung__Hauptschluessel"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
                 ["Zeltlotse__Protokoll__HmacSchluessel"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
+                // Story 6-1: VAPID-Schlüssel für Web-Push (AD-21).
+                ["Zeltlotse__Push__VapidSchluessel"] = ZeltlotseApiFactory.NeuerVapidSchluessel(),
                 // Doku-Screenshots entstehen aus den erfundenen Demo-Daten (NFR-20).
                 ["Zeltlotse__DemoDaten__Aktiv"] = "true",
                 // Login-Mails als .eml-Dateien (Ordner-Adapter, nur Testing/Development); Links zeigen auf die HTTPS-Adresse.

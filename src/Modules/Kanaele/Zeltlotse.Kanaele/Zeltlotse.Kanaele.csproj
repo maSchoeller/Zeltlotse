@@ -8,6 +8,12 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Zeltlotse.SharedKernel\Zeltlotse.SharedKernel.csproj" />
     <ProjectReference Include="..\Zeltlotse.Kanaele.Contracts\Zeltlotse.Kanaele.Contracts.csproj" />
+    <!-- Pfeil aus AD-2: Kanäle liest Freizeiten (Story 6-1: Team der Freizeit für die Empfänger eines Push, Name der Freizeit für den Push-Titel,
+         Zahl der Personen für „An N Personen senden?“; Phase für den Schreibschutz, AD-17). -->
+    <ProjectReference Include="..\..\Freizeiten\Zeltlotse.Freizeiten.Contracts\Zeltlotse.Freizeiten.Contracts.csproj" />
+    <!-- Nur das Ereignis PersonGeloescht (AD-16); Leseschnittstellen von Personen ruft Kanäle nicht auf (AD-2). -->
+    <ProjectReference Include="..\..\Personen\Zeltlotse.Personen.Contracts\Zeltlotse.Personen.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Zeltlotse.Api.Contracts\Zeltlotse.Api.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

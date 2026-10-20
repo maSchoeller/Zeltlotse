@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Zeltlotse.SharedKernel.Mail;
+using Zeltlotse.SharedKernel.Push;
 
 namespace Zeltlotse.SharedKernel;
 
@@ -33,6 +34,17 @@ public abstract class Aggregat
     /// Outbox-Stufe im selben <c>SaveChanges</c> in der Outbox, mit genau einer Zustellung an <see cref="MailAuftraege.Empfaenger"/>.
     /// </summary>
     protected void MailVormerken(IMailAuftrag auftrag)
+    {
+        ArgumentNullException.ThrowIfNull(auftrag);
+        Folgenummer++;
+        _ereignisse.Add(new AbgelegtesEreignis(auftrag, Folgenummer));
+    }
+
+    /// <summary>
+    /// Story 6-1: Merkt einen Push-Auftrag vor (AD-13, AD-21), wie <see cref="MailVormerken"/>: Er erhöht die <see cref="Folgenummer"/> und landet über
+    /// die Outbox-Stufe im selben <c>SaveChanges</c> in der Outbox, mit genau einer Zustellung an <see cref="PushAuftraege.Empfaenger"/>.
+    /// </summary>
+    protected void PushVormerken(IPushAuftrag auftrag)
     {
         ArgumentNullException.ThrowIfNull(auftrag);
         Folgenummer++;

@@ -1,0 +1,55 @@
+@using System.Globalization
+@* Kanal-Nachrichten (EXPERIENCE.md → Kanal-Nachrichten, DESIGN.md → Avatar, Story 6-1): die Nachrichten eines Kanals als Liste in der gegebenen
+   Reihenfolge, die neueste unten. Je Nachricht die Initialen im Avatar (für Screenreader verborgen, der Name steht daneben), der Name fett, daneben Tag
+   und Uhrzeit in Europe/Berlin („03.08. 08:05“, maschinenlesbar im time-Element), darunter der Text mit seinen Zeilenumbrüchen. Keine Zähler, keine
+   „gelesen“-Markierung. Statisch tauglich, ohne Ereignis-Handler. Ohne Nachrichten der Leer-Zustand. *@
+@if (Nachrichten.Count == 0)
+{
+    <LeerZustand Satz="@LeerSatz" />
+}
+else
+{
+    <ol class="zl-kanal" aria-label="Nachrichten">
+        @foreach (var nachricht in Nachrichten)
+        {
+            <li>
+                <span class="elkw-avatar" aria-hidden="true">@nachricht.Initialen</span>
+                <div class="zl-kanal__wer">
+                    <div class="zl-kanal__kopf">
+                        <strong>@nachricht.Name</strong>
+                        <time datetime="@nachricht.Zeitpunkt.ToString("O", CultureInfo.InvariantCulture)">@Zeit(nachricht.Zeitpunkt)</time>
+                    </div>
+                    <p class="zl-kanal__text">@nachricht.Text</p>
+                </div>
+            </li>
+        }
+    </ol>
+}
+
+@code {
+    /// <summary>Satz ohne Nachrichten.</summary>
+    public const string LeerSatz = "Noch keine Nachrichten.";
+
+    private static readonly Lazy<TimeZoneInfo> Berlin = new(() =>
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.Local;
+        }
+        catch (InvalidTimeZoneException)
+        {
+            return TimeZoneInfo.Local;
+        }
+    });
+
+    /// <summary>Die Nachrichten, älteste zuerst.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<KanalNachrichtEintrag> Nachrichten { get; set; } = [];
+
+    /// <summary>Tag und Uhrzeit in Europe/Berlin, z. B. „03.08. 08:05“.</summary>
+    public static string Zeit(DateTimeOffset zeitpunkt) =>
+        TimeZoneInfo.ConvertTime(zeitpunkt, Berlin.Value).ToString("dd.MM. HH:mm", CultureInfo.GetCultureInfo("de-DE"));
+}

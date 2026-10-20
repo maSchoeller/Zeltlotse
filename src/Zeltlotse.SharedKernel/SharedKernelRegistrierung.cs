@@ -7,6 +7,7 @@ using Zeltlotse.SharedKernel.Ereignisse;
 using Zeltlotse.SharedKernel.Mail;
 using Zeltlotse.SharedKernel.Mandanten;
 using Zeltlotse.SharedKernel.Outbox;
+using Zeltlotse.SharedKernel.Push;
 
 namespace Zeltlotse.SharedKernel;
 
@@ -23,9 +24,12 @@ public static class SharedKernelRegistrierung
         services.TryAddScoped<IMandantenKontext>(sp => sp.GetRequiredService<MandantenKontext>());
         services.TryAddSingleton<EreignisKatalog>();
         services.TryAddSingleton<MailKatalog>();
+        services.TryAddSingleton<PushKatalog>();
         services.TryAddSingleton<IOutboxZustellung, OutboxZustellung>();
         services.TryAddSingleton(sp => Hauptschluessel.AusKonfiguration(sp.GetRequiredService<IConfiguration>()));
         services.TryAddScoped<IVerschluesselung, Verschluesselung>();
+        // Story 6-1: der VAPID-Schlüssel für Web-Push (AD-21); erst beim ersten Gebrauch gelesen, die Startprüfung des API-Hosts liest ihn sofort.
+        services.TryAddSingleton(sp => VapidSchluessel.AusKonfiguration(sp.GetRequiredService<IConfiguration>()));
         // Über eine Fabrik: Den Dateispeicher (Adapter) registriert erst der API-Host (AD-23).
         services.TryAddScoped<IGeschuetzteDateien>(sp => new GeschuetzteDateien(
             sp.GetRequiredService<IDateiSpeicher>(), sp.GetRequiredService<IVerschluesselung>()));

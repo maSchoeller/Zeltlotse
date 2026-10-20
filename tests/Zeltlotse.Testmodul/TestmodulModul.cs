@@ -6,6 +6,8 @@ using Zeltlotse.Testmodul.Daten;
 using Zeltlotse.Testmodul.Empfang;
 using Zeltlotse.Testmodul.Events;
 using Zeltlotse.Testmodul.Mails;
+using Zeltlotse.Testmodul.Pushes;
+using Zeltlotse.SharedKernel.Push;
 
 namespace Zeltlotse.Testmodul;
 
@@ -23,6 +25,8 @@ public static class TestmodulModul
         services.EmpfaengtEreignis<NotizGeaendert, GeaendertEmpfangen>();
         services.AddSingleton<MailAufbauStoerung>();
         services.VerschicktMail<NotizMail, NotizMailAufbau>();
+        services.AddSingleton<PushAufbauStoerung>();
+        services.VerschicktPush<NotizPush, NotizPushAufbau>();
         return services;
     }
 }

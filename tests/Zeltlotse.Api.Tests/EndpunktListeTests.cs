@@ -335,6 +335,12 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 "GET /api/freizeiten/{freizeitId:guid}/finanzen/beitraege",
                 "POST /api/freizeiten/{freizeitId:guid}/finanzen/beitraege/{personId:guid}/bezahlt",
                 "POST /api/freizeiten/{freizeitId:guid}/finanzen/beitraege/{personId:guid}/offen",
+                // Story 6-1: Kanäle „Team“ und „Alle“ und das Push-Abo, für Leitung und Team, ohne Funktions-Schalter.
+                "GET /api/freizeiten/{freizeitId:guid}/kanaele/{kanal}/nachrichten",
+                "POST /api/freizeiten/{freizeitId:guid}/kanaele/{kanal}/nachrichten",
+                "GET /api/freizeiten/{freizeitId:guid}/kanaele/push/schluessel",
+                "POST /api/freizeiten/{freizeitId:guid}/kanaele/push/abo",
+                "POST /api/freizeiten/{freizeitId:guid}/kanaele/push/abo/abmelden",
             }.Order(StringComparer.Ordinal),
             freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
         Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));
@@ -364,6 +370,11 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 endpunkte.Where(e => e.Pfad == praefix || e.Pfad.StartsWith(praefix + "/", StringComparison.Ordinal)),
                 e => Assert.Equal(schalter, e.Endpunkt.Metadata.GetMetadata<GehoertZuSchalterMetadaten>()?.Schalter));
         }
+
+        // Story 6-1 (AD-20): Die Kanäle gehören zu keinem Schalter; der Team-Kanal ist nie abschaltbar.
+        var kanaele = endpunkte.Where(e => e.Pfad.Contains("/kanaele/", StringComparison.Ordinal)).ToList();
+        Assert.Equal(5, kanaele.Count);
+        Assert.All(kanaele, e => Assert.Null(e.Endpunkt.Metadata.GetMetadata<GehoertZuSchalterMetadaten>()));
 
         // Ein Schalter ohne Freizeit-Rolle wäre ein Konfigurationsfehler (die Rechteprüfung wirft).
         Assert.All(

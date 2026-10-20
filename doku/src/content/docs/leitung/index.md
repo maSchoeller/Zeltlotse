@@ -25,6 +25,8 @@ Die Leitung darf alles, was das [Team](/mitarbeitende/) darf. **Nur die Leitung*
 - den Teilnehmer-Zugang per QR-Code an- und abschalten – siehe [Module schalten](/leitung/module-schalten/),
 - die Freizeit abschließen – siehe [Freizeit abschließen](/leitung/freizeit-abschliessen/).
 
+Die Kanäle „Team“ und „Alle“ nutzt die Leitung genauso wie das Team: Nachrichten schreiben, an alle erst nach der Rückfrage „An … Personen senden?“, und auf Wunsch Benachrichtigungen aufs Handy – siehe [Kanäle Team und Alle](/mitarbeitende/kanaele/).
+
 ## Dokumente
 
 Infobrief, Packliste, Notfallnummern und Anfahrt legen Leitung und Team gemeinsam an der Freizeit ab; das ist keine Aufgabe nur für die Leitung. Der Weg dorthin ist der Knopf **Dokumente** auf der Startseite der Freizeit. Für jedes Dokument entscheidet die Sichtbarkeit, ob nur das Team, auch die Eltern in der Elterninfo oder alle auf der Freizeitseite es sehen. Wie das geht, steht unter [Dokumente ablegen](/mitarbeitende/dokumente/).

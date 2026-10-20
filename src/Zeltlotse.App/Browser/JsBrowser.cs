@@ -18,7 +18,7 @@ public sealed class JsBrowser(IJSRuntime js) : IBrowser, IAsyncDisposable
     {
         var empfaenger = DotNetObjectReference.Create(new OnlineEmpfaenger(geaendert));
         var beobachtung = await (await Modul()).InvokeAsync<IJSObjectReference>("onlineBeobachten", empfaenger);
-        return new Beobachtung(beobachtung, empfaenger);
+        return new Beobachtung<OnlineEmpfaenger>(beobachtung, empfaenger);
     }
 
     public async ValueTask<DateTimeOffset?> ZuletztAktualisiertLesenAsync()
@@ -40,6 +40,45 @@ public sealed class JsBrowser(IJSRuntime js) : IBrowser, IAsyncDisposable
 
     public async ValueTask DateiSpeichernAsync(string name, string medientyp, byte[] inhalt) =>
         await (await Modul()).InvokeVoidAsync("dateiSpeichern", name, medientyp, inhalt);
+
+    public async ValueTask<PushStatus> PushStatusAsync() =>
+        await (await Modul()).InvokeAsync<string>("pushStatus") switch
+        {
+            "an" => PushStatus.An,
+            "aus" => PushStatus.Aus,
+            "abgelehnt" => PushStatus.Abgelehnt,
+            "homebildschirm" => PushStatus.NurMitHomeBildschirm,
+            _ => PushStatus.NichtUnterstuetzt,
+        };
+
+    public async ValueTask<PushAboDaten?> PushAboLesenAsync() =>
+        await (await Modul()).InvokeAsync<PushAboDaten?>("pushAboLesen");
+
+    public async ValueTask<PushAboDaten?> PushAbonnierenAsync(string oeffentlicherSchluessel) =>
+        await (await Modul()).InvokeAsync<PushAboDaten?>("pushAbonnieren", oeffentlicherSchluessel);
+
+    /// <summary>Fehler des Browsers (JS) gelten als „kein Abo beendet“; so übersteht die Abmeldung der Sitzung sie.</summary>
+    public async ValueTask<string?> PushAbmeldenAsync()
+    {
+        try
+        {
+            return await (await Modul()).InvokeAsync<string?>("pushAbmelden");
+        }
+        catch (Exception fehler) when (fehler is JSException or JSDisconnectedException)
+        {
+            return null;
+        }
+    }
+
+    public async ValueTask<IAsyncDisposable> PushBeobachtenAsync(Func<Task> eingegangen)
+    {
+        var empfaenger = DotNetObjectReference.Create(new PushEmpfaenger(eingegangen));
+        var beobachtung = await (await Modul()).InvokeAsync<IJSObjectReference>("pushBeobachten", empfaenger);
+        return new Beobachtung<PushEmpfaenger>(beobachtung, empfaenger);
+    }
+
+    public async ValueTask AnsEndeScrollenAsync(string elementId) =>
+        await (await Modul()).InvokeVoidAsync("ansEndeScrollen", elementId);
 
     public async ValueTask DisposeAsync()
     {
@@ -63,7 +102,15 @@ public sealed class JsBrowser(IJSRuntime js) : IBrowser, IAsyncDisposable
         public Task OnlineGeaendert(bool online) => geaendert(online);
     }
 
-    private sealed class Beobachtung(IJSObjectReference beobachtung, DotNetObjectReference<OnlineEmpfaenger> empfaenger) : IAsyncDisposable
+    /// <summary>Story 6-1: Ziel der Rückrufe aus <c>pushBeobachten</c>.</summary>
+    public sealed class PushEmpfaenger(Func<Task> eingegangen)
+    {
+        [JSInvokable("PushEingegangen")]
+        public Task PushEingegangen() => eingegangen();
+    }
+
+    private sealed class Beobachtung<TEmpfaenger>(IJSObjectReference beobachtung, DotNetObjectReference<TEmpfaenger> empfaenger) : IAsyncDisposable
+        where TEmpfaenger : class
     {
         public async ValueTask DisposeAsync()
         {

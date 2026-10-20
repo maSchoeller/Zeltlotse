@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.Api.Contracts.Freizeiten;
 using Zeltlotse.Testing;
 using static Zeltlotse.Api.Tests.AnmeldeHelfer;
@@ -79,12 +80,19 @@ internal sealed class FreizeitpassSzenario : IAsyncDisposable
     public string TeilnehmendeZ { get; private set; } = null!;
 
     /// <param name="mitTestEndpunkten">Story 3-7: bildet die <see cref="TestEndpunkte"/> ab (z. B. den Endpunkt des Schalters Verpflegung).</param>
-    public static async Task<FreizeitpassSzenario> AufbauenAsync(PostgresContainer postgres, S3Container? s3 = null, bool mitTestEndpunkten = false)
+    /// <param name="zusatzDienste">Story 6-1: weitere Registrierungen nur für den Test (z. B. ein aufzeichnender Push-Versand), vor dem Start des Hosts.</param>
+    public static async Task<FreizeitpassSzenario> AufbauenAsync(
+        PostgresContainer postgres, S3Container? s3 = null, bool mitTestEndpunkten = false, Action<IServiceCollection>? zusatzDienste = null)
     {
         var szenario = new FreizeitpassSzenario(await postgres.NeueMigrierteDatenbankAsync());
         if (mitTestEndpunkten)
         {
             szenario.Factory.ZusatzDienste.Add(TestEndpunkte.Registrieren);
+        }
+
+        if (zusatzDienste is not null)
+        {
+            szenario.Factory.ZusatzDienste.Add(zusatzDienste);
         }
 
         if (s3 is not null)

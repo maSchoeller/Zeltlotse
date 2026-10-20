@@ -227,6 +227,42 @@ public sealed class KomponentenTests : BunitContext
         Assert.Equal("Teilnehmende", cut.Find(".elkw-people__who span").TextContent);
     }
 
+    // ---------- Kanal-Nachrichten (Story 6-1) ----------
+
+    [Fact]
+    public void Kanal_Nachrichten_zeigen_je_Nachricht_Initialen_Name_Uhrzeit_in_Berlin_und_Text_in_der_gegebenen_Reihenfolge()
+    {
+        var cut = Render<KanalNachrichten>(ps => ps.Add(p => p.Nachrichten, new[]
+        {
+            new KanalNachrichtEintrag("LF", "Lea Feuerstein", new DateTimeOffset(2027, 8, 3, 6, 5, 0, TimeSpan.Zero), "Frühstück um 8.\nBitte pünktlich."),
+            new KanalNachrichtEintrag("?", "Gelöschte Person", new DateTimeOffset(2027, 8, 3, 22, 30, 0, TimeSpan.Zero), "Gute Nacht"),
+        }));
+
+        var liste = cut.Find("ol.zl-kanal");
+        Assert.Equal("Nachrichten", liste.GetAttribute("aria-label"));
+        var eintraege = liste.Children;
+        Assert.Equal(2, eintraege.Length);
+        Assert.Equal("""<span class="elkw-avatar" aria-hidden="true">LF</span>""", eintraege[0].QuerySelector(".elkw-avatar")!.OuterHtml);
+        Assert.Equal("Lea Feuerstein", eintraege[0].QuerySelector("strong")!.TextContent);
+        var zeit = eintraege[0].QuerySelector("time")!;
+        // Europe/Berlin (Sommerzeit): 06:05 UTC ist 08:05 Uhr; über Mitternacht zählt der Berliner Tag.
+        Assert.Equal(("03.08. 08:05", "2027-08-03T06:05:00.0000000+00:00"), (zeit.TextContent, zeit.GetAttribute("datetime")));
+        Assert.Equal("Frühstück um 8.\nBitte pünktlich.", eintraege[0].QuerySelector(".zl-kanal__text")!.TextContent);
+        Assert.Equal(
+            ("?", "Gelöschte Person", "04.08. 00:30"),
+            (eintraege[1].QuerySelector(".elkw-avatar")!.TextContent, eintraege[1].QuerySelector("strong")!.TextContent, eintraege[1].QuerySelector("time")!.TextContent));
+        Assert.Empty(cut.FindAll("button, a, img"));
+    }
+
+    [Fact]
+    public void Kanal_Nachrichten_ohne_Nachrichten_zeigen_den_Leer_Zustand()
+    {
+        var cut = Render<KanalNachrichten>(ps => ps.Add(p => p.Nachrichten, Array.Empty<KanalNachrichtEintrag>()));
+
+        Assert.Empty(cut.FindAll("ol"));
+        Assert.Equal("Noch keine Nachrichten.", cut.Find(".elkw-empty p").TextContent);
+    }
+
     // ---------- Telefon-Link ----------
 
     [Fact]

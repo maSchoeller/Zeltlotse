@@ -10,6 +10,8 @@
     <PackageReference Include="AWSSDK.S3" />
     <!-- SMTP-Adapter (AD-13, AD-23): einziger Ort mit Mail-Code. -->
     <PackageReference Include="MailKit" />
+    <!-- Web-Push-Adapter (AD-21, AD-23, Story 6-1): einziger Ort mit Code für das Push-Protokoll. -->
+    <PackageReference Include="Lib.Net.Http.WebPush" />
     <!-- Auslieferung der Web-App unter /app (AD-5): Blazor-WebAssembly-Dateien eines referenzierten Projekts. -->
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
   </ItemGroup>

@@ -13,6 +13,25 @@ public sealed class StartpruefungTests(PostgresContainer postgres)
     [Theory]
     [InlineData("")]
     [InlineData("AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHg==")] // 31 Bytes
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")] // 32 Bytes, aber kein gültiger P-256-Schlüssel
+    [InlineData("kein base64")]
+    public async Task Story_6_1_fehlender_oder_ungueltiger_VAPID_Schluessel_bricht_den_Start_ab_ohne_den_Wert_zu_nennen(string wert)
+    {
+        var factory = new ZeltlotseApiFactory(await postgres.NeueDatenbankAsync());
+        factory.Einstellungen["Zeltlotse:Push:VapidSchluessel"] = wert;
+
+        var fehler = await StartScheitertAsync(factory);
+
+        Assert.Contains("Zeltlotse:Push:VapidSchluessel", fehler, StringComparison.Ordinal);
+        if (wert.Length > 0)
+        {
+            Assert.DoesNotContain(wert, fehler, StringComparison.Ordinal);
+        }
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHg==")] // 31 Bytes
     [InlineData("kein base64")]
     public async Task Fehlender_oder_ungueltiger_Hauptschluessel_bricht_den_Start_ab_ohne_den_Wert_zu_nennen(string wert)
     {

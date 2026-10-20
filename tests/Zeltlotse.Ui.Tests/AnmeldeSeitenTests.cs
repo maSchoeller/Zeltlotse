@@ -344,8 +344,11 @@ public sealed class AnmeldeSeitenTests : BunitContext
     }
 
     [Fact]
-    public async Task Konto_Abmelden_meldet_ab_verwirft_das_Token_und_fuehrt_zur_Seite_Anmelden()
+    public async Task Konto_Abmelden_meldet_ab_verwirft_das_Token_beendet_das_Push_Abo_und_fuehrt_zur_Seite_Anmelden()
     {
+        // Story 6-1: Das Gerät hat ein Push-Abo; nach dem Abmelden soll es keine Nachrichten der Person mehr zeigen.
+        var browser = new NachgebildeterBrowser { Push = Zeltlotse.App.Browser.PushStatus.An, Abo = new("https://fcm.googleapis.com/fcm/send/geraet", "p", "a") };
+        Services.AddSingleton<Zeltlotse.App.Browser.IBrowser>(browser);
         KontoServer(hatPasswort: false);
         _server.Bei(HttpMethod.Post, "/api/konten/abmelden", () => new HttpResponseMessage(HttpStatusCode.NoContent));
         _server.Bei(HttpMethod.Post, "/api/betrieb/fehler", () => new HttpResponseMessage(HttpStatusCode.NoContent));
@@ -356,6 +359,7 @@ public sealed class AnmeldeSeitenTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.Equal("http://localhost/anmelden", Navigation.Uri));
         Assert.False(Sitzung.Angemeldet);
+        Assert.Equal((Zeltlotse.App.Browser.PushStatus.Aus, (Zeltlotse.App.Browser.PushAboDaten?)null), (browser.Push, browser.Abo));
         var tokenAbmelden = _server.Anfragen.Single(a => a.Pfad == "/api/konten/abmelden").Kopfzeilen[Zeltlotse.Api.Contracts.Gemeinsam.Kopfzeilen.Antiforgery];
 
         // Der nächste ändernde Aufruf holt ein neues Token.

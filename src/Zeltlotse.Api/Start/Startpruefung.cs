@@ -4,6 +4,7 @@ using Npgsql;
 using Zeltlotse.Api.Adapter;
 using Zeltlotse.Api.Demo;
 using Zeltlotse.SharedKernel.Datenschutz;
+using Zeltlotse.SharedKernel.Push;
 using Zeltlotse.SharedKernel.Web;
 
 namespace Zeltlotse.Api.Start;
@@ -23,7 +24,7 @@ internal sealed class DbKontextVerzeichnis(IServiceCollection services)
 
 /// <summary>
 /// Prüfungen vor den Migrationen; jeder Verstoß bricht den Start ab, ohne Geheimnisse zu nennen:
-/// Hauptschlüssel (AD-14), HMAC-Schlüssel der Logs (AD-22), Demo-Daten nur in <c>Development</c>/<c>Testing</c> (NFR-20),
+/// Hauptschlüssel (AD-14), VAPID-Schlüssel (AD-21), HMAC-Schlüssel der Logs (AD-22), Demo-Daten nur in <c>Development</c>/<c>Testing</c> (NFR-20),
 /// Mail-Versand (Art, Ordner-Adapter nur in <c>Development</c>/<c>Testing</c>), öffentliche Adresse, gültige Mail-Adressen in
 /// <c>Zeltlotse:GlobalAdmins</c> und – außerhalb der Umgebung <c>Testing</c> –
 /// keine DbContexts mit <c>EnableSensitiveDataLogging</c>/<c>EnableDetailedErrors</c> und keine Verbindung
@@ -36,6 +37,8 @@ internal static class Startpruefung
     public static void Ausfuehren(IServiceProvider dienste, IHostEnvironment umgebung)
     {
         _ = dienste.GetRequiredService<Hauptschluessel>();
+        // Story 6-1: der VAPID-Schlüssel für Web-Push (AD-21).
+        _ = dienste.GetRequiredService<VapidSchluessel>();
         ProtokollSchwaerzung.SchluesselPruefen(dienste.GetRequiredService<IConfiguration>());
         DemoDatenPruefen(dienste.GetRequiredService<IConfiguration>(), umgebung);
         MailRegistrierung.Pruefen(dienste.GetRequiredService<IConfiguration>(), umgebung, TestUmgebung);

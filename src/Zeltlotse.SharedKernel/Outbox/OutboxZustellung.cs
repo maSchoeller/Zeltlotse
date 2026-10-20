@@ -7,6 +7,7 @@ using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Ereignisse;
 using Zeltlotse.SharedKernel.Mail;
 using Zeltlotse.SharedKernel.Mandanten;
+using Zeltlotse.SharedKernel.Push;
 
 namespace Zeltlotse.SharedKernel.Outbox;
 
@@ -25,13 +26,15 @@ public interface IOutboxZustellung
 /// aus dem Umschlag; ein Fehler bei einem Empfänger hält die anderen nicht auf und wird mit wachsender
 /// Wartezeit wiederholt. Je (Datensatz, Empfänger) wird in der Reihenfolge der Folgenummer zugestellt. Mail-Aufträge
 /// (Empfänger <see cref="MailAuftraege.Empfaenger"/>) baut der registrierte <see cref="IMailAufbau{TAuftrag}"/> erst hier zur Mail
-/// und <see cref="IMailVersand"/> verschickt sie; ohne Inbox und ohne Command.
+/// und <see cref="IMailVersand"/> verschickt sie; ohne Inbox und ohne Command. Story 6-1: Push-Aufträge (Empfänger <see cref="PushAuftraege.Empfaenger"/>)
+/// baut der registrierte <see cref="IPushAufbau{TAuftrag}"/> zur Sendung, und <see cref="IPushVersand"/> schickt sie an jedes Ziel einzeln.
 /// </summary>
 internal sealed partial class OutboxZustellung(
     IServiceScopeFactory scopes,
     IEnumerable<ModulBeschreibung> module,
     EreignisKatalog katalog,
     MailKatalog mailKatalog,
+    PushKatalog pushKatalog,
     TimeProvider uhr,
     ILogger<OutboxZustellung> logger) : IOutboxZustellung
 {
@@ -135,6 +138,12 @@ internal sealed partial class OutboxZustellung(
             return;
         }
 
+        if (empfaenger == PushAuftraege.Empfaenger)
+        {
+            await PushZustellenAsync(nachricht, abbruch);
+            return;
+        }
+
         var eintrag = katalog.Finden(nachricht.Typ, empfaenger)
                       ?? throw new EmpfaengerUnbekanntException();
         var ereignis = JsonSerializer.Deserialize(nachricht.Inhalt, eintrag.EreignisTyp, ModulDbContext.JsonOptionen)
@@ -166,6 +175,64 @@ internal sealed partial class OutboxZustellung(
 
         await scope.ServiceProvider.GetRequiredService<IMailVersand>().SendenAsync(inhalt.An, inhalt.Betreff, inhalt.Text, abbruch);
     }
+
+    /// <summary>
+    /// Story 6-1: Baut die Sendung eines Push-Auftrags im eigenen Scope mit dem Mandanten aus dem Umschlag und schickt sie an jedes Ziel einzeln.
+    /// <c>null</c> heißt „nichts zu senden“. Ein Fehler bei einem Ziel wird nur mit seinem Typ geloggt, und das Ziel ist erledigt: Würde der ganze
+    /// Auftrag wiederholt, bekämen die übrigen Ziele den Push doppelt (die Push-Dienste puffern selbst). Ziele, die der Push-Dienst nicht mehr kennt,
+    /// räumt der Besitzer der Abos danach ab; scheitert das, wird es ebenso nur geloggt.
+    /// </summary>
+    private async Task PushZustellenAsync(OutboxNachricht nachricht, CancellationToken abbruch)
+    {
+        var eintrag = pushKatalog.Finden(nachricht.Typ) ?? throw new EmpfaengerUnbekanntException();
+        var auftrag = JsonSerializer.Deserialize(nachricht.Inhalt, eintrag.AuftragTyp, ModulDbContext.JsonOptionen)
+                      ?? throw new JsonException("Leerer Push-Auftrag in der Outbox.");
+
+        await using var scope = scopes.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<MandantenKontext>().Setzen(nachricht.OrganisationId);
+        var sendung = await eintrag.Aufbauen(scope.ServiceProvider, auftrag, abbruch);
+        if (sendung is null)
+        {
+            return;
+        }
+
+        var versand = scope.ServiceProvider.GetRequiredService<IPushVersand>();
+        var ungueltig = new List<Guid>();
+        foreach (var ziel in sendung.Ziele)
+        {
+            try
+            {
+                if (await versand.SendenAsync(ziel, sendung.Inhalt, abbruch) == PushErgebnis.ZielUngueltig)
+                {
+                    ungueltig.Add(ziel.Id);
+                }
+            }
+            catch (Exception fehler) when (!abbruch.IsCancellationRequested)
+            {
+                PushZielFehlgeschlagen(nachricht.Id, ziel.Id, fehler.GetType().Name);
+            }
+        }
+
+        if (ungueltig.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            await eintrag.UngueltigeZiele(scope.ServiceProvider, ungueltig, abbruch);
+        }
+        catch (Exception fehler) when (!abbruch.IsCancellationRequested)
+        {
+            PushAufraeumenFehlgeschlagen(nachricht.Id, fehler.GetType().Name);
+        }
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Push für Auftrag {EreignisId} an Ziel {ZielId} fehlgeschlagen ({FehlerTyp}).")]
+    private partial void PushZielFehlgeschlagen(Guid ereignisId, Guid zielId, string fehlerTyp);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Abgelaufene Push-Ziele zu Auftrag {EreignisId} nicht abgeräumt ({FehlerTyp}).")]
+    private partial void PushAufraeumenFehlgeschlagen(Guid ereignisId, string fehlerTyp);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Zustellung an {Empfaenger} für Ereignis {EreignisId} fehlgeschlagen (Versuch {Versuche}, {FehlerTyp}).")]
     private partial void ZustellungFehlgeschlagen(string empfaenger, Guid ereignisId, int versuche, string fehlerTyp);

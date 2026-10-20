@@ -7,6 +7,8 @@ var builder = DistributedApplication.CreateBuilder(args);
 var base64Schluessel = new GenerateParameterDefault { MinLength = 43, Lower = true, Upper = true, Numeric = true, Special = false };
 var hauptschluessel = builder.AddParameter("hauptschluessel", base64Schluessel, secret: true, persist: true);
 var hmacSchluessel = builder.AddParameter("protokoll-hmac", base64Schluessel, secret: true, persist: true);
+// Story 6-1: privater VAPID-Schlüssel für Web-Push (AD-21), 32 Bytes wie der Hauptschlüssel; der öffentliche wird daraus abgeleitet.
+var vapidSchluessel = builder.AddParameter("vapid-schluessel", base64Schluessel, secret: true, persist: true);
 
 var dateienZugang = builder.AddParameter(
     "dateien-zugang", new GenerateParameterDefault { MinLength = 20, Special = false }, secret: true, persist: true);
@@ -42,6 +44,7 @@ var api = builder.AddProject<Projects.Zeltlotse_Api>("api", launchProfileName: "
     .WaitFor(dateien)
     .WithEnvironment("Zeltlotse__Verschluesselung__Hauptschluessel", ReferenceExpression.Create($"{hauptschluessel}="))
     .WithEnvironment("Zeltlotse__Protokoll__HmacSchluessel", ReferenceExpression.Create($"{hmacSchluessel}="))
+    .WithEnvironment("Zeltlotse__Push__VapidSchluessel", ReferenceExpression.Create($"{vapidSchluessel}="))
     .WithEnvironment("Zeltlotse__Dateien__Endpunkt", dateien.GetEndpoint("s3"))
     .WithEnvironment("Zeltlotse__Dateien__Bucket", "zeltlotse")
     .WithEnvironment("Zeltlotse__Dateien__Zugang", dateienZugang)

@@ -140,6 +140,19 @@ internal static class DemoKatalog
         ("daniel.probst@example.org", "Mia", "lea.feuerstein@example.org"),
     ];
 
+    /// <summary>
+    /// Story 6-1: Nachrichten in den Kanälen der Demo-Freizeit, in dieser Reihenfolge (Kanal, Mail der Person, die schreibt, Text). Jonas und Miriam sind
+    /// Leitung, Lea Team. Nur, solange die Freizeit noch keine Nachricht hat.
+    /// </summary>
+    public static IReadOnlyList<(Zeltlotse.Api.Contracts.Kanaele.Kanal Kanal, string Mail, string Text)> KanalNachrichten { get; } =
+    [
+        (Zeltlotse.Api.Contracts.Kanaele.Kanal.Team, "jonas.huettner@example.org", "Feuerholz liegt hinter dem Küchenzelt. Wer übernimmt heute die Nachtwache?"),
+        (Zeltlotse.Api.Contracts.Kanaele.Kanal.Team, "lea.feuerstein@example.org", "Ich übernehme bis 1 Uhr, danach Miriam."),
+        (Zeltlotse.Api.Contracts.Kanaele.Kanal.Team, "miriam.zeltner@example.org", "Passt. Morgen um 7:30 kurze Teambesprechung am Lagerfeuerplatz."),
+        (Zeltlotse.Api.Contracts.Kanaele.Kanal.Alle, "jonas.huettner@example.org", "Mittagessen heute um 13:30 statt 13:00."),
+        (Zeltlotse.Api.Contracts.Kanaele.Kanal.Alle, "miriam.zeltner@example.org", "Wandertag morgen: feste Schuhe, Regenjacke und eine volle Trinkflasche einpacken."),
+    ];
+
     /// <summary>Story 4-4: Mahlzeiten, die die Küche als Restetag markiert (Tag, Titel der Mahlzeit).</summary>
     public static IReadOnlyList<(DateOnly Tag, string Mahlzeit)> Restetage { get; } = [(new DateOnly(2027, 8, 3), "Abendessen")];
 

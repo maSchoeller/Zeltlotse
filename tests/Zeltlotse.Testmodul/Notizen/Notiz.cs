@@ -30,6 +30,8 @@ internal sealed class Notiz : Aggregat, IOrganisationsEigen
 
     public void MailVormerken() => MailVormerken(new Mails.NotizMail(Id));
 
+    public void PushVormerken() => PushVormerken(new Pushes.NotizPush(Id));
+
     public void Aendern(string text)
     {
         Text = text;

@@ -25,4 +25,47 @@ public interface IBrowser
 
     /// <summary>Bietet Bytes als Datei zum Speichern an (Blob, Objekt-URL, Link-Klick; ohne Pop-up, CSP-konform).</summary>
     ValueTask DateiSpeichernAsync(string name, string medientyp, byte[] inhalt);
+
+    /// <summary>Story 6-1: Was dieses Gerät mit Push kann und ob es ein Abo hat; fragt nie nach der Erlaubnis.</summary>
+    ValueTask<PushStatus> PushStatusAsync();
+
+    /// <summary>Story 6-1: Das bestehende Push-Abo des Browsers oder <c>null</c>; fragt nie nach der Erlaubnis.</summary>
+    ValueTask<PushAboDaten?> PushAboLesenAsync();
+
+    /// <summary>
+    /// Story 6-1: Fragt nach der Erlaubnis (nur nach einem Tipp auf „Benachrichtigungen einschalten“) und abonniert Push mit dem öffentlichen VAPID-Schlüssel;
+    /// <c>null</c>, wenn die Erlaubnis verweigert wurde oder das Abonnieren scheiterte.
+    /// </summary>
+    ValueTask<PushAboDaten?> PushAbonnierenAsync(string oeffentlicherSchluessel);
+
+    /// <summary>Story 6-1: Beendet das Push-Abo des Browsers und liefert seinen Endpunkt; ohne Abo <c>null</c>.</summary>
+    ValueTask<string?> PushAbmeldenAsync();
+
+    /// <summary>Story 6-1: Meldet jeden eingegangenen Push (der Service Worker sagt den offenen Fenstern Bescheid); Entsorgen beendet die Beobachtung.</summary>
+    ValueTask<IAsyncDisposable> PushBeobachtenAsync(Func<Task> eingegangen);
+
+    /// <summary>Story 6-1: Scrollt das Element mit der Kennung ans untere Ende des sichtbaren Bereichs (die Kanal-Seite öffnet am Ende).</summary>
+    ValueTask AnsEndeScrollenAsync(string elementId);
 }
+
+/// <summary>Story 6-1: Was ein Gerät mit Push kann.</summary>
+public enum PushStatus
+{
+    /// <summary>Der Browser kennt Web-Push nicht.</summary>
+    NichtUnterstuetzt,
+
+    /// <summary>iPhone oder iPad im Browser: Push geht erst, wenn Zeltlotse auf dem Home-Bildschirm liegt.</summary>
+    NurMitHomeBildschirm,
+
+    /// <summary>Die Erlaubnis für Benachrichtigungen ist auf dem Gerät verweigert.</summary>
+    Abgelehnt,
+
+    /// <summary>Möglich, aber noch kein Abo.</summary>
+    Aus,
+
+    /// <summary>Der Browser hat ein Abo.</summary>
+    An,
+}
+
+/// <summary>Story 6-1: Das Push-Abo des Browsers (Web-Push-Standard): Endpunkt beim Push-Dienst und die Schlüssel (base64url).</summary>
+public sealed record PushAboDaten(string Endpunkt, string P256dh, string Auth);

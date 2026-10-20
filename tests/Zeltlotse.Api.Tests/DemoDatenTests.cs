@@ -402,6 +402,17 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
             (beitrag.GetProperty("personId").GetGuid(), beitrag.GetProperty("bezahlt").GetBoolean(), beitrag.GetProperty("abgehaktVon").GetGuid()));
         Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM finanzen.beitrag_vermerk"));
 
+        // Story 6-1: drei Nachrichten im Kanal „Team“ (Jonas, Lea, Miriam) und zwei in „Alle“ (Jonas, Miriam), älteste zuerst; „Alle“ erreicht Mia und das
+        // Team (vier Personen). Nichts doppelt, auch nach dem zweiten Einspielen.
+        var team = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/kanaele/team/nachrichten", Abbruch));
+        Assert.Equal(
+            [.. DemoKatalog.KanalNachrichten.Where(n => n.Kanal == Zeltlotse.Api.Contracts.Kanaele.Kanal.Team).Select(n => n.Text)],
+            team.GetProperty("nachrichten").EnumerateArray().Select(n => n.GetProperty("text").GetString()!));
+        Assert.Equal(lea, team.GetProperty("nachrichten")[1].GetProperty("autorPersonId").GetGuid());
+        var alle = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/kanaele/alle/nachrichten", Abbruch));
+        Assert.Equal((2, 4), (alle.GetProperty("nachrichten").GetArrayLength(), alle.GetProperty("personenAlle").GetInt32()));
+        Assert.Equal(5L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kanaele.nachricht"));
+
         // Story 2-5: Die Fragen-Auswahl kam vor den Anmeldungen: Emmas Freigabe (eingegangen) und Mias (bestätigt) tragen die Fragen für
         // Teilnehmende, Leas die für Mitarbeitende. Daniel hat für Mia drei Antworten gespeichert, Lea eine Team-Notiz zu Mia geschrieben
         // (genau eine, auch nach dem zweiten Einspielen, nur verschlüsselt). Emmas Anmeldung nennt „Einsicht bis“.

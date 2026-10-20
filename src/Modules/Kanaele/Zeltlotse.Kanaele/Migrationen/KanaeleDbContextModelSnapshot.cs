@@ -11,7 +11,7 @@ using Zeltlotse.Kanaele.Daten;
 namespace Zeltlotse.Kanaele.Migrationen
 {
     [DbContext(typeof(KanaeleDbContext))]
-    internal partial class KanaeleDbContextModelSnapshot : ModelSnapshot
+    partial class KanaeleDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -22,6 +22,96 @@ namespace Zeltlotse.Kanaele.Migrationen
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Zeltlotse.Kanaele.Nachrichten.Nachricht", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AutorPersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Folgenummer")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("GesendetAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Kanal")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("Laufnummer")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Laufnummer"));
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AutorPersonId");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("FreizeitId", "Kanal", "GesendetAm");
+
+                    b.ToTable("nachricht", "kanaele");
+                });
+
+            modelBuilder.Entity("Zeltlotse.Kanaele.Push.PushAbo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AngelegtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Auth")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Endpunkt")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("P256dh")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("FreizeitId", "Endpunkt")
+                        .IsUnique();
+
+                    b.ToTable("push_abo", "kanaele");
+                });
 
             modelBuilder.Entity("Zeltlotse.SharedKernel.Outbox.InboxEintrag", b =>
                 {

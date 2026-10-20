@@ -38,6 +38,7 @@ builder.Services.AddWebSicherheit();
 builder.Services.AddBetrieb();
 builder.Services.AddDateiSpeicher();
 builder.Services.AddMailVersand();
+builder.Services.AddPushVersand();
 builder.Services.AddPublicSeiten(sp => sp.GetRequiredService<PublicSeitenDienstKennung>().Geheimnis);
 builder.Services.AddSingleton(new DbKontextVerzeichnis(builder.Services));
 

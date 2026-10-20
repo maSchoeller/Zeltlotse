@@ -1,6 +1,7 @@
 // Das einzige Interop-Modul der Web-App (AD-29), nur über die C#-Schnittstelle IBrowser erreichbar.
 // Inhalt: Online-Status mit Ereignissen, Zeitpunkt der letzten erfolgreichen API-Antwort (localStorage),
-// Neu laden mit Aktivieren eines wartenden Service Workers, Drucken und Datei speichern (Datenauskunft).
+// Neu laden mit Aktivieren eines wartenden Service Workers, Drucken und Datei speichern (Datenauskunft). Story 6-1: Web-Push (Status, Abo lesen,
+// abonnieren, abmelden, eingehende Pushes beobachten) und ans Ende scrollen. Die Erlaubnis für Benachrichtigungen fragt nur pushAbonnieren ab.
 
 const zuletztSchluessel = 'zeltlotse.zuletztAktualisiert';
 
@@ -69,4 +70,140 @@ export function dateiSpeichern(name, medientyp, inhalt) {
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(adresse), 10000);
+}
+
+// ---------- Story 6-1: Web-Push (AD-21) ----------
+
+function istIphoneOderIpad() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function istVomHomeBildschirm() {
+    return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+}
+
+function kannPush() {
+    return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+// Die Erlaubnis für Mitteilungen: „granted“, „denied“ oder „default“. Manche Browser (z. B. ohne Bildschirm) melden über Notification.permission
+// „denied“, obwohl die Permissions-API die Erlaubnis kennt; dann gilt die Permissions-API.
+async function erlaubnis() {
+    if (Notification.permission === 'granted') {
+        return 'granted';
+    }
+
+    try {
+        const status = await navigator.permissions.query({ name: 'notifications' });
+        return status.state === 'prompt' ? 'default' : status.state;
+    } catch {
+        return Notification.permission;
+    }
+}
+
+async function aboDesBrowsers() {
+    const registrierung = await navigator.serviceWorker.getRegistration();
+    return registrierung ? await registrierung.pushManager.getSubscription() : null;
+}
+
+function aboDaten(abo) {
+    const json = abo.toJSON();
+    return { endpunkt: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth };
+}
+
+function base64UrlZuBytes(text) {
+    const base64 = (text + '='.repeat((4 - text.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+    return Uint8Array.from(atob(base64), zeichen => zeichen.charCodeAt(0));
+}
+
+// „an“, „aus“, „abgelehnt“, „homebildschirm“ (iPhone im Browser) oder „nicht“; fragt nie nach der Erlaubnis.
+export async function pushStatus() {
+    if (!kannPush()) {
+        return istIphoneOderIpad() && !istVomHomeBildschirm() ? 'homebildschirm' : 'nicht';
+    }
+
+    const stand = await erlaubnis();
+    if (stand === 'denied') {
+        return 'abgelehnt';
+    }
+
+    try {
+        return stand === 'granted' && await aboDesBrowsers() ? 'an' : 'aus';
+    } catch {
+        return 'aus';
+    }
+}
+
+export async function pushAboLesen() {
+    if (!kannPush() || await erlaubnis() !== 'granted') {
+        return null;
+    }
+
+    try {
+        const abo = await aboDesBrowsers();
+        return abo ? aboDaten(abo) : null;
+    } catch {
+        return null;
+    }
+}
+
+// Nur nach einem Tipp auf „Benachrichtigungen einschalten“: Erlaubnis erfragen, dann mit dem öffentlichen VAPID-Schlüssel abonnieren.
+export async function pushAbonnieren(oeffentlicherSchluessel) {
+    if (!kannPush() || (await erlaubnis() !== 'granted' && await Notification.requestPermission() !== 'granted')) {
+        return null;
+    }
+
+    try {
+        const registrierung = await navigator.serviceWorker.ready;
+        const abo = await registrierung.pushManager.getSubscription()
+            ?? await registrierung.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlZuBytes(oeffentlicherSchluessel) });
+        return aboDaten(abo);
+    } catch {
+        return null;
+    }
+}
+
+export async function pushAbmelden() {
+    if (!kannPush()) {
+        return null;
+    }
+
+    try {
+        const abo = await aboDesBrowsers();
+        if (!abo) {
+            return null;
+        }
+
+        const endpunkt = abo.endpoint;
+        await abo.unsubscribe();
+        return endpunkt;
+    } catch {
+        return null;
+    }
+}
+
+// Meldet jeden Push, den der Service Worker an die offenen Fenster weitergibt (Methode „PushEingegangen“); liefert ein Objekt zum Beenden.
+export function pushBeobachten(empfaenger) {
+    const nachricht = event => {
+        if (event.data && event.data.typ === 'push') {
+            empfaenger.invokeMethodAsync('PushEingegangen');
+        }
+    };
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('message', nachricht);
+    }
+    return {
+        beenden: () => {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.removeEventListener('message', nachricht);
+            }
+        }
+    };
+}
+
+export function ansEndeScrollen(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.scrollIntoView({ block: 'end' });
+    }
 }

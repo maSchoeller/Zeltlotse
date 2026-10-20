@@ -83,6 +83,15 @@ html.elkw[data-stil="nahbar"] .elkw-app__main :is(.elkw-surface, .elkw-card, .el
 /* Suchfeld oder Trefferliste vor einer Card oder Meldung (Schnellsuche, Story 2-8) */
 .elkw-app__main :is(.elkw-field, .elkw-people) + :is(.elkw-card, .elkw-alert) { margin-top: var(--elkw-space-m); }
 
+/* Story 6-1: Kanal-Nachrichten, neueste unten; Zeilenumbrüche der Nachricht bleiben */
+.zl-kanal { margin: 0 0 var(--elkw-space-m); padding: 0; list-style: none; }
+.zl-kanal li { display: flex; align-items: flex-start; gap: 0.85rem; padding: 0.75rem 0; border-bottom: 1px solid var(--elkw-light); }
+.zl-kanal li:last-child { border-bottom: 0; }
+.zl-kanal__wer { flex: 1; min-width: 0; }
+.zl-kanal__kopf { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--elkw-space-xs); }
+.zl-kanal__kopf time { font-size: var(--elkw-fs-small); }
+.zl-kanal__text { margin: 0.15rem 0 0; white-space: pre-line; overflow-wrap: anywhere; }
+
 /* Felder untereinander außerhalb eines Formulars (z. B. Autosave-Felder in einer Card) */
 :not(.zl-formular) > .elkw-field + .elkw-field { margin-top: var(--elkw-space-s); }
 

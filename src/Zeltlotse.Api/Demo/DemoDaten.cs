@@ -20,6 +20,8 @@ using Zeltlotse.Finanzen.Belege;
 using Zeltlotse.Finanzen.Daten;
 using Zeltlotse.Finanzen.Kalkulation;
 using Zeltlotse.Inventar.Artikel;
+using Zeltlotse.Kanaele.Daten;
+using Zeltlotse.Kanaele.Nachrichten;
 using Zeltlotse.Inventar.Daten;
 using Zeltlotse.Inventar.Reservierungen;
 using Zeltlotse.Inventar.Schaeden;
@@ -188,6 +190,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await BelegeAsync(abbruch);
         // Story 5-3: Lea hakt Mias Beitrag als bezahlt ab (braucht Mias bestätigte Anmeldung und Lea im Team).
         await BeitraegeAsync(abbruch);
+        // Story 6-1: Nachrichten in den Kanälen „Team“ und „Alle“ (braucht Lea im Team).
+        await KanaeleAsync(abbruch);
         await MaterialAsync(abbruch);
         await ZweiteFreizeitAsync(abbruch);
         await InventarAsync(abbruch);
@@ -938,6 +942,35 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             if (ergebnis is BeitragErgebnis.Abgeschlossen)
             {
                 throw new InvalidOperationException($"Demo-Beitrag: {kindName} ließ sich nicht als bezahlt abhaken.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Story 6-1: Nachrichten aus <see cref="DemoKatalog.KanalNachrichten"/> über den Command des Moduls Kanäle, als die Person, die schreibt („Alle“ bestätigt).
+    /// Idempotent: Hat die Freizeit schon eine Nachricht, kommt keine dazu. Ohne Push-Abos geht kein Push hinaus.
+    /// </summary>
+    private async Task KanaeleAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var freizeitId = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name)
+            .Select(f => f.Id)
+            .SingleAsync(abbruch);
+        if (await dienste.GetRequiredService<KanaeleLeseDbContext>().Nachrichten.AnyAsync(n => n.FreizeitId == freizeitId, abbruch))
+        {
+            return;
+        }
+
+        foreach (var (kanal, mail, text) in DemoKatalog.KanalNachrichten)
+        {
+            var autor = (await sender.Send(new KontoSicherstellen(mail), abbruch)).PersonId;
+            if (await sender.Send(new NachrichtSendenCommand(freizeitId, kanal, autor, text, Bestaetigt: true), abbruch) is not NachrichtSendenErgebnis.Gesendet)
+            {
+                throw new InvalidOperationException($"Demo-Nachricht im Kanal {kanal} ließ sich nicht senden.");
             }
         }
     }

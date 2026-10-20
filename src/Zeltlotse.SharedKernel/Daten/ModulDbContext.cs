@@ -4,6 +4,7 @@ using Zeltlotse.SharedKernel.Ereignisse;
 using Zeltlotse.SharedKernel.Mail;
 using Zeltlotse.SharedKernel.Mandanten;
 using Zeltlotse.SharedKernel.Outbox;
+using Zeltlotse.SharedKernel.Push;
 
 namespace Zeltlotse.SharedKernel.Daten;
 
@@ -61,10 +62,14 @@ public abstract class ModulDbContext(DbContextOptions optionen, IMandantenKontex
                 };
                 Outbox.Add(nachricht);
 
-                // Ein Mail-Auftrag hat genau eine Zustellung an den festen Empfänger der Mail-Zustellung (AD-13).
-                IEnumerable<string> empfaengerNamen = abgelegt.Ereignis is IMailAuftrag
-                    ? [MailAuftraege.Empfaenger]
-                    : katalog.EmpfaengerFuer(typ).Select(e => e.Empfaenger);
+                // Ein Mail-Auftrag hat genau eine Zustellung an den festen Empfänger der Mail-Zustellung (AD-13), ein Push-Auftrag an den der
+                // Push-Zustellung (Story 6-1).
+                IEnumerable<string> empfaengerNamen = abgelegt.Ereignis switch
+                {
+                    IMailAuftrag => [MailAuftraege.Empfaenger],
+                    IPushAuftrag => [PushAuftraege.Empfaenger],
+                    _ => katalog.EmpfaengerFuer(typ).Select(e => e.Empfaenger),
+                };
                 foreach (var empfaenger in empfaengerNamen)
                 {
                     Zustellungen.Add(new Zustellung
