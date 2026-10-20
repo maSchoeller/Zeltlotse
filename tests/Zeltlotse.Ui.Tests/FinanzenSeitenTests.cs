@@ -143,7 +143,9 @@ public sealed class FinanzenSeitenTests : BunitContext
         var ergebnis = cut.Find("#ergebnis");
         var beitrag = Balken(cut, "Teilnehmerbeitrag");
         Assert.Equal("275,00 €", Zahl(beitrag));
-        Assert.NotNull(beitrag.QuerySelector(".elkw-status"));
+        // Der Balken zeigt den Anteil der Kosten, der über die Beiträge läuft: 275 € × 40 = 11.000 € von 12.200 €.
+        Assert.Equal("90.16%", Breite(beitrag));
+        Assert.Equal("90 % der Kosten über Beiträge", beitrag.QuerySelector(".elkw-status")!.TextContent);
         Assert.Contains("Gesamtkosten", ergebnis.TextContent, StringComparison.Ordinal);
         Assert.Contains("12.200,00 €", ergebnis.TextContent, StringComparison.Ordinal);
         Assert.Contains("1.200,00 €", ergebnis.TextContent, StringComparison.Ordinal);
@@ -255,6 +257,7 @@ public sealed class FinanzenSeitenTests : BunitContext
 
         Assert.Contains(FinanzenTexte.KeinBeitragText, cut.Find("#ergebnis").TextContent, StringComparison.Ordinal);
         Assert.Equal("–", Zahl(Balken(cut, "Teilnehmerbeitrag")));
+        Assert.Equal("Kein Beitrag", Balken(cut, "Teilnehmerbeitrag").QuerySelector(".elkw-status")!.TextContent);
     }
 
     [Fact]
@@ -320,6 +323,18 @@ public sealed class FinanzenSeitenTests : BunitContext
         Assert.Equal(("100%", "100%"), (Breite(Balken(cut, "Laut Kalkulation")), Breite(Balken(cut, "Mit Reglern"))));
         Assert.Equal("Gleich", Balken(cut, "Mit Reglern").QuerySelector(".elkw-status")!.TextContent);
         Assert.Contains("Differenz: 0,00 €", cut.Find("#vergleich").TextContent, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Regler_reichen_bis_zu_gespeicherten_Werten_ueber_den_Standardgrenzen()
+    {
+        Antworten(kalkulation: KalkulationJson(teilnehmende: 250, tagessatz: 35.25m));
+
+        var cut = RechnerRendern();
+
+        Assert.Equal(("250", "250"), (cut.Find("#rechner-teilnehmende").GetAttribute("max"), cut.Find("#rechner-teilnehmende").GetAttribute("value")));
+        Assert.Equal(("35.25", "35.25"), (cut.Find("#rechner-tagessatz").GetAttribute("max"), cut.Find("#rechner-tagessatz").GetAttribute("value")));
+        Assert.Equal("Gleich", Balken(cut, "Mit Reglern").QuerySelector(".elkw-status")!.TextContent);
     }
 
     [Fact]

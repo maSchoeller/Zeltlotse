@@ -153,7 +153,7 @@ else
                 <Formular Absenden="EinnahmeAnlegenAsync">
                     <Fehleruebersicht Fehler="FehlerListe" />
                     <Feld Label="Bezeichnung *" Id="einnahme-bezeichnung" Wert="@_bezeichnung" Fehler="@_bezeichnungFehler" autocomplete="off"
-                          Hinweis="@($"z. B. Zuschuss Landesjugendplan, höchstens {EinnahmepostenFelder.BezeichnungMaximaleLaenge} Zeichen")"
+                          Hinweis="@($"z. B. Zuschuss Landesjugendplan, keine Namen von Personen, höchstens {EinnahmepostenFelder.BezeichnungMaximaleLaenge} Zeichen")"
                           @oninput="@(e => _bezeichnung = e.Value?.ToString())" />
                     <Feld Label="Betrag in €" Id="einnahme-betrag" Wert="@_betrag" Fehler="@_betragFehler" autocomplete="off" inputmode="decimal"
                           Hinweis="z. B. 1200 oder 250,50; leer heißt 0" @oninput="@(e => _betrag = e.Value?.ToString())" />

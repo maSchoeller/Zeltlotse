@@ -3,7 +3,7 @@ title: 'Story 5-1: Kalkulation und Beitragsrechner'
 type: 'feature'
 created: '2026-10-19'
 baseline_revision: 'd3145bbdf75acc972f3a00fc1e0dc5a94a7d24fc'
-status: 'in-review'
+status: 'done'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -110,6 +110,36 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-10-20 — Review pass
+- verdicts: 26 findings — high 0, medium 2, low 20, false 4, maybe-false 0
+- findings:
+  - `[medium]` `[patch]` (Blind) `BetragLesen` entfernt Null-Nachkommastellen vor der Stellenprüfung: „1,000“ wird still zu 1 €, „2,500“ zu 2,5 € — `FinanzenWerte.BetragLesen` prüft jetzt `Scale` am getippten Wert und normalisiert erst danach; Theorie in `Finanzen.Tests` um „1,000“, „2,500“, „7.500“ ergänzt.
+  - `[low]` `[reject]` (Blind) Erster PATCH mit 409 hinterlässt eine Nullzeile — die Zeile trägt nur die Startwerte 0, sichtbar ändert sich nichts, `version` entscheidet nicht; der Fix bräuchte einen Rollback-Zweig.
+  - `[low]` `[reject]` (Blind) `version` wird gelesen, aber nicht ausgewertet — so verlangt es AD-19 im Intent (allein `alterWert` entscheidet), gleiches Muster wie Programm und Küche; kein Schaden benannt.
+  - `[low]` `[reject]` (Blind) Gleiche Feldnamen „Fixkosten in €“ in sechs Cards — jede Card hat ihre Überschrift, Axe-Prüfung grün; der Fix änderte sichtbare Labels überall.
+  - `[low]` `[patch]` (Blind) Hinweis „keine Namen von Personen“ fehlt am Eingabefeld der Bezeichnung — Hinweis in `Kalkulation.razor` (Einnahme hinzufügen) ergänzt.
+  - `[low]` `[reject]` (Blind) Keine Höchstzahl an Einnahmeposten — im Alltag wenige Posten; der Fix bräuchte neue Regel, Fehlertext und Test.
+  - `[low]` `[reject]` (Blind) Reihenfolge zweier Einnahmen aus derselben Millisekunde nicht gesperrt — nur bei gleichzeitigen POSTs in derselben Millisekunde, Folge nur eine vertauschte Anzeige; Fix bräuchte eine Sperre.
+  - `[low]` `[reject]` (Blind) Hinzufügen bei abgeschaltetem Modul zeigt den allgemeinen Fehler statt „nicht verfügbar“ — seltener Fall während offener Seite, Neuladen zeigt dann „nicht verfügbar“.
+  - `[low]` `[reject]` (Blind) Tagessatz-Regler erreicht 0 € nicht, wenn der gespeicherte Wert neben dem 0,50-Raster liegt — nur bei krummen Tagessätzen, Doku beschreibt den verschobenen Bereich; Fix bräuchte Speziallogik im Regler.
+  - `[low]` `[reject]` (Blind) Schemaname im Roh-SQL fest verdrahtet — gleiches Muster wie `KuecheDbContext`, die Integrationstests gegen PostgreSQL fangen eine Umbenennung.
+  - `[low]` `[reject]` (Blind) GET liest drei Abfragen ohne gemeinsamen Snapshot — kurzzeitig gemischter Stand, der nächste Autosave lädt neu; gleiches Muster wie andere Module.
+  - `[low]` `[reject]` (Blind) `Location` des 201 zeigt auf die Kalkulation statt auf die Einnahme — unter `…/einnahmen/{id}` gibt es kein GET; kein Client nutzt den Header.
+  - `[low]` `[reject]` (Blind) Testlücken (Löschlauf mit leerer Liste, gleichzeitiges Anlegen, Einnahme bleibt im Rechte-Test stehen) — der Rechte-Test prüft nur Statuscodes, die verbliebene Einnahme ändert sie nicht; Rest ohne benannten Schaden.
+  - `[low]` `[reject]` (Blind) `MitReglern` rechnet je Render mehrfach — reine Arithmetik über sechs Werte, vernachlässigbar.
+  - `[low]` `[reject]` (Edge) `KategorieSperrenAsync` legt die Zeile vor der Konfliktprüfung an — wie oben: Nullzeile ohne sichtbare Folge.
+  - `[low]` `[reject]` (Edge) `KalkulationSperrenAsync` legt die Zeile vor der Konfliktprüfung an — wie oben.
+  - `[medium]` `[patch]` (Edge) „1,250“, „1,000“, „7,500“ werden angenommen — gleiche Ursache wie der erste Befund, mit ihm behoben.
+  - `[false]` `[reject]` (Edge) `Schieberegler` wirft bei `Maximum < Minimum` — kein Aufrufer erreicht das: Teilnehmende/Mitarbeitende `Max(200|100, Wert) ≥ 0`, `TagessatzMaximum` liegt auf dem Raster ab `TagessatzMinimum` und ist ≥ 30 €.
+  - `[low]` `[reject]` (Edge) Reihenfolge gleichzeitig angelegter Einnahmen — wie oben.
+  - `[low]` `[reject]` (Edge) Tagessatz-Regler startet bei krummem Wert über 0 € — wie oben.
+  - `[low]` `[patch]` (Verification) Statuswort und Breite des Balkens „Teilnehmerbeitrag“ ungeprüft — `FinanzenSeitenTests` prüft jetzt „90.16%“ und „90 % der Kosten über Beiträge“ sowie „Kein Beitrag“ bei 0 Teilnehmenden.
+  - `[low]` `[patch]` (Verification) Reglergrenzen über den Standardwerten ungeprüft — neuer bUnit-Test `Regler_reichen_bis_zu_gespeicherten_Werten_ueber_den_Standardgrenzen` (250 TN, 35,25 €).
+  - `[false]` `[reject]` (Intent) Kein 403-Fall nach AD-30 — es gibt nur die Freizeitrollen Leitung und Team, beide dürfen Finanzen; die Matrix des Intents verlangt 404/401, getestet auf allen sechs Routen; Token-Routen gibt es nicht.
+  - `[false]` `[reject]` (Intent) Beitragsrechner-Regler bleiben nach „gelaufen“ bedienbar — sie speichern nichts, jeder Schreibzugriff bleibt 409; „nur lesbar“ betrifft gespeicherte Werte.
+  - `[low]` `[reject]` (Intent) Pfeiltasten nur über das native `input type=range` und den E2E-Test geprüft — der Browser liefert die Pfeiltasten-Schritte selbst, der Doku-Screenshot-Test bedient sie.
+  - `[false]` `[reject]` (Intent) Doku als eigener Ordner `finanzen/` statt unter einer Rolle — gleiches Muster wie `kueche/`, `DokuRegeln.PflichtSeiten` und Sidebar führen den Ordner.
+
 ## Design Notes
 
 - **Planzahlen statt Anmeldezahlen:** Live-Kalkulation über Anmeldungen ist „bewusst nie“. Die Höchstzahl Teilnehmende ist nicht über eine Contracts-Schnittstelle erreichbar, und eine Höchstzahl Mitarbeitende gibt es nicht. Darum trägt die Kalkulation beide Zahlen selbst. Das ist einfach und kommt ohne neue Schnittstelle aus.
@@ -128,3 +158,70 @@ deferred: []
 - `dotnet test --project tests/Zeltlotse.Ui.Tests` und `dotnet test --project tests/Zeltlotse.ArchitectureTests` -- expected: grün
 - einmal am Ende: alle Testprojekte einzeln, darunter `dotnet test --project tests/Zeltlotse.E2E.Tests` (inklusive Kategorie Doku) -- expected: grün, Screenshots erzeugt
 - einmal am Ende: `npm run build` in `doku/` -- expected: fehlerfrei
+
+## Auto Run Result
+
+Status: done
+
+**Umgesetzt:** Das Modul Finanzen hat jetzt je Freizeit eine Kalkulation: Planzahlen (Teilnehmende, Mitarbeitende), sechs feste Kategorien mit Fixkosten und Kosten pro Person und Tag, freie Einnahmeposten. Gespeichert wird per Autosave (AD-19). Der Server rechnet Kosten je Kategorie, Gesamtkosten, Einnahmen und Teilnehmerbeitrag mit der gemeinsamen reinen Funktion `Beitragsrechnung`. Der Beitragsrechner ist eine Was-wäre-wenn-Ansicht mit drei Schiebereglern und zwei Vergleichsbalken. Er speichert nichts. Dazu kommen der neue Baustein `Schieberegler`, der Knopf „Finanzen“ auf der Startseite, Löschlauf, Demo-Daten, drei Doku-Seiten unter `finanzen/` und vier Screenshots (Handy und Laptop).
+
+**Geänderte Dateien (Auswahl):**
+- `src/Zeltlotse.Api.Contracts/Finanzen/Kalkulation.cs`: DTOs, Feld-Enums, Rechenregel `Beitragsrechnung`.
+- `src/Modules/Finanzen/Zeltlotse.Finanzen/**`: Entitäten, sechs Slices (GET, PATCH ×3, POST, DELETE), DbContext mit Sperr-Helfern, Migration `Kalkulation`, `FinanzenLoeschlauf`, Routen in `FinanzenModul`.
+- `src/Zeltlotse.App/Features/Finanzen/*`: Seiten Kalkulation und Beitragsrechner, Reiter, Texte. `FreizeitStart.razor`: Knopf „Finanzen“.
+- `src/Zeltlotse.Ui.Komponenten/Schieberegler.razor` mit CSS. `src/Zeltlotse.Ui/Api/FinanzenApiClient.cs`, `Anzeige.Euro`.
+- `src/Zeltlotse.Api/Demo/*`: Schritt Finanzen (40 TN, 10 MA, Beitrag 300,00 €).
+- Tests: `tests/Zeltlotse.Finanzen.Tests` (neu), `Api.Tests/KalkulationTests.cs` (PostgreSQL, AD-30-Fälle 404/401, Schalter, gelaufen, Konflikt, gleichzeitiger erster PATCH, Löschlauf), `Ui.Tests/FinanzenSeitenTests.cs`, `KomponentenTests`, `EndpunktListeTests`, `DemoDatenTests`, `DokuScreenshotTests` (Abschnitt 5-1).
+- Doku: `doku/src/content/docs/finanzen/{index,kalkulation,beitragsrechner}.md`, Sidebar, Querverweise, `DokuRegeln`.
+
+**Review:** 26 Befunde: 2 medium, 20 low, 4 false.
+- Vier Patches eingespielt:
+  - Der Betrags-Parser lehnt jetzt „1,000“ und „2,500“ ab (zählt die getippten Nachkommastellen). Medium, zwei Befunde mit derselben Ursache.
+  - Hinweis „keine Namen von Personen“ an der Einnahme-Bezeichnung.
+  - Test für Statuswort und Breite des Beitragsbalkens.
+  - Test für Reglergrenzen über den Standardwerten.
+- Nichts zurückgestellt.
+- Verworfen mit Begründung (Einzelheiten im Review Triage Log):
+  - Nullzeile nach 409 beim ersten PATCH
+  - `version` ungenutzt (AD-19)
+  - gleiche Feldnamen
+  - keine Höchstzahl an Einnahmen
+  - Reihenfolge bei gleicher Millisekunde
+  - allgemeiner Fehler bei abgeschaltetem Modul
+  - Tagessatz-Regler bei krummem Wert
+  - Schemaname im SQL
+  - GET ohne Snapshot
+  - `Location`-Header
+  - kleinere Testlücken
+  - Mehrfachrechnung im Render
+  - Pfeiltasten über natives Range-Element
+  - Als false verworfen: Regler-Absturz, kein 403-Fall, Regler nach Abschluss, Doku-Ordner.
+
+**Follow-up review recommended:** false. Gepatcht wurden: high 0, medium 1 (Eintrag Parser), low 3.
+
+**Verifikation (nach den Patches):**
+- `dotnet build Zeltlotse.slnx`: 0 Warnungen, 0 Fehler.
+- Alle Testprojekte einzeln grün:
+  - Api 937
+  - E2E inkl. Doku-Screenshots 179
+  - Ui 762
+  - Architektur 135
+  - Finanzen 40
+  - Kueche 119
+  - Personen 157
+  - Programm 91
+  - Freizeiten 93
+  - SharedKernel 111
+  - Organisationen 58
+  - Sicherheit 36
+  - Inventar 34
+  - Konten 26
+  - Ablaeufe 10
+- `npm run build` in `doku/`: fehlerfrei (63 Seiten; nur der bekannte Sitemap-Hinweis).
+- `kalkulation-{handy,laptop}.png` und `beitragsrechner-{handy,laptop}.png` liegen vor und sind verlinkt.
+- Screenshots anderer Seiten, die der Lauf nur mit Rendering-Rauschen neu erzeugt hat, wurden zurückgesetzt.
+
+**Restrisiken:**
+- Ein 409 beim allerersten PATCH legt eine Zeile mit Nullwerten an. Sichtbar ändert sich dadurch nichts.
+- Der Tagessatz-Regler erreicht 0 € nicht, wenn der gespeicherte Tagessatz neben dem 0,50-€-Raster liegt.
+- Der Küchen-Parser `KuecheWerte.MengeLesen` hat dieselbe Eigenart wie der hier behobene Betrags-Parser. Er wurde in dieser Story nicht angefasst.

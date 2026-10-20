@@ -55,8 +55,8 @@ internal static partial class FinanzenWerte
             return null;
         }
 
-        betrag = OhneNullen(betrag);
-        return betrag >= 0 && betrag <= KategorieFelder.BetragMaximum && betrag.Scale <= KategorieFelder.BetragNachkommastellen ? betrag : null;
+        // Die Nachkommastellen zählen wie getippt: „1,000“ oder „2,500“ haben drei (sonst würde „1,000“ still zu 1 €).
+        return betrag >= 0 && betrag <= KategorieFelder.BetragMaximum && betrag.Scale <= KategorieFelder.BetragNachkommastellen ? OhneNullen(betrag) : null;
     }
 
     public static string BetragText(decimal betrag) => KategorieFelder.BetragText(betrag);
