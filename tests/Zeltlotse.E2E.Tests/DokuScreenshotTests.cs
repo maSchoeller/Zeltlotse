@@ -2296,6 +2296,82 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await BildAsync(seite, "tagesansicht", geraet);
     }
 
+    // ---------- Story 5-1: Kalkulation und Beitragsrechner ----------
+
+    /// <summary>
+    /// Lea (Team) öffnet die Demo-Freizeit und tippt „Finanzen“ (das Zeltlager hat Finanzen an). Die Demo-Kalkulation: 40 Teilnehmende, 10 Mitarbeitende,
+    /// 12 Tage, 14.200 € Kosten, 2.200 € Einnahmen, 300,00 € Teilnehmerbeitrag.
+    /// </summary>
+    private async Task FinanzenAsync(IPage seite)
+    {
+        await LeaStartseiteAsync(seite);
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Finanzen", Exact = true }).ClickAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Kalkulation", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("#ergebnis .zl-balken--gross .zl-zahl")).ToHaveTextAsync("300,00 €", new() { Timeout = 60_000 });
+    }
+
+    /// <summary>Die Kalkulation: Ergebnis mit Beitrag und Anteilen, darunter Planzahlen, die sechs Kategorien und die Einnahmen. Nur lesend.</summary>
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Kalkulation(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await FinanzenAsync(seite);
+        var ergebnis = seite.Locator("#ergebnis");
+        await Assertions.Expect(ergebnis).ToContainTextAsync("14.200,00 €");
+        await Assertions.Expect(ergebnis).ToContainTextAsync("2.200,00 €");
+        await Assertions.Expect(ergebnis.Locator(".zl-balken strong")).ToHaveTextAsync(
+            ["Teilnehmerbeitrag", "Unterkunft", "Verpflegung", "Fahrt", "Programm und Material", "Mitarbeitende", "Sonstiges"]);
+        await Assertions.Expect(seite.GetByLabel("Teilnehmende", new() { Exact = true })).ToHaveValueAsync("40");
+        await Assertions.Expect(seite.GetByLabel("Tagessatz pro Person und Tag in €")).ToHaveValueAsync("7");
+        await Assertions.Expect(seite.Locator("#kategorie-Verpflegung")).ToContainTextAsync("Kosten: 4.200,00 €");
+        await Assertions.Expect(seite.Locator("#einnahmen h3")).ToHaveTextAsync(["Zuschuss Landesjugendplan", "Rabatt der Organisation"]);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "kalkulation", geraet);
+    }
+
+    /// <summary>
+    /// Der Beitragsrechner: Lea tippt den Reiter „Beitragsrechner“ und schiebt den Regler „Teilnehmende“ mit der Pfeiltaste von 40 auf 35. Mit Reglern ergibt
+    /// das 315,43 € statt 300,00 € („Teurer“, Differenz +15,43 €); gespeichert wird nichts.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Beitragsrechner(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await FinanzenAsync(seite);
+        await seite.GetByRole(AriaRole.Navigation, new() { Name = "Finanzen" }).GetByRole(AriaRole.Link, new() { Name = "Beitragsrechner", Exact = true }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Beitragsrechner", new() { Timeout = 60_000 });
+        var regler = seite.Locator("#rechner-teilnehmende");
+        await Assertions.Expect(regler).ToHaveValueAsync("40", new() { Timeout = 60_000 });
+        await regler.FocusAsync();
+        for (var i = 0; i < 5; i++)
+        {
+            await regler.PressAsync("ArrowLeft");
+        }
+
+        await Assertions.Expect(seite.Locator("#rechner-teilnehmende-wert")).ToHaveTextAsync("35");
+        var balken = seite.Locator("#vergleich .zl-balken");
+        await Assertions.Expect(balken.Nth(0).Locator(".zl-zahl")).ToHaveTextAsync("300,00 €");
+        await Assertions.Expect(balken.Nth(1).Locator(".zl-zahl")).ToHaveTextAsync("315,43 €");
+        await Assertions.Expect(balken.Nth(1).Locator(".elkw-status")).ToHaveTextAsync("Teurer");
+        await Assertions.Expect(seite.Locator("#vergleich")).ToContainTextAsync("Differenz: +15,43 €");
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        // Das Bild zeigt den Vergleich oben (der Fokus hatte zum Regler gescrollt).
+        await regler.BlurAsync();
+        await seite.EvaluateAsync("() => window.scrollTo(0, 0)");
+
+        await BildAsync(seite, "beitragsrechner", geraet);
+    }
+
     /// <summary>Story 3-6: „Abgelegt am …“ hängt vom Tag des Einspielens ab; im Bild steht ein festes Datum.</summary>
     private static Task AbgelegtAmFestAsync(IPage seite) =>
         seite.EvaluateAsync("() => document.querySelectorAll('.elkw-card p').forEach(p => { if (p.textContent.startsWith('Abgelegt am ')) p.textContent = 'Abgelegt am 14.10.2026'; })");

@@ -1,0 +1,348 @@
+@page "/freizeiten/{FreizeitId:guid}/finanzen/kalkulation"
+@using Zeltlotse.Api.Contracts.Finanzen
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Ui.Kontext
+@using ApiEinnahmeposten = Zeltlotse.Api.Contracts.Finanzen.Einnahmeposten
+@using ApiKalkulation = Zeltlotse.Api.Contracts.Finanzen.Kalkulation
+@inject FreizeitKontextDienst Kontext
+@inject FinanzenApiClient FinanzenApi
+@* Kalkulation (CAP-32, FR-54 bis FR-56, Story 5-1) für Leitung und Team, erreicht über den Knopf „Finanzen“ auf der Startseite (nur mit dem Modul
+   Finanzen). Dachzeile „Finanzen“, Überschrift „Kalkulation“, darunter die Finanzen-Reiter „Kalkulation · Beitragsrechner“.
+   - Card „Ergebnis“ zuerst: Balken „Teilnehmerbeitrag“ mit dem Beitrag als Zahl (ohne Teilnehmende „–“ und der Satz „Ohne Teilnehmende lässt sich kein
+     Beitrag berechnen.“), Gesamtkosten und Einnahmen, je Kategorie ein Balken mit ihrem Anteil an den Gesamtkosten (NFR-16: Zahl und Wort).
+   - Card „Planzahlen“: Teilnehmende und Mitarbeitende als Autosave-Felder, die Tage der Freizeit als Text.
+   - Je Kategorie eine Card mit Fixkosten und Kosten pro Person und Tag (bei Verpflegung „Tagessatz pro Person und Tag“) als Autosave-Felder und den
+     Kosten der Kategorie.
+   - Card „Einnahmen“: je Posten Bezeichnung und Betrag als Autosave-Felder und „Entfernen“ (Inline-Bestätigung), darunter „Einnahme hinzufügen“.
+   Nach jedem gespeicherten Feld lädt die Seite die Kalkulation neu (Ergebnis und Kosten); die Felder behalten dabei ihren Stand mit
+   „Gespeichert · Rückgängig“. „Neu laden“ beim Konflikt baut die Felder aus dem neuen Stand (Ladezähler im @key). In der Phase „gelaufen“ nur lesbar:
+   alle Werte als Text. Kontext oder Kalkulation nicht verfügbar (auch ohne Modul Finanzen) → „Diese Seite ist nicht verfügbar.“; scheitert das Laden,
+   steht die Fehlermeldung. *@
+<PageTitle>Kalkulation – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Finanzen</Dachzeile>
+    <h1>Kalkulation</h1>
+    <FinanzenReiter FreizeitId="FreizeitId" Aktiv="kalkulation" />
+
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+
+    @if (_kalkulation is null || _felder is null || _kontext is null)
+    {
+        @if (_meldung is null)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @if (Abgeschlossen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@FinanzenTexte.AbgeschlossenText</p>
+            </Meldung>
+        }
+
+        <Card Titel="Ergebnis" Id="ergebnis">
+            <Balken Bezeichnung="Teilnehmerbeitrag" Zahl="@FinanzenTexte.Beitrag(_kalkulation.Ergebnis.Teilnehmerbeitrag)" Gross="true"
+                    Prozent="@BeitragProzent" Statuswort="@FinanzenTexte.Beitragsanteil(_kalkulation.Ergebnis, _kalkulation.Teilnehmende)" />
+            @if (_kalkulation.Ergebnis.Teilnehmerbeitrag is null)
+            {
+                <p>@FinanzenTexte.KeinBeitragText</p>
+            }
+            <DetailsListe Eintraege="ErgebnisZeilen" />
+            <h3>Anteile der Kategorien</h3>
+            @foreach (var kategorie in _kalkulation.Kategorien)
+            {
+                <Balken @key="kategorie.Kategorie" Bezeichnung="@Kostenkategorien.Text(kategorie.Kategorie)" Zahl="@Anzeige.Euro(kategorie.Kosten)"
+                        Prozent="@FinanzenTexte.Prozent(kategorie.Kosten, _kalkulation.Ergebnis.Gesamtkosten)"
+                        Statuswort="@FinanzenTexte.Anteil(kategorie.Kosten, _kalkulation.Ergebnis.Gesamtkosten)" />
+            }
+        </Card>
+
+        <Card Titel="Planzahlen" Id="planzahlen">
+            @if (Abgeschlossen)
+            {
+                <p>Teilnehmende: @_kalkulation.Teilnehmende</p>
+                <p>Mitarbeitende: @_kalkulation.Mitarbeitende</p>
+            }
+            else
+            {
+                <p>Geplante Zahlen, unabhängig von den Anmeldungen. Mitarbeitende zählen als Personen mit; ihre Kosten tragen die Beiträge der Teilnehmenden.</p>
+                <AutosaveFeld @key="@($"teilnehmende-{_ladung}")" Label="Teilnehmende" Id="kalkulation-teilnehmende" Feldname="@KalkulationFelder.Teilnehmende"
+                              Pfad="@KalkulationPfad" Wert="@Zahl(_felder.Teilnehmende)" Version="@_felder.Version" Hinweis="Ganze Zahl von 0 bis 1000"
+                              NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                <AutosaveFeld @key="@($"mitarbeitende-{_ladung}")" Label="Mitarbeitende" Id="kalkulation-mitarbeitende" Feldname="@KalkulationFelder.Mitarbeitende"
+                              Pfad="@KalkulationPfad" Wert="@Zahl(_felder.Mitarbeitende)" Version="@_felder.Version" Hinweis="Ganze Zahl von 0 bis 1000"
+                              NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+            }
+            <p>Tage: @FinanzenTexte.Tage(_kalkulation.Tage) (aus dem Zeitraum der Freizeit)</p>
+        </Card>
+
+        @foreach (var kategorie in _felder.Kategorien)
+        {
+            <Card @key="kategorie.Kategorie" Titel="@Kostenkategorien.Text(kategorie.Kategorie)" Id="@FinanzenTexte.KategorieId(kategorie.Kategorie)">
+                @if (Abgeschlossen)
+                {
+                    <p>Fixkosten: @Anzeige.Euro(kategorie.Fixkosten)</p>
+                    <p>@FinanzenTexte.ProPersonUndTagText(kategorie.Kategorie): @Anzeige.Euro(kategorie.ProPersonUndTag)</p>
+                }
+                else
+                {
+                    <AutosaveFeld @key="@($"{kategorie.Kategorie}-fix-{_ladung}")" Label="Fixkosten in €" Id="@($"{FinanzenTexte.KategorieId(kategorie.Kategorie)}-fixkosten")"
+                                  Feldname="@KategorieFelder.Fixkosten" Pfad="@FinanzenApiClient.KategoriePfad(FreizeitId, kategorie.Kategorie)"
+                                  Wert="@KategorieFelder.BetragText(kategorie.Fixkosten)" Version="@kategorie.Version" Hinweis="Feste Kosten, z. B. 2000 oder 149,90"
+                                  NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                    <AutosaveFeld @key="@($"{kategorie.Kategorie}-pro-{_ladung}")" Label="@($"{FinanzenTexte.ProPersonUndTagText(kategorie.Kategorie)} in €")"
+                                  Id="@($"{FinanzenTexte.KategorieId(kategorie.Kategorie)}-pro-person-und-tag")" Feldname="@KategorieFelder.ProPersonUndTag"
+                                  Pfad="@FinanzenApiClient.KategoriePfad(FreizeitId, kategorie.Kategorie)" Wert="@KategorieFelder.BetragText(kategorie.ProPersonUndTag)"
+                                  Version="@kategorie.Version" Hinweis="Gilt für alle Personen an jedem Tag, z. B. 7,50"
+                                  NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                }
+                <p><strong>Kosten: @Anzeige.Euro(Kosten(kategorie.Kategorie))</strong></p>
+            </Card>
+        }
+
+        <Card Titel="Einnahmen" Id="einnahmen">
+            <p>Zuschüsse, Spenden und Rabatte der Organisation, jeweils als positiver Betrag. Sie senken den Teilnehmerbeitrag.</p>
+            @if (_felder.Einnahmen.Count == 0)
+            {
+                <LeerZustand Satz="Noch keine Einnahmen." />
+            }
+            else if (Abgeschlossen)
+            {
+                <ul>
+                    @foreach (var einnahme in _felder.Einnahmen)
+                    {
+                        <li @key="einnahme.Id">@einnahme.Bezeichnung: @Anzeige.Euro(einnahme.Betrag)</li>
+                    }
+                </ul>
+            }
+            else
+            {
+                @foreach (var einnahme in _felder.Einnahmen)
+                {
+                    <div @key="@($"{einnahme.Id}-{_ladung}")">
+                        <h3>@Bezeichnung(einnahme)</h3>
+                        <AutosaveFeld Label="Bezeichnung" Id="@($"einnahme-{einnahme.Id}-bezeichnung")" Feldname="@EinnahmepostenFelder.Bezeichnung"
+                                      Pfad="@FinanzenApiClient.EinnahmePfad(FreizeitId, einnahme.Id)" Wert="@einnahme.Bezeichnung" Version="@einnahme.Version"
+                                      NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                        <AutosaveFeld Label="Betrag in €" Id="@($"einnahme-{einnahme.Id}-betrag")" Feldname="@EinnahmepostenFelder.Betrag"
+                                      Pfad="@FinanzenApiClient.EinnahmePfad(FreizeitId, einnahme.Id)" Wert="@KategorieFelder.BetragText(einnahme.Betrag)"
+                                      Version="@einnahme.Version" NeuLaden="NeuLadenAsync" Gespeichert="NachSpeichernAsync" />
+                        <InlineBestaetigung AusloeserText="Entfernen" AusloeserArt="KnopfArt.Outline" Satz="@($"„{Bezeichnung(einnahme)}“ entfernen?")"
+                                            JaText="Ja, entfernen" Bestaetigt="@(() => EinnahmeEntfernenAsync(einnahme))" />
+                    </div>
+                }
+            }
+        </Card>
+
+        @if (!Abgeschlossen)
+        {
+            <Card Titel="Einnahme hinzufügen" Id="einnahme-hinzufuegen">
+                <Formular Absenden="EinnahmeAnlegenAsync">
+                    <Fehleruebersicht Fehler="FehlerListe" />
+                    <Feld Label="Bezeichnung *" Id="einnahme-bezeichnung" Wert="@_bezeichnung" Fehler="@_bezeichnungFehler" autocomplete="off"
+                          Hinweis="@($"z. B. Zuschuss Landesjugendplan, höchstens {EinnahmepostenFelder.BezeichnungMaximaleLaenge} Zeichen")"
+                          @oninput="@(e => _bezeichnung = e.Value?.ToString())" />
+                    <Feld Label="Betrag in €" Id="einnahme-betrag" Wert="@_betrag" Fehler="@_betragFehler" autocomplete="off" inputmode="decimal"
+                          Hinweis="z. B. 1200 oder 250,50; leer heißt 0" @oninput="@(e => _betrag = e.Value?.ToString())" />
+                    <Knopf Typ="submit" Deaktiviert="@_uebertraegt">Einnahme hinzufügen</Knopf>
+                </Formular>
+                <p>* Pflichtfeld</p>
+            </Card>
+        }
+    }
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    // Der zuletzt geladene Stand für Ergebnis und Kosten.
+    private ApiKalkulation? _kalkulation;
+    // Der Stand der Autosave-Felder: nur beim Öffnen, nach „Neu laden“ und nach Hinzufügen oder Entfernen neu, damit ein gespeichertes Feld
+    // „Gespeichert · Rückgängig“ behält, während das Ergebnis neu lädt.
+    private ApiKalkulation? _felder;
+    // Zählt das Neuladen der Felder; Teil des @key, damit sie danach aus dem neuen Stand entstehen.
+    private int _ladung;
+    private bool _nichtVerfuegbar;
+    private bool _uebertraegt;
+    private string? _meldung;
+    private string? _bezeichnung;
+    private string? _betrag;
+    private string? _bezeichnungFehler;
+    private string? _betragFehler;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    private bool Abgeschlossen => _kontext?.Phase == Phase.Gelaufen;
+
+    private string KalkulationPfad => FinanzenApiClient.KalkulationPfad(FreizeitId);
+
+    private static string Zahl(int zahl) => zahl.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>Die Kosten einer Kategorie aus dem zuletzt geladenen Stand.</summary>
+    private decimal Kosten(Kostenkategorie kategorie) => _kalkulation!.Kategorien.FirstOrDefault(k => k.Kategorie == kategorie)?.Kosten ?? 0m;
+
+    /// <summary>Die Bezeichnung aus dem zuletzt geladenen Stand (nach einer Änderung schon neu).</summary>
+    private string Bezeichnung(ApiEinnahmeposten einnahme) => _kalkulation?.Einnahmen.FirstOrDefault(e => e.Id == einnahme.Id)?.Bezeichnung ?? einnahme.Bezeichnung;
+
+    /// <summary>Der Anteil der Gesamtkosten, den die Beiträge tragen.</summary>
+    private double BeitragProzent =>
+        _kalkulation!.Ergebnis.Teilnehmerbeitrag is { } beitrag ? FinanzenTexte.Prozent(beitrag * _kalkulation.Teilnehmende, _kalkulation.Ergebnis.Gesamtkosten) : 0;
+
+    private IReadOnlyList<DetailsEintrag> ErgebnisZeilen =>
+    [
+        new("Gesamtkosten", Anzeige.Euro(_kalkulation!.Ergebnis.Gesamtkosten)),
+        new("Einnahmen", Anzeige.Euro(_kalkulation.Ergebnis.Einnahmen)),
+        new("Personen", $"{_kalkulation.Teilnehmende} Teilnehmende und {_kalkulation.Mitarbeitende} Mitarbeitende, {FinanzenTexte.Tage(_kalkulation.Tage)}"),
+    ];
+
+    private IReadOnlyList<FeldFehler> FehlerListe =>
+    [
+        .. _bezeichnungFehler is null ? Array.Empty<FeldFehler>() : [new FeldFehler("einnahme-bezeichnung", $"Bezeichnung: {_bezeichnungFehler}")],
+        .. _betragFehler is null ? Array.Empty<FeldFehler>() : [new FeldFehler("einnahme-betrag", $"Betrag: {_betragFehler}")],
+    ];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _kalkulation = null;
+        _felder = null;
+        _nichtVerfuegbar = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var kalkulation = FinanzenApi.KalkulationLadenAsync(FreizeitId);
+            await Task.WhenAll(kontext, kalkulation);
+            if (kontext.Result is null || kalkulation.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _kalkulation, _felder) = (kontext.Result, kalkulation.Result, kalkulation.Result);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Lädt die Kalkulation neu; mit <paramref name="felder"/> bekommen auch die Autosave-Felder den neuen Stand.</summary>
+    private async Task LadenAsync(bool felder)
+    {
+        try
+        {
+            if (await FinanzenApi.KalkulationLadenAsync(FreizeitId) is { } kalkulation)
+            {
+                _meldung = null;
+                _kalkulation = kalkulation;
+                if (felder)
+                {
+                    _felder = kalkulation;
+                    _ladung++;
+                }
+            }
+            else
+            {
+                _nichtVerfuegbar = true;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Nach jedem gespeicherten Feld: Ergebnis und Kosten neu.</summary>
+    private Task NachSpeichernAsync(string? _) => LadenAsync(felder: false);
+
+    /// <summary>„Neu laden“ beim Konflikt: alles neu, auch die Felder.</summary>
+    private Task NeuLadenAsync() => LadenAsync(felder: true);
+
+    /// <summary>„Einnahme hinzufügen“: danach steht sie in der Liste und im Ergebnis, das Formular ist leer.</summary>
+    private async Task EinnahmeAnlegenAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        (_bezeichnungFehler, _betragFehler, _meldung) = (null, null, null);
+        try
+        {
+            var aktion = await FinanzenApi.EinnahmeAnlegenAsync(FreizeitId, new EinnahmepostenNeu(_bezeichnung, _betrag));
+            switch (aktion.Ergebnis)
+            {
+                case FinanzenAktionErgebnis.Erfolg:
+                    (_bezeichnung, _betrag) = (null, null);
+                    await LadenAsync(felder: true);
+                    break;
+                case FinanzenAktionErgebnis.Abgeschlossen:
+                    _meldung = FinanzenTexte.AbgeschlossenText;
+                    break;
+                default:
+                    _bezeichnungFehler = aktion.Feldfehler.GetValueOrDefault(EinnahmepostenFelder.Bezeichnung);
+                    _betragFehler = aktion.Feldfehler.GetValueOrDefault(EinnahmepostenFelder.Betrag);
+                    if (_bezeichnungFehler is null && _betragFehler is null)
+                    {
+                        _meldung = AnmeldungAbschluss.FehlerText;
+                    }
+
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    private async Task EinnahmeEntfernenAsync(ApiEinnahmeposten einnahme)
+    {
+        _meldung = null;
+        try
+        {
+            switch (await FinanzenApi.EinnahmeLoeschenAsync(FreizeitId, einnahme.Id))
+            {
+                case FinanzenAktionErgebnis.Erfolg:
+                    await LadenAsync(felder: true);
+                    break;
+                case FinanzenAktionErgebnis.Abgeschlossen:
+                    _meldung = FinanzenTexte.AbgeschlossenText;
+                    break;
+                default:
+                    // Z. B. inzwischen von jemand anderem entfernt: neu laden; die Meldung nur, wenn der Posten noch da ist.
+                    await LadenAsync(felder: true);
+                    if (_kalkulation?.Einnahmen.Any(e => e.Id == einnahme.Id) != false)
+                    {
+                        _meldung = AnmeldungAbschluss.FehlerText;
+                    }
+
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+}

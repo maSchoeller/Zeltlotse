@@ -1,0 +1,15 @@
+@* Finanzen-Reiter (Story 5-1): „Kalkulation · Beitragsrechner“ als Links oben auf den Finanzen-Seiten; der aktive trägt aria-current. *@
+<Reiter Bezeichnung="Finanzen" Eintraege="Eintraege" />
+
+@code {
+    [Parameter, EditorRequired] public Guid FreizeitId { get; set; }
+
+    /// <summary>Die gewählte Seite: „kalkulation“ oder „beitragsrechner“.</summary>
+    [Parameter, EditorRequired] public string Aktiv { get; set; } = "";
+
+    private IReadOnlyList<ReiterEintrag> Eintraege =>
+    [
+        new("Kalkulation", FinanzenTexte.KalkulationZiel(FreizeitId), Aktiv == "kalkulation"),
+        new("Beitragsrechner", FinanzenTexte.BeitragsrechnerZiel(FreizeitId), Aktiv == "beitragsrechner"),
+    ];
+}

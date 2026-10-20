@@ -355,6 +355,21 @@ public sealed class DemoDatenTests(PostgresContainer postgres, S3Container s3)
         Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.mahlzeit_stand"));
         Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM kueche.mahlzeit_stand WHERE \"Restetag\""));
 
+        // Story 5-1: Die Kalkulation des Zeltlagers: 40 Teilnehmende, 10 Mitarbeitende, alle sechs Kategorien mit Beträgen (Verpflegung 7 € Tagessatz),
+        // Zuschuss und Rabatt der Organisation; 14.200 € Kosten, 2.200 € Einnahmen, 300,00 € Beitrag. Nichts doppelt, auch nach dem zweiten Einspielen.
+        var kalkulation = await AnmeldeHelfer.JsonAsync(await miriamClient.GetAsync($"/api/freizeiten/{freizeitId}/finanzen/kalkulation", Abbruch));
+        Assert.Equal((DemoKatalog.Planzahlen.Teilnehmende, DemoKatalog.Planzahlen.Mitarbeitende), (kalkulation.GetProperty("teilnehmende").GetInt32(), kalkulation.GetProperty("mitarbeitende").GetInt32()));
+        Assert.Equal(
+            ["Unterkunft 6300", "Verpflegung 4200", "Fahrt 1800", "ProgrammUndMaterial 1200", "Mitarbeitende 500", "Sonstiges 200"],
+            kalkulation.GetProperty("kategorien").EnumerateArray().Select(k => $"{k.GetProperty("kategorie").GetString()} {k.GetProperty("kosten").GetDecimal()}"));
+        Assert.Equal(7m, kalkulation.GetProperty("kategorien")[1].GetProperty("proPersonUndTag").GetDecimal());
+        Assert.Equal(["Zuschuss Landesjugendplan", "Rabatt der Organisation"], kalkulation.GetProperty("einnahmen").EnumerateArray().Select(e => e.GetProperty("bezeichnung").GetString()));
+        var ergebnis = kalkulation.GetProperty("ergebnis");
+        Assert.Equal((14200m, 2200m, 300m), (ergebnis.GetProperty("gesamtkosten").GetDecimal(), ergebnis.GetProperty("einnahmen").GetDecimal(), ergebnis.GetProperty("teilnehmerbeitrag").GetDecimal()));
+        Assert.Equal(1L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM finanzen.kalkulation"));
+        Assert.Equal(6L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM finanzen.kalkulation_kategorie"));
+        Assert.Equal(2L, await AnmeldeHelfer.WertAsync<long>(verbindung, "SELECT count(*) FROM finanzen.einnahmeposten"));
+
         // Story 2-5: Die Fragen-Auswahl kam vor den Anmeldungen: Emmas Freigabe (eingegangen) und Mias (bestätigt) tragen die Fragen für
         // Teilnehmende, Leas die für Mitarbeitende. Daniel hat für Mia drei Antworten gespeichert, Lea eine Team-Notiz zu Mia geschrieben
         // (genau eine, auch nach dem zweiten Einspielen, nur verschlüsselt). Emmas Anmeldung nennt „Einsicht bis“.

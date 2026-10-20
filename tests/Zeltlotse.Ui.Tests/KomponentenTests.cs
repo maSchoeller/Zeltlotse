@@ -1031,4 +1031,40 @@ public sealed class KomponentenTests : BunitContext
         Assert.All(cut.FindAll("button"), k => Assert.True(k.HasAttribute("disabled")));
         Assert.All(cut.FindAll("button"), k => Assert.Equal("false", k.GetAttribute("aria-pressed")));
     }
+
+    // ---------- Story 5-1: Schieberegler ----------
+
+    [Fact]
+    public void Schieberegler_ist_ein_range_mit_Label_Grenzen_Schritt_und_dem_Wert_als_Zahl_daneben()
+    {
+        var cut = Render<Schieberegler>(ps => ps.Add(p => p.Label, "Tagessatz Verpflegung").Add(p => p.Id, "regler-tagessatz").Add(p => p.Minimum, 0m)
+            .Add(p => p.Maximum, 30m).Add(p => p.Schritt, 0.5m).Add(p => p.Wert, 7.5m).Add(p => p.Anzeige, (Func<decimal, string>)(w => $"{w:0.00} €"))
+            .Add(p => p.Hinweis, "In Schritten von 0,50 €"));
+
+        var regler = cut.Find("input");
+        Assert.Equal(("range", "0", "30", "0.5", "7.5"), (regler.GetAttribute("type"), regler.GetAttribute("min"), regler.GetAttribute("max"), regler.GetAttribute("step"), regler.GetAttribute("value")));
+        Assert.Equal("Tagessatz Verpflegung", cut.Find("label[for=regler-tagessatz]").TextContent);
+        var ausgabe = cut.Find("output");
+        Assert.Equal(("regler-tagessatz", $"{7.5m:0.00} €"), (ausgabe.GetAttribute("for"), ausgabe.TextContent));
+        Assert.Equal($"{7.5m:0.00} €", regler.GetAttribute("aria-valuetext"));
+        Assert.Equal("regler-tagessatz-hinweis", regler.GetAttribute("aria-describedby"));
+        Assert.Null(regler.GetAttribute("style"));
+    }
+
+    [Fact]
+    public void Schieberegler_meldet_jede_Bewegung_sofort_auf_den_Schritt_gerundet_und_begrenzt()
+    {
+        var werte = new List<decimal>();
+        var cut = Render<Schieberegler>(ps => ps.Add(p => p.Label, "Teilnehmende").Add(p => p.Maximum, 200m).Add(p => p.Wert, 40m)
+            .Add(p => p.WertGeaendert, (decimal w) => werte.Add(w)));
+
+        Assert.Equal("40", cut.Find("output").TextContent);
+        cut.Find("input").Input("41");
+        cut.Find("input").Input("12.3");
+        cut.Find("input").Input("250");
+        cut.Find("input").Input("abc");
+
+        Assert.Equal([41m, 12m, 200m], werte);
+        Assert.Equal("200", cut.Find("output").TextContent);
+    }
 }

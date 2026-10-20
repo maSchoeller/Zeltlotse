@@ -24,6 +24,7 @@ export default defineConfig({
 				{ label: 'Mitarbeitende', items: [{ autogenerate: { directory: 'mitarbeitende' } }] },
 				{ label: 'Leitung', items: [{ autogenerate: { directory: 'leitung' } }] },
 				{ label: 'Küche', items: [{ autogenerate: { directory: 'kueche' } }] },
+				{ label: 'Finanzen', items: [{ autogenerate: { directory: 'finanzen' } }] },
 				{ label: 'Org-Admin', items: [{ autogenerate: { directory: 'org-admin' } }] },
 				{ label: 'Betreiber', items: [{ autogenerate: { directory: 'betreiber' } }] },
 				{ label: 'Was passiert mit meinen Daten', slug: 'daten' },

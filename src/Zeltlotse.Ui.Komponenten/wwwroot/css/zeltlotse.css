@@ -125,6 +125,13 @@ a.zl-gross:not(.elkw-btn) { display: inline-flex; align-items: center; }
 .zl-balken__fuellung { fill: var(--elkw-akzent); }
 .zl-balken--warnung .zl-balken__fuellung { fill: var(--elkw-status-warnung); }
 .zl-balken--fehler .zl-balken__fuellung { fill: var(--elkw-status-fehler); }
+.zl-balken + .elkw-details { margin-top: var(--elkw-space-m); }
+
+/* Schieberegler (Story 5-1): Label links, Wert als Zahl rechts, darunter der Regler über die volle Breite, mindestens 44 px hoch */
+.zl-regler + .zl-regler { margin-top: var(--elkw-space-m); }
+.zl-regler__kopf { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 1rem; }
+.zl-regler__kopf label { font-weight: 600; }
+.zl-regler input[type=range] { display: block; width: 100%; min-height: 44px; margin: 0; accent-color: var(--elkw-action); }
 
 /* Inline-Bestätigung: an Ort und Stelle, in Breite der Zeile */
 .zl-bestaetigung { padding: var(--elkw-space-s) var(--elkw-space-m); background: var(--elkw-neutral-10); border-radius: var(--elkw-radius); }

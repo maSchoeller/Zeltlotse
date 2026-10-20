@@ -51,4 +51,4 @@ Auf der Seite der Organisation stehen alle Freizeiten in der Card **Freizeiten**
 
 ## Noch nicht dabei
 
-Belege und Erstattungen gehören zum Modul Finanzen, das mit einer späteren Version kommt. Dann nennt die Rückfrage auch Belege, die noch nicht erstattet sind.
+Belege und Erstattungen gehören zum Modul Finanzen; sie kommen mit einer späteren Version. Dann nennt die Rückfrage auch Belege, die noch nicht erstattet sind.

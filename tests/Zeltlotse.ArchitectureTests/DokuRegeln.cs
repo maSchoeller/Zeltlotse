@@ -29,7 +29,8 @@ internal static partial class DokuRegeln
             .Append("mitarbeitende/programmbibliothek").Append("org-admin/programmbibliothek")
             .Append("leitung/module-schalten").Append("leitung/freizeit-abschliessen")
             .Append("kueche/rezepte").Append("kueche/essensplan").Append("kueche/einkaufsliste").Append("kueche/einkauf")
-            .Append("kueche/tagesansicht");
+            .Append("kueche/tagesansicht")
+            .Append("finanzen/index").Append("finanzen/kalkulation").Append("finanzen/beitragsrechner");
 
     public static string DokuSeitenOrdner => Path.Combine(Loesung.Wurzel, "doku", "src", "content", "docs");
 

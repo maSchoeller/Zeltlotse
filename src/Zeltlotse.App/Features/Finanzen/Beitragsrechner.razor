@@ -1,0 +1,142 @@
+@page "/freizeiten/{FreizeitId:guid}/finanzen/beitragsrechner"
+@using Zeltlotse.Api.Contracts.Finanzen
+@using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Ui.Kontext
+@using ApiKalkulation = Zeltlotse.Api.Contracts.Finanzen.Kalkulation
+@inject FreizeitKontextDienst Kontext
+@inject FinanzenApiClient FinanzenApi
+@* Beitragsrechner (FR-57, Story 5-1) für Leitung und Team: eine reine Was-wäre-wenn-Ansicht über der gespeicherten Kalkulation. Drei Schieberegler
+   (Teilnehmende 0 bis max(200, Planzahl), Mitarbeitende 0 bis max(100, Planzahl), Tagessatz Verpflegung 0 bis max(30 €, Wert) in Schritten von 0,50 €)
+   starten auf den gespeicherten Werten. Jede Bewegung rechnet sofort im Client mit derselben Rechenregel wie der Server (Beitragsrechnung) – ohne
+   Serveraufruf und ohne Speichern. Card „Vergleich“: zwei Balken „Laut Kalkulation“ und „Mit Reglern“ auf einer gemeinsamen Skala (der größere Beitrag ist
+   100 %), am Balken „Mit Reglern“ das Statuswort „Günstiger“, „Gleich“ oder „Teurer“ und darunter die Differenz in Euro. „Zurücksetzen“ stellt die
+   gespeicherten Werte wieder her. Nach dem Abschluss steht der Hinweis „nur lesbar“; die Regler bleiben bedienbar, weil sie nichts speichern. Kontext
+   oder Kalkulation nicht verfügbar (auch ohne Modul Finanzen) → „Diese Seite ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung. *@
+<PageTitle>Beitragsrechner – Zeltlotse</PageTitle>
+
+@if (_nichtVerfuegbar)
+{
+    <NichtVerfuegbar />
+}
+else
+{
+    <Dachzeile>Finanzen</Dachzeile>
+    <h1>Beitragsrechner</h1>
+    <FinanzenReiter FreizeitId="FreizeitId" Aktiv="beitragsrechner" />
+
+    @if (_meldung is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_meldung</p>
+        </Meldung>
+    }
+
+    @if (_kalkulation is null || _kontext is null)
+    {
+        @if (_meldung is null)
+        {
+            <Ladezustand />
+        }
+    }
+    else
+    {
+        @if (_kontext.Phase == Phase.Gelaufen)
+        {
+            <Meldung Titel="Hinweis">
+                <p>@FinanzenTexte.AbgeschlossenText Die Regler speichern nichts und bleiben bedienbar.</p>
+            </Meldung>
+        }
+        <p>Was wäre, wenn mehr oder weniger Personen mitfahren oder die Verpflegung teurer wird? Die Regler rechnen sofort und speichern nichts.</p>
+
+        <Card Titel="Vergleich" Id="vergleich">
+            <Balken Bezeichnung="Laut Kalkulation" Zahl="@FinanzenTexte.Beitrag(Laut)" Prozent="@Skala(Laut)" Statuswort="Ausgangswert" />
+            <Balken Bezeichnung="Mit Reglern" Zahl="@FinanzenTexte.Beitrag(MitReglern.Teilnehmerbeitrag)" Prozent="@Skala(MitReglern.Teilnehmerbeitrag)"
+                    Statuswort="@FinanzenTexte.Vergleich(Laut, MitReglern.Teilnehmerbeitrag)"
+                    Art="@(FinanzenTexte.Vergleich(Laut, MitReglern.Teilnehmerbeitrag) == "Teurer" ? BalkenArt.Warnung : BalkenArt.Normal)" />
+            @if (Laut is { } laut && MitReglern.Teilnehmerbeitrag is { } mitReglern)
+            {
+                <p>Differenz: @FinanzenTexte.Differenz(laut, mitReglern) je teilnehmende Person</p>
+            }
+            else
+            {
+                <p>@FinanzenTexte.KeinBeitragText</p>
+            }
+            <p>Gesamtkosten mit Reglern: @Anzeige.Euro(MitReglern.Gesamtkosten)</p>
+        </Card>
+
+        <Card Titel="Regler" Id="regler">
+            <Schieberegler Label="Teilnehmende" Id="rechner-teilnehmende" Minimum="0" Maximum="@Math.Max(200, _kalkulation.Teilnehmende)" Schritt="1"
+                           Wert="@_teilnehmende" WertGeaendert="@(w => _teilnehmende = (int)w)" Hinweis="@($"Laut Kalkulation {_kalkulation.Teilnehmende}")" />
+            <Schieberegler Label="Mitarbeitende" Id="rechner-mitarbeitende" Minimum="0" Maximum="@Math.Max(100, _kalkulation.Mitarbeitende)" Schritt="1"
+                           Wert="@_mitarbeitende" WertGeaendert="@(w => _mitarbeitende = (int)w)" Hinweis="@($"Laut Kalkulation {_kalkulation.Mitarbeitende}")" />
+            <Schieberegler Label="Tagessatz Verpflegung pro Person und Tag" Id="rechner-tagessatz" Minimum="@FinanzenTexte.TagessatzMinimum(TagessatzLaut)" Maximum="@FinanzenTexte.TagessatzMaximum(TagessatzLaut)"
+                           Schritt="@FinanzenTexte.TagessatzSchritt" Wert="@_tagessatz" WertGeaendert="@(w => _tagessatz = w)" Anzeige="Anzeige.Euro"
+                           Hinweis="@($"In Schritten von 0,50 €, laut Kalkulation {Anzeige.Euro(TagessatzLaut)}")" />
+            <p><Knopf Art="KnopfArt.Outline" @onclick="Zuruecksetzen">Zurücksetzen</Knopf></p>
+        </Card>
+    }
+    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+}
+
+@code {
+    private FreizeitKontext? _kontext;
+    private ApiKalkulation? _kalkulation;
+    private bool _nichtVerfuegbar;
+    private string? _meldung;
+    private int _teilnehmende;
+    private int _mitarbeitende;
+    private decimal _tagessatz;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    /// <summary>Der Teilnehmerbeitrag laut gespeicherter Kalkulation.</summary>
+    private decimal? Laut => _kalkulation!.Ergebnis.Teilnehmerbeitrag;
+
+    private decimal TagessatzLaut => _kalkulation!.Kategorien.FirstOrDefault(k => k.Kategorie == Kostenkategorie.Verpflegung)?.ProPersonUndTag ?? 0m;
+
+    /// <summary>Dieselbe Rechenregel wie auf dem Server, mit den Reglern statt der Planzahlen und des Tagessatzes.</summary>
+    private Beitragsergebnis MitReglern => Beitragsrechnung.Rechnen(
+        _teilnehmende,
+        _mitarbeitende,
+        _kalkulation!.Tage,
+        _kalkulation.Kategorien.Select(k => new Kostenansatz(k.Fixkosten, k.Kategorie == Kostenkategorie.Verpflegung ? _tagessatz : k.ProPersonUndTag)),
+        _kalkulation.Einnahmen.Select(e => e.Betrag));
+
+    /// <summary>Gemeinsame Skala der beiden Balken: der größere Beitrag ist 100 %.</summary>
+    private double Skala(decimal? beitrag) => FinanzenTexte.Prozent(beitrag ?? 0m, Math.Max(Laut ?? 0m, MitReglern.Teilnehmerbeitrag ?? 0m));
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _kontext = null;
+        _kalkulation = null;
+        _nichtVerfuegbar = false;
+        _meldung = null;
+        try
+        {
+            var kontext = Kontext.LadenAsync(FreizeitId);
+            var kalkulation = FinanzenApi.KalkulationLadenAsync(FreizeitId);
+            await Task.WhenAll(kontext, kalkulation);
+            if (kontext.Result is null || kalkulation.Result is null)
+            {
+                _nichtVerfuegbar = true;
+                return;
+            }
+
+            (_kontext, _kalkulation) = (kontext.Result, kalkulation.Result);
+            Zuruecksetzen();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            _meldung = AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>„Zurücksetzen“: die Regler stehen wieder auf den gespeicherten Werten.</summary>
+    private void Zuruecksetzen()
+    {
+        _teilnehmende = _kalkulation!.Teilnehmende;
+        _mitarbeitende = _kalkulation.Mitarbeitende;
+        _tagessatz = TagessatzLaut;
+    }
+}

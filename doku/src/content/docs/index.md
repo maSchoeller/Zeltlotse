@@ -15,6 +15,7 @@ Die Daten gehören den Personen selbst. Eine Freizeit sieht sie nur befristet un
 | [Mitarbeitende](/mitarbeitende/) | im Team einer Freizeit mitarbeiten: Programm, Material, Aufgaben, Vorfall-Protokoll |
 | [Leitung](/leitung/) | eine Freizeit leiten: Anmeldungen bestätigen, Freizeitpass zusammenstellen, Freizeit abschließen |
 | [Küche](/kueche/) | Speiseplan, Allergien und Einkaufsliste – eine Aufgabe im Team |
+| [Finanzen](/finanzen/) | Kalkulation und Beitragsrechner – für Leitung und Team |
 | [Org-Admin](/org-admin/) | eine Organisation verwalten: Freizeiten anlegen, Leitung einsetzen, Richtlinien festlegen, Rollen vergeben |
 | [Betreiber](/betreiber/) | Zeltlotse betreiben: als Global Admin Organisationen anlegen und den ersten Org-Admin einladen |
 

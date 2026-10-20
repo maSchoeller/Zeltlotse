@@ -39,6 +39,7 @@
    Leitung „Freizeit abschließen“ als Inline-Bestätigung); nach dem Abschluss lädt die Seite neu. Ist die Freizeit gelaufen, steht direkt unter
    der Überschrift der Hinweis „Diese Freizeit ist abgeschlossen und nur lesbar.“
    Story 4-1: Nach „Aufgaben“ der Knopf „Küche“ zu den Rezepten, nur wenn das Modul Verpflegung an ist.
+   Story 5-1: Danach der Knopf „Finanzen“ zur Kalkulation, nur wenn das Modul Finanzen an ist.
    403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>@(_freizeit?.Name ?? "Freizeit") – Zeltlotse</PageTitle>
 
@@ -203,6 +204,11 @@ else
     @if (_kontext.Schalter.Contains(FunktionsSchalter.Verpflegung))
     {
         <p><Knopf Art="KnopfArt.Outline" Href="@KuecheTexte.RezepteZiel(FreizeitId)" Ansichtswechsel="true">Küche</Knopf></p>
+    }
+    @* Story 5-1: Die Finanzen (Kalkulation und Beitragsrechner) für Leitung und Team, nur mit eingeschaltetem Modul Finanzen (AD-20). *@
+    @if (_kontext.Schalter.Contains(FunktionsSchalter.Finanzen))
+    {
+        <p><Knopf Art="KnopfArt.Outline" Href="@FinanzenTexte.KalkulationZiel(FreizeitId)" Ansichtswechsel="true">Finanzen</Knopf></p>
     }
     @* Story 3-3: Das Inventar der Organisation mit den Reservierungen dieser Freizeit, in jeder Phase für Leitung und Team. *@
     <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/inventar")" Ansichtswechsel="true">Inventar</Knopf></p>

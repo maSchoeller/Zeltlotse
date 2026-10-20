@@ -91,6 +91,31 @@ internal static class DemoKatalog
     /// <summary>Story 4-3: Hand-Posten, deren Freigabe die Küche danach wieder zurücknimmt (Bezeichnung).</summary>
     public static IReadOnlyList<string> NichtFreigegeben { get; } = ["Äpfel"];
 
+    /// <summary>
+    /// Story 5-1: Kalkulation der Demo-Freizeit (Modul Finanzen): 40 Teilnehmende und 10 Mitarbeitende, Beträge in allen sechs Kategorien (Fixkosten und
+    /// Kosten pro Person und Tag als Text wie im Formular; Verpflegung 7 € Tagessatz) und zwei Einnahmen. Bei 12 Tagen ergibt das 14.200 € Kosten,
+    /// 2.200 € Einnahmen und 300,00 € Teilnehmerbeitrag. Planzahlen und Beträge nur, solange sie 0 sind, Einnahmen nur, wenn es die Bezeichnung noch nicht gibt.
+    /// </summary>
+    public static (int Teilnehmende, int Mitarbeitende) Planzahlen { get; } = (40, 10);
+
+    /// <inheritdoc cref="Planzahlen"/>
+    public static IReadOnlyList<(Zeltlotse.Api.Contracts.Finanzen.Kostenkategorie Kategorie, string Fixkosten, string ProPersonUndTag)> Kostenkategorien { get; } =
+    [
+        (Zeltlotse.Api.Contracts.Finanzen.Kostenkategorie.Unterkunft, "1500", "8"),
+        (Zeltlotse.Api.Contracts.Finanzen.Kostenkategorie.Verpflegung, "0", "7"),
+        (Zeltlotse.Api.Contracts.Finanzen.Kostenkategorie.Fahrt, "1800", "0"),
+        (Zeltlotse.Api.Contracts.Finanzen.Kostenkategorie.ProgrammUndMaterial, "600", "1"),
+        (Zeltlotse.Api.Contracts.Finanzen.Kostenkategorie.Mitarbeitende, "500", "0"),
+        (Zeltlotse.Api.Contracts.Finanzen.Kostenkategorie.Sonstiges, "200", "0"),
+    ];
+
+    /// <inheritdoc cref="Planzahlen"/>
+    public static IReadOnlyList<(string Bezeichnung, string Betrag)> Einnahmen { get; } =
+    [
+        ("Zuschuss Landesjugendplan", "1200"),
+        ("Rabatt der Organisation", "1000"),
+    ];
+
     /// <summary>Story 4-4: Mahlzeiten, die die Küche als Restetag markiert (Tag, Titel der Mahlzeit).</summary>
     public static IReadOnlyList<(DateOnly Tag, string Mahlzeit)> Restetage { get; } = [(new DateOnly(2027, 8, 3), "Abendessen")];
 

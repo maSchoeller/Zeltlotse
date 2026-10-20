@@ -1,0 +1,69 @@
+@attribute [NurInteraktiv]
+@using System.Globalization
+@* Schieberegler (Story 5-1, Beitragsrechner): ein natives <input type="range"> mit sichtbarem Label, Minimum, Maximum und Schritt; der Wert steht als
+   Zahl daneben (output, für Screenreader zusätzlich als aria-valuetext). Mit Pfeiltasten in festen Schritten bedienbar (Verhalten des Browsers), mit Maus
+   oder Finger frei. Jede Änderung meldet den Wert sofort über WertGeaendert, begrenzt auf Minimum und Maximum und auf den Schritt gerundet; gespeichert
+   wird nichts. Keine style-Attribute (CSP). *@
+<div class="zl-regler">
+    <div class="zl-regler__kopf">
+        <label for="@KennungFeld">@Label</label>
+        <output class="zl-zahl" id="@AusgabeId" for="@KennungFeld">@WertText</output>
+    </div>
+    <input id="@KennungFeld" type="range" min="@Text(Minimum)" max="@Text(Maximum)" step="@Text(Schritt)" value="@Text(Wert)"
+           aria-valuetext="@WertText" aria-describedby="@(Hinweis is null ? null : HinweisId)" disabled="@Deaktiviert" @oninput="EingabeAsync" />
+    @if (Hinweis is not null)
+    {
+        <span class="elkw-hint" id="@HinweisId">@Hinweis</span>
+    }
+</div>
+
+@code {
+    private readonly string _vorgabeId = Kennungen.Neu("regler");
+
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+
+    [Parameter] public string? Id { get; set; }
+
+    [Parameter] public decimal Minimum { get; set; }
+
+    [Parameter] public decimal Maximum { get; set; } = 100m;
+
+    /// <summary>Schrittweite für Pfeiltasten und Raster, größer 0.</summary>
+    [Parameter] public decimal Schritt { get; set; } = 1m;
+
+    [Parameter] public decimal Wert { get; set; }
+
+    /// <summary>Wird bei jeder Bewegung mit dem neuen Wert ausgelöst.</summary>
+    [Parameter] public EventCallback<decimal> WertGeaendert { get; set; }
+
+    /// <summary>Der Wert als Text neben dem Regler, z. B. „7,50 €“; ohne Angabe die Zahl deutsch.</summary>
+    [Parameter] public Func<decimal, string>? Anzeige { get; set; }
+
+    [Parameter] public string? Hinweis { get; set; }
+
+    [Parameter] public bool Deaktiviert { get; set; }
+
+    private string KennungFeld => Id ?? _vorgabeId;
+
+    private string AusgabeId => KennungFeld + "-wert";
+
+    private string HinweisId => KennungFeld + "-hinweis";
+
+    private string WertText => Anzeige is { } anzeige ? anzeige(Wert) : Wert.ToString("0.##", CultureInfo.GetCultureInfo("de-DE"));
+
+    private static string Text(decimal zahl) => zahl.ToString("0.############", CultureInfo.InvariantCulture);
+
+    private Task EingabeAsync(ChangeEventArgs e)
+    {
+        if (Deaktiviert || !decimal.TryParse(e.Value?.ToString(), NumberStyles.Number, CultureInfo.InvariantCulture, out var eingabe))
+        {
+            return Task.CompletedTask;
+        }
+
+        var schritt = Schritt > 0 ? Schritt : 1m;
+        var gerastert = Minimum + Math.Round((eingabe - Minimum) / schritt, MidpointRounding.AwayFromZero) * schritt;
+        var neu = Math.Clamp(gerastert, Minimum, Maximum);
+        Wert = neu;
+        return WertGeaendert.InvokeAsync(neu);
+    }
+}

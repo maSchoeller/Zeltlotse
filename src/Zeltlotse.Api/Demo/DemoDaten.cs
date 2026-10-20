@@ -15,6 +15,8 @@ using Zeltlotse.Freizeiten.Leitung;
 using Zeltlotse.Freizeiten.Module;
 using Zeltlotse.Freizeiten.TeamNotizen;
 using Zeltlotse.Freizeiten.Verwaltung;
+using Zeltlotse.Finanzen.Daten;
+using Zeltlotse.Finanzen.Kalkulation;
 using Zeltlotse.Inventar.Artikel;
 using Zeltlotse.Inventar.Daten;
 using Zeltlotse.Inventar.Reservierungen;
@@ -28,6 +30,9 @@ using ZutatFeld = Zeltlotse.Api.Contracts.Kueche.ZutatFeld;
 using EinkaufspostenFeld = Zeltlotse.Api.Contracts.Kueche.EinkaufspostenFeld;
 using HandMengeFeld = Zeltlotse.Api.Contracts.Kueche.HandMengeFeld;
 using MahlzeitFeld = Zeltlotse.Api.Contracts.Kueche.MahlzeitFeld;
+using KalkulationFeld = Zeltlotse.Api.Contracts.Finanzen.KalkulationFeld;
+using KategorieFeld = Zeltlotse.Api.Contracts.Finanzen.KategorieFeld;
+using FinanzenKalkulation = Zeltlotse.Finanzen.Kalkulation.Kalkulation;
 using Zeltlotse.Organisationen.Daten;
 using Zeltlotse.Organisationen.Dokumente;
 using Zeltlotse.Organisationen.Einladungen;
@@ -175,6 +180,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
         await EinkaufAsync(abbruch);
         // Story 4-4: das Abendessen am 03.08. als Restetag.
         await RestetagAsync(abbruch);
+        // Story 5-1: die Kalkulation (Modul Finanzen ist an).
+        await FinanzenAsync(abbruch);
         await MaterialAsync(abbruch);
         await ZweiteFreizeitAsync(abbruch);
         await InventarAsync(abbruch);
@@ -792,6 +799,64 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             if (await sender.Send(new RestetagAendernCommand(freizeitId, punkt, MahlzeitFeld.Restetag, 0, "false", "true"), abbruch) is not RestetagAenderung.Gespeichert)
             {
                 throw new InvalidOperationException($"Demo-Küche: {mahlzeit} am {tag:dd.MM.yyyy} ließ sich nicht als Restetag markieren.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Story 5-1: Kalkulation der Demo-Freizeit aus <see cref="DemoKatalog.Planzahlen"/>, <see cref="DemoKatalog.Kostenkategorien"/> und
+    /// <see cref="DemoKatalog.Einnahmen"/> über die Commands des Moduls Finanzen. Idempotent: Planzahlen und Beträge nur, solange sie 0 sind (der alte Wert
+    /// ist „0“), eine Einnahme nur, wenn es die Bezeichnung noch nicht gibt.
+    /// </summary>
+    private async Task FinanzenAsync(CancellationToken abbruch)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var dienste = scope.ServiceProvider;
+        var sender = dienste.GetRequiredService<ISender>();
+        dienste.GetRequiredService<MandantenKontext>().Setzen(await OrganisationIdAsync(dienste, abbruch));
+        var freizeitId = await dienste.GetRequiredService<FreizeitenLeseDbContext>().Freizeiten
+            .Where(f => f.Name == DemoKatalog.Freizeit.Name)
+            .Select(f => f.Id)
+            .SingleAsync(abbruch);
+        var lesen = dienste.GetRequiredService<FinanzenLeseDbContext>();
+        var kalkulation = await lesen.Kalkulationen.Where(k => k.FreizeitId == freizeitId).Select(k => new { k.Teilnehmende, k.Mitarbeitende }).SingleOrDefaultAsync(abbruch);
+        foreach (var (feld, wert, aktuell) in new[]
+                 {
+                     (KalkulationFeld.Teilnehmende, DemoKatalog.Planzahlen.Teilnehmende, kalkulation?.Teilnehmende ?? 0),
+                     (KalkulationFeld.Mitarbeitende, DemoKatalog.Planzahlen.Mitarbeitende, kalkulation?.Mitarbeitende ?? 0),
+                 })
+        {
+            if (aktuell == 0
+                && await sender.Send(new KalkulationFeldAendernCommand(freizeitId, feld, 0, "0", wert.ToString(CultureInfo.InvariantCulture)), abbruch)
+                    is not FinanzenAenderung<FinanzenKalkulation>.Gespeichert)
+            {
+                throw new InvalidOperationException($"Demo-Kalkulation: {feld} ließ sich nicht setzen.");
+            }
+        }
+
+        var posten = await lesen.KategoriePosten.Where(k => k.FreizeitId == freizeitId).ToDictionaryAsync(k => k.Kategorie, abbruch);
+        foreach (var (kategorie, fixkosten, proPersonUndTag) in DemoKatalog.Kostenkategorien)
+        {
+            var stand = posten.GetValueOrDefault(kategorie);
+            foreach (var (feld, wert, aktuell) in new[]
+                     {
+                         (KategorieFeld.Fixkosten, fixkosten, stand?.Fixkosten ?? 0m), (KategorieFeld.ProPersonUndTag, proPersonUndTag, stand?.ProPersonUndTag ?? 0m),
+                     })
+            {
+                if (aktuell == 0m && wert != "0"
+                    && await sender.Send(new KategorieFeldAendernCommand(freizeitId, kategorie, feld, 0, "0", wert), abbruch) is not FinanzenAenderung<KategoriePosten>.Gespeichert)
+                {
+                    throw new InvalidOperationException($"Demo-Kalkulation: {feld} von {kategorie} ließ sich nicht setzen.");
+                }
+            }
+        }
+
+        var vorhanden = await lesen.Einnahmeposten.Where(e => e.FreizeitId == freizeitId).Select(e => e.Bezeichnung).ToListAsync(abbruch);
+        foreach (var (bezeichnung, betrag) in DemoKatalog.Einnahmen.Where(e => !vorhanden.Contains(e.Bezeichnung)))
+        {
+            if (await sender.Send(new EinnahmeAnlegenCommand(freizeitId, bezeichnung, betrag), abbruch) is not EinnahmeAnlegen.Angelegt)
+            {
+                throw new InvalidOperationException($"Demo-Kalkulation: Die Einnahme {bezeichnung} ließ sich nicht anlegen.");
             }
         }
     }

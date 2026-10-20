@@ -314,6 +314,13 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 // Story 4-4: Küchen-Tagesansicht und Restetag.
                 "PATCH /api/freizeiten/{freizeitId:guid}/kueche/mahlzeiten/{programmpunktId:guid}",
                 "GET /api/freizeiten/{freizeitId:guid}/kueche/tagesansicht",
+                // Story 5-1: Kalkulation (Finanzen), alles für Leitung und Team, nur mit dem Modul Finanzen.
+                "GET /api/freizeiten/{freizeitId:guid}/finanzen/kalkulation",
+                "PATCH /api/freizeiten/{freizeitId:guid}/finanzen/kalkulation",
+                "PATCH /api/freizeiten/{freizeitId:guid}/finanzen/kalkulation/kategorien/{kategorie}",
+                "POST /api/freizeiten/{freizeitId:guid}/finanzen/kalkulation/einnahmen",
+                "PATCH /api/freizeiten/{freizeitId:guid}/finanzen/kalkulation/einnahmen/{einnahmeId:guid}",
+                "DELETE /api/freizeiten/{freizeitId:guid}/finanzen/kalkulation/einnahmen/{einnahmeId:guid}",
             }.Order(StringComparer.Ordinal),
             freizeitRouten.Select(e => e.Name).Order(StringComparer.Ordinal));
         Assert.All(mitFreizeit, e => Assert.Contains("{freizeitId:guid}", e.Pfad, StringComparison.Ordinal));
@@ -334,6 +341,8 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         // Story 3-7 (AD-20): Leitplanke für V4 und V5: Jeder Endpunkt dort erklärt seinen Schalter. Story 4-1: die acht Routen der Rezepte;
         // Story 4-2: zehn Routen für Essensplan, Gerichte und Einkaufsliste; Story 4-3: Tages-Freigabe und die Seite der Einkaufenden.
         Assert.Equal(22, endpunkte.Count(e => e.Pfad.Contains("/kueche/", StringComparison.Ordinal)));
+        // Story 5-1: die sechs Routen der Kalkulation.
+        Assert.Equal(6, endpunkte.Count(e => e.Pfad.Contains("/finanzen/", StringComparison.Ordinal)));
         foreach (var (bereich, schalter) in new[] { ("kueche", FunktionsSchalter.Verpflegung), ("finanzen", FunktionsSchalter.Finanzen) })
         {
             var praefix = $"/api/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/{bereich}";

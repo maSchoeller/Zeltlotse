@@ -402,4 +402,7 @@ public static class Anzeige
 
     /// <summary>Story 4-1: die Allergene einer Komma-Liste als Text, z. B. „Glutenhaltiges Getreide, Milch (inkl. Laktose)“; ohne Allergene „keine angegeben“ (heißt nicht „frei von Allergenen“).</summary>
     public static string Allergene(string? liste) => Zeltlotse.Api.Contracts.Kueche.Allergene.Texte(liste) is { Count: > 0 } texte ? string.Join(", ", texte) : "keine angegeben";
+
+    /// <summary>Story 5-1: ein Betrag in Euro deutsch mit Tausenderpunkt und Cent, z. B. „1.234,50 €“; negativ mit Minuszeichen, z. B. „−25,00 €“.</summary>
+    public static string Euro(decimal betrag) => $"{(betrag < 0 ? "−" : "")}{Math.Abs(betrag).ToString("#,##0.00", Deutsch)} €";
 }
