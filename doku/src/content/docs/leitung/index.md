@@ -25,7 +25,7 @@ Die Leitung darf alles, was das [Team](/mitarbeitende/) darf. **Nur die Leitung*
 - den Teilnehmer-Zugang per QR-Code an- und abschalten – siehe [Module schalten](/leitung/module-schalten/),
 - die Freizeit abschließen – siehe [Freizeit abschließen](/leitung/freizeit-abschliessen/).
 
-Die Kanäle „Team“ und „Alle“ nutzt die Leitung genauso wie das Team: Nachrichten schreiben, an alle erst nach der Rückfrage „An … Personen senden?“, und auf Wunsch Benachrichtigungen aufs Handy – siehe [Kanäle Team und Alle](/mitarbeitende/kanaele/).
+Die Kanäle „Team“ und „Alle“ nutzt die Leitung genauso wie das Team: Nachrichten schreiben, an alle erst nach der Rückfrage „An … Personen senden?“, und auf Wunsch Benachrichtigungen aufs Handy – siehe [Kanäle, Ansagen-Zettel und Besprechung](/mitarbeitende/kanaele/).
 
 ## Dokumente
 

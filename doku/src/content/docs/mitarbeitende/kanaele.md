@@ -1,5 +1,5 @@
 ---
-title: Kanäle Team und Alle
+title: Kanäle, Ansagen-Zettel und Besprechung
 description: Kurznachrichten im Team und an alle schreiben, lesen und als Benachrichtigung aufs Handy bekommen; dazu Ansagen-Zettel und Besprechungspunkte zum Abhaken.
 sidebar:
   order: 13
@@ -65,7 +65,7 @@ Beide Listen erreicht man über die Reiter oben auf der Kanal-Seite; die gewähl
 
 **Abhaken:** Unter „Offen“ stehen die offenen Punkte mit einem Kästchen, der älteste oben. Ein Tipp auf das Kästchen hakt den Punkt ab; er rutscht in die Card **Abgehakt** darunter. Ein weiterer Tipp auf das gesetzte Kästchen holt ihn zurück nach „Offen“. So sieht man in der Besprechung genau, was noch offen ist. „Abgehakt“ zeigt die 50 zuletzt abgehakten Punkte; ältere bleiben gespeichert, stehen aber nicht mehr auf der Seite.
 
-Punkte lassen sich nicht bearbeiten, einzeln löschen oder von Hand sortieren; eine Korrektur ist ein neuer Punkt. Zu Ansagen und Besprechungspunkten gibt es keine Benachrichtigungen. Zeltlotse merkt sich auch nicht, wer einen Punkt notiert oder abgehakt hat.
+Punkte lassen sich nicht bearbeiten, einzeln löschen oder von Hand sortieren; eine Korrektur ist ein neuer Punkt. Zu Ansagen und Besprechungspunkten gibt es keine Benachrichtigungen. Zeltlotse merkt sich auch nicht, wer einen Punkt notiert oder abgehakt hat. Wie bei den Nachrichten gehören Gesundheitsdaten und vertrauliche Angaben über einzelne Personen nicht in die Punkte; dafür gibt es die Freizeitpässe.
 
 ![Ansagen-Zettel am Handy: Reiter „Nachrichten“, „Ansagen-Zettel“ und „Besprechung“, das Feld „Neuer Punkt“ mit „Hinzufügen“ und zwei offene Ansagen mit Kästchen](../../../assets/screenshots/kanaele-ansagen-handy.png)
 

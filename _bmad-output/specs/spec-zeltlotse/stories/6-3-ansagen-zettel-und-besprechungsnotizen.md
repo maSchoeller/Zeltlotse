@@ -3,14 +3,21 @@ title: 'Story 6-3: Ansagen-Zettel und Besprechungsnotizen'
 type: 'feature'
 created: '2026-10-20'
 baseline_revision: '00dd06049e5fcf029a5226ccc4867a0fb3a714f2'
-status: 'in-review'
+status: 'done'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/specs/spec-zeltlotse/stories/6-1-kanaele-team-und-alle-mit-push.md'
 warnings: ['oversized']
-deferred: []
+deferred:
+  - summary: >-
+      Nach einem gescheiterten Tipp zeigt das Kästchen wieder den Serverstand (_runde im @key), das prüft aber kein Test.
+    evidence: |-
+      bUnit ändert den DOM-Zustand checked bei Change() nicht; nur ein Playwright-Test mit erzwungenem Serverfehler kann das Zurücksetzen beobachten.
+    location: >-
+      src/Zeltlotse.App/Features/Kanaele/KanalNotizen.razor
+    severity: low
 ---
 
 <intent-contract>
@@ -130,6 +137,36 @@ Wurzel: `src/` = S, `tests/` = T, KM = `S/Modules/Kanaele/Zeltlotse.Kanaele`.
 
 ## Review Triage Log
 
+### 2026-10-21 — Review pass
+- verdicts: 26 findings — high 0, medium 1, low 21, false 4, maybe-false 0
+- findings:
+  - `[low]` `[patch]` (Verification Gap) Keine Seitentests für 409 `freizeit-abgeschlossen` beim Hinzufügen und Abhaken — neue bUnit-Tests `Hinzufuegen_nach_dem_Abschluss_…` und `Abhaken_nach_dem_Abschluss_…` (Kontext erst „läuft“, dann „gelaufen“; Hinweis genau einmal, Eingabe weg, Kästchen deaktiviert).
+  - `[low]` `[patch]` (Verification Gap) Reiterwechsel auf derselben Komponente ungetestet — neuer Test `Reiterwechsel_auf_derselben_Seite_leert_den_Entwurf_und_laedt_die_andere_Liste`.
+  - `[low]` `[defer]` (Verification Gap) Zurücksetzen des Kästchens nach gescheitertem Tipp (`_runde` im `@key`) beobachtet kein Test — nur mit Browser-Test und erzwungenem Serverfehler prüfbar; laut Disposition des Layers zurückgestellt.
+  - `[low]` `[reject]` (Edge Case) Reiterwechsel während des Ladens: ältere Antwort überschreibt `_liste` — braucht sehr schnellen Doppel-Tipp; Fix wäre ein zusätzlicher Wächter, gleiches Muster wie `Kanaele.razor`.
+  - `[low]` `[reject]` (Edge Case) Reiterwechsel während Hinzufügen/Umschalten lädt die alte Liste — wie oben, selten, Fix fügt Wächter hinzu.
+  - `[low]` `[reject]` (Edge Case) Entwurf bleibt beim Wechsel der Freizeit mit gleicher Liste — es gibt keinen direkten Weg von der Notiz-Seite einer Freizeit zur gleichen Seite einer anderen; Fix ist ein zusätzlicher Wächter.
+  - `[low]` `[patch]` (Edge Case) Abschluss-Satz doppelt (Fehler-Meldung und Hinweis) nach 409 beim Hinzufügen — `KanalNotizen.razor`: Meldung bzw. Fehler am Punkt nur noch, wenn der neu geladene Kontext nicht „gelaufen“ meldet.
+  - `[false]` `[reject]` (Edge Case) Gleichzeitiges Abhaken/Öffnen: Last-Write-Wins verliert eine Wahl — `erledigt` und `offen` setzen einen Zustand, kein Umschalten; der letzte Tipp gewinnt, genau wie die Person ihn gewählt hat, nichts geht unbemerkt verloren.
+  - `[low]` `[reject]` (Edge Case) Gleichstand bei `ErledigtAm` sortiert nach Anlage — Zeitstempel in Mikrosekunden, Gleichstand praktisch nur mit fester Testuhr; Fix bräuchte eine weitere Spalte.
+  - `[low]` `[reject]` (Edge Case) Demo-Einspielung nach Abbruch halb fertig — gleiches Muster wie `KanaeleAsync` (Story 6-1); nur bei Abbruch mitten im Einspielen, Demo-Datenbank wird neu aufgesetzt.
+  - `[low]` `[patch]` (Blind) Gleicher Satz doppelt nach 409 beim Hinzufügen und Abhaken — gleiche Ursache wie oben, gleiche Korrektur.
+  - `[medium]` `[patch]` (Blind) Kein Hinweis gegen Gesundheitsdaten in Notizen — Satz in `kanaele.md` ergänzt: Gesundheitsdaten und vertrauliche Angaben über Personen gehören nicht in die Punkte.
+  - `[low]` `[reject]` (Blind) Liste „Offen“ ohne Obergrenze — die Absicht verlangt ausdrücklich „alle offenen Punkte“; nur Leitung und Team können schreiben.
+  - `[low]` `[reject]` (Blind) Gleichstand-Sortierung nach Anlage statt Abhak-Reihenfolge — wie Edge-Case-Befund oben.
+  - `[false]` `[reject]` (Blind) Keine Konfliktbehandlung bei gleichzeitigem Umschalten — wie Edge-Case-Befund oben: Zustand statt Umschalten, keine verlorene Wahl.
+  - `[false]` `[reject]` (Blind) Vertrags-Records geben Text in `ToString` aus — AD-22 betrifft Commands und Entitäten, die die Pipeline protokolliert; die Records werden nirgends geloggt, `KanalNachricht` aus 6-1 genauso.
+  - `[low]` `[reject]` (Blind) E2E-Tests fügen nichts hinzu und haken nichts ab — Verdrahtung ist in bUnit getestet, der Server in HTTP-Tests; ein schreibender E2E-Test bräuchte eine eigene Freizeit.
+  - `[low]` `[patch]` (Blind) Mehrere UI-Pfade ohne Test (Reiterwechsel, „Alles abgehakt.“, Neuladen scheitert) — Tests für Reiterwechsel und „Alles abgehakt.“ ergänzt; Neuladen-Fehler bleibt ungetestet (gleiches Muster wie 6-1).
+  - `[false]` `[reject]` (Blind) „Card“ als unerklärter Begriff in der Doku — „Card“ ist durchgängig in der Anwender-Doku verwendet (z. B. `eltern/familienkonto.md`); keine benannte Schadwirkung.
+  - `[low]` `[patch]` (Blind) Seitentitel passt nicht mehr zum Inhalt — `title` in `kanaele.md` zu „Kanäle, Ansagen-Zettel und Besprechung“, Linktexte in `mitarbeitende/index.md`, `leitung/index.md` und `programm.md` angepasst. Die h1 „Team“/„Alle“ der Nachrichtenseite bleibt (Segmente).
+  - `[low]` `[reject]` (Blind) Hinweistext spricht nur vom „Tipp“ — Wortwahl der ganzen App und von EXPERIENCE.md; am Laptop verständlich.
+  - `[low]` `[reject]` (Blind) Demo-Einspielung halb fertig nach Abbruch — wie Edge-Case-Befund oben.
+  - `[low]` `[reject]` (Blind) 500-Zeichen-Grenze in UTF-16 statt Zeichen, kein `maxlength` — trifft nur Texte nahe 500 Zeichen mit Emojis; Feldfehler erklärt die Grenze, gleiches Muster wie Nachrichten.
+  - `[low]` `[reject]` (Intent) Offene API-Entscheidungen (Trim vor Längenprüfung, Reihenfolge nach Anlage, Groß/Klein bei `art`, 409 vor 404) ohne eigenen Test — alle sind vertretbare Lesarten; kein Nutzerschaden benannt.
+  - `[low]` `[reject]` (Intent) Bedienung nur gegen nachgebildeten Server und lesende E2E-Tests geprüft — wie Blind-Befund zu E2E.
+  - `[low]` `[reject]` (Intent) AD-22 (`ToString` ohne Text) und „keine Personen-Kennung“ nicht per Test abgesichert — strukturell umgesetzt (Overrides, Migration ohne Personenspalte), gleiches Vorgehen wie 6-1/6-2.
+
 ## Design Notes
 
 - **Ein Typ für beide Listen:** Ansagen-Zettel und Besprechungspunkte verhalten sich gleich (Text anlegen, abhaken). Eine Entität mit `Art` vermeidet doppelten Code. Beide liegen im Modul Kanäle, wie es die Modultabelle der Spine vorsieht.
@@ -144,3 +181,50 @@ Wurzel: `src/` = S, `tests/` = T, KM = `S/Modules/Kanaele/Zeltlotse.Kanaele`.
 **Commands:**
 - `dotnet test tests/Zeltlotse.Api.Tests` (gefiltert auf KanalNotizenTests, KanaeleTests, EndpunktListeTests, DemoDatenTests), `tests/Zeltlotse.Ui.Tests`, `tests/Zeltlotse.ArchitectureTests` -- erwartet: grün.
 - Am Ende einmal `dotnet test` für die ganze Lösung inklusive E2E der Kategorie Doku, danach `npm run build` in `doku/` -- erwartet: grün, fehlerfrei, die neuen PNGs liegen in `doku/src/assets/screenshots/`.
+
+## Auto Run Result
+
+Status: done
+
+**Umsetzung:** Das Modul Kanäle hat je Freizeit zwei Notiz-Listen, Ansagen-Zettel und Besprechung. Dazu gehören die Entität `Notiz` ohne Personen-Kennung und vier Endpunkte unter `/api/freizeiten/{id}/kanaele/notizen` (Laden, Anlegen, erledigt, offen). Bei *gelaufen* antworten sie mit 409. Der Löschlauf entfernt die Notizen. In der Web-App gibt es die Reiter „Nachrichten · Ansagen-Zettel · Besprechung“ und die Notiz-Seite mit Kästchen-Liste. Außerdem: Demo-Daten, Screenshots für Handy und Laptop, Anwender-Doku.
+
+**Geänderte Dateien (Kern):**
+- `src/Modules/Kanaele/Zeltlotse.Kanaele/Notizen/*` – Entität, Anlegen, Laden, Übergang
+- `…/Daten/KanaeleDbContext.cs`, `…/Migrationen/20261020190743_Notizen*` – Tabelle `notiz`
+- `…/Datenschutz/KanaeleLoeschlauf.cs` – Notizen mit der Freizeit löschen
+- `…/KanaeleModul.cs` – Routen registriert
+- `src/Zeltlotse.Api.Contracts/Kanaele/Kanaele.cs` – Verträge und Konstanten
+- `src/Zeltlotse.Ui/Api/KanaeleApiClient.cs` – Client-Methoden
+- `src/Zeltlotse.App/Features/Kanaele/KanalNotizen.razor`, `KanaeleReiter.razor`, `KanaeleTexte.cs`, `Kanaele.razor` – Oberfläche
+- `src/Zeltlotse.Api/Demo/DemoDaten.cs`, `DemoKatalog.cs` – Demo-Punkte
+- Tests: `KanalNotizenTests.cs` (HTTP gegen PostgreSQL), `KanalNotizenSeitenTests.cs` (bUnit), `EndpunktListeTests.cs`, `KanaeleTests.cs`, `DemoDatenTests.cs`, `DokuScreenshotTests.cs`
+- Doku:
+  - `mitarbeitende/kanaele.md` mit neuem Abschnitt und Titel
+  - `daten.md`
+  - Linktexte in `mitarbeitende/index.md`, `leitung/index.md` und `programm.md`
+  - vier neue Screenshots `kanaele-ansagen-*` und `kanaele-besprechung-*`
+
+**Review:** 26 Befunde.
+- Patches:
+  - Der Abschluss-Satz erscheint nach 409 nur noch einmal (gruppiert, 3 Befunde, low).
+  - Neue bUnit-Tests für 409 beim Hinzufügen und Abhaken, für den Reiterwechsel und für „Alles abgehakt.“ (low).
+  - In der Doku ein Hinweis gegen Gesundheitsdaten in Punkten (medium).
+  - Doku-Titel und Linktexte (low).
+- Patch-Zählung nach Urteil: high 0, medium 1, low 5 Einträge.
+- Zurückgestellt: ein Eintrag, das Zurücksetzen des Kästchens nach gescheitertem Tipp; nur per Browser-Test prüfbar.
+- Abgelehnt: alle übrigen; die Gründe stehen im Triage-Log.
+
+**Folge-Review empfohlen:** false. Es wurde kein high gepatcht, nur ein medium.
+
+**Verifikation:**
+- `dotnet build Zeltlotse.slnx`: fehlerfrei.
+- `dotnet test` je Testprojekt grün:
+  - Ablaeufe 10, Api 1043, E2E 197 (inklusive Doku-Screenshots), Finanzen 65, Freizeiten 93, Inventar 34
+  - Konten 26, Kueche 119, Organisationen 58, Personen 157, Programm 109, SharedKernel 134
+  - Sicherheit 36, Ui 853, ArchitectureTests 136
+- Screenshots fremder Seiten, die der Lauf nur mit Rendering-Rauschen neu erzeugt hat, sind zurückgesetzt.
+- `npm run build` in `doku/`: fehlerfrei, 67 Seiten.
+
+**Restrisiken:**
+- Die Seite behandelt Rennen beim schnellen Reiterwechsel während des Ladens nicht. Das gleiche Muster hat die Kanal-Seite.
+- Die Kästchen-Rücksetzung nach einem Fehler ist nur im Code umgesetzt; kein Test prüft sie.

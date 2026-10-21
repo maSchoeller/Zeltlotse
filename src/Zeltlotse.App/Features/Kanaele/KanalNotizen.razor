@@ -171,7 +171,12 @@ else
                     break;
                 case KanalAktionErgebnis.Abgeschlossen:
                     _kontext = await Kontext.LadenAsync(FreizeitId) ?? _kontext;
-                    _meldung = KanaeleTexte.NotizenAbgeschlossenText;
+                    if (!Abgeschlossen)
+                    {
+                        // Sonst steht der Satz schon als Hinweis über der Liste.
+                        _meldung = KanaeleTexte.NotizenAbgeschlossenText;
+                    }
+
                     break;
                 default:
                     _textFehler = aktion.Feldfehler.GetValueOrDefault(KanalFelder.Text) ?? KanaeleTexte.NichtGespeichertText;
@@ -208,8 +213,12 @@ else
                     await LadenAsync(art);
                     break;
                 case KanalAktionErgebnis.Abgeschlossen:
-                    _fehler[notiz] = KanaeleTexte.NotizenAbgeschlossenText;
                     _kontext = await Kontext.LadenAsync(FreizeitId) ?? _kontext;
+                    if (!Abgeschlossen)
+                    {
+                        _fehler[notiz] = KanaeleTexte.NotizenAbgeschlossenText;
+                    }
+
                     break;
                 default:
                     _fehler[notiz] = KanaeleTexte.NichtGespeichertText;

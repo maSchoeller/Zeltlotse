@@ -283,6 +283,81 @@ public sealed class KanalNotizenSeitenTests : BunitContext
         Assert.All(kaestchen, k => Assert.True(k.HasAttribute("disabled")));
     }
 
+    /// <summary>Der Kontext meldet beim ersten Laden „läuft“, danach „gelaufen“: Die Freizeit wird abgeschlossen, während die Seite offen ist.</summary>
+    private void WirdAbgeschlossen()
+    {
+        var abrufe = 0;
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{Freizeit}/kontext", () => Json(new
+        {
+            freizeitId = Freizeit, name = "Zeltlager Sommer 2027", phase = ++abrufe == 1 ? "Laeuft" : "Gelaufen", rollen = new[] { "Team" },
+            schalter = Array.Empty<string>(), erlaubt = Array.Empty<string>(),
+        }));
+    }
+
+    [Fact]
+    public void Hinzufuegen_nach_dem_Abschluss_zeigt_den_Hinweis_einmal_und_blendet_die_Eingabe_aus()
+    {
+        Antworten();
+        WirdAbgeschlossen();
+        _server.Bei(HttpMethod.Post, Pfad("ansagen"), () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, "freizeit-abgeschlossen"));
+        var cut = Rendern();
+        cut.Find("#notiz-text").Input("Taschenlampen");
+
+        cut.Find("form").Submit();
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("#notiz-text")));
+        Assert.Single(cut.FindAll("p"), p => p.TextContent == KanaeleTexte.NotizenAbgeschlossenText);
+        Assert.All(cut.FindAll("input[type=checkbox]"), k => Assert.True(k.HasAttribute("disabled")));
+    }
+
+    [Fact]
+    public void Abhaken_nach_dem_Abschluss_zeigt_den_Hinweis_einmal_und_deaktiviert_die_Kaestchen()
+    {
+        Antworten();
+        WirdAbgeschlossen();
+        _server.Bei(HttpMethod.Post, UebergangPfad(Nachtwache, "erledigt"), () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, "freizeit-abgeschlossen"));
+        var cut = Rendern("besprechung");
+
+        cut.Find("#offen input[type=checkbox]").Change(true);
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("#notiz-text")));
+        Assert.Single(cut.FindAll("p"), p => p.TextContent == KanaeleTexte.NotizenAbgeschlossenText);
+        Assert.Empty(cut.FindAll(".elkw-field-error"));
+        Assert.All(cut.FindAll("input[type=checkbox]"), k => Assert.True(k.HasAttribute("disabled")));
+    }
+
+    // ---------- Reiterwechsel ----------
+
+    [Fact]
+    public void Reiterwechsel_auf_derselben_Seite_leert_den_Entwurf_und_laedt_die_andere_Liste()
+    {
+        Antworten();
+        var cut = Rendern();
+        cut.Find("#notiz-text").Input("Taschenlampen");
+
+        cut.Render(ps => ps.Add(p => p.Art, "besprechung"));
+
+        cut.WaitForAssertion(() => Assert.Equal(["Nachtwache einteilen"], Punkte(cut, "offen")));
+        Assert.Equal("Besprechung", cut.Find("h1").TextContent);
+        Assert.Equal("", cut.Find("#notiz-text").GetAttribute("value") ?? "");
+    }
+
+    [Fact]
+    public void Alles_abgehakt_zeigt_den_eigenen_Leer_Zustand_und_die_abgehakten_Punkte()
+    {
+        Antworten();
+        _server.Bei(HttpMethod.Get, Pfad("besprechung"), () => Json(new
+        {
+            art = "Besprechung", offen = Array.Empty<object>(),
+            abgehakt = new[] { Notiz(Spuelplan, "Besprechung", "Spülplan besprechen", "2027-08-03T19:00:00+00:00") },
+        }));
+
+        var cut = Rendern("besprechung");
+
+        Assert.Equal(KanaeleTexte.AllesAbgehaktText, cut.Find("#offen .elkw-empty p").TextContent);
+        Assert.Equal(["Spülplan besprechen"], Punkte(cut, "abgehakt"));
+    }
+
     // ---------- Client ----------
 
     [Fact]
