@@ -35,6 +35,9 @@ internal static class WebSicherheit
         // Story 3-8: Abschluss der Freizeit einmal pro Anfrage für die Schreibschutz-Stufe der Pipeline (AD-17).
         services.AddScoped<IAbschlussStand, AbschlussStand>();
         services.AddScoped<IAngemeldeteMail, AngemeldeteMail>();
+        // Story 6-4: der QR-Gast der Anfrage; nur die Rechteprüfung setzt ihn.
+        services.AddScoped<QrGastKontext>();
+        services.AddScoped<IQrGast>(sp => sp.GetRequiredService<QrGastKontext>());
 
         // Weitergeleitete Header nur von konfigurierten Proxy-Adressen; die eingebauten Loopback-Vorgaben fallen weg.
         services.AddOptions<ForwardedHeadersOptions>()

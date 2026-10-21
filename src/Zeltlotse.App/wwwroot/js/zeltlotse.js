@@ -2,6 +2,7 @@
 // Inhalt: Online-Status mit Ereignissen, Zeitpunkt der letzten erfolgreichen API-Antwort (localStorage),
 // Neu laden mit Aktivieren eines wartenden Service Workers, Drucken und Datei speichern (Datenauskunft). Story 6-1: Web-Push (Status, Abo lesen,
 // abonnieren, abmelden, eingehende Pushes beobachten) und ans Ende scrollen. Die Erlaubnis für Benachrichtigungen fragt nur pushAbonnieren ab.
+// Story 6-4: Text in die Zwischenablage kopieren (Link des Teilnehmer-Zugangs).
 
 const zuletztSchluessel = 'zeltlotse.zuletztAktualisiert';
 
@@ -205,5 +206,17 @@ export function ansEndeScrollen(elementId) {
     const element = document.getElementById(elementId);
     if (element) {
         element.scrollIntoView({ block: 'end' });
+    }
+}
+
+// ---------- Story 6-4: Link kopieren ----------
+
+// Legt den Text in die Zwischenablage (nur nach einem Tipp, z. B. „Link kopieren“); liefert, ob es geklappt hat. Ohne Clipboard-API oder ohne Erlaubnis false.
+export async function kopieren(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch {
+        return false;
     }
 }

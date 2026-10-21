@@ -1,8 +1,10 @@
 @page "/anmelden"
 @inject KontenApiClient Konten
 @inject AnmeldungAbschluss Abschluss
+@inject TeilnehmerApiClient Teilnehmer
 @* Anmelden (EXPERIENCE.md → Login, State Patterns „Login-Link verschickt“; AD-11): Login-Link per Mail anfordern; in der
-   installierten App den Code aus derselben Mail eintippen. Alternativ mit Passwort. Nur Bausteine aus Ui.Komponenten. *@
+   installierten App den Code aus derselben Mail eintippen. Alternativ mit Passwort. Story 6-4: Mit gültiger Gast-Sitzung zusätzlich die Card
+   „Teilnehmer-Zugang“ mit dem Weg zurück dorthin. Nur Bausteine aus Ui.Komponenten. *@
 <PageTitle>Anmelden – Zeltlotse</PageTitle>
 
 <h1>Anmelden</h1>
@@ -44,6 +46,14 @@ else if (_anfrageId is not null)
 
 <p><a href="anmelden/passwort">Mit Passwort anmelden</a></p>
 
+@if (_teilnehmer is not null)
+{
+    <Card Titel="Teilnehmer-Zugang" Id="teilnehmer-zugang">
+        <p>Auf diesem Gerät ist der Teilnehmer-Zugang für @_teilnehmer.Name offen. Dafür braucht es keine Anmeldung.</p>
+        <Knopf Href="@TeilnehmerTexte.Start" Ansichtswechsel="true">Zum Teilnehmer-Zugang</Knopf>
+    </Card>
+}
+
 @code {
     private string? _mail;
     private string? _mailFehler;
@@ -52,6 +62,23 @@ else if (_anfrageId is not null)
     private bool _codeFalsch;
     private bool _uebertraegt;
     private bool _aktionFehler;
+    private Zeltlotse.Api.Contracts.Freizeiten.TeilnehmerFreizeit? _teilnehmer;
+
+    /// <summary>
+    /// Story 6-4: Ein Start vom Home-Bildschirm (start_url <c>/app/</c>) landet ohne Konto hier; hat das Gerät eine gültige Gast-Sitzung, führt eine Card
+    /// zurück zum Teilnehmer-Zugang. Ein Fehler heißt: keine Card.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _teilnehmer = await Teilnehmer.LadenAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _teilnehmer = null;
+        }
+    }
 
     private async Task LinkSchickenAsync()
     {

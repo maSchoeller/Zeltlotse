@@ -109,6 +109,51 @@ namespace Zeltlotse.Kanaele.Migrationen
                     b.ToTable("notiz", "kanaele");
                 });
 
+            modelBuilder.Entity("Zeltlotse.Kanaele.Push.GastPushAbo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AngelegtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Auth")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Endpunkt")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("GeraeteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("P256dh")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("Stempel")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("FreizeitId", "Endpunkt")
+                        .IsUnique();
+
+                    b.ToTable("gast_push_abo", "kanaele");
+                });
+
             modelBuilder.Entity("Zeltlotse.Kanaele.Push.PushAbo", b =>
                 {
                     b.Property<Guid>("Id")

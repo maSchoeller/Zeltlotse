@@ -1,0 +1,146 @@
+@using Zeltlotse.Api.Contracts.Kanaele
+@inject IBrowser Browser
+@* Card „Benachrichtigungen“ (Story 6-1, aus der Kanal-Seite herausgezogen in Story 6-4; EXPERIENCE.md → „Push nicht möglich“, „Push abgelehnt“): gemeinsam für
+   Leitung und Team (Kanäle) und den QR-Gast (Teilnehmer-Zugang, Kanal „Alle“); die Seite übergibt die Aufrufe für Schlüssel, Abo und Abmelden. Die Erlaubnis
+   fragt der Browser erst nach einem Tipp auf „Benachrichtigungen einschalten“; ohne Push-Möglichkeit steht der passende Hinweis (iPhone ohne Home-Bildschirm,
+   abgelehnt, Browser ohne Push), die Kanäle bleiben lesbar. Hat das Gerät schon ein Abo, erneuert die Card es still für das Ziel (Freizeit bzw. Gast). *@
+<Card Titel="Benachrichtigungen" Id="benachrichtigungen">
+    @switch (_push)
+    {
+        case PushStatus.An:
+            <p>@KanaeleTexte.PushAnText</p>
+            <Knopf Art="KnopfArt.Outline" @onclick="AusschaltenAsync">Benachrichtigungen ausschalten</Knopf>
+            break;
+        case PushStatus.Aus:
+            <p>@AusText</p>
+            <Knopf Art="KnopfArt.Outline" @onclick="EinschaltenAsync">Benachrichtigungen einschalten</Knopf>
+            break;
+        case PushStatus.Abgelehnt:
+            <p><strong>@KanaeleTexte.PushAbgelehntText</strong> @BleibenText</p>
+            <p>So geht es wieder an:</p>
+            <ol>
+                <li>In den Einstellungen des Geräts oder des Browsers die Mitteilungen für Zeltlotse erlauben.</li>
+                <li>Diese Seite neu laden und „Benachrichtigungen einschalten“ tippen.</li>
+            </ol>
+            break;
+        case PushStatus.NurMitHomeBildschirm:
+            <p><strong>@KanaeleTexte.PushHomeBildschirmText</strong> @BleibenText</p>
+            <ol>
+                <li>In Safari unten auf „Teilen“ tippen.</li>
+                <li>„Zum Home-Bildschirm“ wählen und „Hinzufügen“ tippen.</li>
+                <li>Zeltlotse über das neue Symbol öffnen, hierher wechseln und „Benachrichtigungen einschalten“ tippen.</li>
+            </ol>
+            break;
+        default:
+            <p><strong>@KanaeleTexte.PushNichtMoeglichText</strong> @BleibenText</p>
+            break;
+    }
+    @if (_pushFehler)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@KanaeleTexte.PushFehlerText</p>
+        </Meldung>
+    }
+</Card>
+
+@code {
+    private PushStatus _push = PushStatus.Aus;
+    private bool _pushFehler;
+    private string? _geprueftFuer;
+
+    /// <summary>Wofür die Card gilt (z. B. die Freizeit); wechselt es, prüft die Card das Gerät neu und erneuert ein bestehendes Abo still.</summary>
+    [Parameter, EditorRequired] public string Ziel { get; set; } = "";
+
+    /// <summary>Lädt den öffentlichen VAPID-Schlüssel; <c>null</c> heißt: nicht verfügbar.</summary>
+    [Parameter, EditorRequired] public Func<Task<string?>> SchluesselLaden { get; set; } = () => Task.FromResult<string?>(null);
+
+    /// <summary>Speichert das Abo des Browsers beim Server.</summary>
+    [Parameter, EditorRequired] public Func<PushAboNeu, Task<KanalAktionErgebnis>> AboSpeichern { get; set; } = _ => Task.FromResult(KanalAktionErgebnis.Fehler);
+
+    /// <summary>Meldet das Abo zu diesem Endpunkt beim Server ab.</summary>
+    [Parameter, EditorRequired] public Func<string, Task<KanalAktionErgebnis>> Abmelden { get; set; } = _ => Task.FromResult(KanalAktionErgebnis.Fehler);
+
+    /// <summary>Satz, solange Push möglich, aber aus ist.</summary>
+    [Parameter] public string AusText { get; set; } = KanaeleTexte.PushAusText;
+
+    /// <summary>Satz unter jedem Hinweis ohne Push.</summary>
+    [Parameter] public string BleibenText { get; set; } = KanaeleTexte.KanaeleBleibenText;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_geprueftFuer == Ziel)
+        {
+            return;
+        }
+
+        _geprueftFuer = Ziel;
+        _pushFehler = false;
+        await PruefenAsync();
+    }
+
+    /// <summary>Was das Gerät kann; hat es schon ein Abo, wird es still für dieses Ziel erneuert (auch nach einem Wechsel der Freizeit).</summary>
+    private async Task PruefenAsync()
+    {
+        _push = await Browser.PushStatusAsync();
+        if (_push == PushStatus.An && await Browser.PushAboLesenAsync() is { } abo)
+        {
+            try
+            {
+                await AboSpeichern(new PushAboNeu(abo.Endpunkt, abo.P256dh, abo.Auth));
+            }
+            catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+            {
+                // Still: Beim nächsten Öffnen wird es erneut versucht.
+            }
+        }
+    }
+
+    /// <summary>Erst hier fragt der Browser nach der Erlaubnis; danach speichert der Server das Abo.</summary>
+    private async Task EinschaltenAsync()
+    {
+        _pushFehler = false;
+        try
+        {
+            if (await SchluesselLaden() is not { } schluessel)
+            {
+                _pushFehler = true;
+                return;
+            }
+
+            if (await Browser.PushAbonnierenAsync(schluessel) is not { } abo)
+            {
+                _push = await Browser.PushStatusAsync();
+                return;
+            }
+
+            var ergebnis = await AboSpeichern(new PushAboNeu(abo.Endpunkt, abo.P256dh, abo.Auth));
+            _pushFehler = ergebnis != KanalAktionErgebnis.Erfolg;
+            _push = ergebnis == KanalAktionErgebnis.Erfolg ? PushStatus.An : await Browser.PushStatusAsync();
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _pushFehler = true;
+        }
+    }
+
+    /// <summary>Beendet das Abo im Browser und meldet es beim Server ab.</summary>
+    private async Task AusschaltenAsync()
+    {
+        _pushFehler = false;
+        var endpunkt = await Browser.PushAbmeldenAsync();
+        _push = await Browser.PushStatusAsync();
+        if (endpunkt is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await Abmelden(endpunkt);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // Der Browser hat kein Abo mehr; der Push-Dienst meldet das alte Abo beim nächsten Push als abgelaufen.
+        }
+    }
+}

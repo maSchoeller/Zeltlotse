@@ -10,6 +10,7 @@ using Zeltlotse.Freizeiten.Contracts.Namen;
 using Zeltlotse.Freizeiten.Contracts.Personen;
 using Zeltlotse.Freizeiten.Contracts.Rollen;
 using Zeltlotse.Freizeiten.Contracts.Schalter;
+using Zeltlotse.Freizeiten.Contracts.TeilnehmerZugang;
 using Zeltlotse.Freizeiten.Contracts.Team;
 using Zeltlotse.Freizeiten.Contracts.Zeitpunkte;
 using Zeltlotse.Freizeiten.Daten;
@@ -21,6 +22,7 @@ using Zeltlotse.Freizeiten.Module;
 using Zeltlotse.Freizeiten.Nachweise;
 using Zeltlotse.Freizeiten.Personenliste;
 using Zeltlotse.Freizeiten.TeamNotizen;
+using Zeltlotse.Freizeiten.TeilnehmerZugang;
 using Zeltlotse.Freizeiten.Rechte;
 using Zeltlotse.Freizeiten.Startseite;
 using Zeltlotse.Freizeiten.Verwaltung;
@@ -64,6 +66,8 @@ public static class FreizeitenModul
         // Story 3-1: die Tage einer Freizeit für Wochenraster und Mahlzeiten (Pfeil Programm → Freizeiten).
         services.AddScoped<IFreizeitTageLesen, FreizeitTageLesen>();
         services.AddScoped<IBestaetigteTeilnehmende, BestaetigteTeilnehmendeZaehlen>();
+        // Story 6-4: die Prüfung der Gast-Sitzung des QR-Teilnehmerzugangs für die Rechteprüfung des Hosts (AD-12).
+        services.AddScoped<IQrZugangLesen, QrZugangLesen>();
         services.VerschicktMail<AnmeldungEntschiedenMail, AnmeldungEntschiedenMailAufbau>();
         services.EmpfaengtEreignis<PersonGeloescht, FreizeitPersonLoeschen>();
         services.AddScoped<IDatenauskunft, FreizeitenAuskunft>();
@@ -121,6 +125,11 @@ public static class FreizeitenModul
         // Story 3-7: Module der Freizeit schalten (FR-44, AD-20), nur Leitung.
         freizeit.MapGet("/module", ModuleLadenEndpunkt.Laden).NurFreizeitRolle(FreizeitRechte.Einstellungen);
         freizeit.MapPatch("/module", ModulAendernEndpunkt.Aendern).NurFreizeitRolle(FreizeitRechte.Einstellungen);
+        // Story 6-4: QR-Link des Teilnehmer-Zugangs (AD-11, FR-64), nur Leitung und nur mit dem Modul Teilnehmer-Zugang (AD-20).
+        freizeit.MapGet("/qr-zugang", QrZugangLadenEndpunkt.Laden)
+            .NurFreizeitRolle(FreizeitRechte.Einstellungen).GehoertZuSchalter(FunktionsSchalter.TeilnehmerZugang);
+        freizeit.MapPost("/qr-zugang/erneuern", QrZugangErneuernEndpunkt.Erneuern)
+            .NurFreizeitRolle(FreizeitRechte.Einstellungen).GehoertZuSchalter(FunktionsSchalter.TeilnehmerZugang);
         // Story 3-8: Freizeit abschließen (AD-17, CAP-27), nur Leitung; Übergang als POST (AD-19, AD-28).
         freizeit.MapPost("/abschliessen", FreizeitAbschliessenEndpunkt.Abschliessen).NurFreizeitRolle(FreizeitRechte.Einstellungen);
         // Story 2-3: Anmeldungen der Leitung (Liste, Bestätigen, Absagen); Statuswechsel als POST je Übergang (AD-19, AD-28).
@@ -141,6 +150,14 @@ public static class FreizeitenModul
         dokumente.MapGet("/{dokumentId:guid}/datei", DokumentEndpunkte.Datei).NurFreizeitRolle(FreizeitRechte.Mitarbeit);
         dokumente.MapGet("/org", DokumentEndpunkte.OrgAuswahl).NurFreizeitRolle(FreizeitRechte.Mitarbeit);
         dokumente.MapPost("/einbindungen", DokumentEndpunkte.Einbinden).NurFreizeitRolle(FreizeitRechte.Mitarbeit);
+
+        // Story 6-4: Teilnehmer-Zugang per QR-Code. Nur das Einlösen ist anonym und zugriffsbegrenzt (viele Kinder teilen im Lager eine IP); die übrigen
+        // Routen lesen nur und verlangen die Gast-Sitzung (.NurQrGast(), sonst 404).
+        var teilnehmer = api.MapGroup("/teilnehmer");
+        teilnehmer.MapPost("/einloesen", TeilnehmerEinloesenEndpunkt.Einloesen).AllowAnonymous().Zugriffsbegrenzt();
+        teilnehmer.MapGet("", TeilnehmerEndpunkte.Laden).NurQrGast();
+        teilnehmer.MapGet("/infos", TeilnehmerEndpunkte.Infos).NurQrGast();
+        teilnehmer.MapGet("/infos/{dokumentId:guid}", TeilnehmerEndpunkte.Datei).NurQrGast();
 
         api.MapGet("/ich/freizeiten", MeineFreizeitenEndpunkt.Laden).Organisationsuebergreifend();
         var anmeldungen = api.MapGroup("/ich/anmeldungen").Organisationsuebergreifend();

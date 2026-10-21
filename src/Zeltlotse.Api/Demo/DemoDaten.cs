@@ -14,6 +14,7 @@ using Zeltlotse.Freizeiten.Freizeitseite;
 using Zeltlotse.Freizeiten.Leitung;
 using Zeltlotse.Freizeiten.Module;
 using Zeltlotse.Freizeiten.TeamNotizen;
+using Zeltlotse.Freizeiten.TeilnehmerZugang;
 using Zeltlotse.Freizeiten.Verwaltung;
 using Zeltlotse.Finanzen.Beitraege;
 using Zeltlotse.Finanzen.Belege;
@@ -598,8 +599,8 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
     }
 
     /// <summary>
-    /// Story 3-7: schaltet die Module aus <see cref="DemoKatalog.Module"/> in der Demo-Freizeit ein, je nur, wenn sie noch aus sind; der
-    /// Teilnehmer-Zugang bleibt aus. Die Kinderbibeltage bleiben ohne Module.
+    /// Story 3-7: schaltet die Module aus <see cref="DemoKatalog.Module"/> in der Demo-Freizeit ein, je nur, wenn sie noch aus sind. Die
+    /// Kinderbibeltage bleiben ohne Module. Story 6-4: Mit dem Teilnehmer-Zugang erzeugt Miriam den QR-Link, nur wenn es noch keinen gibt.
     /// </summary>
     private async Task ModuleAsync(CancellationToken abbruch)
     {
@@ -614,6 +615,12 @@ internal sealed partial class DemoDaten(IConfiguration konfiguration, IServiceSc
             {
                 throw new InvalidOperationException($"Demo-Freizeit: Das Modul {feld} ließ sich nicht einschalten.");
             }
+        }
+
+        if (!await dienste.GetRequiredService<FreizeitenLeseDbContext>().QrZugaenge.AnyAsync(q => q.FreizeitId == freizeit.Id, abbruch)
+            && await sender.Send(new QrZugangErneuernCommand(freizeit.Id), abbruch) is not QrZugangErneuerung.Erneuert)
+        {
+            throw new InvalidOperationException("Demo-Freizeit: Der QR-Link des Teilnehmer-Zugangs ließ sich nicht erzeugen.");
         }
     }
 

@@ -40,6 +40,8 @@ public sealed class SchutzkonzeptSeitenTests : BunitContext
         _server.Bei(r => r.Method == HttpMethod.Get && r.RequestUri!.AbsolutePath.EndsWith("/programm/aufgaben", StringComparison.Ordinal),
             _ => Task.FromResult(NachgebildeterHandler.Json(HttpStatusCode.OK, "[]")));
         Services.AddScoped<AppSitzung>();
+        // Story 6-4: Die Einstellungen drucken und kopieren über den Browser (Card „Teilnehmer-Zugang“).
+        Services.AddSingleton<Zeltlotse.App.Browser.IBrowser>(new NachgebildeterBrowser());
         Services.AddScoped<ISitzung>(sp => sp.GetRequiredService<AppSitzung>());
         Services.AddScoped(_ => new AntiforgeryHandler { InnerHandler = _server });
         Services.AddScoped(sp => new HttpClient(

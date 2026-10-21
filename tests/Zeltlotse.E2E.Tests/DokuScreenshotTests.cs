@@ -1394,7 +1394,8 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(card).ToContainTextAsync("Abgeschaltete Module erscheinen nirgends in Zeltlotse.", new() { Timeout = 60_000 });
         await Assertions.Expect(card.GetByLabel("Verpflegung")).ToBeCheckedAsync();
         await Assertions.Expect(card.GetByLabel("Finanzen")).ToBeCheckedAsync();
-        await Assertions.Expect(card.GetByLabel("Teilnehmer-Zugang")).Not.ToBeCheckedAsync();
+        // Story 6-4: In der Demo-Freizeit ist auch der Teilnehmer-Zugang an.
+        await Assertions.Expect(card.GetByLabel("Teilnehmer-Zugang")).ToBeCheckedAsync();
         await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await E2EHilfe.AxeAsync(seite);
         await card.EvaluateAsync("karte => karte.scrollIntoView({ block: 'start' })");
@@ -2657,6 +2658,145 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         // Am Handy steht „Abgehakt“ unter dem Bildrand; das Bild zeigt beide Cards.
         await seite.Locator("#abgehakt").ScrollIntoViewIfNeededAsync();
         await BildAsync(seite, "kanaele-besprechung", geraet);
+    }
+
+    // ---------- Story 6-4: Teilnehmer-Zugang per QR-Code ----------
+
+    /// <summary>
+    /// Jonas (Leitung) öffnet die Einstellungen der Demo-Freizeit: Die Card „Teilnehmer-Zugang“ zeigt den Namen der Freizeit, den QR-Code, den Link als
+    /// Text und die Knöpfe „Drucken“, „Link kopieren“ und „Link erneuern“. Nur lesend: kein Erneuern, damit der Link der anderen Bilder bleibt.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Teilnehmer_Zugang_Qr(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await EinstellungenAsync(seite);
+        var card = seite.Locator("#teilnehmer-zugang");
+        await Assertions.Expect(card.Locator(".zl-druck-seite h2")).ToHaveTextAsync(DemoFreizeitName, new() { Timeout = 60_000 });
+        await Assertions.Expect(card.GetByRole(AriaRole.Img, new() { Name = "QR-Code zum Teilnehmer-Zugang" })).ToBeVisibleAsync();
+        await Assertions.Expect(card.Locator(".zl-druck-seite p")).ToHaveTextAsync(new System.Text.RegularExpressions.Regex(@"/app/teilnehmer/[A-Za-z0-9_-]{43}$"));
+        await Assertions.Expect(card.GetByRole(AriaRole.Button, new() { Name = "Drucken" })).ToBeVisibleAsync();
+        await Assertions.Expect(card.GetByRole(AriaRole.Button, new() { Name = "Link kopieren" })).ToBeVisibleAsync();
+        await Assertions.Expect(card.GetByRole(AriaRole.Button, new() { Name = "Link erneuern" })).ToBeVisibleAsync();
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+        await card.EvaluateAsync("karte => karte.scrollIntoView({ block: 'start' })");
+
+        await BildAsync(seite, "teilnehmer-zugang-qr", geraet);
+    }
+
+    /// <summary>
+    /// Wochenübersicht des Teilnehmer-Zugangs: Ein Browser ohne Konto öffnet den Link aus der Card und tippt „Freizeit öffnen“. Am Handy der erste Tag
+    /// (die Demo-Freizeit liegt in der Zukunft), am Laptop alle Tage; je Programmpunkt nur Uhrzeit und Titel, ohne Link, Übernahme oder Knopf.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Teilnehmer_Woche(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await TeilnehmerZugangAsync(seite);
+        if (geraet == "handy")
+        {
+            var tag = seite.Locator(".zl-reiter__inhalt .zl-reiter__inhalt");
+            await Assertions.Expect(tag.Locator("h2")).ToHaveTextAsync("Montag, 2. August 2027", new() { Timeout = 60_000 });
+            await Assertions.Expect(tag.Locator(".zl-termin h3")).ToHaveTextAsync(["Frühstück", "Mittagessen", "Anreise und Zeltaufbau", "Abendessen", "Lagerfeuer"]);
+        }
+        else
+        {
+            var spalten = seite.Locator(".zl-tagesspalte");
+            await Assertions.Expect(spalten).ToHaveCountAsync(12, new() { Timeout = 60_000 });
+            await Assertions.Expect(TerminIn(spalten.Nth(1), "Geländespiel").Locator(".elkw-kicker")).ToHaveTextAsync("14:30");
+        }
+
+        await Assertions.Expect(seite.Locator(".zl-termin a, .zl-termin .elkw-status, .zl-termin button")).ToHaveCountAsync(0);
+        await Assertions.Expect(seite.Locator("header .zl-freizeitname")).ToHaveTextAsync(DemoFreizeitName);
+        await Assertions.Expect(seite.Locator("header a.zl-konto-link")).ToHaveCountAsync(0);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "teilnehmer-woche", geraet);
+    }
+
+    /// <summary>Infos des Teilnehmer-Zugangs: die Dokumente der Demo-Freizeit für Eltern und Teilnehmende, darunter der Infobrief.</summary>
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Teilnehmer_Infos(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+
+        await TeilnehmerZugangAsync(seite);
+        await TeilnehmerBereichAsync(seite, "Infos", "?bereich=infos");
+        await Assertions.Expect(seite.Locator(".zl-reiter__inhalt li a")).ToHaveTextAsync(DemoElterninfo, new() { Timeout = 60_000 });
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await BildAsync(seite, "teilnehmer-infos", geraet);
+    }
+
+    /// <summary>
+    /// Kanal „Alle“ im Teilnehmer-Zugang: die Nachrichten an alle mit „Team“ als Absender, ohne Eingabefeld, darüber die Card „Benachrichtigungen“. Tag
+    /// und Uhrzeit hängen vom Einspielen ab; im Bild stehen feste. Nur lesend.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Teilnehmer_Alle(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet, ["notifications"]);
+        var seite = await kontext.NewPageAsync();
+
+        await TeilnehmerZugangAsync(seite);
+        await TeilnehmerBereichAsync(seite, "Alle", "?bereich=alle");
+        await Assertions.Expect(seite.Locator("ol.zl-kanal .zl-kanal__text")).ToHaveTextAsync(
+            ["Mittagessen heute um 13:30 statt 13:00.", "Wandertag morgen: feste Schuhe, Regenjacke und eine volle Trinkflasche einpacken."], new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("ol.zl-kanal strong")).ToHaveTextAsync(["Team", "Team"]);
+        await Assertions.Expect(seite.GetByRole(AriaRole.Button, new() { Name = "Benachrichtigungen einschalten" })).ToBeVisibleAsync(new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("textarea")).ToHaveCountAsync(0);
+        await seite.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await E2EHilfe.AxeAsync(seite);
+
+        await ZeitenFestAsync(seite, "03.08. 11:02", "03.08. 18:30");
+        await BildAsync(seite, "teilnehmer-alle", geraet);
+    }
+
+    /// <summary>
+    /// Story 6-4: Liest den Link aus Jonas' Card „Teilnehmer-Zugang“ und öffnet ihn in der Seite eines Browser-Kontexts ohne Sitzung; „Freizeit öffnen“ löst
+    /// ihn ein. Kein Erneuern, damit die Demo-Daten unverändert bleiben. Es gibt nie eine Umleitung zur Anmeldung.
+    /// </summary>
+    private async Task TeilnehmerZugangAsync(IPage seite)
+    {
+        var leitung = await host.KontextAsync(new BrowserNewContextOptions { Locale = "de-DE", TimezoneId = "Europe/Berlin" });
+        try
+        {
+            var einstellungen = await leitung.NewPageAsync();
+            await EinstellungenAsync(einstellungen);
+            var link = einstellungen.Locator("#teilnehmer-zugang .zl-druck-seite p");
+            await Assertions.Expect(link).ToHaveTextAsync(new System.Text.RegularExpressions.Regex("/app/teilnehmer/"), new() { Timeout = 60_000 });
+            await seite.GotoAsync((await link.TextContentAsync())!.Trim());
+        }
+        finally
+        {
+            await leitung.CloseAsync();
+        }
+
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Teilnehmer-Zugang", new() { Timeout = 60_000 });
+        await seite.GetByRole(AriaRole.Button, new() { Name = "Freizeit öffnen" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync(DemoFreizeitName, new() { Timeout = 60_000 });
+        await Assertions.Expect(seite).ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/app/teilnehmer$"));
+    }
+
+    /// <summary>Story 6-4: Tippt im Teilnehmer-Zugang den Reiter eines Bereichs und wartet auf die Seite.</summary>
+    private static async Task TeilnehmerBereichAsync(IPage seite, string reiter, string adresse)
+    {
+        await seite.GetByRole(AriaRole.Navigation, new() { Name = "Bereiche" }).GetByRole(AriaRole.Link, new() { Name = reiter, Exact = true }).ClickAsync();
+        await Assertions.Expect(seite).ToHaveURLAsync(new System.Text.RegularExpressions.Regex(System.Text.RegularExpressions.Regex.Escape(adresse) + "$"), new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByRole(AriaRole.Navigation, new() { Name = "Bereiche" }).GetByRole(AriaRole.Link, new() { Name = reiter, Exact = true }))
+            .ToHaveAttributeAsync("aria-current", "page");
     }
 
     /// <summary>Story 6-3: Tippt in den Kanälen den Reiter einer Notiz-Liste und wartet auf die Seite.</summary>

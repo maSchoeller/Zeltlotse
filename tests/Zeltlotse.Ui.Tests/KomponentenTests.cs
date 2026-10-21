@@ -284,7 +284,45 @@ public sealed class KomponentenTests : BunitContext
         Assert.Equal("tel:074431234", TelefonLink.Href("(0)7443 1234"));
     }
 
+    // ---------- QR-Code-Bild (Story 6-4) ----------
+
+    [Fact]
+    public void QR_Code_Bild_zeichnet_je_Folge_dunkler_Module_ein_Rechteck_in_einem_Pfad_als_Bild_mit_Bezeichnung_ohne_style()
+    {
+        var cut = Render<QrCodeBild>(ps => ps.Add(p => p.Zeilen, ["0110", "1001", "1111", "0000"]).Add(p => p.Bezeichnung, "QR-Code zum Teilnehmer-Zugang"));
+
+        var bild = cut.Find("svg");
+        Assert.Equal(
+            ("zl-qr", "img", "QR-Code zum Teilnehmer-Zugang", "0 0 4 4", "crispEdges"),
+            (bild.GetAttribute("class"), bild.GetAttribute("role"), bild.GetAttribute("aria-label"), bild.GetAttribute("viewBox"), bild.GetAttribute("shape-rendering")));
+        var pfad = Assert.Single(cut.FindAll("path"));
+        Assert.Equal("M1 0h2v1h-2zM0 1h1v1h-1zM3 1h1v1h-1zM0 2h4v1h-4z", pfad.GetAttribute("d"));
+        Assert.Single(bild.Children);
+        Assert.DoesNotContain("style", cut.Markup, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void QR_Code_Bild_ohne_Zeilen_hat_einen_leeren_Pfad()
+    {
+        var cut = Render<QrCodeBild>(ps => ps.Add(p => p.Zeilen, []).Add(p => p.Bezeichnung, "QR-Code"));
+
+        Assert.Equal(("0 0 0 0", ""), (cut.Find("svg").GetAttribute("viewBox"), cut.Find("path").GetAttribute("d")));
+    }
+
     // ---------- Druck (Story 2-11) ----------
+
+    [Fact]
+    public void Druck_Seite_ohne_Dachzeile_hat_nur_den_Titel()
+    {
+        var cut = Render<DruckSeite>(ps => ps.Add(p => p.Titel, "Zeltlager Sommer 2027").AddChildContent("<p>Link</p>"));
+
+        cut.MarkupMatches("""
+            <section class="zl-druck-seite">
+              <h2 class="zl-druck-seite__titel">Zeltlager Sommer 2027</h2>
+              <p>Link</p>
+            </section>
+            """);
+    }
 
     [Fact]
     public void Druck_Seite_ist_ein_Abschnitt_mit_Dachzeile_und_Titel_als_h2()

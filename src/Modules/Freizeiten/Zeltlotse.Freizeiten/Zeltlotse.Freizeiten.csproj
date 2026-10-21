@@ -3,6 +3,8 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Mediator.Abstractions" />
+    <!-- Story 6-4: die Matrix des QR-Codes für den Teilnehmer-Zugang (MIT); nur hier, nie in einem Client. -->
+    <PackageReference Include="QRCoder" />
   </ItemGroup>
 
   <ItemGroup>

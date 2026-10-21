@@ -23,6 +23,9 @@ internal sealed class FreizeitenDbContext(DbContextOptions<FreizeitenDbContext> 
 
     public DbSet<Anmeldelink> Anmeldelinks => Set<Anmeldelink>();
 
+    /// <summary>Story 6-4: der QR-Link des Teilnehmer-Zugangs, höchstens einer je Freizeit.</summary>
+    public DbSet<QrZugang> QrZugaenge => Set<QrZugang>();
+
     public DbSet<Anmeldung> Anmeldungen => Set<Anmeldung>();
 
     public DbSet<TeamNotiz> TeamNotizen => Set<TeamNotiz>();
@@ -45,6 +48,9 @@ internal sealed class FreizeitenLeseDbContext(DbContextOptions<FreizeitenLeseDbC
     public DbSet<LeitungsEinladung> Einladungen => Set<LeitungsEinladung>();
 
     public DbSet<Anmeldelink> Anmeldelinks => Set<Anmeldelink>();
+
+    /// <summary>Story 6-4: der QR-Link des Teilnehmer-Zugangs, höchstens einer je Freizeit.</summary>
+    public DbSet<QrZugang> QrZugaenge => Set<QrZugang>();
 
     public DbSet<Anmeldung> Anmeldungen => Set<Anmeldung>();
 
@@ -114,6 +120,19 @@ internal static class FreizeitenModell
             e.HasIndex(l => l.TokenHash).IsUnique();
             e.Property(l => l.TokenGeschuetzt).HasColumnType("bytea");
             e.HasOne<Freizeit>().WithMany().HasForeignKey(l => l.FreizeitId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Story 6-4 (AD-11): der QR-Link des Teilnehmer-Zugangs nach dem Muster Anmeldelink; mit der Freizeit verschwindet auch er.
+        modelBuilder.Entity<QrZugang>(e =>
+        {
+            e.ToTable("qr_zugang");
+            e.Property(q => q.Id).ValueGeneratedNever();
+            e.HasIndex(q => q.FreizeitId).IsUnique();
+            e.Property(q => q.TokenHash).HasColumnType("bytea");
+            e.HasIndex(q => q.TokenHash).IsUnique();
+            e.Property(q => q.TokenGeschuetzt).HasColumnType("bytea");
+            e.HasIndex(q => q.OrganisationId);
+            e.HasOne<Freizeit>().WithMany().HasForeignKey(q => q.FreizeitId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // FR-16: je Freizeit und Person höchstens eine Anmeldung; der Platzhalter gelöschter Personen ist ausgenommen, damit zwei

@@ -14,7 +14,8 @@ namespace Zeltlotse.SharedKernel.Rechte;
 /// </list>
 /// Org- und Freizeit-Merkmal an demselben Endpunkt sind verboten. Story 3-7: <see cref="GehoertZuSchalter{TBuilder}"/> verlangt
 /// <see cref="NurFreizeitRolle{TBuilder}"/>; ist der Schalter für die Freizeit aus, antwortet der Endpunkt nach bestandener Rollenprüfung
-/// mit <c>404</c> (AD-20).
+/// mit <c>404</c> (AD-20). Story 6-4: <see cref="NurQrGast{TBuilder}"/> steht immer allein: Der Endpunkt ist für die normale Sitzung anonym und
+/// verlangt eine gültige Gast-Sitzung des QR-Teilnehmerzugangs; sonst <c>404</c>, nie <c>401</c>.
 /// </summary>
 public static class Rechtemerkmale
 {
@@ -60,6 +61,25 @@ public static class Rechtemerkmale
     public static TBuilder GehoertZuSchalter<TBuilder>(this TBuilder endpunkt, FunktionsSchalter schalter)
         where TBuilder : IEndpointConventionBuilder =>
         endpunkt.WithMetadata(new GehoertZuSchalterMetadaten(schalter));
+
+    /// <summary>
+    /// Story 6-4 (AD-12): Nur für den QR-Gast einer Freizeit. Der Endpunkt verlangt keine Sitzung (für sie ist er anonym); der Host prüft stattdessen das
+    /// Gast-Cookie, setzt den Mandanten und füllt <see cref="IQrGast"/>. Fehlt die Gast-Sitzung oder gilt sie nicht (mehr), antwortet er mit <c>404</c>.
+    /// Zusammen mit einem anderen Rechtemerkmal ist das ein Konfigurationsfehler.
+    /// </summary>
+    public static TBuilder NurQrGast<TBuilder>(this TBuilder endpunkt)
+        where TBuilder : IEndpointConventionBuilder =>
+        endpunkt.AllowAnonymous().WithMetadata(NurQrGastMetadaten.Instanz);
+}
+
+/// <summary>Story 6-4: Merkmal: Der Endpunkt verlangt eine gültige Gast-Sitzung des QR-Teilnehmerzugangs.</summary>
+public sealed class NurQrGastMetadaten
+{
+    public static NurQrGastMetadaten Instanz { get; } = new();
+
+    private NurQrGastMetadaten()
+    {
+    }
 }
 
 /// <summary>Merkmal: Der Endpunkt verlangt einen Global Admin.</summary>

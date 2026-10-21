@@ -92,6 +92,6 @@ Nach dem Abschluss der Freizeit ist das Programm nur lesbar: Oben steht „Diese
 
 ## Noch nicht dabei
 
-Dokumente am Programmpunkt kommen mit einer späteren Version. Teilnehmende lesen den Kanal „Alle“ und damit auch die Nachricht zu einer Verschiebung erst mit dem Teilnehmer-Zugang über den QR-Code.
+Dokumente am Programmpunkt kommen mit einer späteren Version. Teilnehmende lesen den Kanal „Alle“ und damit auch die Nachricht zu einer Verschiebung über den [Teilnehmer-Zugang per QR-Code](/leitung/teilnehmer-zugang/); dort sehen sie die Woche nur mit Uhrzeit und Titel, ohne Details und ohne Übernahmen.
 
 Wer einen Programmpunkt übernommen hat, steht auch in der Datenauskunft der Person unter „Programm“ – mehr dazu unter [Was passiert mit meinen Daten](/daten/#programm).

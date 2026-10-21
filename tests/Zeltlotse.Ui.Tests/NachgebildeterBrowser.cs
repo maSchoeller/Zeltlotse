@@ -139,6 +139,22 @@ internal sealed class NachgebildeterBrowser : IBrowser
         return ValueTask.FromResult<IAsyncDisposable>(new Ende(() => _push = null));
     }
 
+    /// <summary>Story 6-4: Die kopierten Texte (Zwischenablage).</summary>
+    public List<string> Kopiert { get; } = [];
+
+    /// <summary>Story 6-4: Ob der Browser das Kopieren erlaubt.</summary>
+    public bool KopierenErlaubt { get; set; } = true;
+
+    public ValueTask<bool> KopierenAsync(string text)
+    {
+        if (KopierenErlaubt)
+        {
+            Kopiert.Add(text);
+        }
+
+        return ValueTask.FromResult(KopierenErlaubt);
+    }
+
     public ValueTask AnsEndeScrollenAsync(string elementId)
     {
         AnsEnde.Add(elementId);

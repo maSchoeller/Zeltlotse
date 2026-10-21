@@ -77,6 +77,9 @@ public sealed class JsBrowser(IJSRuntime js) : IBrowser, IAsyncDisposable
         return new Beobachtung<PushEmpfaenger>(beobachtung, empfaenger);
     }
 
+    public async ValueTask<bool> KopierenAsync(string text) =>
+        await (await Modul()).InvokeAsync<bool>("kopieren", text);
+
     public async ValueTask AnsEndeScrollenAsync(string elementId) =>
         await (await Modul()).InvokeVoidAsync("ansEndeScrollen", elementId);
 

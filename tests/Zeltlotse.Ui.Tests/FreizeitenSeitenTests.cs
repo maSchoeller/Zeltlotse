@@ -28,6 +28,7 @@ public sealed class FreizeitenSeitenTests : BunitContext
     private static readonly Guid PersonId = Guid.Parse("0199a000-0000-7000-8000-0000000000b1");
 
     private readonly NachgebildeterHandler _server = new();
+    private readonly NachgebildeterBrowser _browser = new();
     private int _tokens;
 
     public FreizeitenSeitenTests()
@@ -36,6 +37,7 @@ public sealed class FreizeitenSeitenTests : BunitContext
         _server.Bei(HttpMethod.Get, "/api/betrieb/antiforgery", () => NachgebildeterHandler.Json(HttpStatusCode.OK, $$"""{"token":"token-{{++_tokens}}"}"""));
         _server.Bei(HttpMethod.Post, "/api/ich/profil", () => NachgebildeterHandler.Json(HttpStatusCode.OK, """{"version":1,"vorname":"Jonas","nachname":"Hüttner"}"""));
         Services.AddScoped<AppSitzung>();
+        Services.AddSingleton<Zeltlotse.App.Browser.IBrowser>(_browser);
         Services.AddScoped<ISitzung>(sp => sp.GetRequiredService<AppSitzung>());
         Services.AddScoped(_ => new AntiforgeryHandler { InnerHandler = _server });
         Services.AddScoped(sp => new HttpClient(
@@ -1019,8 +1021,10 @@ public sealed class FreizeitenSeitenTests : BunitContext
             : [],
     };
 
-    private void EinstellungenAntworten(string[] erlaubt, bool mitLinks = true, string phase = "InVorbereitung")
+    private void EinstellungenAntworten(string[] erlaubt, bool mitLinks = true, string phase = "InVorbereitung", bool teilnehmerZugang = false, bool mitQrLink = true)
     {
+        // Story 6-4: der QR-Link (nur mit dem Modul Teilnehmer-Zugang; ohne Modul antwortet der Server 404).
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitId}/qr-zugang", () => mitQrLink ? Json(QrAnsicht(QrAdresse)) : Json(new { adresse = (string?)null, zeilen = (string[]?)null }));
         _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitId}/kontext", () => Json(new
         {
             freizeitId = FreizeitId,
@@ -1032,6 +1036,152 @@ public sealed class FreizeitenSeitenTests : BunitContext
         }));
         _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitId}/freizeitseite", () => Json(Einstellungen(mitLinks)));
         // Story 3-7: Module der Freizeit (Verpflegung an).
-        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitId}/module", () => Json(new { version = 11, verpflegung = true, finanzen = false, teilnehmerZugang = false }));
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{FreizeitId}/module", () => Json(new { version = 11, verpflegung = true, finanzen = false, teilnehmerZugang }));
+    }
+
+    // ---------- Story 6-4: Teilnehmer-Zugang per QR-Code ----------
+
+    private const string QrAdresse = "https://zeltlotse.example/app/teilnehmer/AlterTokenAlterTokenAlterTokenAlterTokenAlt";
+
+    /// <summary>Eine kleine Matrix (3×3) genügt für die Darstellung; die echte erzeugt der Server.</summary>
+    private static object QrAnsicht(string adresse) => new { adresse, zeilen = new[] { "101", "010", "111" } };
+
+    [Fact]
+    public void Ohne_Modul_Teilnehmer_Zugang_keine_Card_und_keine_Anfrage_nach_dem_QR_Link()
+    {
+        EinstellungenAntworten([Aktionsschluessel.FreizeitEinstellungen]);
+
+        var cut = Render<Einstellungen>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#module")));
+        Assert.Empty(cut.FindAll("#teilnehmer-zugang"));
+        Assert.DoesNotContain(_server.Anfragen, a => a.Pfad == $"/api/freizeiten/{FreizeitId}/qr-zugang");
+    }
+
+    [Fact]
+    public void Mit_Modul_zeigt_die_Card_Freizeitname_QR_Code_und_Link_mit_Drucken_Kopieren_und_Erneuern()
+    {
+        EinstellungenAntworten([Aktionsschluessel.FreizeitEinstellungen], teilnehmerZugang: true);
+
+        var cut = Render<Einstellungen>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#teilnehmer-zugang")));
+        var card = cut.Find("#teilnehmer-zugang");
+        Assert.Equal("Teilnehmer-Zugang", card.QuerySelector(".elkw-card__title")!.TextContent);
+        // Nach der Card „Module“ als letzte.
+        var titel = cut.FindAll(".elkw-card").Select(c => c.QuerySelector("h2")?.TextContent).ToList();
+        Assert.Equal(titel.IndexOf("Module") + 1, titel.IndexOf("Teilnehmer-Zugang"));
+        Assert.Equal("Zeltlager Sommer 2027", card.QuerySelector(".zl-druck-seite h2")!.TextContent);
+        var bild = card.QuerySelector("svg.zl-qr")!;
+        Assert.Equal(("img", "QR-Code zum Teilnehmer-Zugang"), (bild.GetAttribute("role"), bild.GetAttribute("aria-label")));
+        Assert.Contains(QrAdresse, card.QuerySelector(".zl-druck-seite")!.TextContent, StringComparison.Ordinal);
+        Assert.Equal(["Drucken", "Link kopieren", "Link erneuern"], card.QuerySelectorAll("button").Select(b => b.TextContent.Trim()));
+    }
+
+    [Fact]
+    public void Im_Druckbild_stehen_nur_Freizeitname_QR_Code_und_Link_Drucken_ruft_den_Druck_auf()
+    {
+        EinstellungenAntworten([Aktionsschluessel.FreizeitEinstellungen], teilnehmerZugang: true);
+        var cut = Render<Einstellungen>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#teilnehmer-zugang")));
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Drucken").Click();
+
+        Assert.Equal(1, _browser.Gedruckt);
+        // Gedruckt wird alles außerhalb von NurBildschirm (Druck-CSS); den Titel der Card um die Druckseite blendet das Druck-CSS ebenfalls aus. Übrig
+        // bleibt nur die Druckseite des Aushangs, kein Knopf, keine andere Card.
+        var ausserhalb = cut.FindAll("*")
+            .Where(e => e.Closest(".zl-nur-bildschirm") is null && !e.ClassList.Contains("elkw-card__title") && e.TextContent.Trim().Length > 0 && e.Children.Length == 0)
+            .ToList();
+        Assert.Equal("Teilnehmer-Zugang", cut.Find("#teilnehmer-zugang > .elkw-card__body > .elkw-card__title").TextContent);
+        Assert.Equal(["Zeltlager Sommer 2027", QrAdresse], ausserhalb.Select(e => e.TextContent.Trim()));
+        Assert.All(ausserhalb, e => Assert.NotNull(e.Closest(".zl-druck-seite")));
+        Assert.Single(cut.FindAll(".zl-druck-seite"));
+        Assert.Null(cut.Find(".zl-druck-seite svg").Closest(".zl-nur-bildschirm"));
+        Assert.DoesNotContain(cut.FindAll("button"), b => b.Closest(".zl-nur-bildschirm") is null);
+    }
+
+    [Fact]
+    public void Link_kopieren_legt_die_Adresse_in_die_Zwischenablage_und_meldet_Link_kopiert()
+    {
+        EinstellungenAntworten([Aktionsschluessel.FreizeitEinstellungen], teilnehmerZugang: true);
+        var cut = Render<Einstellungen>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#teilnehmer-zugang")));
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Link kopieren").Click();
+
+        Assert.Equal([QrAdresse], _browser.Kopiert);
+        cut.WaitForAssertion(() => Assert.Contains(Zeltlotse.App.Features.Freizeiten.Einstellungen.KopiertText, cut.Find("#teilnehmer-zugang").TextContent, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Link_erneuern_fragt_inline_nach_und_zeigt_danach_den_neuen_Link()
+    {
+        const string neu = "https://zeltlotse.example/app/teilnehmer/NeuerTokenNeuerTokenNeuerTokenNeuerTokenNeu";
+        EinstellungenAntworten([Aktionsschluessel.FreizeitEinstellungen], teilnehmerZugang: true);
+        _server.Bei(HttpMethod.Post, $"/api/freizeiten/{FreizeitId}/qr-zugang/erneuern", () => Json(QrAnsicht(neu)));
+        var cut = Render<Einstellungen>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#teilnehmer-zugang")));
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Link erneuern").Click();
+
+        Assert.Equal(Zeltlotse.App.Features.Freizeiten.Einstellungen.QrErneuernSatz, cut.Find("#teilnehmer-zugang .zl-bestaetigung__satz").TextContent);
+        Assert.DoesNotContain(_server.Anfragen, a => a.Methode == HttpMethod.Post && a.Pfad.EndsWith("/qr-zugang/erneuern", StringComparison.Ordinal));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Ja, Link erneuern").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains(neu, cut.Find("#teilnehmer-zugang").TextContent, StringComparison.Ordinal));
+        Assert.DoesNotContain(QrAdresse, cut.Markup, StringComparison.Ordinal);
+        Assert.Single(_server.Anfragen, a => a.Methode == HttpMethod.Post && a.Pfad == $"/api/freizeiten/{FreizeitId}/qr-zugang/erneuern");
+    }
+
+    [Fact]
+    public void Ohne_Link_bietet_der_Leer_Zustand_QR_Code_erzeugen_an()
+    {
+        EinstellungenAntworten([Aktionsschluessel.FreizeitEinstellungen], teilnehmerZugang: true, mitQrLink: false);
+        _server.Bei(HttpMethod.Post, $"/api/freizeiten/{FreizeitId}/qr-zugang/erneuern", () => Json(QrAnsicht(QrAdresse)));
+        var cut = Render<Einstellungen>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#teilnehmer-zugang .elkw-empty")));
+        Assert.Empty(cut.FindAll("#teilnehmer-zugang svg"));
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "QR-Code erzeugen").Click();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#teilnehmer-zugang svg.zl-qr")));
+        Assert.Contains(QrAdresse, cut.Find("#teilnehmer-zugang").TextContent, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Nach_dem_Einschalten_erscheint_die_Card_nach_dem_Ausschalten_verschwindet_sie()
+    {
+        EinstellungenAntworten([Aktionsschluessel.FreizeitEinstellungen]);
+        _server.BeiDerReihe(
+            HttpMethod.Patch, $"/api/freizeiten/{FreizeitId}/module",
+            () => NachgebildeterHandler.Json(HttpStatusCode.OK, """{"version":12,"teilnehmerZugang":"true"}"""),
+            () => NachgebildeterHandler.Json(HttpStatusCode.OK, """{"version":13,"teilnehmerZugang":"false"}"""));
+        var cut = Render<Einstellungen>(ps => ps.Add(p => p.FreizeitId, FreizeitId));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#modul-teilnehmer-zugang")));
+        Assert.Empty(cut.FindAll("#teilnehmer-zugang"));
+
+        cut.Find("#modul-teilnehmer-zugang").Change(true);
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#teilnehmer-zugang svg.zl-qr")));
+
+        cut.Find("#modul-teilnehmer-zugang").Change(false);
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("#teilnehmer-zugang")));
+    }
+
+    [Fact]
+    public async Task Client_laedt_und_erneuert_den_QR_Link()
+    {
+        EinstellungenAntworten([Aktionsschluessel.FreizeitEinstellungen], teilnehmerZugang: true);
+        _server.Bei(HttpMethod.Post, $"/api/freizeiten/{FreizeitId}/qr-zugang/erneuern", () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, "freizeit-abgeschlossen"));
+        var client = Services.GetRequiredService<FreizeitenApiClient>();
+
+        var ansicht = await client.QrZugangLadenAsync(FreizeitId, Abbruch);
+
+        Assert.Equal((QrAdresse, 3), (ansicht!.Adresse, ansicht.Zeilen!.Count));
+        Assert.Null(await client.QrZugangLadenAsync(Guid.CreateVersion7(), Abbruch));
+        Assert.Equal(new QrZugangErneuernErgebnis(null, Abgeschlossen: true), await client.QrZugangErneuernAsync(FreizeitId, Abbruch));
+        Assert.Equal(new QrZugangErneuernErgebnis(null, Abgeschlossen: false), await client.QrZugangErneuernAsync(Guid.CreateVersion7(), Abbruch));
     }
 }

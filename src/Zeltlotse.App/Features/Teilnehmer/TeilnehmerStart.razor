@@ -1,0 +1,237 @@
+@page "/teilnehmer"
+@layout TeilnehmerLayout
+@implements IAsyncDisposable
+@using System.Globalization
+@using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Kanaele
+@using Zeltlotse.Api.Contracts.Programm
+@inject TeilnehmerApiClient Teilnehmer
+@inject IBrowser Browser
+@inject TimeProvider Uhr
+@* Startseite des Teilnehmer-Zugangs (Story 6-4, FR-64, NS-10; EXPERIENCE.md → Wochenraster, Kanal-Nachrichten): Dachzeile „Teilnehmer-Zugang“, Überschrift
+   der Name der Freizeit, darunter die Reiter „Woche / Infos / Alle“ (die Wahl steht in der Adresse, ?bereich=infos bzw. ?bereich=alle).
+   - Woche: am Handy ein Tag über Reiter (?tag=JJJJ-MM-TT, sonst heute in der Freizeit, sonst der erste Tag), am Laptop alle Tage nebeneinander; je
+     Programmpunkt nur Uhrzeit und Titel, ohne Link, Status oder Details.
+   - Infos: die Dokumente für Eltern und Teilnehmende als Links.
+   - Alle: die Nachrichten an alle mit „Team“ als Absender, ohne Eingabefeld; darüber die Card „Benachrichtigungen“ (gemeinsam mit den Kanälen); geht ein
+     Push ein, lädt die Liste neu.
+   Jede Antwort 404 heißt: Der Zugang gilt nicht (mehr) → „Diese Freizeit ist zu Ende.“ mit dem Hinweis auf einen neuen Scan. Nie eine Umleitung zur
+   Anmeldung. *@
+<PageTitle>Teilnehmer-Zugang – Zeltlotse</PageTitle>
+
+@if (_ende)
+{
+    <h1>@TeilnehmerTexte.EndeText</h1>
+    <p>@TeilnehmerTexte.EndeZusatz</p>
+}
+else if (_fehler)
+{
+    <h1>@TeilnehmerTexte.Ueberschrift</h1>
+    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+        <p>@AnmeldungAbschluss.FehlerText</p>
+    </Meldung>
+}
+else if (_freizeit is null)
+{
+    <Ladezustand />
+}
+else
+{
+    <Dachzeile>@TeilnehmerTexte.Ueberschrift</Dachzeile>
+    <h1>@_freizeit.Name</h1>
+    <p>@Anzeige.Zeitraum(_freizeit.ErsterTag, _freizeit.LetzterTag)</p>
+    <Reiter Bezeichnung="Bereiche" Eintraege="@TeilnehmerTexte.Bereiche(Gewaehlt)">
+        @switch (Gewaehlt)
+        {
+            case "infos":
+                if (_infos is null)
+                {
+                    <Ladezustand />
+                }
+                else if (_infos.Dokumente.Count == 0)
+                {
+                    <LeerZustand Satz="@TeilnehmerTexte.KeineInfosText" />
+                }
+                else
+                {
+                    <Card Titel="Infos">
+                        <ul>
+                            @foreach (var dokument in _infos.Dokumente)
+                            {
+                                <li><a href="@TeilnehmerApiClient.InfoDateiPfad(dokument.Id)" target="_blank" rel="noopener">@Anzeige.Dokument(dokument.Titel, dokument.Dateiart)</a></li>
+                            }
+                        </ul>
+                    </Card>
+                }
+                break;
+            case "alle":
+                if (_kanal is null)
+                {
+                    <Ladezustand />
+                }
+                else
+                {
+                    <PushCard Ziel="@TeilnehmerTexte.Start" SchluesselLaden="@(() => Teilnehmer.SchluesselLadenAsync())"
+                              AboSpeichern="@(abo => Teilnehmer.AboSpeichernAsync(abo))" Abmelden="@(endpunkt => Teilnehmer.AbmeldenAsync(endpunkt))"
+                              AusText="@TeilnehmerTexte.PushAusText" BleibenText="@TeilnehmerTexte.NachrichtenBleibenText" />
+                    <h2>Nachrichten an alle</h2>
+                    <KanalNachrichten Nachrichten="@([.. _kanal.Nachrichten.Select(TeilnehmerTexte.Eintrag)])" />
+                }
+                break;
+            default:
+                if (_woche is null)
+                {
+                    <Ladezustand />
+                }
+                else
+                {
+                    <Reiter NurHandy="true" Bezeichnung="Tage" Eintraege="TagReiter">
+                        <h2>@Anzeige.TagLang(_tag)</h2>
+                        @Termine(_tag)
+                    </Reiter>
+                    <TagesSpalten Bezeichnung="Wochenübersicht" Spalten="Spalten" />
+                }
+                break;
+        }
+    </Reiter>
+}
+
+@code {
+    private TeilnehmerFreizeit? _freizeit;
+    private TeilnehmerWoche? _woche;
+    private TeilnehmerInfos? _infos;
+    private TeilnehmerKanal? _kanal;
+    private IAsyncDisposable? _pushBeobachtung;
+    private DateOnly _tag;
+    private bool _ende;
+    private bool _fehler;
+
+    /// <summary>Der Bereich aus der Adresse: <c>infos</c>, <c>alle</c>, sonst die Woche.</summary>
+    [SupplyParameterFromQuery(Name = "bereich")] public string? BereichWahl { get; set; }
+
+    /// <summary>Der gewählte Tag der Woche im Handy-Aufbau als <c>JJJJ-MM-TT</c>.</summary>
+    [SupplyParameterFromQuery(Name = "tag")] public string? TagWahl { get; set; }
+
+    private string Gewaehlt => TeilnehmerTexte.Bereich(BereichWahl);
+
+    private IEnumerable<DateOnly> Tage
+    {
+        get
+        {
+            for (var tag = _woche!.ErsterTag; tag <= _woche.LetzterTag; tag = tag.AddDays(1))
+            {
+                yield return tag;
+            }
+        }
+    }
+
+    private IReadOnlyList<ReiterEintrag> TagReiter => [.. Tage.Select(t => new ReiterEintrag(Anzeige.TagKurz(t), TeilnehmerTexte.TagZiel(t), t == _tag))];
+
+    private IReadOnlyList<TagesSpalte> Spalten => [.. Tage.Select(t => new TagesSpalte(Anzeige.TagKurz(t), Termine(t)))];
+
+    private RenderFragment Termine(DateOnly tag) => @<text>
+        @{
+            var punkte = _woche!.Punkte.Where(p => p.Tag == tag).ToList();
+        }
+        @if (punkte.Count == 0)
+        {
+            <p>@TeilnehmerTexte.KeinProgrammText</p>
+        }
+        @foreach (var punkt in punkte)
+        {
+            <Termin Uhrzeit="@punkt.Beginn" Titel="@punkt.Titel" />
+        }
+    </text>;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _fehler = false;
+        try
+        {
+            _freizeit ??= await Teilnehmer.LadenAsync();
+            if (_freizeit is null)
+            {
+                _ende = true;
+                return;
+            }
+
+            var gefunden = Gewaehlt switch
+            {
+                "infos" => (_infos = await Teilnehmer.InfosLadenAsync()) is not null,
+                "alle" => (_kanal = await Teilnehmer.KanalLadenAsync()) is not null,
+                _ => (_woche ??= await Teilnehmer.WocheLadenAsync()) is not null,
+            };
+            if (!gefunden)
+            {
+                _ende = true;
+                return;
+            }
+
+            if (_woche is not null)
+            {
+                TagWaehlen();
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _fehler = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _pushBeobachtung = await Browser.PushBeobachtenAsync(PushEingegangenAsync);
+        }
+    }
+
+    /// <summary>Der Tag aus der Adresse, sonst heute (wenn er zur Freizeit gehört), sonst der erste Tag.</summary>
+    private void TagWaehlen()
+    {
+        var (erster, letzter) = (_woche!.ErsterTag, _woche.LetzterTag);
+        if (DateOnly.TryParseExact(TagWahl, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var gewaehlt) && gewaehlt >= erster && gewaehlt <= letzter)
+        {
+            _tag = gewaehlt;
+            return;
+        }
+
+        var heute = Anzeige.Tag(Uhr.GetUtcNow());
+        _tag = heute >= erster && heute <= letzter ? heute : erster;
+    }
+
+    /// <summary>Ein Push ist eingegangen: Im Bereich „Alle“ lädt die Liste neu.</summary>
+    private async Task PushEingegangenAsync()
+    {
+        if (Gewaehlt != "alle" || _ende)
+        {
+            return;
+        }
+
+        try
+        {
+            if (await Teilnehmer.KanalLadenAsync() is { } kanal)
+            {
+                _kanal = kanal;
+            }
+            else
+            {
+                _ende = true;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _fehler = true;
+        }
+
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_pushBeobachtung is not null)
+        {
+            await _pushBeobachtung.DisposeAsync();
+        }
+    }
+}

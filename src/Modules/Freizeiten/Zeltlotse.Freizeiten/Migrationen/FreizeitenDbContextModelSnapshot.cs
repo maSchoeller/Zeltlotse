@@ -316,6 +316,44 @@ namespace Zeltlotse.Freizeiten.Migrationen
                     b.ToTable("leitungs_einladung", "freizeiten");
                 });
 
+            modelBuilder.Entity("Zeltlotse.Freizeiten.Domaene.QrZugang", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ErzeugtAm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FreizeitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("Stempel")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("TokenGeschuetzt")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FreizeitId")
+                        .IsUnique();
+
+                    b.HasIndex("OrganisationId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("qr_zugang", "freizeiten");
+                });
+
             modelBuilder.Entity("Zeltlotse.Freizeiten.TeamNotizen.TeamNotiz", b =>
                 {
                     b.Property<Guid>("Id")
@@ -486,6 +524,15 @@ namespace Zeltlotse.Freizeiten.Migrationen
                 {
                     b.HasOne("Zeltlotse.Freizeiten.Domaene.Freizeit", null)
                         .WithMany("Rollen")
+                        .HasForeignKey("FreizeitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zeltlotse.Freizeiten.Domaene.QrZugang", b =>
+                {
+                    b.HasOne("Zeltlotse.Freizeiten.Domaene.Freizeit", null)
+                        .WithMany()
                         .HasForeignKey("FreizeitId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

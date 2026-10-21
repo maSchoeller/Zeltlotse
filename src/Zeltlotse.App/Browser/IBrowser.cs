@@ -46,6 +46,9 @@ public interface IBrowser
 
     /// <summary>Story 6-1: Scrollt das Element mit der Kennung ans untere Ende des sichtbaren Bereichs (die Kanal-Seite öffnet am Ende).</summary>
     ValueTask AnsEndeScrollenAsync(string elementId);
+
+    /// <summary>Story 6-4: Legt den Text in die Zwischenablage (nur nach einem Tipp, z. B. „Link kopieren“); <c>false</c>, wenn der Browser es nicht erlaubt.</summary>
+    ValueTask<bool> KopierenAsync(string text);
 }
 
 /// <summary>Story 6-1: Was ein Gerät mit Push kann.</summary>

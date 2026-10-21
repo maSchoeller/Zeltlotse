@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Zeltlotse.Freizeiten.Contracts.Events;
 using Zeltlotse.Kanaele.Daten;
 using Zeltlotse.Kanaele.Datenschutz;
 using Zeltlotse.Kanaele.Nachrichten;
@@ -33,6 +34,9 @@ public static class KanaeleModul
         // Arbeitsdaten der Freizeit, Push-Abos personeneigen (AD-16): Empfänger von PersonGeloescht, Datenauskunft und Lösch-Lauf.
         services.VerschicktPush<NachrichtPush, NachrichtPushAufbau>();
         services.EmpfaengtEreignis<PersonGeloescht, KanaelePersonLoeschen>();
+        // Story 6-4: Eine Nachricht in „Alle“ geht zusätzlich an die Gast-Abos der QR-Gäste; der Abschluss der Freizeit beendet Gast- und Team-Abos (AD-21).
+        services.VerschicktPush<NachrichtGastPush, NachrichtGastPushAufbau>();
+        services.EmpfaengtEreignis<FreizeitAbgeschlossen, GastAbosBeenden>();
         services.AddScoped<IDatenauskunft, KanaeleAuskunft>();
         services.AddScoped<ILoeschlauf, KanaeleLoeschlauf>();
         return services;
@@ -42,7 +46,8 @@ public static class KanaeleModul
     /// Bindet die Endpunkte des Moduls in die <c>/api</c>-Gruppe ein. Story 6-1: die zwei festen Kanäle unter
     /// <c>/api/freizeiten/{freizeitId}/kanaele/{team|alle}/nachrichten</c> (lesen, senden; „Alle“ nur mit Bestätigung) und das Push-Abo unter
     /// <c>…/kanaele/push</c> (öffentlicher Schlüssel, Abo speichern, abmelden), alle für Leitung und Team, ohne Funktions-Schalter; nach dem Abschluss nur
-    /// lesbar (AD-17). Story 6-3: Ansagen-Zettel und Besprechungspunkte unter <c>…/kanaele/notizen</c> (lesen, anlegen, abhaken, wieder öffnen).
+    /// lesbar (AD-17). Story 6-3: Ansagen-Zettel und Besprechungspunkte unter <c>…/kanaele/notizen</c> (lesen, anlegen, abhaken, wieder öffnen). Story 6-4:
+    /// für den QR-Gast unter <c>/api/teilnehmer</c> der Kanal „Alle“ (nur lesen) und das eigene Push-Abo (<c>.NurQrGast()</c>).
     /// </summary>
     public static IEndpointRouteBuilder MapKanaeleEndpoints(this IEndpointRouteBuilder api)
     {
@@ -57,6 +62,13 @@ public static class KanaeleModul
         kanaele.MapPost("/notizen/{art}", NotizAnlegenEndpunkt.Anlegen).NurFreizeitRolle(Mitarbeit);
         kanaele.MapPost("/notizen/{notizId:guid}/erledigt", NotizUebergangEndpunkt.Erledigt).NurFreizeitRolle(Mitarbeit);
         kanaele.MapPost("/notizen/{notizId:guid}/offen", NotizUebergangEndpunkt.Offen).NurFreizeitRolle(Mitarbeit);
+
+        // Story 6-4: Der QR-Gast liest nur den Kanal „Alle“; schreiben darf er nur das eigene Push-Abo (gleiche Prüfung wie beim Team).
+        var teilnehmer = api.MapGroup("/teilnehmer");
+        teilnehmer.MapGet("/kanal", TeilnehmerKanalLadenEndpunkt.Laden).NurQrGast();
+        teilnehmer.MapGet("/push/schluessel", GastPushEndpunkte.Schluessel).NurQrGast();
+        teilnehmer.MapPost("/push/abo", GastPushEndpunkte.Speichern).NurQrGast();
+        teilnehmer.MapPost("/push/abo/abmelden", GastPushEndpunkte.Abmelden).NurQrGast();
         return api;
     }
 }

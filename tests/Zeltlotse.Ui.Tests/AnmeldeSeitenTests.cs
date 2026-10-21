@@ -143,7 +143,8 @@ public sealed class AnmeldeSeitenTests : BunitContext
         cut.WaitForAssertion(() => Assert.Equal("http://localhost/", Navigation.Uri));
         Assert.True(Sitzung.Angemeldet);
         Assert.Equal("Jonas", Sitzung.Vorname);
-        Assert.Equal(["POST /api/konten/login-link", "POST /api/konten/login-code/einloesen", "POST /api/ich/profil"], Aufrufe);
+        // Story 6-4: Die Seite fragt zuerst nach einer Gast-Sitzung des Teilnehmer-Zugangs (hier keine, 404).
+        Assert.Equal(["GET /api/teilnehmer", "POST /api/konten/login-link", "POST /api/konten/login-code/einloesen", "POST /api/ich/profil"], Aufrufe);
         // Nach der Anmeldung ein neues Antiforgery-Token (es hängt an der Identität).
         var tokenNachAnmeldung = _server.Anfragen.Single(a => a.Pfad == "/api/ich/profil").Kopfzeilen[Zeltlotse.Api.Contracts.Gemeinsam.Kopfzeilen.Antiforgery];
         Assert.NotEqual(_server.Anfragen.Single(a => a.Pfad == "/api/konten/login-code/einloesen").Kopfzeilen[Zeltlotse.Api.Contracts.Gemeinsam.Kopfzeilen.Antiforgery], tokenNachAnmeldung);

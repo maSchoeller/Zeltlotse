@@ -80,7 +80,7 @@ public sealed class DokuTests
                 "Seite kueche/tagesansicht.md fehlt.",
                 "Seite finanzen/index.md fehlt.", "Seite finanzen/kalkulation.md fehlt.", "Seite finanzen/beitragsrechner.md fehlt.", "Seite finanzen/belege.md fehlt.", "Seite finanzen/soll-ist.md fehlt.",
                 "Seite finanzen/beitraege.md fehlt.",
-                "Seite mitarbeitende/kanaele.md fehlt.",
+                "Seite mitarbeitende/kanaele.md fehlt.", "Seite leitung/teilnehmer-zugang.md fehlt.",
             ],
             fehlend);
     }

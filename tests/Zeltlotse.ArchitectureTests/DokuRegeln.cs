@@ -32,7 +32,7 @@ internal static partial class DokuRegeln
             .Append("kueche/tagesansicht")
             .Append("finanzen/index").Append("finanzen/kalkulation").Append("finanzen/beitragsrechner")
             .Append("finanzen/belege").Append("finanzen/soll-ist").Append("finanzen/beitraege")
-            .Append("mitarbeitende/kanaele");
+            .Append("mitarbeitende/kanaele").Append("leitung/teilnehmer-zugang");
 
     public static string DokuSeitenOrdner => Path.Combine(Loesung.Wurzel, "doku", "src", "content", "docs");
 

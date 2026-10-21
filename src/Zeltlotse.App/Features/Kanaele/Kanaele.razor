@@ -14,7 +14,7 @@
    zuerst die Inline-Bestätigung „An N Personen senden?“ auf („Ja, senden“ / „Nein“). In der Card „Benachrichtigungen“: Die Erlaubnis für Push fragt die Seite
    erst nach einem Tipp auf „Benachrichtigungen einschalten“; ohne Push-Möglichkeit steht der passende Hinweis (iPhone ohne Home-Bildschirm, abgelehnt,
    Browser ohne Push), die Kanäle bleiben lesbar und beschreibbar. Hat das Gerät schon ein Abo, erneuert die Seite es still für diese Freizeit. Geht ein
-   Push ein, lädt der Kanal neu. Keine Zähler. In der Phase „gelaufen“ nur lesbar, ohne Eingabefeld und ohne Benachrichtigungen. Kontext oder Kanal nicht
+   Push ein, lädt der Kanal neu. Story 6-4: Die Card ist der gemeinsame Baustein PushCard (auch für den Teilnehmer-Zugang). Keine Zähler. In der Phase „gelaufen“ nur lesbar, ohne Eingabefeld und ohne Benachrichtigungen. Kontext oder Kanal nicht
    verfügbar → „Diese Seite ist nicht verfügbar.“. Namen kommen aus Freizeit und Personenliste (AD-2). *@
 <PageTitle>Kanäle – Zeltlotse</PageTitle>
 
@@ -54,44 +54,8 @@ else
 
         @if (!Abgeschlossen)
         {
-            <Card Titel="Benachrichtigungen" Id="benachrichtigungen">
-                @switch (_push)
-                {
-                    case PushStatus.An:
-                        <p>@KanaeleTexte.PushAnText</p>
-                        <Knopf Art="KnopfArt.Outline" @onclick="AusschaltenAsync">Benachrichtigungen ausschalten</Knopf>
-                        break;
-                    case PushStatus.Aus:
-                        <p>@KanaeleTexte.PushAusText</p>
-                        <Knopf Art="KnopfArt.Outline" @onclick="EinschaltenAsync">Benachrichtigungen einschalten</Knopf>
-                        break;
-                    case PushStatus.Abgelehnt:
-                        <p><strong>@KanaeleTexte.PushAbgelehntText</strong> @KanaeleTexte.KanaeleBleibenText</p>
-                        <p>So geht es wieder an:</p>
-                        <ol>
-                            <li>In den Einstellungen des Geräts oder des Browsers die Mitteilungen für Zeltlotse erlauben.</li>
-                            <li>Diese Seite neu laden und „Benachrichtigungen einschalten“ tippen.</li>
-                        </ol>
-                        break;
-                    case PushStatus.NurMitHomeBildschirm:
-                        <p><strong>@KanaeleTexte.PushHomeBildschirmText</strong> @KanaeleTexte.KanaeleBleibenText</p>
-                        <ol>
-                            <li>In Safari unten auf „Teilen“ tippen.</li>
-                            <li>„Zum Home-Bildschirm“ wählen und „Hinzufügen“ tippen.</li>
-                            <li>Zeltlotse über das neue Symbol öffnen, hierher wechseln und „Benachrichtigungen einschalten“ tippen.</li>
-                        </ol>
-                        break;
-                    default:
-                        <p><strong>@KanaeleTexte.PushNichtMoeglichText</strong> @KanaeleTexte.KanaeleBleibenText</p>
-                        break;
-                }
-                @if (_pushFehler)
-                {
-                    <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
-                        <p>@KanaeleTexte.PushFehlerText</p>
-                    </Meldung>
-                }
-            </Card>
+            <PushCard Ziel="@FreizeitId.ToString()" SchluesselLaden="@(() => KanaeleApi.SchluesselLadenAsync(FreizeitId))"
+                      AboSpeichern="@(abo => KanaeleApi.AboSpeichernAsync(FreizeitId, abo))" Abmelden="@(endpunkt => KanaeleApi.AbmeldenAsync(FreizeitId, endpunkt))" />
         }
 
         <KanalNachrichten Nachrichten="@([.. _ansicht.Nachrichten.Select(n => KanaeleTexte.Eintrag(n, _personen))])" />
@@ -120,11 +84,9 @@ else
     private FreizeitKontext? _kontext;
     private KanalAnsicht? _ansicht;
     private IReadOnlyDictionary<Guid, (string? Vorname, string? Nachname)> _personen = new Dictionary<Guid, (string?, string?)>();
-    private PushStatus _push = PushStatus.Aus;
     private IAsyncDisposable? _pushBeobachtung;
     private bool _nichtVerfuegbar;
     private bool _sendet;
-    private bool _pushFehler;
     private bool _ansEnde;
     private string? _meldung;
     private string? _text;
@@ -154,7 +116,6 @@ else
         _nichtVerfuegbar = false;
         _meldung = null;
         _textFehler = null;
-        _pushFehler = false;
         try
         {
             var kontext = Kontext.LadenAsync(FreizeitId);
@@ -174,12 +135,6 @@ else
         {
             // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
             _meldung = AnmeldungAbschluss.FehlerText;
-            return;
-        }
-
-        if (!Abgeschlossen)
-        {
-            await PushPruefenAsync();
         }
     }
 
@@ -194,23 +149,6 @@ else
         {
             _ansEnde = false;
             await Browser.AnsEndeScrollenAsync("kanal-ende");
-        }
-    }
-
-    /// <summary>Was das Gerät kann; hat es schon ein Abo, wird es still für diese Freizeit erneuert (auch nach einem Wechsel der Freizeit).</summary>
-    private async Task PushPruefenAsync()
-    {
-        _push = await Browser.PushStatusAsync();
-        if (_push == PushStatus.An && await Browser.PushAboLesenAsync() is { } abo)
-        {
-            try
-            {
-                await KanaeleApi.AboSpeichernAsync(FreizeitId, new PushAboNeu(abo.Endpunkt, abo.P256dh, abo.Auth));
-            }
-            catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
-            {
-                // Still: Beim nächsten Öffnen wird es erneut versucht.
-            }
         }
     }
 
@@ -292,55 +230,6 @@ else
 
         await LadenAsync();
         StateHasChanged();
-    }
-
-    /// <summary>Erst hier fragt der Browser nach der Erlaubnis; danach speichert der Server das Abo.</summary>
-    private async Task EinschaltenAsync()
-    {
-        _pushFehler = false;
-        try
-        {
-            if (await KanaeleApi.SchluesselLadenAsync(FreizeitId) is not { } schluessel)
-            {
-                _pushFehler = true;
-                return;
-            }
-
-            if (await Browser.PushAbonnierenAsync(schluessel) is not { } abo)
-            {
-                _push = await Browser.PushStatusAsync();
-                return;
-            }
-
-            var ergebnis = await KanaeleApi.AboSpeichernAsync(FreizeitId, new PushAboNeu(abo.Endpunkt, abo.P256dh, abo.Auth));
-            _pushFehler = ergebnis != KanalAktionErgebnis.Erfolg;
-            _push = ergebnis == KanalAktionErgebnis.Erfolg ? PushStatus.An : await Browser.PushStatusAsync();
-        }
-        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
-        {
-            _pushFehler = true;
-        }
-    }
-
-    /// <summary>Beendet das Abo im Browser und meldet es beim Server ab.</summary>
-    private async Task AusschaltenAsync()
-    {
-        _pushFehler = false;
-        var endpunkt = await Browser.PushAbmeldenAsync();
-        _push = await Browser.PushStatusAsync();
-        if (endpunkt is null)
-        {
-            return;
-        }
-
-        try
-        {
-            await KanaeleApi.AbmeldenAsync(FreizeitId, endpunkt);
-        }
-        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
-        {
-            // Der Browser hat kein Abo mehr; der Push-Dienst meldet das alte Abo beim nächsten Push als abgelaufen.
-        }
     }
 
     public async ValueTask DisposeAsync()

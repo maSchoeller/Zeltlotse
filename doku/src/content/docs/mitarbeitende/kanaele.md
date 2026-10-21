@@ -10,7 +10,7 @@ sidebar:
 Jede Freizeit hat zwei feste **Kanäle** für Kurznachrichten:
 
 - **Team** – nur für Leitung und Team, zum Beispiel „Wer übernimmt heute die Nachtwache?“.
-- **Alle** – für alle Personen der Freizeit, zum Beispiel „Mittagessen heute um 13:30 statt 13:00.“ Teilnehmende lesen hier noch nicht mit; das kommt mit dem Teilnehmer-Zugang über den QR-Code.
+- **Alle** – für alle Personen der Freizeit, zum Beispiel „Mittagessen heute um 13:30 statt 13:00.“ Teilnehmende lesen hier über den [Teilnehmer-Zugang per QR-Code](/leitung/teilnehmer-zugang/) mit, ohne Konto und ohne Namen aus dem Team; ist der Zugang eingeschaltet, bekommen sie die Nachrichten auch als Benachrichtigung.
 
 So laufen Absprachen nicht mehr über eine Chat-App nebenher, und jede Nachricht kann als **Benachrichtigung** (Push-Nachricht) aufs Handy kommen. Die Kanäle gibt es in jeder Freizeit; das Modul lässt sich nicht abschalten.
 
@@ -50,7 +50,7 @@ Wer im Programm die Uhrzeit eines Programmpunkts ändert, kann von dort aus mit 
 - **Abgelehnt:** Wurde die Erlaubnis im Gerät verweigert, steht dort „Benachrichtigungen sind auf diesem Gerät ausgeschaltet.“ mit den Schritten, wie sie in den Einstellungen wieder angehen.
 - **Nicht möglich:** Kann ein Browser gar keine Benachrichtigungen empfangen, sagt die Seite das.
 
-In allen Fällen bleiben die Kanäle lesbar und beschreibbar. Benachrichtigungen gehen nur an Personen, die gerade zu Leitung oder Team der Freizeit gehören. Zeltlotse schickt sie selbst, über den offenen Standard für Web-Push, ohne Dienste von Google, Apple oder Microsoft dazwischen außer dem Push-Dienst, den der Browser ohnehin nutzt. Benachrichtigungen enthalten nie Gesundheitsdaten und keinen Namen der Person, die geschrieben hat; Gesundheitsdaten gehören auch nicht in die Nachrichten.
+In allen Fällen bleiben die Kanäle lesbar und beschreibbar. Benachrichtigungen gehen nur an Personen, die gerade zu Leitung oder Team der Freizeit gehören, und aus „Alle“ zusätzlich an Teilnehmende, die sie im [Teilnehmer-Zugang](/leitung/teilnehmer-zugang/) eingeschaltet haben. Zeltlotse schickt sie selbst, über den offenen Standard für Web-Push, ohne Dienste von Google, Apple oder Microsoft dazwischen außer dem Push-Dienst, den der Browser ohnehin nutzt. Benachrichtigungen enthalten nie Gesundheitsdaten und keinen Namen der Person, die geschrieben hat; Gesundheitsdaten gehören auch nicht in die Nachrichten.
 
 ## Ansagen-Zettel und Besprechung
 
@@ -89,7 +89,6 @@ Löscht eine Person ihr Konto, bleiben ihre Nachrichten als Arbeitsdaten der Fre
 
 ## Noch nicht dabei
 
-- Teilnehmende mit dem QR-Zugang lesen den Kanal „Alle“ noch nicht mit und bekommen noch keine Benachrichtigungen.
 - Ansagen und Besprechungspunkte lassen sich keinem Essen, Tag oder einer Person zuordnen.
 - Offline lassen sich Kanäle, Ansagen-Zettel und Besprechung noch nicht nutzen.
 - Nachrichten erscheinen nicht live; die Seite lädt beim Öffnen, nach dem Senden und bei einer Benachrichtigung neu.

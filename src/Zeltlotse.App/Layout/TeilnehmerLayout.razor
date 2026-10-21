@@ -1,0 +1,84 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@using Zeltlotse.App.Features.Teilnehmer
+@inject AppVerbindung Verbindung
+@inject NavigationManager Navigation
+@inject TeilnehmerApiClient Teilnehmer
+@* Layout des Teilnehmer-Zugangs per QR-Code (Story 6-4, EXPERIENCE.md → öffentliche Seiten): App-Rahmen mit App-Leiste, darin der Name der Freizeit, ohne
+   Konto-Link und ohne Navigation; offline die Offline-Leiste. Den Namen lädt das Layout nur auf der Startseite des Zugangs („teilnehmer“) über die
+   Gast-Sitzung; ohne gültige Gast-Sitzung steht keiner da. Lädt nichts, was eine Sitzung verlangt (kein Profil, kein Kontext). *@
+<Sprunglink Ziel="@SprungZiel" />
+<AppRahmen>
+    <Leiste>
+        <AppLeiste StartHref="@TeilnehmerTexte.Start" FreizeitName="@_freizeitName" />
+    </Leiste>
+    <UnterDerLeiste>
+        @if (Verbindung.Offline)
+        {
+            <OfflineLeiste Text="@Verbindung.OfflineText" />
+        }
+    </UnterDerLeiste>
+    <ChildContent>
+        <MeldendeFehlergrenze @ref="_grenze">
+            <ChildContent>
+                <OfflineBereich Offline="@Verbindung.Offline">
+                    @Body
+                </OfflineBereich>
+            </ChildContent>
+            <ErrorContent>
+                <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                    <p>Die Ansicht konnte nicht angezeigt werden.</p>
+                </Meldung>
+            </ErrorContent>
+        </MeldendeFehlergrenze>
+    </ChildContent>
+</AppRahmen>
+
+@code {
+    private MeldendeFehlergrenze? _grenze;
+    private string? _freizeitName;
+
+    private string SprungZiel => Navigation.Uri.Split('#')[0] + "#" + AppRahmen.InhaltId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Verbindung.Geaendert += Neuzeichnen;
+        Navigation.LocationChanged += Seitenwechsel;
+        await Verbindung.StartenAsync();
+        await NameLadenAsync();
+    }
+
+    private void Neuzeichnen() => _ = InvokeAsync(StateHasChanged);
+
+    private void Seitenwechsel(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>
+        _ = InvokeAsync(async () =>
+        {
+            _grenze?.Recover();
+            await NameLadenAsync();
+            StateHasChanged();
+        });
+
+    /// <summary>Der Name der Freizeit, nur auf der Startseite des Zugangs; ein Fehler heißt: kein Name.</summary>
+    private async Task NameLadenAsync()
+    {
+        if (_freizeitName is not null || Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0] != TeilnehmerTexte.Start)
+        {
+            return;
+        }
+
+        try
+        {
+            _freizeitName = (await Teilnehmer.LadenAsync())?.Name;
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            // Ohne Namen; die Seite meldet den Fehler selbst.
+        }
+    }
+
+    public void Dispose()
+    {
+        Verbindung.Geaendert -= Neuzeichnen;
+        Navigation.LocationChanged -= Seitenwechsel;
+    }
+}

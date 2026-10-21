@@ -32,3 +32,7 @@ Eine Anmeldung gelingt auch ohne Konto. Nach der Gast-Anmeldung kommt eine Mail 
 Wer selbst 18 oder älter ist, meldet sich mit einem eigenen Konto selbst an: auf der Freizeitseite **Mit Konto anmelden** und dort **Selbst** wählen.
 
 Wie lange eine Freizeit die Angaben sieht und wann sie gelöscht werden, steht unter [Was passiert mit meinen Daten](/daten/).
+
+## Während der Freizeit: Teilnehmer-Zugang
+
+Viele Freizeiten hängen am Infobrett einen QR-Code aus. Darüber sehen die Kinder auf dem eigenen Handy ohne Konto die Wochenübersicht, die Infos der Freizeit und die Nachrichten an alle; Eltern brauchen dafür nichts einzurichten. Der Zugang kennt keine Namen und endet mit der Freizeit. Mehr dazu steht unter [Teilnehmer-Zugang per QR-Code](/leitung/teilnehmer-zugang/) und [Was passiert mit meinen Daten](/daten/#teilnehmer-zugang).

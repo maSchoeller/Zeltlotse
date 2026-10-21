@@ -33,6 +33,10 @@
     <!-- Web-Push-Adapter mit eigenem VAPID-Schlüssel (nur im API-Host); aktuelle stabile Version beim Anlegen (Story 6-1). -->
     <PackageVersion Include="Lib.Net.Http.WebPush" Version="3.3.1" />
   </ItemGroup>
+  <ItemGroup Label="Teilnehmer-Zugang (AD-11, Story 6-4)">
+    <!-- Matrix des QR-Codes auf dem Server (MIT, nur im Modul Freizeiten); aktuelle stabile Version beim Anlegen (Story 6-4). Clients nutzen keine Fremdpakete. -->
+    <PackageVersion Include="QRCoder" Version="1.8.1" />
+  </ItemGroup>
   <ItemGroup Label="Aspire und ServiceDefaults">
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.1" />
     <!-- Transitiv über Aspire.Hosting; 2.5.303 schließt GHSA-qhrr-8q5h-9q3h (veröffentlicht 15.10.2026). -->

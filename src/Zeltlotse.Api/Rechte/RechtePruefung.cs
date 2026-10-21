@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authentication;
 using Zeltlotse.Freizeiten.Contracts.Rollen;
+using Zeltlotse.Freizeiten.Contracts.TeilnehmerZugang;
 using Zeltlotse.SharedKernel.Anmeldung;
 using Zeltlotse.SharedKernel.Mandanten;
 using Zeltlotse.SharedKernel.Rechte;
@@ -20,6 +22,8 @@ namespace Zeltlotse.Api.Rechte;
 /// aber nicht die verlangte → <c>403</c>.</item>
 /// <item>Story 3-7: <c>.GehoertZuSchalter(…)</c> (nur mit <c>.NurFreizeitRolle(…)</c>): nach bestandener Rollenprüfung, Schalter für die
 /// Freizeit aus → <c>404</c> (AD-20).</item>
+/// <item>Story 6-4: <c>.NurQrGast()</c> (immer allein): Gast-Sitzung fehlt oder gilt nicht (mehr) → <c>404</c>, nie <c>401</c>; sonst Mandant = Organisation
+/// der Freizeit des QR-Links und <see cref="Zeltlotse.SharedKernel.Rechte.IQrGast"/> gesetzt.</item>
 /// </list>
 /// Den Körper (ProblemDetails) schreiben die Statuscode-Seiten. Kein Modul prüft Rollen selbst.
 /// </summary>
@@ -43,6 +47,27 @@ internal sealed class RechtePruefung(RequestDelegate weiter)
         if (schalterMerkmal is not null && freizeitMerkmal is null)
         {
             throw new InvalidOperationException($"{endpunkt!.DisplayName}: .GehoertZuSchalter() verlangt .NurFreizeitRolle() an demselben Endpunkt.");
+        }
+
+        // Story 6-4: Der QR-Gast steht immer allein; jedes weitere Rechtemerkmal wäre eine zweite, widersprüchliche Regel.
+        if (endpunkt?.Metadata.GetMetadata<NurQrGastMetadaten>() is not null)
+        {
+            if (orgMerkmal is not null || freizeitMerkmal is not null || schalterMerkmal is not null
+                || endpunkt.Metadata.GetMetadata<NurGlobalAdminMetadaten>() is not null
+                || endpunkt.Metadata.GetMetadata<ErneuteAnmeldungMetadaten>() is not null
+                || endpunkt.Metadata.GetMetadata<Zeltlotse.SharedKernel.Web.OrganisationsuebergreifendMetadaten>() is not null)
+            {
+                throw new InvalidOperationException($"{endpunkt.DisplayName}: .NurQrGast() verträgt kein weiteres Rechtemerkmal an demselben Endpunkt.");
+            }
+
+            if (!await QrGastPruefenAsync(kontext, mandant, abbruch))
+            {
+                kontext.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+
+            await weiter(kontext);
+            return;
         }
 
         var organisationId = Kennung(kontext, Rechtemerkmale.OrgRouteWert);
@@ -102,6 +127,29 @@ internal sealed class RechtePruefung(RequestDelegate weiter)
         }
 
         await weiter(kontext);
+    }
+
+    /// <summary>
+    /// Story 6-4 (AD-12, AD-20): Authentifiziert das Gast-Schema (nie das Vorgabe-Schema) und prüft bei Freizeiten, ob der QR-Link mit diesem Stempel noch
+    /// besteht, der Teilnehmer-Zugang an ist und das Freizeitende noch nicht erreicht ist. Dann Mandant = Organisation der Freizeit und der QR-Gast gesetzt.
+    /// </summary>
+    private static async Task<bool> QrGastPruefenAsync(HttpContext kontext, MandantenKontext mandant, CancellationToken abbruch)
+    {
+        var ergebnis = await kontext.AuthenticateAsync(GastSitzung.Schema);
+        if (!ergebnis.Succeeded || GastSitzung.Lesen(ergebnis.Principal) is not { } gast)
+        {
+            return false;
+        }
+
+        var organisation = await kontext.RequestServices.GetRequiredService<IQrZugangLesen>().PruefenAsync(gast.FreizeitId, gast.Stempel, abbruch);
+        if (organisation is null)
+        {
+            return false;
+        }
+
+        mandant.Setzen(organisation);
+        kontext.RequestServices.GetRequiredService<QrGastKontext>().Setzen(gast.FreizeitId, gast.GeraeteId, gast.Stempel);
+        return true;
     }
 
     /// <summary>AD-25: Die Anmeldung der Sitzung liegt höchstens <see cref="Sitzung.FrischeDauer"/> zurück (Uhr über <see cref="TimeProvider"/>).</summary>

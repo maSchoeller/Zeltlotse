@@ -39,6 +39,8 @@ public sealed class FreizeitpassSeitenTests : BunitContext
         _server.Bei(HttpMethod.Get, "/api/betrieb/antiforgery", () => NachgebildeterHandler.Json(HttpStatusCode.OK, $$"""{"token":"token-{{++_tokens}}"}"""));
         _server.Bei(HttpMethod.Get, "/api/ich/anmeldungen", () => Json(_anmeldungen));
         Services.AddScoped<AppSitzung>();
+        // Story 6-4: Die Einstellungen drucken und kopieren über den Browser (Card „Teilnehmer-Zugang“).
+        Services.AddSingleton<Zeltlotse.App.Browser.IBrowser>(new NachgebildeterBrowser());
         Services.AddScoped<ISitzung>(sp => sp.GetRequiredService<AppSitzung>());
         Services.AddScoped(_ => new AntiforgeryHandler { InnerHandler = _server });
         Services.AddScoped(sp => new HttpClient(

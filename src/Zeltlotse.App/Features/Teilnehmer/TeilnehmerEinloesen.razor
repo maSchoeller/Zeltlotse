@@ -1,0 +1,71 @@
+@page "/teilnehmer/{Token}"
+@layout TeilnehmerLayout
+@inject TeilnehmerApiClient Teilnehmer
+@inject NavigationManager Navigation
+@* Teilnehmer-Zugang, die Seite hinter dem QR-Code (Story 6-4, AD-11, NS-10): Der Aufruf zeigt nur die Seite mit „Freizeit öffnen“; erst der Tipp löst das
+   Token per POST ein (der Server setzt das Gast-Cookie) und führt zur Startseite des Zugangs. Gilt das Token nicht (mehr), „Diese Freizeit ist zu Ende.“ mit
+   dem Hinweis auf einen neuen Scan. Antwortet der Server 429 (viele scannen gleichzeitig hinter einer IP), die Bitte, gleich noch einmal zu tippen. Kein
+   Konto, keine Anmeldung. *@
+<PageTitle>Teilnehmer-Zugang – Zeltlotse</PageTitle>
+
+@if (_ende)
+{
+    <h1>@TeilnehmerTexte.EndeText</h1>
+    <p>@TeilnehmerTexte.EndeZusatz</p>
+}
+else
+{
+    <h1>@TeilnehmerTexte.Ueberschrift</h1>
+    <p>@TeilnehmerTexte.Erklaerung</p>
+    @if (_fehler is not null)
+    {
+        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+            <p>@_fehler</p>
+        </Meldung>
+    }
+    <p><Knopf Deaktiviert="@_uebertraegt" @onclick="OeffnenAsync">Freizeit öffnen</Knopf></p>
+}
+
+@code {
+    private bool _ende;
+    private string? _fehler;
+    private bool _uebertraegt;
+
+    /// <summary>Das Token aus dem QR-Link; es geht nur per POST an den Server.</summary>
+    [Parameter] public string Token { get; set; } = "";
+
+    private async Task OeffnenAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _fehler = null;
+        try
+        {
+            switch (await Teilnehmer.EinloesenAsync(Token))
+            {
+                case TeilnehmerEinloesung.Eingeloest:
+                    // Ohne das Token in der Adresse weiter; der Verlauf behält die Seite mit dem Token nicht.
+                    Navigation.NavigateTo(TeilnehmerTexte.Start, replace: true);
+                    return;
+                case TeilnehmerEinloesung.ZuVieleAnfragen:
+                    _fehler = TeilnehmerTexte.ZuVieleText;
+                    break;
+                default:
+                    _ende = true;
+                    break;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _fehler = AnmeldungAbschluss.FehlerText;
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+}

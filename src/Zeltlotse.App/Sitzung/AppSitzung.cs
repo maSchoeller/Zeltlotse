@@ -60,14 +60,15 @@ public sealed class AppSitzung(NavigationManager navigation) : ISitzung
     }
 
     /// <summary>
-    /// Abgemeldet und, außer auf den Anmelde-Seiten selbst, weiter zur Seite „Anmelden“. Die aktuelle Seite wird der
+    /// Abgemeldet und, außer auf den Anmelde-Seiten selbst und (Story 6-4) im Teilnehmer-Zugang, weiter zur Seite „Anmelden“. Die aktuelle Seite wird der
     /// Rückweg; nur Pfade innerhalb der Web-App, nie eine fremde Adresse.
     /// </summary>
     public ValueTask AbgelaufenAsync()
     {
         Zuruecksetzen();
         var pfad = navigation.ToBaseRelativePath(navigation.Uri);
-        if (!pfad.StartsWith(AnmeldenPfad, StringComparison.OrdinalIgnoreCase))
+        // Story 6-4: Der Teilnehmer-Zugang kennt keine Anmeldung; seine Seiten bleiben, wo sie sind.
+        if (!pfad.StartsWith(AnmeldenPfad, StringComparison.OrdinalIgnoreCase) && !IstTeilnehmerPfad(pfad))
         {
             _rueckweg = IstEigenerPfad(pfad) ? pfad : null;
             navigation.NavigateTo(AnmeldenPfad);
@@ -75,6 +76,17 @@ public sealed class AppSitzung(NavigationManager navigation) : ISitzung
 
         return ValueTask.CompletedTask;
     }
+
+    /// <summary>Story 6-4: eine Seite des Teilnehmer-Zugangs (<c>teilnehmer</c>, <c>teilnehmer/{token}</c>, mit oder ohne Abfrage).</summary>
+    public static bool IstTeilnehmerPfad(string pfad)
+    {
+        var ohneAbfrage = pfad.Split('?', '#')[0];
+        return ohneAbfrage.Equals(TeilnehmerPfad, StringComparison.OrdinalIgnoreCase)
+               || ohneAbfrage.StartsWith(TeilnehmerPfad + "/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Story 6-4: Pfad des Teilnehmer-Zugangs relativ zur Basis <c>/app/</c>.</summary>
+    public const string TeilnehmerPfad = "teilnehmer";
 
     /// <summary>Ein relativer Pfad ohne Schema, Host oder führenden Schrägstrich; die Startseite braucht keinen Rückweg.</summary>
     private static bool IstEigenerPfad(string pfad) =>

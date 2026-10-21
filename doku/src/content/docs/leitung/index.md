@@ -22,7 +22,7 @@ Die Leitung darf alles, was das [Team](/mitarbeitende/) darf. **Nur die Leitung*
 - festlegen, welche Module (Verpflegung, Finanzen, Teilnehmer-Zugang) die Freizeit nutzt – siehe [Module schalten](/leitung/module-schalten/),
 - die Sicherheitskette einrichten (was im Notfall zu tun ist, wen das Team anruft) – siehe [Sicherheitskette einrichten](/leitung/sicherheitskette/),
 - das Schutzkonzept anhängen, also festlegen, welches Dokument der Freizeit es ist – siehe [Schutzkonzept anhängen](/leitung/schutzkonzept/),
-- den Teilnehmer-Zugang per QR-Code an- und abschalten – siehe [Module schalten](/leitung/module-schalten/),
+- den Teilnehmer-Zugang per QR-Code an- und abschalten, den QR-Code als Aushang drucken, den Link kopieren und erneuern – siehe [Teilnehmer-Zugang per QR-Code](/leitung/teilnehmer-zugang/),
 - die Freizeit abschließen – siehe [Freizeit abschließen](/leitung/freizeit-abschliessen/).
 
 Die Kanäle „Team“ und „Alle“ nutzt die Leitung genauso wie das Team: Nachrichten schreiben, an alle erst nach der Rückfrage „An … Personen senden?“, und auf Wunsch Benachrichtigungen aufs Handy – siehe [Kanäle, Ansagen-Zettel und Besprechung](/mitarbeitende/kanaele/).

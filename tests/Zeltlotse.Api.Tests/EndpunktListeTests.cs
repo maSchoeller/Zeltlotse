@@ -41,7 +41,20 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         "POST /api/konten/login-code/einloesen",
         "POST /api/konten/login-link",
         "POST /api/konten/login-link/einloesen",
+        // Story 6-4: Teilnehmer-Zugang per QR-Code: das Einlösen und die Routen des QR-Gasts (ohne Sitzung, aber mit Gast-Cookie, sonst 404).
+        "POST /api/teilnehmer/einloesen",
+        "GET /api/teilnehmer",
+        "GET /api/teilnehmer/infos",
+        "GET /api/teilnehmer/infos/{dokumentId:guid}",
+        "GET /api/teilnehmer/programm",
+        "GET /api/teilnehmer/kanal",
+        "GET /api/teilnehmer/push/schluessel",
+        "POST /api/teilnehmer/push/abo",
+        "POST /api/teilnehmer/push/abo/abmelden",
     ];
+
+    /// <summary>Story 6-4: die einzigen schreibenden Routen des QR-Gasts, das eigene Push-Abo.</summary>
+    private static readonly string[] QrGastSchreibend = ["POST /api/teilnehmer/push/abo", "POST /api/teilnehmer/push/abo/abmelden"];
 
     /// <summary>Die personenbezogenen Endpunkte über Organisationen hinweg (AD-26), namentlich.</summary>
     private static readonly string[] Organisationsuebergreifend =
@@ -126,6 +139,37 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
             Assert.DoesNotContain(e.Endpunkt.RoutePattern.Parameters, p => p.Name == Rechtemerkmale.FreizeitRouteWert || p.Name == Rechtemerkmale.OrgRouteWert);
             Assert.Null(e.Endpunkt.Metadata.GetMetadata<NurFreizeitRolleMetadaten>());
         });
+    }
+
+    [Fact]
+    public async Task QR_Gast_Routen_lesen_nur_ausser_dem_eigenen_Push_Abo_nur_das_Einloesen_ist_zugriffsbegrenzt()
+    {
+        var endpunkte = await EndpunkteAsync();
+
+        // Story 6-4 (AD-12): Jeder Endpunkt unter /api/teilnehmer außer dem Einlösen trägt .NurQrGast(), und nur diese Endpunkte tragen es.
+        var teilnehmer = endpunkte.Where(e => e.Pfad == "/api/teilnehmer" || e.Pfad.StartsWith("/api/teilnehmer/", StringComparison.Ordinal)).ToList();
+        Assert.Equal(9, teilnehmer.Count);
+        var gast = endpunkte.Where(e => e.Endpunkt.Metadata.GetMetadata<NurQrGastMetadaten>() is not null).ToList();
+        Assert.Equal(teilnehmer.Where(e => e.Name != "POST /api/teilnehmer/einloesen").Select(e => e.Name).Order(StringComparer.Ordinal), gast.Select(e => e.Name).Order(StringComparer.Ordinal));
+        // Nur lesen; die einzige Ausnahme ist das eigene Push-Abo.
+        Assert.Equal(QrGastSchreibend.Order(StringComparer.Ordinal), gast.Where(e => e.Methode != "GET").Select(e => e.Name).Order(StringComparer.Ordinal));
+        Assert.All(gast, e =>
+        {
+            Assert.Null(e.Endpunkt.Metadata.GetMetadata<NurFreizeitRolleMetadaten>());
+            Assert.Null(e.Endpunkt.Metadata.GetMetadata<NurOrgRolleMetadaten>());
+            Assert.Null(e.Endpunkt.Metadata.GetMetadata<GehoertZuSchalterMetadaten>());
+            Assert.DoesNotContain(e.Endpunkt.RoutePattern.Parameters, p => p.Name == Rechtemerkmale.FreizeitRouteWert || p.Name == Rechtemerkmale.OrgRouteWert);
+            // Viele Kinder teilen im Lager eine IP: die Lese-Routen sind nicht begrenzt.
+            Assert.DoesNotContain(
+                e.Endpunkt.Metadata.OfType<Microsoft.AspNetCore.RateLimiting.EnableRateLimitingAttribute>(),
+                r => r.PolicyName == Zugriffsbegrenzung.Richtlinie);
+        });
+
+        var einloesen = Assert.Single(endpunkte, e => e.Name == "POST /api/teilnehmer/einloesen");
+        Assert.Contains(
+            einloesen.Endpunkt.Metadata.OfType<Microsoft.AspNetCore.RateLimiting.EnableRateLimitingAttribute>(),
+            r => r.PolicyName == Zugriffsbegrenzung.Richtlinie);
+        Assert.Null(einloesen.Endpunkt.Metadata.GetMetadata<NurQrGastMetadaten>());
     }
 
     [Fact]
@@ -220,6 +264,9 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
                 // Story 3-7: Module der Freizeit (Leitung).
                 "GET /api/freizeiten/{freizeitId:guid}/module",
                 "PATCH /api/freizeiten/{freizeitId:guid}/module",
+                // Story 6-4: QR-Link des Teilnehmer-Zugangs (Leitung, nur mit dem Modul Teilnehmer-Zugang).
+                "GET /api/freizeiten/{freizeitId:guid}/qr-zugang",
+                "POST /api/freizeiten/{freizeitId:guid}/qr-zugang/erneuern",
                 // Story 3-8: Freizeit abschließen (Leitung).
                 "POST /api/freizeiten/{freizeitId:guid}/abschliessen",
                 // Story 2-5: Freizeitpass im Freizeit-Kontext (Personen), Personenliste und Team-Notizen (Freizeiten), Leitung und Team.
@@ -382,6 +429,12 @@ public sealed class EndpunktListeTests(PostgresContainer postgres)
         var kanaele = endpunkte.Where(e => e.Pfad.Contains("/kanaele/", StringComparison.Ordinal)).ToList();
         Assert.Equal(9, kanaele.Count);
         Assert.All(kanaele, e => Assert.Null(e.Endpunkt.Metadata.GetMetadata<GehoertZuSchalterMetadaten>()));
+
+        // Story 6-4: Der QR-Link gehört zum Schalter Teilnehmer-Zugang (die Gast-Routen prüfen ihn über die Gast-Sitzung).
+        Assert.All(
+            endpunkte.Where(e => e.Pfad.Contains("/qr-zugang", StringComparison.Ordinal)),
+            e => Assert.Equal(FunktionsSchalter.TeilnehmerZugang, e.Endpunkt.Metadata.GetMetadata<GehoertZuSchalterMetadaten>()?.Schalter));
+        Assert.Equal(2, endpunkte.Count(e => e.Pfad.Contains("/qr-zugang", StringComparison.Ordinal)));
 
         // Ein Schalter ohne Freizeit-Rolle wäre ein Konfigurationsfehler (die Rechteprüfung wirft).
         Assert.All(

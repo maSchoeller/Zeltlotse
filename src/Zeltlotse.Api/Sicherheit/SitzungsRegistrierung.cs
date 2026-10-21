@@ -35,6 +35,22 @@ internal static class SitzungsRegistrierung
                     OnRedirectToLogin = kontext => StatusSetzen(kontext, StatusCodes.Status401Unauthorized),
                     OnRedirectToAccessDenied = kontext => StatusSetzen(kontext, StatusCodes.Status403Forbidden),
                 };
+            })
+            // Story 6-4: die Gast-Sitzung des QR-Teilnehmerzugangs, nie das Vorgabe-Schema. Dauerhaft bis zum Freizeitende (beim Ausstellen gesetzt),
+            // ohne Gleiten; ob sie gilt, prüft die Rechteprüfung bei jeder Anfrage an einen Endpunkt mit .NurQrGast().
+            .AddCookie(GastSitzung.Schema, optionen =>
+            {
+                optionen.Cookie.Name = GastSitzung.CookieName;
+                optionen.Cookie.HttpOnly = true;
+                optionen.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                optionen.Cookie.SameSite = SameSiteMode.Lax;
+                optionen.Cookie.Path = "/";
+                optionen.SlidingExpiration = false;
+                optionen.Events = new CookieAuthenticationEvents
+                {
+                    OnRedirectToLogin = kontext => StatusSetzen(kontext, StatusCodes.Status404NotFound),
+                    OnRedirectToAccessDenied = kontext => StatusSetzen(kontext, StatusCodes.Status404NotFound),
+                };
             });
         return services;
     }

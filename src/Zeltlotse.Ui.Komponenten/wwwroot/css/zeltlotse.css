@@ -232,6 +232,12 @@ a.zl-gross:not(.elkw-btn) { display: inline-flex; align-items: center; }
 .zl-vergleich__zeile { padding: 0.2rem 0 0.2rem var(--elkw-space-xs); border-left: 3px solid transparent; }
 .zl-vergleich__zeile--geaendert { border-left-color: var(--elkw-akzent); }
 
+/* QR-Code (Story 6-4, DESIGN.md → QR-Code-Card): schwarz auf weißer Fläche, auch im Dunkelmodus (Kameras lesen ihn sonst nicht); mittig, am Handy bis zur
+   vollen Breite der Card. Die Ruhezone steckt in der Matrix. Darunter der Link als Text, der an jeder Stelle umbrechen darf. */
+.zl-qr { display: block; width: 100%; max-width: 20rem; height: auto; aspect-ratio: 1 / 1; margin: var(--elkw-space-s) auto; background: #FFFFFF; }
+.zl-qr path { fill: #000000; }
+.zl-qr + p { overflow-wrap: anywhere; text-align: center; }
+
 /* ---------- 5. Druck ---------- */
 /* Der Browser druckt nur den Inhalt (z. B. die Datenauskunft „Als PDF speichern“): ohne App-Leiste, Navigation, Knöpfe und
    Offline-Leiste, hell und in voller Breite. */
@@ -252,4 +258,11 @@ a.zl-gross:not(.elkw-btn) { display: inline-flex; align-items: center; }
   .elkw-app, .zl-app { display: block; height: auto; min-height: 0; }
   .elkw-app__main { overflow: visible; padding: 0; }
   .elkw-table-wrap { overflow: visible; }
+  /* Story 6-4: Aushang des Teilnehmer-Zugangs: nur Freizeitname, großer QR-Code und Link, mittig; die Card darum fällt weg. */
+  .elkw-card:has(.zl-druck-seite) { margin: 0; padding: 0; border: 0; box-shadow: none; background: #FFFFFF; }
+  .elkw-card:has(.zl-druck-seite) > .elkw-card__body { padding: 0; }
+  .elkw-card:has(.zl-druck-seite) .elkw-card__title { display: none; }
+  .zl-druck-seite:has(.zl-qr) { text-align: center; }
+  .zl-druck-seite .zl-qr { width: 150mm; max-width: none; margin: 10mm auto; }
+  .zl-druck-seite .zl-qr + p { font-size: 14pt; color: #000000; }
 }

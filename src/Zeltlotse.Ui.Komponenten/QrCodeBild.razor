@@ -1,0 +1,56 @@
+@using System.Globalization
+@using System.Text
+@* QR-Code-Bild (DESIGN.md → QR-Code-Card, Story 6-4): zeichnet eine fertige QR-Matrix als SVG mit genau einem Pfad, schwarz auf weißer Fläche (auch im
+   Dunkelmodus, damit Kameras ihn lesen). Die Matrix kommt vom Server (Zeilen aus '1' dunkel und '0' hell, Ruhezone schon enthalten); der Baustein kennt
+   weder QR-Verfahren noch Fremdpakete. Je Folge dunkler Module einer Zeile ein Rechteck im Pfad. Für Screenreader ein Bild mit Bezeichnung. Ohne
+   style-Attribute (CSP), Größe und Farben kommen aus dem CSS. Statisch tauglich. *@
+<svg class="zl-qr" role="img" aria-label="@Bezeichnung" viewBox="@ViewBox" shape-rendering="crispEdges" focusable="false"><path d="@Pfad" /></svg>
+
+@code {
+    /// <summary>Die Matrix: gleich lange Zeilen aus <c>'1'</c> (dunkel) und <c>'0'</c> (hell), mit Ruhezone.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<string> Zeilen { get; set; } = [];
+
+    /// <summary>Text für Screenreader, z. B. „QR-Code zum Teilnehmer-Zugang“.</summary>
+    [Parameter, EditorRequired] public string Bezeichnung { get; set; } = "";
+
+    private string ViewBox
+    {
+        get
+        {
+            var breite = Zeilen.Count == 0 ? 0 : Zeilen.Max(z => z.Length);
+            return string.Create(CultureInfo.InvariantCulture, $"0 0 {breite} {Zeilen.Count}");
+        }
+    }
+
+    /// <summary>Je Folge dunkler Module ein Rechteck: <c>M x y h länge v1 h -länge z</c>.</summary>
+    private string Pfad
+    {
+        get
+        {
+            var pfad = new StringBuilder();
+            for (var y = 0; y < Zeilen.Count; y++)
+            {
+                var zeile = Zeilen[y];
+                var x = 0;
+                while (x < zeile.Length)
+                {
+                    if (zeile[x] != '1')
+                    {
+                        x++;
+                        continue;
+                    }
+
+                    var start = x;
+                    while (x < zeile.Length && zeile[x] == '1')
+                    {
+                        x++;
+                    }
+
+                    pfad.Append(CultureInfo.InvariantCulture, $"M{start} {y}h{x - start}v1h-{x - start}z");
+                }
+            }
+
+            return pfad.ToString();
+        }
+    }
+}

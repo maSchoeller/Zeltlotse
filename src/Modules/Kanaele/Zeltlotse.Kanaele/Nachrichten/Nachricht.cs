@@ -48,6 +48,12 @@ internal sealed class Nachricht : Aggregat, IOrganisationsEigen
             GesendetAm = jetzt,
         };
         nachricht.PushVormerken(new NachrichtPush(id));
+        if (kanal == Kanal.Alle)
+        {
+            // Story 6-4: „Alle“ erreicht auch die QR-Gäste mit Push-Abo (der Aufbau prüft Teilnehmer-Zugang und Freizeitende erst beim Versand).
+            nachricht.PushVormerken(new NachrichtGastPush(id));
+        }
+
         return nachricht;
     }
 }

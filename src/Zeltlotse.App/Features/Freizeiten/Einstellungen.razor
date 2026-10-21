@@ -6,6 +6,7 @@
 @inject FreizeitKontextDienst Kontext
 @inject FreizeitenApiClient Freizeiten
 @inject SicherheitApiClient SicherheitApi
+@inject IBrowser Browser
 @* Einstellungen der Freizeit (EXPERIENCE.md → Fläche „Einstellungen der Freizeit“, nur Leitung; FR-15, FR-16, FR-67): Abschnitt
    „Freizeitseite“ mit Beschreibung (mehrzeilig), Ort, Höchstzahl Teilnehmende und Teilnahmebedingungen (mehrzeilig, FR-19) per
    Autosave (AD-19), Abschnitt „Kontakt für Absagen“ mit Mail-Adresse und Telefon der Leitung (FR-21, Story 2-3) per Autosave, Abschnitt
@@ -15,7 +16,9 @@
    gelesen hat) und Abschnitt
    „Anmeldelinks“ mit beiden Links als Text, „Freizeitseite öffnen“ und „Neuen Link erzeugen“ über die Inline-Bestätigung, danach
    Abschnitt „Module“ (FR-44, Story 3-7: Verpflegung, Finanzen und Teilnehmer-Zugang je als Ankreuzfeld per Autosave; Abschalten verbirgt
-   das Modul überall, die Daten bleiben). In einer abgeschlossenen Freizeit zeigt jedes Feld beim Speichern den Hinweis „nur lesbar“. Ohne
+   das Modul überall, die Daten bleiben). Story 6-4: Ist der Teilnehmer-Zugang an, folgt die Card „Teilnehmer-Zugang“ (DESIGN.md → QR-Code-Card) mit
+   Name der Freizeit, QR-Code und Link als Text, „Drucken“ (A4-Aushang: im Druck nur Name, QR-Code und Link; alles andere steht in NurBildschirm),
+   „Link kopieren“ und „Link erneuern“ über die Inline-Bestätigung; ohne Link „QR-Code erzeugen“. Sie erscheint und verschwindet mit dem Ankreuzfeld. In einer abgeschlossenen Freizeit zeigt jedes Feld beim Speichern den Hinweis „nur lesbar“. Ohne
    die erlaubte Aktion „freizeit-einstellungen“ oder bei 403/404 → „Diese Seite ist nicht verfügbar.“ *@
 <PageTitle>Einstellungen – Zeltlotse</PageTitle>
 
@@ -25,147 +28,189 @@
 }
 else
 {
-    <h1>Einstellungen</h1>
-    <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
+    <NurBildschirm>
+        <h1>Einstellungen</h1>
+        <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
 
-    @if (_aktionFehler)
-    {
-        <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
-            <p>@AnmeldungAbschluss.FehlerText</p>
-        </Meldung>
-    }
-    @if (_abgeschlossen)
-    {
-        <Meldung Titel="Hinweis">
-            <p>@AbgeschlossenText</p>
-        </Meldung>
-    }
-    @if (_erneuert is not null)
-    {
-        <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
-            <p>Neuer Link für @Fuer(_erneuert.Value) ist erzeugt. Der bisherige Link ist nicht mehr gültig.</p>
-        </Meldung>
-    }
-
-    @if (_einstellungen is null)
-    {
-        @if (!_aktionFehler)
+        @if (_aktionFehler)
         {
-            <Ladezustand />
+            <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
+                <p>@AnmeldungAbschluss.FehlerText</p>
+            </Meldung>
         }
-    }
-    else
-    {
-        <Card Titel="Freizeitseite">
-            <p>Diese Angaben stehen auf der öffentlichen Freizeitseite, die die Anmeldelinks öffnen.</p>
-            <AutosaveFeld Label="Beschreibung" Id="freizeitseite-beschreibung" Feldname="@FreizeitseiteFelder.Beschreibung" Mehrzeilig="true"
-                          Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.Beschreibung" Version="@_einstellungen.Version"
-                          Hinweis="@($"Höchstens {FreizeitseiteFelder.BeschreibungMaximaleLaenge} Zeichen")" NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
-            <AutosaveFeld Label="Ort" Id="freizeitseite-ort" Feldname="@FreizeitseiteFelder.Ort"
-                          Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.Ort" Version="@_einstellungen.Version"
-                          NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
-            <AutosaveFeld Label="Höchstzahl Teilnehmende" Id="freizeitseite-hoechstzahl" Feldname="@FreizeitseiteFelder.HoechstzahlTeilnehmende" Typ="number"
-                          Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.HoechstzahlTeilnehmende?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                          Version="@_einstellungen.Version" Hinweis="Leer lassen, wenn es keine Grenze gibt. Ist sie erreicht, zeigt die Freizeitseite „Ausgebucht“."
-                          NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
-            <AutosaveFeld Label="Teilnahmebedingungen" Id="freizeitseite-teilnahmebedingungen" Feldname="@FreizeitseiteFelder.Teilnahmebedingungen" Mehrzeilig="true"
-                          Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.Teilnahmebedingungen" Version="@_einstellungen.Version"
-                          Hinweis="Erscheint bei der Anmeldung vor dem Absenden." NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
-        </Card>
-
-        <Card Titel="Kontakt für Absagen">
-            <p>Erscheint bei Eltern und Mitarbeitenden neben dem Anmeldestatus.</p>
-            <AutosaveFeld Label="Mail-Adresse" Id="kontakt-mail" Feldname="@FreizeitseiteFelder.KontaktMail" Typ="email"
-                          Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.KontaktMail" Version="@_einstellungen.Version"
-                          NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
-            <AutosaveFeld Label="Telefon" Id="kontakt-telefon" Feldname="@FreizeitseiteFelder.KontaktTelefon" Typ="tel"
-                          Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.KontaktTelefon" Version="@_einstellungen.Version"
-                          NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
-        </Card>
-
-        @if (_fragen is not null)
+        @if (_abgeschlossen)
         {
-            <Card Titel="Freizeitpass">
-                <p>Ohne Auswahl fragt der Freizeitpass nichts ab.</p>
-                <p>Allergien, Medikamente und Notfallkontakte stehen im Freizeitpass immer oben. Die Antworten gehören den Personen und stehen bei der nächsten Freizeit schon da.</p>
-                <AutosaveAuswahlgruppe Legende="Fragen für Teilnehmende" Id="fragen-teilnehmende" Feldname="@FragenFelder.Teilnehmende"
-                                       Pfad="@FreizeitenApiClient.FragenPfad(FreizeitId)" Optionen="@Katalog" Wert="@_fragen.Teilnehmende" Version="@_fragen.Version"
-                                       NeuLaden="NeuLadenAsync" />
-                <AutosaveAuswahlgruppe Legende="Fragen für Mitarbeitende" Id="fragen-mitarbeitende" Feldname="@FragenFelder.Mitarbeitende"
-                                       Pfad="@FreizeitenApiClient.FragenPfad(FreizeitId)" Optionen="@Katalog" Wert="@_fragen.Mitarbeitende" Version="@_fragen.Version"
-                                       NeuLaden="NeuLadenAsync" />
-            </Card>
+            <Meldung Titel="Hinweis">
+                <p>@AbgeschlossenText</p>
+            </Meldung>
+        }
+        @if (_erneuert is not null)
+        {
+            <Meldung Titel="Gespeichert" Art="MeldungArt.Erfolg">
+                <p>Neuer Link für @Fuer(_erneuert.Value) ist erzeugt. Der bisherige Link ist nicht mehr gültig.</p>
+            </Meldung>
         }
 
-        @if (_kette is not null)
+        @if (_einstellungen is null)
         {
-            <Card Titel="Sicherheitskette" Id="sicherheitskette">
-                <p>Erscheint im Notfall bei Leitung und Team.</p>
-                <AutosaveFeld Label="Was jetzt zu tun ist" Id="sicherheitskette-was-tun" Feldname="@SicherheitsketteFelder.WasTun" Mehrzeilig="true"
-                              Pfad="@KettePfad" Wert="@_kette.WasTun" Version="@_kette.Version" Hinweis="Ein Schritt je Zeile."
-                              NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
-                <AutosaveFeld Label="Telefon der Leitung im Notfall" Id="sicherheitskette-leitung-telefon" Feldname="@SicherheitsketteFelder.LeitungTelefon" Typ="tel"
-                              Pfad="@KettePfad" Wert="@_kette.LeitungTelefon" Version="@_kette.Version"
-                              NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
-                <AutosaveFeld Label="Ansprechperson am Heimatort" Id="sicherheitskette-heimat-name" Feldname="@SicherheitsketteFelder.HeimatName"
-                              Pfad="@KettePfad" Wert="@_kette.HeimatName" Version="@_kette.Version"
-                              NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
-                <AutosaveFeld Label="Telefon der Ansprechperson am Heimatort" Id="sicherheitskette-heimat-telefon" Feldname="@SicherheitsketteFelder.HeimatTelefon" Typ="tel"
-                              Pfad="@KettePfad" Wert="@_kette.HeimatTelefon" Version="@_kette.Version"
-                              NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
-            </Card>
-        }
-
-        @if (_schutzkonzept is not null && _dokumente is not null)
-        {
-            <Card Titel="Schutzkonzept" Id="schutzkonzept">
-                <p>Jedes Teammitglied bestätigt es als gelesen. Wird es ausgetauscht, bestätigen alle neu.</p>
-                <AutosaveAuswahlgruppe Legende="Dokument" Id="schutzkonzept-dokument" Feldname="@SchutzkonzeptFelder.DokumentId" Mehrfach="false"
-                                       Pfad="@SicherheitApiClient.SchutzkonzeptPfad(FreizeitId)" Optionen="@SchutzkonzeptOptionen"
-                                       Wert="@_schutzkonzept.DokumentId?.ToString()" Version="@_schutzkonzept.Version"
-                                       NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
-                <p>Neue Datei unter „<a href="@($"freizeiten/{FreizeitId}/dokumente")">Dokumente</a>“ hochladen oder aus der Organisation einbinden.</p>
-                <p><a href="@($"freizeiten/{FreizeitId}/schutzkonzept")">Wer hat gelesen?</a></p>
-            </Card>
-        }
-
-        <Card Titel="Anmeldelinks">
-            <p>Jeder Link öffnet die Freizeitseite und lässt sich beliebig oft teilen. Er gilt bis zum Ende der Freizeit.</p>
-            @foreach (var art in Enum.GetValues<AnmeldelinkArt>())
+            @if (!_aktionFehler)
             {
-                var link = _einstellungen.Anmeldelinks.FirstOrDefault(l => l.Art == art);
-                <h3>Für @Fuer(art)</h3>
-                @if (link is null)
+                <Ladezustand />
+            }
+        }
+        else
+        {
+            <Card Titel="Freizeitseite">
+                <p>Diese Angaben stehen auf der öffentlichen Freizeitseite, die die Anmeldelinks öffnen.</p>
+                <AutosaveFeld Label="Beschreibung" Id="freizeitseite-beschreibung" Feldname="@FreizeitseiteFelder.Beschreibung" Mehrzeilig="true"
+                              Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.Beschreibung" Version="@_einstellungen.Version"
+                              Hinweis="@($"Höchstens {FreizeitseiteFelder.BeschreibungMaximaleLaenge} Zeichen")" NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+                <AutosaveFeld Label="Ort" Id="freizeitseite-ort" Feldname="@FreizeitseiteFelder.Ort"
+                              Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.Ort" Version="@_einstellungen.Version"
+                              NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+                <AutosaveFeld Label="Höchstzahl Teilnehmende" Id="freizeitseite-hoechstzahl" Feldname="@FreizeitseiteFelder.HoechstzahlTeilnehmende" Typ="number"
+                              Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.HoechstzahlTeilnehmende?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                              Version="@_einstellungen.Version" Hinweis="Leer lassen, wenn es keine Grenze gibt. Ist sie erreicht, zeigt die Freizeitseite „Ausgebucht“."
+                              NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+                <AutosaveFeld Label="Teilnahmebedingungen" Id="freizeitseite-teilnahmebedingungen" Feldname="@FreizeitseiteFelder.Teilnahmebedingungen" Mehrzeilig="true"
+                              Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.Teilnahmebedingungen" Version="@_einstellungen.Version"
+                              Hinweis="Erscheint bei der Anmeldung vor dem Absenden." NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+            </Card>
+
+            <Card Titel="Kontakt für Absagen">
+                <p>Erscheint bei Eltern und Mitarbeitenden neben dem Anmeldestatus.</p>
+                <AutosaveFeld Label="Mail-Adresse" Id="kontakt-mail" Feldname="@FreizeitseiteFelder.KontaktMail" Typ="email"
+                              Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.KontaktMail" Version="@_einstellungen.Version"
+                              NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+                <AutosaveFeld Label="Telefon" Id="kontakt-telefon" Feldname="@FreizeitseiteFelder.KontaktTelefon" Typ="tel"
+                              Pfad="@FreizeitenApiClient.FreizeitseitePfad(FreizeitId)" Wert="@_einstellungen.KontaktTelefon" Version="@_einstellungen.Version"
+                              NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+            </Card>
+
+            @if (_fragen is not null)
+            {
+                <Card Titel="Freizeitpass">
+                    <p>Ohne Auswahl fragt der Freizeitpass nichts ab.</p>
+                    <p>Allergien, Medikamente und Notfallkontakte stehen im Freizeitpass immer oben. Die Antworten gehören den Personen und stehen bei der nächsten Freizeit schon da.</p>
+                    <AutosaveAuswahlgruppe Legende="Fragen für Teilnehmende" Id="fragen-teilnehmende" Feldname="@FragenFelder.Teilnehmende"
+                                           Pfad="@FreizeitenApiClient.FragenPfad(FreizeitId)" Optionen="@Katalog" Wert="@_fragen.Teilnehmende" Version="@_fragen.Version"
+                                           NeuLaden="NeuLadenAsync" />
+                    <AutosaveAuswahlgruppe Legende="Fragen für Mitarbeitende" Id="fragen-mitarbeitende" Feldname="@FragenFelder.Mitarbeitende"
+                                           Pfad="@FreizeitenApiClient.FragenPfad(FreizeitId)" Optionen="@Katalog" Wert="@_fragen.Mitarbeitende" Version="@_fragen.Version"
+                                           NeuLaden="NeuLadenAsync" />
+                </Card>
+            }
+
+            @if (_kette is not null)
+            {
+                <Card Titel="Sicherheitskette" Id="sicherheitskette">
+                    <p>Erscheint im Notfall bei Leitung und Team.</p>
+                    <AutosaveFeld Label="Was jetzt zu tun ist" Id="sicherheitskette-was-tun" Feldname="@SicherheitsketteFelder.WasTun" Mehrzeilig="true"
+                                  Pfad="@KettePfad" Wert="@_kette.WasTun" Version="@_kette.Version" Hinweis="Ein Schritt je Zeile."
+                                  NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+                    <AutosaveFeld Label="Telefon der Leitung im Notfall" Id="sicherheitskette-leitung-telefon" Feldname="@SicherheitsketteFelder.LeitungTelefon" Typ="tel"
+                                  Pfad="@KettePfad" Wert="@_kette.LeitungTelefon" Version="@_kette.Version"
+                                  NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+                    <AutosaveFeld Label="Ansprechperson am Heimatort" Id="sicherheitskette-heimat-name" Feldname="@SicherheitsketteFelder.HeimatName"
+                                  Pfad="@KettePfad" Wert="@_kette.HeimatName" Version="@_kette.Version"
+                                  NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+                    <AutosaveFeld Label="Telefon der Ansprechperson am Heimatort" Id="sicherheitskette-heimat-telefon" Feldname="@SicherheitsketteFelder.HeimatTelefon" Typ="tel"
+                                  Pfad="@KettePfad" Wert="@_kette.HeimatTelefon" Version="@_kette.Version"
+                                  NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+                </Card>
+            }
+
+            @if (_schutzkonzept is not null && _dokumente is not null)
+            {
+                <Card Titel="Schutzkonzept" Id="schutzkonzept">
+                    <p>Jedes Teammitglied bestätigt es als gelesen. Wird es ausgetauscht, bestätigen alle neu.</p>
+                    <AutosaveAuswahlgruppe Legende="Dokument" Id="schutzkonzept-dokument" Feldname="@SchutzkonzeptFelder.DokumentId" Mehrfach="false"
+                                           Pfad="@SicherheitApiClient.SchutzkonzeptPfad(FreizeitId)" Optionen="@SchutzkonzeptOptionen"
+                                           Wert="@_schutzkonzept.DokumentId?.ToString()" Version="@_schutzkonzept.Version"
+                                           NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+                    <p>Neue Datei unter „<a href="@($"freizeiten/{FreizeitId}/dokumente")">Dokumente</a>“ hochladen oder aus der Organisation einbinden.</p>
+                    <p><a href="@($"freizeiten/{FreizeitId}/schutzkonzept")">Wer hat gelesen?</a></p>
+                </Card>
+            }
+
+            <Card Titel="Anmeldelinks">
+                <p>Jeder Link öffnet die Freizeitseite und lässt sich beliebig oft teilen. Er gilt bis zum Ende der Freizeit.</p>
+                @foreach (var art in Enum.GetValues<AnmeldelinkArt>())
                 {
-                    <LeerZustand Satz="Noch kein Link.">
-                        <Knopf Deaktiviert="@_uebertraegt" @onclick="() => ErneuernAsync(art)">Link erzeugen</Knopf>
+                    var link = _einstellungen.Anmeldelinks.FirstOrDefault(l => l.Art == art);
+                    <h3>Für @Fuer(art)</h3>
+                    @if (link is null)
+                    {
+                        <LeerZustand Satz="Noch kein Link.">
+                            <Knopf Deaktiviert="@_uebertraegt" @onclick="() => ErneuernAsync(art)">Link erzeugen</Knopf>
+                        </LeerZustand>
+                    }
+                    else
+                    {
+                        <p>@link.Adresse</p>
+                        <p><Knopf Art="KnopfArt.Outline" Href="@link.Adresse" Ansichtswechsel="true">Freizeitseite öffnen</Knopf></p>
+                        <InlineBestaetigung AusloeserText="Neuen Link erzeugen" AusloeserArt="KnopfArt.Outline" Satz="Der bisherige Link wird ungültig."
+                                            JaText="Ja, neuen Link erzeugen" Bestaetigt="() => ErneuernAsync(art)" />
+                    }
+                }
+            </Card>
+
+            @if (_module is not null)
+            {
+                <Card Titel="Module" Id="module">
+                    <p>Abgeschaltete Module erscheinen nirgends in Zeltlotse. Ihre Daten bleiben erhalten und sind nach dem Einschalten wieder da.</p>
+                    <AutosaveAnkreuzfeld Label="Verpflegung" Id="modul-verpflegung" Feldname="@ModulFelder.Verpflegung"
+                                         Pfad="@FreizeitenApiClient.ModulePfad(FreizeitId)" Wert="@_module.Verpflegung" Version="@_module.Version"
+                                         NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+                    <AutosaveAnkreuzfeld Label="Finanzen" Id="modul-finanzen" Feldname="@ModulFelder.Finanzen"
+                                         Pfad="@FreizeitenApiClient.ModulePfad(FreizeitId)" Wert="@_module.Finanzen" Version="@_module.Version"
+                                         NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
+                    <AutosaveAnkreuzfeld Label="Teilnehmer-Zugang" Id="modul-teilnehmer-zugang" Feldname="@ModulFelder.TeilnehmerZugang"
+                                         Pfad="@FreizeitenApiClient.ModulePfad(FreizeitId)" Wert="@_module.TeilnehmerZugang" Version="@_module.Version"
+                                         NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)"
+                                         Gespeichert="TeilnehmerZugangGespeichertAsync" />
+                </Card>
+            }
+        }
+    </NurBildschirm>
+
+    @if (_einstellungen is not null && _teilnehmerZugangAn && _qr is not null)
+    {
+        <Card Titel="Teilnehmer-Zugang" Id="teilnehmer-zugang">
+            @if (_qr.Adresse is null || _qr.Zeilen is null)
+            {
+                <NurBildschirm>
+                    <p>@QrErklaerung</p>
+                    <LeerZustand Satz="Noch kein QR-Code.">
+                        <Knopf Deaktiviert="@_uebertraegt" @onclick="QrErneuernAsync">QR-Code erzeugen</Knopf>
                     </LeerZustand>
-                }
-                else
-                {
-                    <p>@link.Adresse</p>
-                    <p><Knopf Art="KnopfArt.Outline" Href="@link.Adresse" Ansichtswechsel="true">Freizeitseite öffnen</Knopf></p>
-                    <InlineBestaetigung AusloeserText="Neuen Link erzeugen" AusloeserArt="KnopfArt.Outline" Satz="Der bisherige Link wird ungültig."
-                                        JaText="Ja, neuen Link erzeugen" Bestaetigt="() => ErneuernAsync(art)" />
-                }
+                </NurBildschirm>
+            }
+            else
+            {
+                <NurBildschirm>
+                    <p>@QrErklaerung</p>
+                </NurBildschirm>
+                <DruckSeite Titel="@_freizeitName">
+                    <QrCodeBild Zeilen="@_qr.Zeilen" Bezeichnung="QR-Code zum Teilnehmer-Zugang" />
+                    <p>@_qr.Adresse</p>
+                </DruckSeite>
+                <NurBildschirm>
+                    @if (_qrMeldung is not null)
+                    {
+                        <Meldung Titel="@(_qrMeldungFehler ? "Fehler" : "Erledigt")" Art="@(_qrMeldungFehler ? MeldungArt.Fehler : MeldungArt.Erfolg)">
+                            <p>@_qrMeldung</p>
+                        </Meldung>
+                    }
+                    <p>
+                        <Knopf @onclick="DruckenAsync">Drucken</Knopf>
+                        <Knopf Art="KnopfArt.Outline" @onclick="KopierenAsync">Link kopieren</Knopf>
+                    </p>
+                    <InlineBestaetigung AusloeserText="Link erneuern" AusloeserArt="KnopfArt.Outline" Satz="@QrErneuernSatz"
+                                        JaText="Ja, Link erneuern" Bestaetigt="QrErneuernAsync" />
+                </NurBildschirm>
             }
         </Card>
-
-        @if (_module is not null)
-        {
-            <Card Titel="Module" Id="module">
-                <p>Abgeschaltete Module erscheinen nirgends in Zeltlotse. Ihre Daten bleiben erhalten und sind nach dem Einschalten wieder da.</p>
-                <AutosaveAnkreuzfeld Label="Verpflegung" Id="modul-verpflegung" Feldname="@ModulFelder.Verpflegung"
-                                     Pfad="@FreizeitenApiClient.ModulePfad(FreizeitId)" Wert="@_module.Verpflegung" Version="@_module.Version"
-                                     NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
-                <AutosaveAnkreuzfeld Label="Finanzen" Id="modul-finanzen" Feldname="@ModulFelder.Finanzen"
-                                     Pfad="@FreizeitenApiClient.ModulePfad(FreizeitId)" Wert="@_module.Finanzen" Version="@_module.Version"
-                                     NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
-                <AutosaveAnkreuzfeld Label="Teilnehmer-Zugang" Id="modul-teilnehmer-zugang" Feldname="@ModulFelder.TeilnehmerZugang"
-                                     Pfad="@FreizeitenApiClient.ModulePfad(FreizeitId)" Wert="@_module.TeilnehmerZugang" Version="@_module.Version"
-                                     NeuLaden="NeuLadenAsync" KonfliktText="@(_abgeschlossen ? AbgeschlossenText : null)" />
-            </Card>
-        }
     }
 }
 
@@ -181,6 +226,12 @@ else
     private bool _abgeschlossen;
     private bool _uebertraegt;
     private AnmeldelinkArt? _erneuert;
+    // Story 6-4: der QR-Link des Teilnehmer-Zugangs (nur bei eingeschaltetem Modul) und die Rückmeldung zu Kopieren und Erneuern.
+    private QrZugangAnsicht? _qr;
+    private bool _teilnehmerZugangAn;
+    private string _freizeitName = "";
+    private string? _qrMeldung;
+    private bool _qrMeldungFehler;
 
     [Parameter] public Guid FreizeitId { get; set; }
 
@@ -198,6 +249,9 @@ else
         _aktionFehler = false;
         _abgeschlossen = false;
         _erneuert = null;
+        _qr = null;
+        _teilnehmerZugangAn = false;
+        _qrMeldung = null;
         try
         {
             var kontext = await Kontext.LadenAsync(FreizeitId);
@@ -211,6 +265,8 @@ else
             _einstellungen = await Freizeiten.FreizeitseiteLadenAsync(FreizeitId);
             _fragen = await Freizeiten.FragenLadenAsync(FreizeitId);
             _module = await Freizeiten.ModuleLadenAsync(FreizeitId);
+            _freizeitName = kontext.Name;
+            await QrLadenAsync();
             _kette = await SicherheitApi.SicherheitsketteLadenAsync(FreizeitId);
             (_schutzkonzept, _dokumente) = await SchutzkonzeptLadenAsync();
             _nichtVerfuegbar = _einstellungen is null;
@@ -231,6 +287,7 @@ else
             _einstellungen = await Freizeiten.FreizeitseiteLadenAsync(FreizeitId);
             _fragen = await Freizeiten.FragenLadenAsync(FreizeitId);
             _module = await Freizeiten.ModuleLadenAsync(FreizeitId);
+            await QrLadenAsync();
             _kette = await SicherheitApi.SicherheitsketteLadenAsync(FreizeitId);
             (_schutzkonzept, _dokumente) = await SchutzkonzeptLadenAsync();
             _nichtVerfuegbar = _einstellungen is null;
@@ -300,6 +357,98 @@ else
         {
             _uebertraegt = false;
         }
+    }
+
+    /// <summary>Story 6-4: Erklärung in der Card „Teilnehmer-Zugang“.</summary>
+    private const string QrErklaerung =
+        "Teilnehmende scannen den QR-Code am Infobrett und sehen ohne Konto die Wochenübersicht, die Infos und die Nachrichten an alle. Er gilt bis zum Ende der Freizeit.";
+
+    /// <summary>Story 6-4: Satz der Inline-Bestätigung vor dem Erneuern.</summary>
+    public const string QrErneuernSatz = "Der bisherige QR-Code wird ungültig. Wer ihn schon nutzt, muss neu scannen.";
+
+    /// <summary>Story 6-4: Rückmeldung nach „Link kopieren“.</summary>
+    public const string KopiertText = "Link kopiert.";
+
+    /// <summary>Story 6-4: Lädt den QR-Link, nur wenn das Modul Teilnehmer-Zugang an ist; ohne Modul keine Card.</summary>
+    private async Task QrLadenAsync()
+    {
+        _teilnehmerZugangAn = _module?.TeilnehmerZugang == true;
+        _qr = _teilnehmerZugangAn ? await Freizeiten.QrZugangLadenAsync(FreizeitId) : null;
+    }
+
+    /// <summary>Story 6-4: Nach dem Umschalten des Moduls erscheint oder verschwindet die Card „Teilnehmer-Zugang“.</summary>
+    private async Task TeilnehmerZugangGespeichertAsync(string? wert)
+    {
+        _qrMeldung = null;
+        _teilnehmerZugangAn = wert == "true";
+        if (!_teilnehmerZugangAn)
+        {
+            _qr = null;
+            return;
+        }
+
+        try
+        {
+            _qr = await Freizeiten.QrZugangLadenAsync(FreizeitId);
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            _aktionFehler = true;
+        }
+    }
+
+    /// <summary>Story 6-4: „QR-Code erzeugen“ bzw. nach „Ja, Link erneuern“: neuer Link, der bisherige ist ungültig.</summary>
+    private async Task QrErneuernAsync()
+    {
+        if (_uebertraegt)
+        {
+            return;
+        }
+
+        _uebertraegt = true;
+        _qrMeldung = null;
+        var erstes = _qr?.Adresse is null;
+        try
+        {
+            var ergebnis = await Freizeiten.QrZugangErneuernAsync(FreizeitId);
+            if (ergebnis.Ansicht is { } ansicht)
+            {
+                _qr = ansicht;
+                (_qrMeldung, _qrMeldungFehler) = (erstes ? null : "Neuer QR-Code ist erzeugt. Der bisherige gilt nicht mehr.", false);
+            }
+            else if (ergebnis.Abgeschlossen)
+            {
+                _abgeschlossen = true;
+                (_qrMeldung, _qrMeldungFehler) = (AbgeschlossenText, true);
+            }
+            else
+            {
+                _qr = null;
+                _teilnehmerZugangAn = false;
+            }
+        }
+        catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
+        {
+            (_qrMeldung, _qrMeldungFehler) = (AnmeldungAbschluss.FehlerText, true);
+        }
+        finally
+        {
+            _uebertraegt = false;
+        }
+    }
+
+    /// <summary>Story 6-4: Der Druck zeigt nur Freizeitname, QR-Code und Link (alles andere steht nur am Bildschirm).</summary>
+    private async Task DruckenAsync() => await Browser.DruckenAsync();
+
+    private async Task KopierenAsync()
+    {
+        if (_qr?.Adresse is not { } adresse)
+        {
+            return;
+        }
+
+        var kopiert = await Browser.KopierenAsync(adresse);
+        (_qrMeldung, _qrMeldungFehler) = kopiert ? (KopiertText, false) : ("Kopieren ging nicht. Bitte den Link oben markieren und kopieren.", true);
     }
 
     private const string AbgeschlossenText = "Diese Freizeit ist abgeschlossen und nur lesbar.";

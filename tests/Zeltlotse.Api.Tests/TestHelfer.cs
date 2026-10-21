@@ -41,6 +41,10 @@ internal sealed class TestEndpunkte : IZusatzEndpunkte
         // Story 3-7: Schalter ohne Freizeit-Rolle ist ein Konfigurationsfehler des Endpunkts (500).
         api.MapGet($"/test/schalter-ohne-rolle/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}", () => TypedResults.Ok(new { ok = true }))
             .GehoertZuSchalter(Zeltlotse.SharedKernel.Rechte.FunktionsSchalter.Verpflegung);
+        // Story 6-4: .NurQrGast() zusammen mit einem weiteren Rechtemerkmal ist ein Konfigurationsfehler des Endpunkts (500).
+        api.MapGet($"/test/qr-gast-mit-rolle/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}", () => TypedResults.Ok(new { ok = true }))
+            .NurQrGast()
+            .NurFreizeitRolle(Zeltlotse.SharedKernel.Rechte.FreizeitRolle.Leitung);
         api.MapGet("/test/keks-ohne-praefix", (HttpContext kontext) =>
         {
             kontext.Response.Cookies.Append("zeltlotse", "1");

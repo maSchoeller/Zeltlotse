@@ -15,6 +15,12 @@ public sealed record FreizeitAnlegenErgebnis(Guid? Id, string? NameFehler, strin
 public sealed record AnmeldelinkErneuernErgebnis(Anmeldelink? Link, bool Abgeschlossen);
 
 /// <summary>
+/// Story 6-4: Ergebnis von <see cref="FreizeitenApiClient.QrZugangErneuernAsync"/>: die neue Ansicht des QR-Links, nicht (mehr) verfügbar (<c>403</c>/<c>404</c>)
+/// oder die Freizeit ist abgeschlossen (<c>409</c>).
+/// </summary>
+public sealed record QrZugangErneuernErgebnis(QrZugangAnsicht? Ansicht, bool Abgeschlossen);
+
+/// <summary>
 /// Ergebnis der Anmelde-Aufrufe (<see cref="FreizeitenApiClient.GastAnmeldenAsync"/>, <see cref="FreizeitenApiClient.AnmeldenAsync"/>):
 /// die Kennung der Anmeldung, die Fehler an den Feldern (<c>400</c>), nicht (mehr) gültig (<c>404</c>), schon angemeldet (<c>409</c> mit
 /// <c>konflikt</c>) oder, seit Story 3-8, die Freizeit ist zu Ende (<c>409</c> mit <c>freizeit-abgeschlossen</c>).
@@ -219,6 +225,39 @@ public sealed class FreizeitenApiClient(HttpClient http)
         var link = await antwort.Content.ReadFromJsonAsync<Anmeldelink>(ApiJson.Optionen, abbruch)
                    ?? throw new HttpRequestException("Leere Antwort beim Erneuern des Anmeldelinks.");
         return new AnmeldelinkErneuernErgebnis(link, Abgeschlossen: false);
+    }
+
+    /// <summary>Story 6-4: Pfad des QR-Links des Teilnehmer-Zugangs.</summary>
+    public static string QrZugangPfad(Guid freizeitId) => $"/api/freizeiten/{freizeitId}/qr-zugang";
+
+    /// <summary>
+    /// Story 6-4: <c>GET /api/freizeiten/{freizeitId}/qr-zugang</c> (Leitung, Modul Teilnehmer-Zugang): Adresse und QR-Code (beide <c>null</c> ohne Link)
+    /// oder <c>null</c> bei <c>403</c>/<c>404</c> (z. B. das Modul ist aus).
+    /// </summary>
+    public Task<QrZugangAnsicht?> QrZugangLadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
+        LadenAsync<QrZugangAnsicht>(QrZugangPfad(freizeitId), abbruch);
+
+    /// <summary>
+    /// Story 6-4: <c>POST /api/freizeiten/{freizeitId}/qr-zugang/erneuern</c> (Leitung): erzeugt oder erneuert den QR-Link; der bisherige ist danach
+    /// ungültig. Liefert die neue Ansicht, sonst nicht (mehr) verfügbar (<c>403</c>/<c>404</c>) oder abgeschlossen (<c>409</c>).
+    /// </summary>
+    public async Task<QrZugangErneuernErgebnis> QrZugangErneuernAsync(Guid freizeitId, CancellationToken abbruch = default)
+    {
+        using var antwort = await http.PostAsync($"{QrZugangPfad(freizeitId)}/erneuern", content: null, abbruch);
+        if (antwort.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+        {
+            return new QrZugangErneuernErgebnis(null, Abgeschlossen: false);
+        }
+
+        if (antwort.StatusCode == HttpStatusCode.Conflict)
+        {
+            return new QrZugangErneuernErgebnis(null, Abgeschlossen: true);
+        }
+
+        antwort.EnsureSuccessStatusCode();
+        var ansicht = await antwort.Content.ReadFromJsonAsync<QrZugangAnsicht>(ApiJson.Optionen, abbruch)
+                      ?? throw new HttpRequestException("Leere Antwort beim Erneuern des QR-Links.");
+        return new QrZugangErneuernErgebnis(ansicht, Abgeschlossen: false);
     }
 
     /// <summary>

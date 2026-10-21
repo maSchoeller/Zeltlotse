@@ -9,6 +9,7 @@ namespace Zeltlotse.Kanaele.Daten;
 
 using Nachricht = Zeltlotse.Kanaele.Nachrichten.Nachricht;
 using Notiz = Zeltlotse.Kanaele.Notizen.Notiz;
+using GastPushAbo = Zeltlotse.Kanaele.Push.GastPushAbo;
 using PushAbo = Zeltlotse.Kanaele.Push.PushAbo;
 
 /// <summary>Schreibender DbContext; nur Command-Handler erhalten ihn (AD-27).</summary>
@@ -20,6 +21,9 @@ internal sealed class KanaeleDbContext(DbContextOptions<KanaeleDbContext> option
 
     /// <summary>Story 6-1: die Push-Abos der Browser, höchstens eines je (Freizeit, Endpunkt).</summary>
     public DbSet<PushAbo> PushAbos => Set<PushAbo>();
+
+    /// <summary>Story 6-4: die Push-Abos der QR-Gäste für den Kanal „Alle“, höchstens eines je (Freizeit, Endpunkt).</summary>
+    public DbSet<GastPushAbo> GastPushAbos => Set<GastPushAbo>();
 
     /// <summary>Story 6-3: die Punkte von Ansagen-Zettel und Besprechungsliste.</summary>
     public DbSet<Notiz> Notizen => Set<Notiz>();
@@ -43,6 +47,23 @@ internal sealed class KanaeleDbContext(DbContextOptions<KanaeleDbContext> option
              """,
             abbruch);
 
+    /// <summary>
+    /// Story 6-4: Speichert das Push-Abo eines QR-Gasts wie <see cref="AboSpeichernAsync"/>: Ein erneutes Senden desselben Endpunkts (auch nach einem neuen
+    /// Scan mit neuer Geräte-Kennung) überschreibt Gerät, Stempel des QR-Links, Schlüssel und Zeitpunkt, statt das Abo zu verdoppeln.
+    /// </summary>
+    public Task GastAboSpeichernAsync(
+        Guid id, Guid organisationId, Guid freizeitId, Guid geraeteId, Guid stempel, string endpunkt, string p256dh, string auth, DateTimeOffset jetzt,
+        CancellationToken abbruch) =>
+        Database.ExecuteSqlAsync(
+            $"""
+             INSERT INTO kanaele.gast_push_abo ("Id", "OrganisationId", "FreizeitId", "GeraeteId", "Stempel", "Endpunkt", "P256dh", "Auth", "AngelegtAm")
+             VALUES ({id}, {organisationId}, {freizeitId}, {geraeteId}, {stempel}, {endpunkt}, {p256dh}, {auth}, {jetzt})
+             ON CONFLICT ("FreizeitId", "Endpunkt") DO UPDATE
+             SET "GeraeteId" = EXCLUDED."GeraeteId", "Stempel" = EXCLUDED."Stempel", "P256dh" = EXCLUDED."P256dh", "Auth" = EXCLUDED."Auth", "AngelegtAm" = EXCLUDED."AngelegtAm"
+             WHERE kanaele.gast_push_abo."OrganisationId" = EXCLUDED."OrganisationId"
+             """,
+            abbruch);
+
     protected override void ModellKonfigurieren(ModelBuilder modelBuilder) => KanaeleModell.Konfigurieren(modelBuilder);
 }
 
@@ -53,6 +74,8 @@ internal sealed class KanaeleLeseDbContext(DbContextOptions<KanaeleLeseDbContext
     public DbSet<Nachricht> Nachrichten => Set<Nachricht>();
 
     public DbSet<PushAbo> PushAbos => Set<PushAbo>();
+
+    public DbSet<GastPushAbo> GastPushAbos => Set<GastPushAbo>();
 
     public DbSet<Notiz> Notizen => Set<Notiz>();
 
@@ -92,6 +115,18 @@ internal static class KanaeleModell
             e.HasIndex(a => new { a.FreizeitId, a.Endpunkt }).IsUnique();
             e.HasIndex(a => a.OrganisationId);
             e.HasIndex(a => a.PersonId);
+        });
+
+        // Story 6-4, AD-21: Push-Abos der QR-Gäste (ohne Person, nur mit Geräte-Kennung), höchstens eines je Freizeit und Endpunkt.
+        modelBuilder.Entity<GastPushAbo>(e =>
+        {
+            e.ToTable("gast_push_abo");
+            e.Property(a => a.Id).ValueGeneratedNever();
+            e.Property(a => a.Endpunkt).HasMaxLength(PushEndpunkte.MaximaleLaenge);
+            e.Property(a => a.P256dh).HasMaxLength(SchluesselMaximaleLaenge);
+            e.Property(a => a.Auth).HasMaxLength(SchluesselMaximaleLaenge);
+            e.HasIndex(a => new { a.FreizeitId, a.Endpunkt }).IsUnique();
+            e.HasIndex(a => a.OrganisationId);
         });
 
         // Story 6-3, FR-63: Ansagen-Zettel und Besprechungspunkte (Arbeitsdaten der Freizeit ohne Personenbezug, AD-16), gelesen je Liste.

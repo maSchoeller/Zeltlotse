@@ -292,6 +292,31 @@ public sealed class KanaeleSeitenTests : BunitContext
         Assert.Contains(KanaeleTexte.PushAnText, cut.Find("#benachrichtigungen").TextContent, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Beim_Wechsel_auf_eine_andere_Freizeit_wird_das_Abo_still_fuer_die_neue_Freizeit_erneuert()
+    {
+        var andere = Guid.Parse("0199f700-0000-7000-8000-0000000006d2");
+        Antworten();
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{andere}/kontext", () => Json(new
+        {
+            freizeitId = andere, name = "Herbstlager 2027", phase = "Laeuft", rollen = new[] { "Team" }, schalter = Array.Empty<string>(), erlaubt = Array.Empty<string>(),
+        }));
+        _server.Bei(HttpMethod.Get, $"/api/freizeiten/{andere}/kanaele/team/nachrichten", () => Json(Ansicht("Team")));
+        _server.Bei(HttpMethod.Post, $"/api/freizeiten/{andere}/kanaele/push/abo", () => new HttpResponseMessage(HttpStatusCode.NoContent));
+        _browser.Push = PushStatus.An;
+        _browser.Abo = new PushAboDaten("https://fcm.googleapis.com/fcm/send/alt", "p", "a");
+        var cut = Rendern();
+        cut.WaitForAssertion(() => Assert.Single(Posts(AboPfad)));
+
+        Navigation.NavigateTo($"freizeiten/{andere}/kanaele");
+        cut.Render(ps => ps.Add(p => p.FreizeitId, andere));
+
+        cut.WaitForAssertion(() => Assert.Single(Posts($"/api/freizeiten/{andere}/kanaele/push/abo")));
+        Assert.Contains("fcm/send/alt", Posts($"/api/freizeiten/{andere}/kanaele/push/abo").Single().Koerper!, StringComparison.Ordinal);
+        Assert.Single(Posts(AboPfad));
+        Assert.Equal(0, _browser.ErlaubnisGefragt);
+    }
+
     [Theory]
     [InlineData(PushStatus.Abgelehnt, KanaeleTexte.PushAbgelehntText)]
     [InlineData(PushStatus.NurMitHomeBildschirm, KanaeleTexte.PushHomeBildschirmText)]

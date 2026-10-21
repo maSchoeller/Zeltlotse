@@ -10,6 +10,7 @@ using Zeltlotse.Programm.Daten;
 using Zeltlotse.Programm.Datenschutz;
 using Zeltlotse.Programm.Materialien;
 using Zeltlotse.Programm.Programme;
+using Zeltlotse.Programm.Teilnehmer;
 using Zeltlotse.SharedKernel.Daten;
 using Zeltlotse.SharedKernel.Datenschutz;
 using Zeltlotse.SharedKernel.Ereignisse;
@@ -49,7 +50,8 @@ public static class ProgrammModul
     /// Aufgaben-Vorlagen der Organisation unter <c>/api/organisationen/{orgId}/aufgaben-vorlagen</c> nur für den Org-Admin. Story 3-6: die
     /// Programmbibliothek: Programmpunkt ablegen, Bibliothek lesen und Einträge übernehmen unter <c>…/programm</c> für Leitung und Team; die
     /// Bibliothek der Organisation unter <c>/api/organisationen/{orgId}/programmbibliothek</c> (lesen, Einträge entfernen) nur für den Org-Admin.
-    /// Story 6-2: „mitgeteilt“ an einem verschobenen Programmpunkt für Leitung und Team.
+    /// Story 6-2: „mitgeteilt“ an einem verschobenen Programmpunkt für Leitung und Team. Story 6-4: die Wochenübersicht für den QR-Gast unter
+    /// <c>/api/teilnehmer/programm</c> (nur lesen, <c>.NurQrGast()</c>).
     /// </summary>
     public static IEndpointRouteBuilder MapProgrammEndpoints(this IEndpointRouteBuilder api)
     {
@@ -92,6 +94,8 @@ public static class ProgrammModul
         var bibliothek = api.MapGroup($"/organisationen/{{{Rechtemerkmale.OrgRouteWert}:guid}}/programmbibliothek");
         bibliothek.MapGet("", OrgBibliothekLadenEndpunkt.Laden).NurOrgRolle(ProgrammRechte.Bibliothek);
         bibliothek.MapDelete("/{eintragId:guid}", EintragLoeschenEndpunkt.Loeschen).NurOrgRolle(ProgrammRechte.Bibliothek);
+        // Story 6-4: die Wochenübersicht für den QR-Gast (nur Tag, Uhrzeit und Titel; nur lesen).
+        api.MapGet("/teilnehmer/programm", TeilnehmerWocheLadenEndpunkt.Laden).NurQrGast();
         return api;
     }
 }

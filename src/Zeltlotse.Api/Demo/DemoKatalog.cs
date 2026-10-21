@@ -26,10 +26,10 @@ internal static class DemoKatalog
         "Die Lagerregeln und die Anweisungen der Mitarbeitenden gelten für alle Teilnehmenden.\nDer Teilnahmebeitrag wird nach der Zusage fällig. Wer krank wird, sagt bei der Leitung ab.");
 
     /// <summary>
-    /// Story 3-7: Module der Demo-Freizeit, die Miriam einschaltet (je nur, wenn noch aus): Verpflegung und Finanzen an, Teilnehmer-Zugang
-    /// bleibt aus. Die zweite Freizeit (Kinderbibeltage) nutzt kein Modul.
+    /// Story 3-7: Module der Demo-Freizeit, die Miriam einschaltet (je nur, wenn noch aus): Verpflegung und Finanzen an; Story 6-4: dazu der
+    /// Teilnehmer-Zugang mit QR-Link. Die zweite Freizeit (Kinderbibeltage) nutzt kein Modul.
     /// </summary>
-    public static IReadOnlyList<ModulFeld> Module { get; } = [ModulFeld.Verpflegung, ModulFeld.Finanzen];
+    public static IReadOnlyList<ModulFeld> Module { get; } = [ModulFeld.Verpflegung, ModulFeld.Finanzen, ModulFeld.TeilnehmerZugang];
 
     /// <summary>
     /// Story 4-1: Rezepte der Küche in der Demo-Freizeit (Modul Verpflegung), je für 4 Personen, mit Zubereitung und Zutaten (Menge als Text wie im

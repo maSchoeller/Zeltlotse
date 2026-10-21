@@ -95,7 +95,13 @@ Für Benachrichtigungen speichert Zeltlotse je Gerät und Freizeit ein **Push-Ab
 
 Ein Punkt auf dem [Ansagen-Zettel oder der Besprechungsliste](/mitarbeitende/kanaele/#ansagen-zettel-und-besprechung) speichert nur Liste, Text, wann er notiert und wann er abgehakt wurde – ohne Angabe einer Person; er steht deshalb in keiner Datenauskunft.
 
-In der eigenen Datenauskunft stehen unter „Kanäle“ die eigenen Nachrichten mit Kanal, Datum und Text und die Zahl der eigenen Push-Abos. Nach Ablauf der Löschfrist der Organisation für Freizeit-Daten löscht Zeltlotse die Nachrichten, die Push-Abos und die Punkte von Ansagen-Zettel und Besprechung der Freizeit endgültig.
+In der eigenen Datenauskunft stehen unter „Kanäle“ die eigenen Nachrichten mit Kanal, Datum und Text und die Zahl der eigenen Push-Abos. Mit dem [Abschluss der Freizeit](/leitung/freizeit-abschliessen/) löscht Zeltlotse alle Push-Abos dieser Freizeit, denn danach kann niemand mehr senden. Nach Ablauf der Löschfrist der Organisation für Freizeit-Daten löscht Zeltlotse die Nachrichten, die Push-Abos und die Punkte von Ansagen-Zettel und Besprechung der Freizeit endgültig.
+
+## Teilnehmer-Zugang
+
+Der [Teilnehmer-Zugang per QR-Code](/leitung/teilnehmer-zugang/) kennt keine Personen. Wer den QR-Code scannt und „Freizeit öffnen“ tippt, bekommt im Browser ein Cookie (eine kleine Datei, die der Browser für Zeltlotse aufbewahrt). Es enthält nur die Freizeit, eine zufällige **Geräte-Kennung** und einen Stempel des QR-Codes – keinen Namen, kein Konto und nicht den QR-Code selbst. Den QR-Link speichert Zeltlotse wie die Anmeldelinks nur als Prüfwert und verschlüsselt.
+
+Schaltet jemand im Teilnehmer-Zugang Benachrichtigungen ein, speichert Zeltlotse ein **Gast-Abo**: die Adresse beim Push-Dienst des Browsers, die Schlüssel des Browsers und die Geräte-Kennung, ohne Person. Das Gast-Abo endet mit der Freizeit: Nach dem Ende des letzten Freizeittags, nach dem Abschalten des Moduls oder nach dem Erneuern des QR-Codes geht nichts mehr hinaus; mit dem Abschluss der Freizeit löscht Zeltlotse alle Gast-Abos, spätestens mit den übrigen Daten der Freizeit nach der Löschfrist. Weil es keinen Personenbezug gibt, stehen Teilnehmer-Zugang und Gast-Abos in keiner Datenauskunft.
 
 ## Nachweise: nur eine einmalige Einsicht
 
