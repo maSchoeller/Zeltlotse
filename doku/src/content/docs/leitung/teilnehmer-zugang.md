@@ -50,6 +50,8 @@ Der QR-Code öffnet im Browser die Seite **Teilnehmer-Zugang** mit dem Knopf **F
 
 Keine Namen aus dem Team, keine Details der Programmpunkte, kein Material, keine Aufgaben, keine Übernahmen, nicht den Kanal „Team“, keine Freizeitpässe und keine Anmeldungen. Schreiben können sie nichts außer dem eigenen Wunsch nach Benachrichtigungen. Zeltlotse prüft das auf dem Server, nicht nur in der Oberfläche.
 
+**Vor dem Einschalten prüfen:** Teilnehmende sehen den Titel jedes Programmpunkts, auch von Punkten nur fürs Team wie „Teamsitzung“ oder einer geplanten Überraschung. Solche Punkte brauchen dann einen Titel, den alle lesen dürfen. Im Reiter **Alle** stehen außerdem die bisherigen Nachrichten in „Alle“ (die neuesten 200), auch die von vor dem Einschalten.
+
 ## Benachrichtigungen und iPhone
 
 Im Reiter **Alle** steht die Card **Benachrichtigungen** wie in den [Kanälen](/mitarbeitende/kanaele/#benachrichtigungen-aufs-handy). Nach einem Tipp auf **Benachrichtigungen einschalten** fragt das Handy nach der Erlaubnis. Danach kommt jede neue Nachricht in „Alle“ als Benachrichtigung aufs Handy; ein Tipp darauf öffnet den Teilnehmer-Zugang. Nachrichten im Kanal „Team“ kommen nie dort an.
@@ -62,4 +64,4 @@ Auf dem iPhone kommen Benachrichtigungen erst, wenn Zeltlotse auf dem Home-Bilds
 
 ## Ende mit der Freizeit
 
-Der Zugang gilt bis zum Ende des letzten Freizeittags (24:00 Uhr). Danach zeigt der QR-Code nur noch „Diese Freizeit ist zu Ende.“, und es gehen keine Benachrichtigungen mehr an Teilnehmende. Dasselbe gilt sofort, wenn die Leitung das Modul abschaltet oder den Link erneuert. Mit dem Abschluss der Freizeit löscht Zeltlotse alle Benachrichtigungs-Abos dieser Freizeit (siehe [Freizeit abschließen](/leitung/freizeit-abschliessen/) und [Was passiert mit meinen Daten](/daten/#teilnehmer-zugang)).
+Der Zugang gilt bis zum Ende des letzten Freizeittags (24:00 Uhr). Danach zeigt der QR-Code nur noch „Diese Freizeit ist zu Ende.“, und es gehen keine Benachrichtigungen mehr an Teilnehmende. Dasselbe gilt sofort, wenn die Leitung das Modul abschaltet oder den Link erneuert. Schaltet die Leitung das Modul wieder ein, gilt der bisherige QR-Code wieder, auch für alle, die ihn schon genutzt haben. Wer den alten Code endgültig sperren will, erneuert den Link. Mit dem Abschluss der Freizeit löscht Zeltlotse alle Benachrichtigungs-Abos dieser Freizeit (siehe [Freizeit abschließen](/leitung/freizeit-abschliessen/) und [Was passiert mit meinen Daten](/daten/#teilnehmer-zugang)).

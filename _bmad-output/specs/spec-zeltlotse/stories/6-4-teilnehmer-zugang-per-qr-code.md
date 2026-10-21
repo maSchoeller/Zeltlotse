@@ -5,7 +5,7 @@ created: '2026-10-21'
 baseline_revision: '2a0183fb6559feca3fbeab9a0ddfaf4a3c377149'
 status: 'done'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/specs/spec-zeltlotse/stories/6-1-kanaele-team-und-alle-mit-push.md'
@@ -26,6 +26,13 @@ deferred:
     location: >-
       src/Zeltlotse.App/Features/Freizeiten/Einstellungen.razor
     severity: low
+  - summary: >-
+      Die Zugriffsbegrenzung ist ein gemeinsames Budget je IP für alle begrenzten Routen; eine Scan-Welle im Lager-WLAN kann auch die Anmeldung der Leitung im selben Netz für bis zu eine Minute mit 429 sperren.
+    evidence: |-
+      Eine Richtlinie „zugriffsbegrenzt“ mit festem Fenster von 20 Anfragen je Minute und Partition nur nach IP (src/Zeltlotse.Api/Sicherheit/Zugriffsbegrenzung.cs). Dieselbe Partition teilen Einlösen, Login-Link, Passwort-Anmeldung und GET /api/betrieb/antiforgery. Die Teilung gab es schon vor 6-4 (AD-25); 6-4 bringt nur einen weiteren, gehäuften Nutzer. Abhilfe bräuchte eine eigene Partition oder Grenze für das Einlösen, also eine Entscheidung an AD-25. Bis dahin lässt sich AnfragenJeMinute im Betrieb erhöhen.
+    location: >-
+      src/Zeltlotse.Api/Sicherheit/Zugriffsbegrenzung.cs, src/Modules/Freizeiten/Zeltlotse.Freizeiten/FreizeitenModul.cs:157
+    severity: medium
 ---
 
 <intent-contract>
@@ -222,6 +229,35 @@ Wurzel: `src/` = S, `tests/` = T, Fk = `S/Modules/Freizeiten/Zeltlotse.Freizeite
   - `[low]` `[reject]` Intent: Kein Screenshot von 404-Seite, Druckbild und Anmelden-Card — Laut Design Notes per bUnit und HTTP belegt. Die E2E-Uhr ist nicht einstellbar.
   - `[false]` `[reject]` Intent: Zusätze über die Kurzbeschreibung hinaus (Team-Abos beim Abschluss löschen, Anmelden-Card, Begrenzung nur beim Einlösen) — Steht so in der Spec; keine Abweichung.
 
+### 2026-10-21 — Review pass (Folgedurchlauf)
+- verdicts: 25 findings — high 0, medium 1, low 16, false 7, maybe-false 1
+- findings:
+  - `[maybe-false]` `[defer]` Blind: Die Web-App vom iPhone-Home-Bildschirm sieht das Gast-Cookie aus Safari nicht, der Gast kommt dort nicht an Push — carried: bereits zurückgestellt (deferred), Klärung nur am echten Gerät.
+  - `[low]` `[reject]` Blind: Ein Gerät hält nur eine Gast-Sitzung; das alte Gast-Abo einer ersten Freizeit läuft weiter und lässt sich nicht ausschalten — carried: wie „Ein Browser scannt nacheinander zwei Freizeiten“; selten, endet mit dem Freizeitende.
+  - `[low]` `[reject]` Blind: Der Cookie-Ablauf bleibt beim Einlösen stehen und folgt keiner späteren Datumsänderung — carried: selten, ein neuer Scan hilft.
+  - `[medium]` `[defer]` Blind: Die Zugriffsbegrenzung teilt ein Budget je IP mit Login und Einladungen; eine Scan-Welle sperrt auch die Leitung im selben WLAN — bestätigt (eine Richtlinie, Partition nur nach IP, 20 je Minute, auch GET antiforgery zählt). Die Teilung ist vorbestehend (AD-25); die Abhilfe ist eine Entscheidung an AD-25. Zurückgestellt, Ausweg im Betrieb: AnfragenJeMinute.
+  - `[low]` `[reject]` Blind: Jedes gescheiterte Einlösen schreibt ins Sicherheitsprotokoll, auch Ende, Schalter aus und erneuerter Link — Die Spec verlangt `LinkEinloesungFehlgeschlagen` für jeden Fehlschlag (AD-22), wie beim Anmeldelink; eine Änderung wiche von der Spec ab.
+  - `[low]` `[reject]` Blind: Der Ende-Text deckt nicht jeden 404-Grund genau ab — Den Text legt die Spec fest, der Zusatz nennt schon Erneuern und Ausschalten (Patch des ersten Durchgangs). Eine Unterscheidung bräuchte einen eigenen Status, den die Design Notes bewusst ausschließen.
+  - `[low]` `[patch]` Blind: Die Leitung kann Programmpunkte nicht vor Teilnehmenden verbergen; auch Team-Punkte und Überraschungen stehen mit Titel in der Woche — Das Verhalten folgt der Spec (Zeiten und Titel). Gepatcht ist die fehlende Warnung: `leitung/teilnehmer-zugang.md` hat jetzt den Absatz „Vor dem Einschalten prüfen“.
+  - `[low]` `[patch]` Blind: Niemand erfährt, dass mit dem Einschalten auch die bisherigen Nachrichten in „Alle“ lesbar werden — gleiche Ursache (Sichtbarkeit nicht dokumentiert), gleicher Doku-Absatz (die neuesten 200, auch von vor dem Einschalten).
+  - `[low]` `[reject]` Blind: Erzeugen und Erneuern des QR-Links schreiben nichts ins Sicherheitsprotokoll — Gleich wie beim Erneuern des Anmeldelinks; ein neuer Protokolltyp ist laut Spec nicht vorgesehen (keine neuen Ereignis-Typen).
+  - `[false]` `[reject]` Blind: Der Name `GastAbosBeenden` verdeckt, dass auch Team-Abos gelöscht werden — Name und Verhalten verlangt die Spec ausdrücklich; die Doku (`freizeit-abschliessen`, `daten.md`) nennt das Löschen aller Abos.
+  - `[low]` `[reject]` Blind: Zwei Abfragen je Gast-Anfrage und doppelte `GET /api/teilnehmer` je Seitenaufruf — bei Lager-Größen ohne belegten Schaden; Zusammenlegen wäre reine Optimierung.
+  - `[low]` `[reject]` Edge: Ein Gerät mit Team-Abo, dessen Person kein Empfänger des Team-Push ist, bekommt auch keinen Gast-Push — selten (eigene Nachricht des Autors, ehemaliges Team-Mitglied im selben Browser); die Korrektur bräuchte die Empfängerliste des Team-Push im Gast-Aufbau.
+  - `[low]` `[reject]` Edge: „Benachrichtigungen ausschalten“ auf der Gastseite beendet das Browser-Abo, das ein Team-Abo mitnutzt — selten (Team-Mitglied scannt den Aushang im selben Browser); ein Schutz bräuchte einen neuen Zweig in `PushCard`.
+  - `[low]` `[reject]` Edge: Erneuern in der Nachbereitung erzeugt einen QR-Code, der nie gilt — carried.
+  - `[low]` `[reject]` Edge: Lässt sich `TokenGeschuetzt` nicht entschlüsseln, endet `GET qr-zugang` mit 500 — gleich wie beim Anmeldelink (`AnmeldelinkErzeugen.Token`); ein verlorener Schlüsselring ist ein Betriebsfehler für alle Links.
+  - `[low]` `[reject]` Edge: Liefert Erneuern 403/404 (Modul auf einem anderen Gerät ausgeschaltet), verschwindet die Card ohne Meldung — selten; der nächste Seitenaufruf zeigt den richtigen Stand.
+  - `[low]` `[defer]` Verification-Gap: Die Zweige 409, „Kopieren scheitert“ und die Erfolgsmeldung der QR-Card sind per bUnit ungetestet — carried: bereits zurückgestellt, kein neuer Eintrag.
+  - `[low]` `[patch]` Verification-Gap: Die Grenze von 200 Nachrichten im Gast-Kanal ist ungetestet — Test `Kanal_hoechstens_die_neuesten_200_aus_Alle_aelteste_zuerst` ergänzt (205 Nachrichten, erwartet Nr. 6 bis 205 in Reihenfolge); grün.
+  - `[false]` `[reject]` Intent: `IQrGast`, `IQrZugangLesen` und `GastPushAbo` tragen über die Spec hinaus einen Stempel — dient „Der Zugang endet beim Erneuern“ auch für Push (Patch des ersten Durchgangs); die Spec verbietet keine weiteren Felder, kein Schaden.
+  - `[false]` `[reject]` Intent: Der Gast-Push überspringt Geräte mit Team-Abo, das steht nicht in der Spec — bewusster Patch des ersten Durchgangs gegen doppelte Pushes; der Randfall ist oben unter Edge bewertet.
+  - `[low]` `[patch]` Intent: Nach dem Wieder-Einschalten des Moduls gilt ein altes Cookie wieder (statt „endet“) — Das Verhalten folgt der Gültigkeitsregel der Spec (Stempel, Schalter an, vor dem Ende, bei jeder Anfrage geprüft). Gepatcht ist die Doku: „Ende mit der Freizeit“ sagt jetzt, dass der alte Code nach dem Wieder-Einschalten wieder gilt und nur Erneuern endgültig sperrt.
+  - `[false]` `[reject]` Intent: `IstTeilnehmerPfad` prüft den Anfang des Pfads statt „enthält“ — Der Präfix ist die gemeinte Lesart (Gastseiten liegen unter `/teilnehmer`); kein anderer Pfad ist betroffen.
+  - `[false]` `[reject]` Intent: Der 404-Text hat einen dritten Satz — bewusster Patch des ersten Durchgangs (Ausschalten), widerspricht dem Spec-Text nicht.
+  - `[false]` `[reject]` Intent: „Cookie für X liest Y nicht“ ist nur über den Inhalt geprüft — Gast-Routen haben keine Freizeit im Pfad; ein Zugriff auf Y lässt sich gar nicht formulieren, der Inhaltstest ist die richtige Oberfläche.
+  - `[false]` `[reject]` Intent: Demo-Daten mit Teilnehmer-Zugang liegen außerhalb der Intent — Definition of Done und Aufruf verlangen Demo-Daten für die neue Oberfläche.
+
 ## Design Notes
 
 - **QR auf dem Server:** Die Paketregel verbietet Fremdpakete in Clients. Ein eigener Encoder (Reed-Solomon, Masken) wäre fehleranfällig und kaum prüfbar. Modul-Projekte dürfen Pakete nutzen (z. B. MailKit, Lib.Net.Http.WebPush). Die Matrix als Zeilen ist eine Datenform; das SVG baut `QrCodeBild` ohne CSP-Konflikt.
@@ -295,3 +331,28 @@ Status: done
 - Die QR-Screenshots enthalten ein zufälliges Token und den Port des Test-Hosts und ändern sich bei jedem Lauf.
 - Das Druckbild nutzt den CSS-Selektor `:has()`.
 - Der Komplettlauf ist auf diesem Rechner nur mit Wiederholungen grün: Docker und Testcontainers laufen unter Last in Timeouts.
+
+### Folgedurchlauf 2026-10-21
+
+Status: done
+
+**Review:** 25 Funde (medium 1, low 16, false 7, maybe-false 1, kein high); Details im Triage-Log.
+- **Patches** (alle low):
+  - neuer HTTP-Test für die Grenze von 200 Nachrichten im Gast-Kanal (`TeilnehmerZugangTests`);
+  - Doku `leitung/teilnehmer-zugang.md`: Absatz „Vor dem Einschalten prüfen“ (alle Programmtitel und die bisherigen Nachrichten in „Alle“ sind sichtbar) und der Hinweis, dass nach dem Wieder-Einschalten der alte QR-Code wieder gilt und nur Erneuern endgültig sperrt.
+- **Zurückgestellt:** gemeinsames Budget der Zugriffsbegrenzung je IP (medium, Entscheidung an AD-25). Weiter offen aus dem ersten Durchgang: iPhone-Home-Bildschirm und Fehlerzweige der QR-Card (beide carried).
+- **Verworfen** (je mit Grund im Triage-Log): zwei Freizeiten in einem Browser (carried); Cookie-Ablauf bei Datumsänderung (carried); Protokoll-Rauschen beim Einlösen (Spec verlangt es); Ende-Text je Grund; kein Protokoll beim Erneuern; Name `GastAbosBeenden` (false); Anfragen je Seitenaufruf; Gerät mit Team-Abo ohne Team-Push; Ausschalten mit geteiltem Browser-Abo; Erneuern in der Nachbereitung (carried); nicht entschlüsselbares Token; Card verschwindet bei 403/404; Stempel-Felder, Dublettenregel, Pfad-Präfix, dritter Satz, X/Y-Test, Demo-Daten (alle false).
+
+**Folge-Review empfohlen:** nein. Folgedurchlauf ohne gepatchten high-Fund (gepatcht: high 0, medium 0, low 3 Einträge); die Arbeit ist konvergiert.
+
+**Dateien:**
+- `tests/Zeltlotse.Api.Tests/TeilnehmerZugangTests.cs`: Test für die 200er-Grenze im Gast-Kanal.
+- `doku/src/content/docs/leitung/teilnehmer-zugang.md`: Sichtbarkeit vor dem Einschalten, Wieder-Einschalten.
+
+**Verifikation:**
+- `dotnet test --project tests/Zeltlotse.Api.Tests` mit Filter `TeilnehmerZugangTests`: 21/21 grün.
+- `dotnet test --project tests/Zeltlotse.ArchitectureTests` (inkl. Doku-Regeln): 136/136 grün.
+- `npm run build` in `doku/`: fehlerfrei, 68 Seiten (nur der bekannte Sitemap-Hinweis).
+- Kein Produktivcode geändert, darum kein neuer Komplettlauf und keine neuen Screenshots; der Nachweis der Definition of Done aus dem ersten Durchgang bleibt gültig.
+
+**Restrisiken:** wie im ersten Durchgang, dazu das geteilte Budget der Zugriffsbegrenzung im Lager-WLAN (deferred).

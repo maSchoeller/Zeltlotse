@@ -323,6 +323,20 @@ public sealed class TeilnehmerZugangTests(PostgresContainer postgres, S3Containe
     }
 
     [Fact]
+    public async Task Kanal_hoechstens_die_neuesten_200_aus_Alle_aelteste_zuerst()
+    {
+        using var gast = await GastAsync(await ZugangAsync());
+        await AusfuehrenAsync(
+            _s.Verbindung,
+            "INSERT INTO kanaele.nachricht (\"Id\", \"OrganisationId\", \"FreizeitId\", \"Kanal\", \"AutorPersonId\", \"Text\", \"GesendetAm\", \"Folgenummer\") " +
+            "SELECT gen_random_uuid(), @o, @f, 2, @p, 'Nachricht ' || i, @t + i * interval '1 minute', 1 FROM generate_series(1, 205) AS i",
+            ("o", _s.A), ("f", _s.X), ("p", _s.MiriamId), ("t", new DateTime(2026, 7, 1, 8, 0, 0, DateTimeKind.Utc)));
+
+        var texte = (await GetJsonAsync(gast, "/api/teilnehmer/kanal")).GetProperty("nachrichten").EnumerateArray().Select(n => n.GetProperty("text").GetString());
+        Assert.Equal([.. Enumerable.Range(6, 200).Select(i => (string?)$"Nachricht {i}")], texte);
+    }
+
+    [Fact]
     public async Task Ohne_Gast_Cookie_404_auch_mit_Team_Sitzung_ein_Gast_an_Team_Routen_401()
     {
         var token = await ZugangAsync();
