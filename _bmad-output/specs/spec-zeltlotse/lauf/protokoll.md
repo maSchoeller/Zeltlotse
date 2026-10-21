@@ -54,6 +54,7 @@ Test-Tempo ab 2-3 (Vorgabe von Marvin, 2026-10-12): Story-Sitzungen testen währ
 | 2026-10-20 17:20 | 6-1 | done (mit Folgedurchlauf) | ja (done, keiner mehr) | schnell grün: Build, Architektur 136/136, UI 811/811 / – | 7055101 | Echte Push-Zustellung (Google/Mozilla/Apple) ungeprüft, nur mit Nachbildungen getestet; VAPID-Schlüsselwechsel macht alte Abos stumm; Feldnamen der Push-Nachricht zum Service Worker ohne Test |
 | 2026-10-20 21:00 | 6-2 | done (mit Folgedurchlauf) | ja (done, keiner mehr) | schnell grün: Build, Architektur 136/136, UI 836/836 / – (Sitzung: 3034 grün) | 0728d4c | Folgedurchlauf behob falsches „Alle informiert“ nach Fehler. Offen: gleichzeitiges „Ja, informieren“ kann doppelt senden; Konten.Tests im Gesamtlauf einmal rot (DB-Verbindung), einzeln grün |
 | 2026-10-20 22:30 | 6-3 | pausiert (in-review) | – | – | 628db8e | Lauf auf Wunsch von Marvin pausiert (Rechner wird heruntergefahren). Umsetzung fertig, Zwischenstand committet; beim Fortsetzen 6-3 neu starten, die Sitzung macht beim Review weiter |
+| 2026-10-21 14:20 | 6-3 | done | nein (nicht empfohlen) | schnell grün: Build, Architektur 136/136, UI 853/853 / – (Sitzung: 15 Projekte grün, Api 1043, Playwright 197) | ca8a2b4 | Nach Pause ab dem Review fortgesetzt (ca. 1 h). Restrisiko: schneller Reiterwechsel zeigt kurz die falsche Liste |
 
 ## Entscheidungen im Lauf
 
