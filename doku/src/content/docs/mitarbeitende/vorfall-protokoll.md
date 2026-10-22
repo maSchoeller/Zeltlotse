@@ -50,4 +50,4 @@ Bis zum Abschluss der Freizeit lassen sich Einträge schreiben, auch in der Nach
 
 Was aus dem Erste-Hilfe-Kasten entnommen wurde, setzt Zeltlotse zusätzlich auf die Liste **Schäden & Verluste** der Freizeit, als „Erste-Hilfe-Entnahme · Erste-Hilfe-Kasten“; niemand muss es zweimal eintragen. Leitung und Team sehen dort auch den Text aus dem Vorfall-Protokoll, die Organisation nach dem Abschluss nur „Erste-Hilfe-Kasten“ – siehe [Schäden und Verluste eintragen](/mitarbeitende/schaeden-verluste/#entnahmen-aus-dem-vorfall-protokoll).
 
-Das Vorfall-Protokoll braucht eine Verbindung; offline lässt es sich noch nicht schreiben. Der Text steht nur verschlüsselt in der Datenbank – mehr dazu unter [Was passiert mit meinen Daten](/daten/#vorfall-protokoll).
+Ohne Netz lässt sich das Vorfall-Protokoll während der Freizeit trotzdem schreiben: Der Eintrag wartet verschlüsselt auf dem Gerät und geht an den Server, sobald das Netz zurück ist – siehe [Ohne Netz arbeiten](/mitarbeitende/offline/#vorfall-protokoll-ohne-netz). Der Text steht nur verschlüsselt in der Datenbank – mehr dazu unter [Was passiert mit meinen Daten](/daten/#vorfall-protokoll).

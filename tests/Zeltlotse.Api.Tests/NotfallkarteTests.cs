@@ -109,6 +109,22 @@ public sealed class NotfallkarteTests(PostgresContainer postgres) : IAsyncLifeti
     }
 
     [Fact]
+    public async Task Datenauskunft_nennt_das_Laden_der_Notfallkarte_mit_der_lesenden_Person()
+    {
+        // Tobias (volljährig, eigenes Konto, als Mitarbeitender bestätigt) steht auf der Karte, die Miriam lädt.
+        await KarteAsync(_s.Miriam);
+        await AnmeldenAsync(_s.Factory, _s.Tobias, FreizeitHelfer.Tobias);
+
+        var auskunft = (await System.Net.Http.Json.HttpClientJsonExtensions.GetFromJsonAsync<Zeltlotse.Api.Contracts.Betrieb.DatenauskunftAntwort>(
+            _s.Tobias, "/api/ich/daten", Abbruch))!;
+
+        var zeile = Assert.Single(
+            Assert.Single(auskunft.Abschnitte, a => a.Titel == "Zugriffsprotokoll").Zeilen,
+            z => z.Wert.EndsWith(": Notfallkarte aufs Gerät geladen", StringComparison.Ordinal));
+        Assert.StartsWith("Miriam ", zeile.Wert, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Nur_eingegangene_Personen_fehlen_ohne_Protokoll()
     {
         await _s.KindAnmeldenAsync(_s.Emma);

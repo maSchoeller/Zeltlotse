@@ -2790,6 +2790,134 @@ public sealed class DokuScreenshotTests(VeroeffentlichterHost host)
         await Assertions.Expect(seite).ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/app/teilnehmer$"));
     }
 
+    // ---------- Story 6-5: Offline-Modus ----------
+
+    /// <summary>
+    /// Story 6-5: Die Demo-Freizeit liegt 2027 und ist in Vorbereitung; offline gespeichert wird nur in Phase „läuft“. Deshalb baut jedes Gerät eine eigene
+    /// laufende Freizeit mit erfundenen Namen und eigener Leitung (nie Jonas) auf (<see cref="LaufendeFreizeit"/>), lässt den Abgleich speichern und geht in
+    /// den Flugmodus: Sicherheitskette aus dem Speicher, Notfallkarte von Paula Sommer, ein wartender Vorfall-Eintrag und die Küchen-Tagesansicht. Tage und
+    /// Uhrzeiten hängen vom Lauf ab; im Bild stehen feste (2.–6. August 2027).
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Geraete))]
+    public async Task Offline_Modus(string geraet)
+    {
+        await using var kontext = await KontextAsync(geraet);
+        var seite = await kontext.NewPageAsync();
+        var kennung = Guid.NewGuid().ToString("N")[..8];
+        var freizeit = new LaufendeFreizeit(host);
+        await freizeit.AufbauenAsync(
+            kontext, seite, $"Herbstlager {kennung}", $"offline-doku-{geraet}-{kennung}@example.org", $"offline-doku-eltern-{geraet}-{kennung}@example.org");
+        var id = freizeit.FreizeitId;
+        var kind = $"{LaufendeFreizeit.Kind} {LaufendeFreizeit.Familienname}";
+
+        // Online öffnen, bis der Abgleich alles gespeichert hat und der Service Worker die Seite steuert.
+        await seite.GotoAsync(new Uri(host.Adresse, $"/app/freizeiten/{id}").ToString());
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync(freizeit.Name, new() { Timeout = 60_000 });
+        await seite.EvaluateAsync("() => navigator.serviceWorker.ready");
+        await freizeit.GespeichertAsync(seite);
+        await seite.ReloadAsync();
+        await seite.WaitForFunctionAsync("() => navigator.serviceWorker.controller !== null", null, new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync(freizeit.Name, new() { Timeout = 60_000 });
+
+        // Flugmodus: Die Notfall-Box führt zur gespeicherten Sicherheitskette.
+        await kontext.SetOfflineAsync(true);
+        await seite.ReloadAsync();
+        var box = seite.Locator(".zl-notfall-box");
+        await Assertions.Expect(box).ToContainTextAsync("Die Sicherheitskette ist auf diesem Gerät gespeichert.", new() { Timeout = 60_000 });
+        await box.GetByRole(AriaRole.Link, new() { Name = "Notfallhilfe öffnen" }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Sicherheitskette", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.Locator(".zl-offline-leiste")).ToContainTextAsync("Offline");
+        await Assertions.Expect(seite.Locator("a[href='tel:0123456792']")).ToHaveTextAsync($"Leitung anrufen: {LaufendeFreizeit.LeitungTelefon}", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByLabel("Betroffene Person suchen")).ToBeVisibleAsync();
+        await Assertions.Expect(seite.Locator("a.elkw-btn", new() { HasText = "Notfallordner drucken" })).ToHaveAttributeAsync("aria-disabled", "true");
+        await Assertions.Expect(seite.GetByText("Offline nicht verfügbar.")).ToHaveCountAsync(0);
+        await E2EHilfe.AxeAsync(seite);
+        await OfflineFestAsync(seite, []);
+
+        await BildAsync(seite, "offline-sicherheitskette", geraet);
+
+        // Die Suche öffnet offline die Notfallkarte.
+        await seite.GetByLabel("Betroffene Person suchen").FillAsync(LaufendeFreizeit.Kind[..3]);
+        var treffer = seite.Locator(".elkw-people").GetByRole(AriaRole.Link, new() { Name = kind });
+        await Assertions.Expect(treffer).ToBeVisibleAsync(E2EHilfe.Lange);
+        await treffer.ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Notfallkarte", new() { Timeout = 60_000 });
+        var main = seite.Locator("main");
+        await Assertions.Expect(main).ToContainTextAsync(kind, new() { Timeout = 60_000 });
+        await Assertions.Expect(main).ToContainTextAsync("Milch");
+        await Assertions.Expect(main).ToContainTextAsync(LaufendeFreizeit.Medikament);
+        await Assertions.Expect(main).ToContainTextAsync("Karin Sommer (Mutter), 0123 456794");
+        await Assertions.Expect(main).ToContainTextAsync("keine Angabe");
+        await Assertions.Expect(seite.GetByRole(AriaRole.Link, new() { Name = "Zurück zur Sicherheitskette" })).ToBeVisibleAsync();
+        await E2EHilfe.AxeAsync(seite);
+        await OfflineFestAsync(seite, []);
+
+        await BildAsync(seite, "offline-notfallkarte", geraet);
+
+        // Ein Vorfall-Eintrag offline wartet auf Verbindung.
+        await seite.GetByRole(AriaRole.Link, new() { Name = "Vorfall-Protokoll", Exact = true }).ClickAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Vorfall-Protokoll", new() { Timeout = 60_000 });
+        var geschehen = seite.GetByLabel("Was ist passiert?", new() { Exact = true });
+        await Assertions.Expect(geschehen).ToBeVisibleAsync(E2EHilfe.Lange);
+        await geschehen.FillAsync("Beim Fußball umgeknickt, Knöchel gekühlt und hochgelegt.");
+        await geschehen.PressAsync("Tab");
+        var protokoll = seite.Locator(".elkw-card").Filter(new() { Has = seite.GetByRole(AriaRole.Heading, new() { Name = "Protokoll", Exact = true }) });
+        await Assertions.Expect(protokoll.Locator("div[id^=vorfall-]").First).ToContainTextAsync("wartet auf Verbindung", new() { Timeout = 60_000 });
+        await Assertions.Expect(geschehen).ToHaveValueAsync("");
+        await Assertions.Expect(seite.Locator(".zl-offline-leiste")).ToContainTextAsync("1 Eintrag wartet auf Verbindung");
+        await E2EHilfe.AxeAsync(seite);
+        // Der Blick auf den wartenden Eintrag: Fokus weg vom Feld, das Protokoll im Bild.
+        await seite.EvaluateAsync("() => document.activeElement && document.activeElement.blur()");
+        await protokoll.ScrollIntoViewIfNeededAsync();
+        await OfflineFestAsync(seite, [[@"^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}", "03.08.2027 14:35"]]);
+
+        await BildAsync(seite, "offline-vorfall-wartet", geraet);
+
+        // Die Küchen-Tagesansicht öffnet sich offline (aus dem Service Worker neu geladen); der Restetag ist ausgegraut.
+        await seite.GotoAsync(new Uri(host.Adresse, $"/app/freizeiten/{id}/kueche/tagesansicht").ToString());
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Tagesansicht", new() { Timeout = 60_000 });
+        await Assertions.Expect(main).ToContainTextAsync("Frühstück", new() { Timeout = 60_000 });
+        await Assertions.Expect(seite.GetByLabel("Restetag").First).ToBeDisabledAsync();
+        await Assertions.Expect(seite.GetByText("Offline nicht verfügbar.")).ToHaveCountAsync(0);
+        await E2EHilfe.AxeAsync(seite);
+        var deutsch = System.Globalization.CultureInfo.GetCultureInfo("de-DE");
+        var tage = new List<(string Echt, string Fest)>();
+        for (var i = 0; i < 5; i++)
+        {
+            var echt = freizeit.LetzterTag.AddDays(i - 4);
+            var fest = new DateOnly(2027, 8, 2).AddDays(i);
+            tage.Add((TagKurz(echt, deutsch), TagKurz(fest, deutsch)));
+            tage.Add((echt.ToString("dddd, d. MMMM yyyy", deutsch), fest.ToString("dddd, d. MMMM yyyy", deutsch)));
+        }
+
+        // Erst auf Platzhalter, dann auf die festen Tage: So trifft keine Ersetzung einen schon ersetzten Tag.
+        await OfflineFestAsync(seite, [.. tage.Select((t, i) => new[] { System.Text.RegularExpressions.Regex.Escape(t.Echt), $"§{i}§" })]);
+        await OfflineFestAsync(seite, [.. tage.Select((t, i) => new[] { $"§{i}§", t.Fest })]);
+
+        await BildAsync(seite, "offline-tagesansicht", geraet);
+    }
+
+    /// <summary>Story 6-5: Tag kurz wie in den Reitern der Tagesansicht, z. B. „Mo 02.08.“.</summary>
+    private static string TagKurz(DateOnly tag, IFormatProvider deutsch) => $"{tag.ToString("ddd", deutsch).TrimEnd('.')} {tag.ToString("dd.MM.", deutsch)}";
+
+    /// <summary>
+    /// Story 6-5: Setzt im Bild die Uhrzeit der Offline-Leiste fest (sie hängt vom Lauf ab) und ersetzt dazu jedes Muster aus <paramref name="ersetzungen"/>
+    /// (regulärer Ausdruck, Ersatz) in allen Texten der Seite.
+    /// </summary>
+    private static Task OfflineFestAsync(IPage seite, string[][] ersetzungen) =>
+        seite.EvaluateAsync(
+            """
+            paare => {
+                const alle = [['aktualisiert\\s+\\d{1,2}:\\d{2}', 'aktualisiert 14:32'], ...paare];
+                const gang = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+                for (let text = gang.nextNode(); text; text = gang.nextNode()) {
+                    for (const [muster, neu] of alle) text.nodeValue = text.nodeValue.replace(new RegExp(muster, 'g'), neu);
+                }
+            }
+            """,
+            ersetzungen);
+
     /// <summary>Story 6-4: Tippt im Teilnehmer-Zugang den Reiter eines Bereichs und wartet auf die Seite.</summary>
     private static async Task TeilnehmerBereichAsync(IPage seite, string reiter, string adresse)
     {

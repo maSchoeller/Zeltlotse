@@ -267,9 +267,8 @@ public sealed class OfflineModusTests : BunitContext
 
         await _browser.MeldenAsync(true);
 
-        await WartenAufAsync(() => _server.Anfragen.Any(a => a.Pfad == "/api/ich/freizeiten"));
-        await Abgleich.AbgleichenAsync();
-        Assert.Equal(1, _browser.SpeicherGehalten);
+        await WartenAufAsync(() => _browser.SpeicherGehalten == 1);
+        Assert.Single(_server.Anfragen, a => a.Pfad == "/api/ich/freizeiten");
     }
 
     [Fact]
@@ -636,6 +635,8 @@ public sealed class OfflineModusTests : BunitContext
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("#vorfall-geschehen")));
         Assert.Contains("Emma Muster", cut.Markup, StringComparison.Ordinal);
         Assert.Contains(ProtokollSeite.OfflineText, cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(ProtokollSeite.OfflineHinweisText, cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("sofort für die Leitung sichtbar", cut.Markup, StringComparison.Ordinal);
 
         cut.Find("#vorfall-geschehen").Input("Am Knie geschnitten");
         cut.Find("#vorfall-geschehen").FocusOut();
@@ -687,6 +688,156 @@ public sealed class OfflineModusTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.Contains(OfflineSpeicher.NichtGespeichertText, cut.Markup, StringComparison.Ordinal));
         Assert.Empty(cut.FindAll("textarea"));
+    }
+
+    [Fact]
+    public void Zugriffsprotokoll_nennt_den_Zweck_Notfallkarte_aufs_Geraet_geladen() =>
+        Assert.Equal("Notfallkarte aufs Gerät geladen", Zeltlotse.Ui.Texte.Anzeige.Zweck(ZugriffZweck.NotfallkarteGeladen));
+
+    [Fact]
+    public async Task Layout_gleicht_eine_laufende_noch_nicht_gespeicherte_Freizeit_nach_dem_Laden_ihres_Kontexts_ab()
+    {
+        Services.GetRequiredService<AppSitzung>().Anmelden("Lea");
+        Meine();
+        await Verbindung.StartenAsync();
+        await Abgleich.StartenAsync();
+        await WartenAufAsync(() => _browser.SpeicherGehalten == 1);
+        Assert.Empty(Schluessel(Freizeit));
+
+        // Inzwischen läuft die Freizeit; die Seite eines ihrer Bereiche lädt den Kontext und stößt den Abgleich an.
+        Meine(Meine(Freizeit));
+        Laufend(Freizeit);
+        Layout(nutzbar: false);
+
+        await WartenAufAsync(() => _browser.Offline.ContainsKey($"{Freizeit:D}/sicherheitskette"));
+        Assert.Contains($"{Freizeit:D}/freizeit", _browser.Offline.Keys);
+    }
+
+    [Fact]
+    public async Task Abmelden_waehrend_eines_Abgleichs_der_Lauf_schreibt_danach_nichts_mehr()
+    {
+        Meine(Meine(Freizeit));
+        Laufend(Freizeit);
+        var halt = new TaskCompletionSource();
+        _server.Bei(
+            r => r.Method == HttpMethod.Get && r.RequestUri!.AbsolutePath == Pfad(Freizeit, "/sicherheit/sicherheitskette"),
+            async _ =>
+            {
+                await halt.Task;
+                return Json(Kette());
+            });
+
+        var lauf = Abgleich.AbgleichenAsync();
+        await WartenAufAsync(() => _server.Anfragen.Any(a => a.Pfad == Pfad(Freizeit, "/sicherheit/sicherheitskette")));
+        await Services.GetRequiredService<AnmeldungAbschluss>().AbmeldenAsync(abbruch: Xunit.TestContext.Current.CancellationToken);
+        halt.SetResult();
+        await lauf;
+
+        Assert.Empty(_browser.Offline);
+        Assert.Equal(1, _browser.OfflineAllesGeloescht);
+        Assert.Equal(0, _browser.SpeicherGehalten);
+    }
+
+    [Fact]
+    public async Task Tagesansicht_bei_Netzfehler_aus_dem_Speicher_mit_ausgegrautem_Restetag()
+    {
+        await GespeichertAsync();
+        _server.Bei(r => r.RequestUri!.AbsolutePath.StartsWith(Pfad(Freizeit), StringComparison.Ordinal), Netzfehler);
+
+        var cut = Render<TagesansichtSeite>(ps => ps.Add(p => p.FreizeitId, Freizeit));
+
+        cut.WaitForAssertion(() => Assert.Contains("Frühstück 03.08.", cut.Markup, StringComparison.Ordinal));
+        Assert.True(cut.Find($"#restetag-{Fruehstueck}").HasAttribute("disabled"));
+        Assert.DoesNotContain(AnmeldungAbschluss.FehlerText, cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Tagesansicht_offline_ein_anderer_Tag_kommt_aus_dem_Speicher()
+    {
+        await GespeichertAsync();
+        await OfflineAsync();
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"freizeiten/{Freizeit}/kueche/tagesansicht");
+        var cut = Render<TagesansichtSeite>(ps => ps.Add(p => p.FreizeitId, Freizeit));
+        cut.WaitForAssertion(() => Assert.Contains("Frühstück 03.08.", cut.Markup, StringComparison.Ordinal));
+
+        navigation.NavigateTo($"freizeiten/{Freizeit}/kueche/tagesansicht?tag=2027-08-04");
+
+        cut.WaitForAssertion(() => Assert.Contains("Frühstück 04.08.", cut.Markup, StringComparison.Ordinal));
+        Assert.True(cut.Find($"#restetag-{Fruehstueck}").HasAttribute("disabled"));
+        Assert.Empty(_server.Anfragen);
+    }
+
+    [Fact]
+    public async Task Vorfall_Laden_mit_Netzfehler_zeigt_die_Felder_aus_dem_Speicher_mit_dem_Offline_Satz()
+    {
+        await GespeichertAsync();
+        _server.Bei(r => r.RequestUri!.AbsolutePath.StartsWith(Pfad(Freizeit), StringComparison.Ordinal), Netzfehler);
+
+        var cut = Render<ProtokollSeite>(ps => ps.Add(p => p.FreizeitId, Freizeit).Add(p => p.PersonId, Emma));
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("#vorfall-geschehen")));
+        Assert.Contains(ProtokollSeite.OfflineText, cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Emma Muster", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain(AnmeldungAbschluss.FehlerText, cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Vorfall_offline_geoeffnet_ohne_Wartende_laedt_mit_Verbindung_die_Eintraege_vom_Server()
+    {
+        await GespeichertAsync();
+        await OfflineAsync();
+        var cut = Render<ProtokollSeite>(ps => ps.Add(p => p.FreizeitId, Freizeit).Add(p => p.PersonId, Emma));
+        cut.WaitForAssertion(() => Assert.Contains(ProtokollSeite.OfflineText, cut.Markup, StringComparison.Ordinal));
+        await Abgleich.StartenAsync();
+
+        Meine(Meine(Freizeit));
+        Laufend(Freizeit);
+        _server.Bei(HttpMethod.Get, Pfad(Freizeit, "/sicherheit/vorfaelle"), () => Json(new[]
+        {
+            new VorfallEintrag(Guid.CreateVersion7(), Emma, "Emma", "Muster", VorfallArt.Geschehen, "Zecke entfernt", _uhr.GetUtcNow(), "Lea", "Feuerstein"),
+        }));
+        await cut.InvokeAsync(() => _browser.MeldenAsync(true));
+
+        cut.WaitForAssertion(() => Assert.Contains("Zecke entfernt", cut.Markup, StringComparison.Ordinal));
+        Assert.DoesNotContain(ProtokollSeite.OfflineText, cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(ProtokollSeite.OnlineHinweisText, cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Vorfall_offline_scheitert_das_Schreiben_auf_dem_Geraet_bleibt_der_Text_im_Feld()
+    {
+        await GespeichertAsync();
+        await OfflineAsync();
+        var cut = Render<ProtokollSeite>(ps => ps.Add(p => p.FreizeitId, Freizeit).Add(p => p.PersonId, Emma));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("#vorfall-geschehen")));
+        _browser.SchreibenScheitert = true;
+
+        cut.Find("#vorfall-geschehen").Input("Am Knie geschnitten");
+        cut.Find("#vorfall-geschehen").FocusOut();
+
+        cut.WaitForAssertion(() => Assert.Contains(OfflineSpeicher.NichtGespeichertText, cut.Markup, StringComparison.Ordinal));
+        Assert.Contains("Am Knie geschnitten", cut.Find("#vorfall-geschehen").OuterHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain(ProtokollSeite.WartetText, cut.Markup, StringComparison.Ordinal);
+        Assert.Empty(await Speicher.WartendeAsync());
+        Assert.Equal(0, Abgleich.Wartend);
+    }
+
+    [Fact]
+    public async Task Vorfall_online_mit_Netzfehler_ohne_gespeicherte_Freizeit_bleibt_der_Text_mit_Fehler_im_Feld()
+    {
+        Laufend(Freizeit);
+        var cut = Render<ProtokollSeite>(ps => ps.Add(p => p.FreizeitId, Freizeit).Add(p => p.PersonId, Emma));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("#vorfall-medikament")));
+        _server.Bei(r => r.Method == HttpMethod.Post && r.RequestUri!.AbsolutePath.EndsWith("/vorfaelle", StringComparison.Ordinal), Netzfehler);
+
+        cut.Find("#vorfall-medikament").Input("Kühlpack");
+        cut.Find("#vorfall-medikament").FocusOut();
+
+        cut.WaitForAssertion(() => Assert.Contains(OfflineSpeicher.NichtGespeichertText, cut.Markup, StringComparison.Ordinal));
+        Assert.Contains("Kühlpack", cut.Find("#vorfall-medikament").OuterHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain(ProtokollSeite.WartetText, cut.Markup, StringComparison.Ordinal);
+        Assert.Empty(await Speicher.WartendeAsync());
     }
 
     private static async Task WartenAufAsync(Func<bool> bedingung)

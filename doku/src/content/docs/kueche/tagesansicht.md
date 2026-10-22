@@ -60,6 +60,6 @@ Der Restetag selbst enthält keine Personendaten; Zeltlotse speichert nicht, wer
 
 Nach dem Abschluss der Freizeit ist die Tagesansicht nur lesbar: Oben steht „Diese Freizeit ist abgeschlossen und nur lesbar.“ Das Kästchen **Restetag** und der Link **Im Essensplan vormerken** fehlen; an einer Mahlzeit, die ein Restetag war, steht weiter „Restetag: Reste verwerten.“
 
-## Noch nicht dabei
+## Ohne Netz
 
-Die Tagesansicht ohne Netz (offline) kommt mit einer späteren Version.
+Während der Freizeit liegt die Tagesansicht jedes Tages verschlüsselt auf den Geräten von Leitung und Team und öffnet sich auch ohne Netz; das Kästchen **Restetag** ist dann ausgegraut. Mehr dazu unter [Ohne Netz arbeiten](/mitarbeitende/offline/#küchen-tagesansicht-ohne-netz).

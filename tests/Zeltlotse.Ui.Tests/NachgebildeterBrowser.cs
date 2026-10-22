@@ -175,9 +175,16 @@ internal sealed class NachgebildeterBrowser(TimeProvider? uhr = null) : IBrowser
 
     private bool Abgelaufen(long ablauf) => ablauf <= _uhr.GetUtcNow().ToUnixTimeMilliseconds();
 
+    /// <summary>Story 6-5: Schreiben scheitert still (wie der echte Browser bei vollem Speicher oder ohne IndexedDB/WebCrypto): nichts wird gespeichert.</summary>
+    public bool SchreibenScheitert { get; set; }
+
     public ValueTask OfflineSchreibenAsync(string schluessel, Guid freizeitId, long ablaufMs, string text)
     {
-        Offline[schluessel] = (freizeitId, ablaufMs, text);
+        if (!SchreibenScheitert)
+        {
+            Offline[schluessel] = (freizeitId, ablaufMs, text);
+        }
+
         return ValueTask.CompletedTask;
     }
 

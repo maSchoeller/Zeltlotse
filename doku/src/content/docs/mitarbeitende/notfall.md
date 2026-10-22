@@ -50,6 +50,8 @@ Im Freizeitpass stehen die **Notfallangaben ganz oben** und offen, ohne Aufklapp
 
 ## Ohne Netz
 
-Ohne Verbindung zeigt Zeltlotse die Offline-Leiste und eine Notfall-Box mit „Notruf 112“ und dem Satz „Offline gilt der ausgedruckte Notfallordner.“ Sicherheitskette und Freizeitpässe lassen sich offline noch nicht öffnen. Bis dahin gilt der **ausgedruckte Notfallordner** mit den Notfallangaben je Kind. Der Knopf **Notfallordner drucken** steht auf der Sicherheitskette unter „Wen anrufen“ und auf der Seite „Freizeitpässe“; wie der Ausdruck aussieht, steht unter [Notfallordner drucken](/mitarbeitende/notfallordner/).
+Während der Freizeit liegen Sicherheitskette und Notfallkarten verschlüsselt auf dem Gerät. Ohne Verbindung führt die Notfall-Box mit „Notfallhilfe öffnen“ zur gespeicherten Sicherheitskette, und die Suche öffnet die **Notfallkarte** der Person mit Allergien, Medikamenten, Krankheiten und Notfallkontakten. Wie das genau geht, steht unter [Ohne Netz arbeiten](/mitarbeitende/offline/).
+
+Ist auf dem Gerät nichts gespeichert, zeigt die Notfall-Box nur „Notruf 112“ und den Satz „Offline gilt der ausgedruckte Notfallordner.“ Dann gilt der **ausgedruckte Notfallordner** mit den Notfallangaben je Kind. Der Knopf **Notfallordner drucken** steht auf der Sicherheitskette unter „Wen anrufen“ und auf der Seite „Freizeitpässe“; wie der Ausdruck aussieht, steht unter [Notfallordner drucken](/mitarbeitende/notfallordner/).
 
 ![Web-App ohne Netz am Handy: Offline-Leiste und Notfall-Box mit „Notruf 112“](../../../assets/screenshots/app-offline-handy.png)

@@ -3,9 +3,9 @@ title: 'Story 6-5: Offline-Modus'
 type: 'feature'
 created: '2026-10-21'
 baseline_revision: '8075fb37356293fccce646aa6563abfadc9ad036'
-status: 'in-progress'
+status: 'done'
 review_loop_iteration: 0
-followup_review_recommended: false
+followup_review_recommended: true
 context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Zeltlotse-2026-10-10/EXPERIENCE.md'
@@ -118,6 +118,46 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-10-22 — Review pass
+- verdicts: 36 findings — high 0, medium 7, low 27, false 2, maybe-false 0
+- findings:
+  - `[medium]` `[patch]` Blind: Offline-Eintrag gilt als wartend, obwohl `OfflineSchreibenAsync` Fehler schluckt (Quote, kein IndexedDB) – Text geht verloren — `VorfallEinreihenAsync` liest den Datensatz zurück und meldet sonst `false`; Text bleibt im Feld.
+  - `[medium]` `[reject]` Blind: 401 beim Senden der Warteschlange löscht wartende Einträge — Intent verlangt ausdrücklich: abgelaufene Sitzung löscht die ganze Offline-Datenbank (Design Note „401 löscht mit“).
+  - `[low]` `[reject]` Blind: Vom Server abgelehnte Einträge (400/409) verschwinden ohne Hinweis — Matrix „Wieder online“ schreibt Entfernen vor; Texte über 2000 Zeichen offline sind selten, ein Hinweis wäre zusätzliche Logik.
+  - `[low]` `[reject]` Blind: `erfasstAm` ohne Untergrenze — Intent legt `min(erfasstAm, jetzt)` fest, Design Note schließt eine Untergrenze aus.
+  - `[false]` `[reject]` Blind: Ohne `freizeitpaesse-sehen` kein Vorfall offline erreichbar — `FreizeitRechte.Freizeitpaesse` = Leitung und Team, also hat jede Rolle mit Offline-Daten den Schlüssel; Unbestätigte sind nicht in der Notfallkarte, offline ist das ohne Belang (gering, keine Änderung).
+  - `[low]` `[reject]` Blind: Zwei Tabs können nach dem Abmelden neu anlegen — braucht laufenden Abgleich im zweiten Tab genau beim Abmelden; Abhilfe wäre tab-übergreifende Logik.
+  - `[low]` `[patch]` Blind: Kein regelmäßiger Abgleich bei lange offener App; Doku-Satz übertreibt — Intent schließt Live-Aktualisierung aus; Doku-Satz in `offline.md` auf die echten Zeitpunkte korrigiert.
+  - `[medium]` `[patch]` Blind: Vorfall-Protokoll bleibt nach Wiederverbinden im Offline-Stand, wenn nichts wartete — Neuladen, sobald online und (`_offline` oder eine vorher wartende Kennung fehlt).
+  - `[low]` `[reject]` Blind: Notfallkarte liest auch online nur vom Gerät — Task schreibt „liest immer aus dem Speicher“ vor; die Seite ist nur über die Offline-Suche erreichbar.
+  - `[low]` `[reject]` Blind: `FreizeitenAsync` entschlüsselt alle Datensätze — bei rund 20 Datensätzen je Freizeit vernachlässigbar.
+  - `[low]` `[reject]` Blind: Notfallkarte-Endpunkt fragt je Person einzeln — Muster wie Notfallordner; bei 100 Personen lokal im Sekundenbereich, Umbau auf Sammelabfrage ist kein kleiner Fix.
+  - `[false]` `[reject]` Blind: Gescheiterte Entschlüsselung löscht Daten auch bei kurzzeitigem Schlüsselfehler — Lesefehler werfen (Promise-Reject), liefern nicht `null`; ohne Schlüssel sind die Daten ohnehin nicht mehr lesbar.
+  - `[medium]` `[patch]` Blind: Keine Tests für die Fehlerpfade — mit den Tests der Verification-Gap-Befunde ergänzt.
+  - `[medium]` `[patch]` Verification Gap: Kontolöschung löscht Offline-Datenbank, nie geprüft — Test in `MeineDatenSeitenTests` ergänzt.
+  - `[low]` `[patch]` Verification Gap: Text „Notfallkarte aufs Gerät geladen“ in Oberfläche und Auskunft nicht geprüft — Asserts ergänzt.
+  - `[low]` `[patch]` Verification Gap: Abgleich-Auslöser im Layout für noch nicht gespeicherte laufende Freizeit ungetestet — bUnit-Test ergänzt.
+  - `[medium]` `[patch]` Verification Gap: Generation-Schutz (kein Neuanlegen nach Abmelden) ungetestet — Test mit angehaltener Antwort ergänzt.
+  - `[low]` `[patch]` Verification Gap: Netzfehler-Rückfall in Tagesansicht und Vorfall-Protokoll sowie Tageswechsel offline ungetestet — drei Tests ergänzt.
+  - `[low]` `[patch]` Verification Gap: Online gescheitertes Speichern ohne gespeicherte Freizeit behält Text — Test ergänzt.
+  - `[low]` `[reject]` Edge: Dauerhafter 5xx auf einen Eintrag blockiert den ganzen Abgleich — braucht einen Serverfehler nur für diesen Eintrag; Verhalten ist bewusst getestet (`Serverfehler_beim_Senden_…`).
+  - `[low]` `[reject]` Edge: Abgelehnte Einträge (u. a. über 2000 Zeichen) still verworfen — gleiche Ursache wie oben, Intent schreibt Entfernen vor.
+  - `[low]` `[reject]` Edge: Kopf wird vor der Kette geschrieben; Abbruch dazwischen → Box verweist auf „nicht gespeichert“ — Zielseite zeigt dann Notfallordner-Satz und 112; Kopf zuletzt schreiben ließe Gesundheitsdaten ohne Kopf zurück, die das Löschen nicht mehr gelisteter Freizeiten nicht findet.
+  - `[low]` `[reject]` Edge: Notfall-Box zeigt nach Mitternacht des Freizeitendes noch die Freizeit — App müsste über das Freizeitende offline offen bleiben; Zielseite liest geprüft und zeigt dann „nicht gespeichert“.
+  - `[low]` `[reject]` Edge: `erfasstAm` weit in der Vergangenheit — wie oben, Intent legt die Regel fest.
+  - `[low]` `[patch]` Edge: Offline sagt der Hinweis „Jeder Eintrag ist sofort für die Leitung sichtbar“ — offline eigener Satz.
+  - `[low]` `[reject]` Edge: Gespeichertes JSON älterer App-Version ohne Felder → Absturz — eine ältere Form gibt es nicht; Story legt das Format erstmals an.
+  - `[low]` `[reject]` Edge: `AbgelaufenAsync` fängt andere Ausnahmen beim Löschen nicht — `JsBrowser` fängt `JSException`; andere Ausnahmen beim Löschen sind nicht gezeigt, Abhilfe wäre ein zusätzlicher Wächter.
+  - `[medium]` `[patch]` Edge: Gleiche Anzahl wartender Einträge nach Senden und Neu-Einreihen → gesendeter Eintrag verschwindet — gleiche Ursache und gleicher Fix wie „Vorfall-Protokoll bleibt im Offline-Stand“ (Vergleich der Kennungen).
+  - `[low]` `[reject]` Edge: Notfallkarte-Endpunkt ohne Obergrenze, Abfragen je Person — wie oben (Performance, kein kleiner Fix).
+  - `[low]` `[reject]` Edge: Abbruch mitten im Protokollieren hinterlässt Einträge ohne Auslieferung — höchstens zu viel protokolliert; gleiches Muster wie Notfallordner.
+  - `[low]` `[reject]` Edge: Layout startet Abgleich auch ohne Leitung/Team-Rolle erneut — nur beim Wechsel der Freizeit, Ergebnis ist ein leerer Abgleich; Abhilfe wäre zusätzlicher Wächter.
+  - `[low]` `[reject]` Intent: Protokolltext „aufs Gerät“ statt „auf Gerät“ — gleiche Bedeutung; Tasks nennen „aufs Gerät geladen“.
+  - `[low]` `[reject]` Intent: Notfallkarte-Seite online nur aus dem Speicher — wie oben, so vom Task vorgegeben.
+  - `[low]` `[reject]` Intent: E2E kann Gerätezeit nicht von Serverzeit unterscheiden — Senden von `erfasstAm` per bUnit, Übernahme per HTTP-Test belegt.
+  - `[low]` `[reject]` Intent: Löschpfade (403/404, nicht mehr gelistet, 401) nur gegen nachgebildeten Browser — dieselben JS-Funktionen laufen im E2E-Test (Freizeit-Löschen über Ablauf, Alles-Löschen über Abmelden).
+  - `[low]` `[patch]` Intent: Zusätzlicher Layout-Auslöser nicht eigens geprüft — gleiche Ursache wie der Verification-Gap-Befund zum Layout-Auslöser.
+
 ## Design Notes
 
 - **Nur Phase *läuft*:** AD-18 legt das Ende fest, nicht den Beginn. Gesundheitsdaten sollen nicht länger als nötig auf Geräten liegen; Notfall-Box und „Notfall“ gibt es ebenfalls nur in *läuft* (EXPERIENCE.md). Folge: Doku-Screenshots brauchen eine eigens angelegte laufende Freizeit (Muster `NotfallTests`), weil die Demo-Freizeit 2027 liegt; die Demo-Daten bleiben unberührt, die Bilder zeigen möglichst keine Tagesdaten.
@@ -135,3 +175,38 @@ deferred: []
 - `dotnet test` (ganze Lösung, einmal am Ende) -- grün
 - `dotnet test --project tests/Zeltlotse.E2E.Tests -- --filter-trait "Kategorie=Doku"` -- Screenshots `offline-*-handy.png`/`-laptop.png` erzeugt
 - `npm run build` in `doku/` -- fehlerfrei
+
+## Auto Run Result
+
+**Zusammenfassung:** Offline-Modus nach AD-18 umgesetzt. Neuer Endpunkt `GET /api/freizeiten/{id}/personen/notfallkarte` (Leitung/Team, nur vier Notfallfragen, Einsicht-Protokoll „Notfallkarte aufs Gerät geladen“ höchstens 1×/Tag). Vorfall-Einträge nehmen `erfasstAm` als `min(erfasstAm, jetzt)` an. In der Web-App gleicht `OfflineAbgleich` laufende Freizeiten in eine AES-GCM-verschlüsselte IndexedDB ab (Ablauf = Freizeitende). Tagesansicht, Sicherheitskette, Notfallkarte (neu) und Vorfall-Protokoll sind offline nutzbar. Vorfall-Einträge warten offline in einer Warteschlange. Abmelden, Kontolöschung und 401 löschen die Datenbank. Die Umsetzung lief über zwei Sitzungen (Zwischenstand-Commit `191548ba79dff8f85a8042e6816f916a28596f91`); die Baseline bleibt `8075fb3…`, damit der Review-Diff die ganze Story umfasst.
+
+**Geänderte Dateien (Auswahl):**
+- `src/Modules/Personen/.../Freizeitpass/Notfallkarte.cs`, `PersonenModul.cs`, `EinsichtProtokoll.cs`, `PersonenAuskunft.cs`: neuer Endpunkt und Protokoll-Zweck.
+- `src/Modules/Sicherheit/.../VorfaelleBearbeiten.cs`, `Api.Contracts/Sicherheit/Vorfaelle.cs`: Gerätezeit `erfasstAm`.
+- `src/Zeltlotse.App/Offline/*`: Offline-Speicher, Abgleich mit Warteschlange, Kennzeichnung `[OfflineNutzbar]`.
+- `src/Zeltlotse.App/wwwroot/js/zeltlotse.js`, `Browser/IBrowser.cs`, `JsBrowser.cs`: IndexedDB und WebCrypto hinter `IBrowser`.
+- `Layout/MainLayout.razor`, `App.razor`, `OfflineLeiste.razor`: Notfall-Box mit „Notfallhilfe öffnen“, offline nutzbare Seiten, Zeile mit wartenden Einträgen.
+- `Features/Kueche/Tagesansicht.razor`, `Features/Sicherheit/{Sicherheitskette,Notfallkarte,VorfallProtokoll}.razor`, `Freizeiten/Schnellsuche.razor`: Lesen aus dem Speicher, Warteschlange.
+- `AnmeldungAbschluss.cs`, `AppSitzung.cs`, `MeineDaten.razor`: Offline-Datenbank löschen.
+- Tests: `Api.Tests/NotfallkarteTests.cs`, `VorfaelleTests.cs`, `Ui.Tests/OfflineModusTests.cs` (+ Nachbildung des Browsers), `E2E.Tests/OfflineModusTests.cs`, `LaufendeFreizeit.cs`, `DokuScreenshotTests.cs` (Abschnitt Story 6-5), `E2EHilfe.cs` (Login je Mail-Adresse nacheinander).
+- Doku: neue Seite `mitarbeitende/offline.md`, ergänzt `notfall.md`, `vorfall-protokoll.md`, `kueche/tagesansicht.md`, `erste-schritte/zeltlotse-oeffnen.md`, `daten.md`; 8 Screenshots `offline-*-{handy,laptop}.png`. Demo-Daten unverändert (eigene laufende Freizeit im Screenshot-Test, siehe Design Notes).
+
+**Review:** 36 Befunde (high 0, medium 7, low 27, false 2).
+- Korrigiert (patch): Rücklesen nach dem Einreihen (kein stiller Textverlust); Vorfall-Protokoll lädt nach Wiederverbinden neu (Vergleich der Kennungen); eigener Offline-Hinweis im Vorfall-Protokoll; Doku-Satz zum Abgleichzeitpunkt; neue Tests für Kontolöschung, Protokolltext in Oberfläche und Auskunft, Layout-Auslöser, Generation-Schutz beim Abmelden, Netzfehler-Rückfall (Tagesansicht, Vorfall), Tageswechsel offline sowie gescheitertes Speichern ohne gespeicherte Freizeit.
+- Abgelehnt: alle übrigen Befunde mit Begründung im Review Triage Log. Die meisten sind vom Intent so vorgegeben (401 löscht alles, 400/409 entfernt Einträge, keine Untergrenze für `erfasstAm`, Notfallkarte liest immer aus dem Speicher, keine Live-Aktualisierung) oder geringfügig und selten.
+- Zurückgestellt: keine.
+- Patches nach Stufe: medium 6 Einträge (Rücklesen, Neuladen Vorfall-Protokoll, Fehlerpfad-Tests, Kontolöschung-Test, Generation-Test, Gruppe Kennungsvergleich), low 7.
+
+**Folge-Review empfohlen: ja.** Konkretes Risiko: Das Neuladen des Vorfall-Protokolls nach dem Wiederverbinden und das Rücklesen in `VorfallEinreihenAsync` sind nur gegen den nachgebildeten Browser (bUnit) geprüft, nicht im echten Browser.
+
+**Verifikation:**
+- Gezielt: `NotfallkarteTests` und `VorfaelleTests` 34/34; Ui.Tests 924/924, nach den Patches 933/933; ArchitectureTests 136/136.
+- Am Ende je Testprojekt: Ablaeufe 10, Api 1081, Architecture 136, Finanzen 65, Freizeiten 93, Inventar 34, Konten 26, Kueche 119, Organisationen 58, Personen 157, Programm 109, SharedKernel 134, Sicherheit 36, Ui 933 – alle grün.
+- E2E inklusive Doku-Screenshots: 208/208 grün.
+- `npm run build` in `doku/`: fehlerfrei (69 Seiten).
+- Die Screenshots aus früheren Stories, die der Lauf nur mit Rauschen neu erzeugt hat (Uhrzeit, Datum, QR-Codes, Tokens), sind zurückgesetzt.
+
+**Restrisiken:**
+- Wartende Einträge gehen bei einer abgelaufenen Sitzung (401) mit verloren; so vom Intent gewollt.
+- Der Löschpfad, der im Browser blockiert wird (zweites offenes Fenster), ist nicht eigens getestet.
+- Mehrere Tabs teilen den Generation-Schutz nicht.

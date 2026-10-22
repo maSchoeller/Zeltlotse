@@ -68,7 +68,7 @@ else
         else
         {
             <Meldung Titel="Hinweis">
-                <p>Jeder Eintrag ist sofort für die Leitung sichtbar. Einträge lassen sich nicht ändern; eine Korrektur ist ein neuer Eintrag.</p>
+                <p>@(_offline ? OfflineHinweisText : OnlineHinweisText)</p>
             </Meldung>
             @foreach (var (art, label, id) in Felder)
             {
@@ -117,6 +117,13 @@ else
 @code {
     /// <summary>Text eines Eintrags, dessen Schlüssel vernichtet ist (die Person ist gelöscht).</summary>
     public const string NichtLesbar = "Inhalt nicht mehr lesbar.";
+
+    /// <summary>Hinweis über den Feldern mit Verbindung.</summary>
+    public const string OnlineHinweisText = "Jeder Eintrag ist sofort für die Leitung sichtbar. Einträge lassen sich nicht ändern; eine Korrektur ist ein neuer Eintrag.";
+
+    /// <summary>Story 6-5: Hinweis über den Feldern ohne Verbindung.</summary>
+    public const string OfflineHinweisText =
+        "Ohne Verbindung wartet jeder Eintrag auf dem Gerät und ist für die Leitung sichtbar, sobald die Verbindung zurück ist. Einträge lassen sich nicht ändern; eine Korrektur ist ein neuer Eintrag.";
 
     /// <summary>Story 6-5: Status eines Eintrags in der Warteschlange.</summary>
     public const string WartetText = "wartet auf Verbindung";
@@ -239,8 +246,8 @@ else
         [.. (await Speicher.WartendeAsync(FreizeitId)).Select(w => w.Eintrag).Where(e => e.PersonId == PersonId)];
 
     /// <summary>
-    /// Story 6-5: Die Warteschlange hat sich geändert (eingereiht oder gesendet). Ist ein Eintrag dieser Person gesendet und die Verbindung da, lädt die
-    /// Liste vom Server neu, damit er dort steht.
+    /// Story 6-5: Die Warteschlange hat sich geändert (eingereiht oder gesendet). Ist die Verbindung da und kam die Seite aus dem Offline-Speicher oder
+    /// ist ein bisher wartender Eintrag dieser Person gesendet, lädt die Liste vom Server neu, damit er dort steht.
     /// </summary>
     private void AbgleichGeaendert() => _ = InvokeAsync(async () =>
     {
@@ -250,7 +257,8 @@ else
         }
 
         var wartend = await WartendeAsync();
-        if (wartend.Count < _wartend.Count && !Verbindung.Offline && await NeuLadenAsync() is { } eintraege)
+        var gesendet = _wartend.Any(w => wartend.All(n => n.Id != w.Id));
+        if (!Verbindung.Offline && (_offline || gesendet) && await NeuLadenAsync() is { } eintraege)
         {
             (_eintraege, _offline) = (eintraege, false);
         }

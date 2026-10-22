@@ -237,6 +237,8 @@ public sealed class MeineDatenSeitenTests : BunitContext
     {
         Protokoll();
         _server.Bei(HttpMethod.Post, "/api/ich/profil/loeschen", () => new HttpResponseMessage(HttpStatusCode.NoContent));
+        // Story 6-5: Offline-Daten auf dem Gerät verschwinden mit dem Konto.
+        _browser.Offline[$"{Guid.Empty:D}/freizeit"] = (Guid.Empty, long.MaxValue, "{}");
         Sitzung.Anmelden("Jonas");
         var cut = Render<MeineDaten>();
         cut.WaitForElement(".elkw-empty");
@@ -258,6 +260,8 @@ public sealed class MeineDatenSeitenTests : BunitContext
         Assert.Equal("/api/ich/profil/loeschen", post.Pfad);
         Assert.True(post.Kopfzeilen.ContainsKey(Kopfzeilen.Antiforgery));
         Assert.False(Sitzung.Angemeldet);
+        Assert.Equal(1, _browser.OfflineAllesGeloescht);
+        Assert.Empty(_browser.Offline);
     }
 
     [Fact]

@@ -95,7 +95,7 @@ public sealed class OfflineSpeicher(IBrowser browser)
 
     /// <summary>
     /// Legt einen Eintrag in die Warteschlange, mit dem Ablauf der gespeicherten Freizeit. Ist die Freizeit nicht gespeichert (vor Phase „läuft“
-    /// oder ohne Abgleich), wird nichts gespeichert: <c>false</c>.
+    /// oder ohne Abgleich) oder lässt sich der Eintrag danach nicht lesen (Schreiben gescheitert), <c>false</c>.
     /// </summary>
     public async Task<bool> VorfallEinreihenAsync(Guid freizeitId, VorfallEintragNeu eintrag)
     {
@@ -104,8 +104,10 @@ public sealed class OfflineSpeicher(IBrowser browser)
             return false;
         }
 
-        await SchreibenAsync(VorfallSchluessel(freizeitId, eintrag.Id), freizeit.Freizeit, eintrag);
-        return true;
+        var schluessel = VorfallSchluessel(freizeitId, eintrag.Id);
+        await SchreibenAsync(schluessel, freizeit.Freizeit, eintrag);
+        // Der Browser übergeht Fehler beim Schreiben (Speicher voll, kein IndexedDB/WebCrypto): Nur was wieder lesbar ist, gilt als eingereiht.
+        return await browser.OfflineLesenAsync(schluessel) is not null;
     }
 
     /// <summary>Die wartenden Einträge (ohne Angabe aller Freizeiten), in der Reihenfolge ihrer Kennung (UUID v7, also des Schreibens).</summary>

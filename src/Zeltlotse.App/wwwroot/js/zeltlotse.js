@@ -398,6 +398,8 @@ export function offlineAllesLoeschen() {
         const request = indexedDB.deleteDatabase(offlineName);
         request.onsuccess = () => fertig();
         request.onerror = () => fehler(request.error);
+        // Blockiert ein anderes Fenster, löscht der Browser, sobald es die Verbindung schließt; das Abmelden wartet nicht darauf.
+        request.onblocked = () => fertig();
     });
 }
 

@@ -17,17 +17,30 @@ internal static class E2EHilfe
     /// </summary>
     public static async Task PerLinkAnmeldenAsync(IPage seite, VeroeffentlichterHost host, string mail)
     {
-        var vorher = host.Mails.An(mail).Count;
-        await seite.GotoAsync(new Uri(host.Adresse, "/app/anmelden").ToString());
-        await seite.Locator("#anmelden-mail").FillAsync(mail);
-        await seite.GetByRole(AriaRole.Button, new() { Name = "Login-Link schicken" }).ClickAsync();
-        await Assertions.Expect(seite.GetByText("Login-Link ist verschickt. Bitte im Postfach nachsehen.")).ToBeVisibleAsync(Lange);
-        var link = (await host.Mails.WartenAufAsync(mail, vorher + 1)).Link;
+        // Story 6-5: Mehrere Tests melden dieselbe Person gleichzeitig an (z. B. Andrea für laufende Freizeiten); ein neuer Login-Link macht den
+        // vorigen ungültig, und die Zählung der Mails träfe den Link eines anderen Tests. Deshalb je Mail-Adresse nacheinander.
+        var sperre = AnmeldeSperren.GetOrAdd(mail.ToLowerInvariant(), _ => new SemaphoreSlim(1, 1));
+        await sperre.WaitAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            var vorher = host.Mails.An(mail).Count;
+            await seite.GotoAsync(new Uri(host.Adresse, "/app/anmelden").ToString());
+            await seite.Locator("#anmelden-mail").FillAsync(mail);
+            await seite.GetByRole(AriaRole.Button, new() { Name = "Login-Link schicken" }).ClickAsync();
+            await Assertions.Expect(seite.GetByText("Login-Link ist verschickt. Bitte im Postfach nachsehen.")).ToBeVisibleAsync(Lange);
+            var link = (await host.Mails.WartenAufAsync(mail, vorher + 1)).Link;
 
-        await seite.GotoAsync(link);
-        await seite.GetByRole(AriaRole.Button, new() { Name = "Anmelden", Exact = true }).ClickAsync();
-        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync(new System.Text.RegularExpressions.Regex("^Hallo"), new() { Timeout = 60_000 });
+            await seite.GotoAsync(link);
+            await seite.GetByRole(AriaRole.Button, new() { Name = "Anmelden", Exact = true }).ClickAsync();
+            await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync(new System.Text.RegularExpressions.Regex("^Hallo"), new() { Timeout = 60_000 });
+        }
+        finally
+        {
+            sperre.Release();
+        }
     }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> AnmeldeSperren = new();
 
     /// <summary>
     /// Der Anmeldelink der Demo-Freizeit (Story 2-1): Jonas (Leitung) meldet sich in einem eigenen Browser-Kontext an und liest den

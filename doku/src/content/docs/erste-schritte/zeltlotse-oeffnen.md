@@ -43,10 +43,11 @@ Wurde die Web-App einmal mit Netz geöffnet, startet sie auch ohne Netz. Dann gi
 
 - Oben erscheint die **Offline-Leiste**: „Offline“, und wenn bekannt, die Uhrzeit der letzten Aktualisierung.
 - Die **Notfall-Box** zeigt „Im Notfall:“ und den Link **„Notruf 112“**, der direkt die 112 wählt.
-- Alles andere ist ausgegraut und mit „Offline nicht verfügbar.“ gekennzeichnet. Ohne Netz gilt der ausgedruckte Notfallordner.
+- Alles andere ist ausgegraut und mit „Offline nicht verfügbar.“ gekennzeichnet. Ausgenommen sind während einer Freizeit die Seiten, die Zeltlotse für Leitung und Team auf dem Gerät gespeichert hat: Sicherheitskette, Notfallkarte, Küchen-Tagesansicht und Vorfall-Protokoll. Dann führt die Notfall-Box mit **Notfallhilfe öffnen** zur gespeicherten Sicherheitskette – siehe [Ohne Netz arbeiten](/mitarbeitende/offline/).
+- Ist nichts gespeichert, gilt ohne Netz der ausgedruckte Notfallordner.
 
 ![Web-App ohne Netz am Handy: Offline-Leiste, Notfall-Box mit „Notruf 112“ und ausgegrauter Inhalt](../../../assets/screenshots/app-offline-handy.png)
 
 ![Web-App ohne Netz am Laptop: Offline-Leiste, Notfall-Box mit „Notruf 112“ und ausgegrauter Inhalt](../../../assets/screenshots/app-offline-laptop.png)
 
-Sobald das Netz zurück ist, verschwinden Offline-Leiste und Notfall-Box, und alle Inhalte sind wieder bedienbar.
+Sobald das Netz zurück ist, verschwinden Offline-Leiste und Notfall-Box, und alle Inhalte sind wieder bedienbar. Warten noch offline geschriebene Einträge des Vorfall-Protokolls, bleibt die Leiste mit „1 Eintrag wartet auf Verbindung“ stehen, bis sie gesendet sind.
