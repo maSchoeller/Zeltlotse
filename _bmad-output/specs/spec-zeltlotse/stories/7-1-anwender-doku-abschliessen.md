@@ -5,7 +5,7 @@ created: '2026-10-22'
 baseline_revision: '12210eb0285efb107286fc4093ff5f998a5b70c3'
 status: 'done'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/specs/spec-zeltlotse/rollen-und-rechte.md'
   - '{project-root}/_bmad-output/specs/spec-zeltlotse/nutzungsszenarien.md'
@@ -103,6 +103,37 @@ Zuordnung CAP → Seiten (Stand Prüfung, alle Seiten existieren und haben Handy
   - `[false]` `[reject]` Intent: AD-30-Hinweis unbehandelt — Design Notes halten fest, dass kein Endpunkt entsteht; die HTTP-Tests laufen im Abschlusslauf.
   - `[low]` `[reject]` Intent: Inhalt von `rollen.md` nur per Review gegen `rollen-und-rechte.md` geprüft — Review hat die Abweichungen gefunden und sie sind behoben; ein Textvergleichs-Test wäre Speziallogik.
 
+### 2026-10-22 — Review pass (Folgedurchlauf)
+- verdicts: 26 findings — high 0, medium 0, low 21, false 5, maybe-false 0
+- findings:
+  - `[low]` `[reject]` Blind: CAP-Regel prüft nur Bildpaar je Seite, nicht den Abschnitt der Capability (CAP-36/37 teilen Seiten) — carried: wie Zeile „Prüfung je Seite, nicht je Bildschirm“ oben.
+  - `[low]` `[reject]` Blind: CAP 1–39 fest im Code, nicht aus `SPEC.md` — carried: SPEC-Parser abgelehnt (siehe oben).
+  - `[low]` `[reject]` Blind: Link-Prüfung übersieht Links mit Titel, relative Links, Referenz-Links, `<a href>` — Suche in `doku/src/content/docs` findet keinen solchen Link; zusätzliche Formen bräuchten neue Zweige für einen heute nicht vorkommenden Fall.
+  - `[low]` `[reject]` Blind: Code-Block-/Anker-Behandlung einfacher als Starlight (`~~~`, `#` im Frontmatter, github-slugger-Kollision „x-1“) — keine Doku-Seite hat `#`-Zeilen im Frontmatter oder `~~~`-Blöcke; Abdeckung aller Varianten wäre zusätzliche Logik ohne heutigen Fall.
+  - `[low]` `[reject]` Blind: keine Prüfung auf Bilder, die keine Seite verwendet — heute keine verwaisten Bilder, nicht Teil der Intent; neue Regel wäre zusätzliche Speziallogik.
+  - `[low]` `[reject]` Blind: Erzeuger-Erkennung fragil (interpolierte Namen, Raw-Strings, Unterordner) — carried für Regex/Unterordner; Raw-Strings (`DokuScreenshotTests.cs:186`) führen höchstens zu einer lauten Fehlmeldung, die Regel ist mit ihnen heute grün.
+  - `[low]` `[reject]` Blind: `rollen.md` erklärt nicht, wie Rechte enden — `rollen-und-rechte.md` beschreibt das Ende nicht als eigenen Punkt; Ergänzung riskierte „nichts erfinden“, die Fach-Seiten (Freigabefenster, Absagen, Teilnehmer-Zugang endet mit der Freizeit) erklären es schon.
+  - `[low]` `[reject]` Blind: „Häufige Aufgaben“ ohne Rollen vergeben, Löschfristen, Inventar, Essensplan, Beiträge — die Tabelle folgt laut Intent NS-1 bis NS-13 und deckt sie ab; die übrigen Aufgaben erreicht der Wegweiser nach Rolle.
+  - `[false]` `[reject]` Blind: „Die Bilder zeigen jeden Bildschirm am Handy und am Laptop“ stimmt nicht, weil Übersichtsseiten keine Bilder haben — der Satz meint Bildschirme der App, nicht Doku-Seiten; jede CAP-Seite hat ein Bildpaar (Regel grün).
+  - `[low]` `[reject]` Blind: „30 Tage“/„12 Monate“ in „Auf einen Blick“ ohne Test gegen die Code-Konstanten — dieselben Werte stehen schon in den bestehenden Detailabschnitten von `daten.md`, `freizeit-anlegen.md` und `loeschfristen.md`; ein Abgleichstest wäre Speziallogik.
+  - `[false]` `[reject]` Blind: „Mitarbeitende der Organisation“ und Gast fehlen in der Rollentabelle — `rollen-und-rechte.md` führt beide nicht als eigene Rolle; `rollen.md` beschreibt beide unter „Wie Rechte entstehen“ und in der Eltern-Zeile.
+  - `[low]` `[reject]` Blind: Kleinere Lücken (`.PNG`, Seite ganz ohne Bilder ungetestet, doppelter Link, Bild in HTML-Kommentar) — `.PNG` carried; die übrigen Fälle kommen nicht vor, und ein Schutz bräuchte zusätzliche Zweige.
+  - `[low]` `[reject]` Edge: E2E-Dateien in Unterordnern — carried (siehe oben).
+  - `[low]` `[reject]` Edge: Raw-String-Literale mit `//` stören `OhneKommentare` — schlägt laut fehl, die Regel ist heute mit den vorhandenen Raw-Strings grün; der Schutz wäre eine zusätzliche Regex-Alternative.
+  - `[low]` `[reject]` Edge: Name als `$"…"`, Konstante oder tiefer verschachtelter Ausdruck — carried (siehe oben).
+  - `[low]` `[reject]` Edge: Endung `.PNG` — carried (siehe oben).
+  - `[low]` `[reject]` Edge: Links mit Titel oder in spitzen Klammern werden still übersprungen — gleiche Ursache wie die Blind-Zeile zu Link-Formen, dort abgelehnt.
+  - `[low]` `[reject]` Edge: relative Links, Referenz-Links, `<a href>` — gleiche Ursache wie die Blind-Zeile zu Link-Formen, dort abgelehnt.
+  - `[low]` `[reject]` Edge: `~~~`, eingerückte Blöcke, HTML-Kommentare, `#` im Frontmatter — gleiche Ursache wie die Blind-Zeile zu Code-Block/Anker, dort abgelehnt.
+  - `[low]` `[reject]` Edge: Screenshot-Link nur im Code-Block/Kommentar zählt für die CAP-Regel — kommt in der Doku nicht vor; selten und nur über zusätzliche Bereinigung lösbar.
+  - `[low]` `[reject]` Edge: `x.md` und `x.mdx` gleichen Namens — carried (siehe oben).
+  - `[false]` `[reject]` Intent: „aktuell“ nur als Erzeuger-Existenz statt Frische — carried (siehe oben).
+  - `[low]` `[reject]` Intent: CAP-Abdeckung strukturell statt inhaltlich — carried (Prüfung je Seite).
+  - `[low]` `[reject]` Intent: Inhalte von `rollen`, `index`, `daten` nur über Existenz und Links geprüft — carried (Textvergleichs-Test abgelehnt).
+  - `[false]` `[reject]` Intent: Zusätze über die Intent hinaus (Link-Prüfung, Bildpaar-Regel, „Aufbau der Anleitung“, weitere Punkte in „Auf einen Blick“) — keine benannte Wirkung zum Schaden; die Zusätze stammen aus gepatchten Befunden des ersten Reviews, und die Intent verbietet sie nicht.
+  - `[false]` `[reject]` Intent: Reihenfolge „Test zuerst“ im Diff nicht erkennbar — das ist keine Fehlwirkung im Code, sondern ein Prozesshinweis.
+- Verification-Gap: keine Lücken gemeldet, keine weiteren Befunde.
+
 ## Design Notes
 
 - **Zuordnung als Code statt Frontmatter:** Die CAP → Seite-Liste steht in `DokuRegeln`, weil die Doku-Seiten Anwendertext sind und keine Capability-Kennungen tragen sollen. Sie ist zugleich die Grundlage für den Abnahmebericht (Story 7-2).
@@ -144,3 +175,29 @@ Status: done
 - AD-30: Kein Endpunkt angelegt oder geändert, daher keine neuen HTTP-Tests; die bestehenden HTTP-Tests gegen PostgreSQL liefen im vollen Lauf grün.
 
 **Restrisiken:** Wortlaut der neuen Seiten ist nicht von einem Menschen gegengelesen. Die CAP-Zuordnung ist von Hand gepflegt und erkennt neue CAPs in `SPEC.md` nicht von selbst.
+
+### Folgedurchlauf 2026-10-22
+
+**Umfang:** Frischer Review des Diffs seit `12210eb0285efb107286fc4093ff5f998a5b70c3` (Doku-Seiten, Sidebar, `DokuRegeln.cs`, `DokuTests.cs`). Alle vier Layer liefen: Blind Hunter, Edge Case Hunter, Verification Gap und Intent Alignment.
+
+**Befunde:** 26 (0 hoch, 0 mittel, 21 niedrig, 5 falsch). Gepatcht: keine (0 hoch, 0 mittel, 0 niedrig). Zurückgestellt: keine. Abgelehnt sind alle 26 mit Begründung im Triage Log. Elf davon wurden aus dem ersten Durchlauf übernommen (carried). Neu abgelehnt wurden:
+- seltene Link- und Codeblock-Formen, die in der Doku nicht vorkommen,
+- Raw-Strings in den E2E-Quellen (scheitern laut, heute grün),
+- verwaiste Bilder,
+- das Ende von Rechten (steht nicht in der Quelle `rollen-und-rechte.md`),
+- weitere Zeilen in „Häufige Aufgaben“ (die Tabelle folgt NS-1 bis NS-13),
+- Werte in „Auf einen Blick“ (sie stehen schon so in bestehenden Seiten).
+
+Falsch waren: „jeden Bildschirm“, „Mitarbeitende der Organisation“ als Rolle, Zusätze über die Intent hinaus, Testreihenfolge, „aktuell“.
+
+**Restrisiko aus dem ersten Durchlauf:** Zur Anker-Berechnung bei Sonderzeichen hat der Edge Case Hunter nur Varianten gemeldet, die heute nicht vorkommen (`~~~`, `#` im Frontmatter, Slug-Kollision „x-1“). Ein Fehler bei den heutigen Überschriften wurde nicht gefunden.
+
+**Folge-Review empfohlen: nein.** Dieser Durchlauf hat nichts gepatcht, die Arbeit ist konvergiert.
+
+**Verifikation:** Code und Doku sind unverändert, deshalb liefen keine neuen Tests. Es gelten die Nachweise des ersten Durchlaufs. Diese Prüfungen waren Lesen und Suchen ohne Testlauf:
+- Suche nach Links mit Titel: keiner gefunden.
+- `#`-Zeilen im Frontmatter: keine gefunden.
+- Raw-Strings in den E2E-Quellen: vorhanden, Regel trotzdem grün (laut Lauf des ersten Durchlaufs).
+- Werte 30 Tage und 12 Monate: stehen gleich in den Detailabschnitten.
+
+Der Verification-Gap-Layer konnte die Architekturtests selbst nicht bauen, weil `Zeltlotse.Api.dll` von einem anderen Prozess gesperrt war. Er hat deshalb nur gelesen.
