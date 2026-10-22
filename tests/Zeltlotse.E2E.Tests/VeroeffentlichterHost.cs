@@ -100,7 +100,9 @@ public sealed class VeroeffentlichterHost : IAsyncLifetime
         {
             Headless = true,
             // Selbst erzeugtes Testzertifikat: auch der Service Worker soll registriert werden.
-            Args = ["--ignore-certificate-errors"],
+            // Deutsche Browser-Sprache: Chromium zeichnet Zeit- und Datumsfelder nach der
+            // UI-Sprache, nicht nach der Kontext-Locale (sonst „08:00 PM“ und „mm/dd/yyyy“).
+            Args = ["--ignore-certificate-errors", "--lang=de-DE"],
         });
     }
 
