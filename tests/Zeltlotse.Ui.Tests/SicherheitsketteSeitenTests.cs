@@ -43,6 +43,8 @@ public sealed class SicherheitsketteSeitenTests : BunitContext
             new SitzungsHandler(sp.GetRequiredService<ISitzung>()) { InnerHandler = sp.GetRequiredService<AntiforgeryHandler>() },
             disposeHandler: false) { BaseAddress = new Uri("http://localhost/app/") });
         Services.AddZeltlotseUi(sp => sp.GetRequiredService<HttpClient>());
+        // Story 6-5: offline nutzbare Seiten und das Layout lesen den Offline-Speicher.
+        Services.AddOfflineDienste();
         Services.AddScoped<AnmeldungAbschluss>();
     }
 

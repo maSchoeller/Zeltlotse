@@ -557,6 +557,13 @@ public sealed class PersonenApiClient(HttpClient http)
             $"/api/freizeiten/{freizeitId}/personen/notfallordner?{string.Join("&", personIds.Select(p => $"{NotfallordnerAbfrage.Parameter}={p}"))}",
             abbruch);
 
+    /// <summary>
+    /// Story 6-5: <c>GET /api/freizeiten/{freizeitId}/personen/notfallkarte</c> (Leitung und Team, FR-65): die Notfallangaben aller bestätigten
+    /// Personen der Freizeit für den Offline-Speicher, nur die nötigen Fragen; <c>null</c> bei <c>403</c>/<c>404</c>.
+    /// </summary>
+    public Task<List<NotfallkartePerson>?> NotfallkarteLadenAsync(Guid freizeitId, CancellationToken abbruch = default) =>
+        LadenOderNullAsync<List<NotfallkartePerson>>($"/api/freizeiten/{freizeitId}/personen/notfallkarte", abbruch);
+
     /// <summary>Pfad des Freizeitpasses eines Kindes über den Gast-Link (anonym, Story 2-4).</summary>
     public static string GastFreizeitpassPfad(string gastToken, Guid personId) =>
         $"/api/personen/oeffentlich/gaeste/{Uri.EscapeDataString(gastToken)}/freizeitpass/{personId}";

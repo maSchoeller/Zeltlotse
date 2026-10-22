@@ -1,7 +1,25 @@
-@* Offline-Leiste (DESIGN.md): schmale Leiste direkt unter der App-Leiste, kleine Schrift, kein Statusrot. *@
-<div class="zl-offline-leiste" role="status"><p>@Text</p></div>
+@* Offline-Leiste (DESIGN.md): schmale Leiste direkt unter der App-Leiste, kleine Schrift, kein Statusrot. Story 6-5: Warten offline geschriebene
+   Einträge, steht darunter „1 Eintrag wartet auf Verbindung“ bzw. „N Einträge warten auf Verbindung“; dann erscheint die Leiste auch mit
+   Verbindung, nur mit dieser Zeile. *@
+<div class="zl-offline-leiste" role="status">
+    @if (!string.IsNullOrEmpty(Text))
+    {
+        <p>@Text</p>
+    }
+    @if (Wartend > 0)
+    {
+        <p>@WartendText(Wartend)</p>
+    }
+</div>
 
 @code {
-    /// <summary>z. B. „Offline – zuletzt aktualisiert 14:32 Uhr“.</summary>
-    [Parameter, EditorRequired] public string Text { get; set; } = "";
+    /// <summary>z. B. „Offline – zuletzt aktualisiert 14:32 Uhr“; leer, wenn nur Einträge warten.</summary>
+    [Parameter] public string? Text { get; set; }
+
+    /// <summary>Story 6-5: Wie viele Einträge auf Verbindung warten.</summary>
+    [Parameter] public int Wartend { get; set; }
+
+    /// <summary>„1 Eintrag wartet auf Verbindung“ oder „N Einträge warten auf Verbindung“.</summary>
+    public static string WartendText(int anzahl) =>
+        anzahl == 1 ? "1 Eintrag wartet auf Verbindung" : $"{anzahl} Einträge warten auf Verbindung";
 }

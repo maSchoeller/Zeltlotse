@@ -1,4 +1,5 @@
 @page "/freizeiten/{FreizeitId:guid}/kueche/tagesansicht"
+@attribute [OfflineNutzbar]
 @using System.Globalization
 @using Zeltlotse.Api.Contracts.Gemeinsam
 @using Zeltlotse.Api.Contracts.Kueche
@@ -6,6 +7,9 @@
 @using ApiTagesansicht = Zeltlotse.Api.Contracts.Kueche.Tagesansicht
 @inject FreizeitKontextDienst Kontext
 @inject KuecheApiClient KuecheApi
+@inject OfflineSpeicher Speicher
+@inject AppVerbindung Verbindung
+@inject TimeProvider Uhr
 @* Küchen-Tagesansicht (FR-52, FR-53, CAP-31, Story 4-4) für Leitung und Team, erster Küche-Reiter. Dachzeile „Küche“, Überschrift „Tagesansicht“,
    darunter die Küche-Reiter und Reiter je Tag (gewählt über ?tag=JJJJ-MM-TT; ohne Wahl wählt der Server heute, wenn heute ein Tag der Freizeit ist,
    sonst den ersten Tag). Card „Allergien und Sonderkost“: je Allergen und je Sonderkost die Zahl der Personen aus bestätigten Freizeitpässen (ohne
@@ -13,7 +17,9 @@
    Gerichten (Link zum Rezept) und „N Ersatzportionen einplanen (enthält …)“; ohne Gericht „Kein Gericht vorgemerkt.“ mit dem Weg zum Essensplan an
    diesem Tag. Ankreuzfeld „Restetag“ mit Autosave („Gespeichert · Rückgängig“); gesetzt steht „Restetag: Reste verwerten.“ dabei. Der Restetag ist
    eine reine Markierung und ändert weder Gerichte noch Einkauf. In der Phase „gelaufen“ nur lesbar: der Restetag nur als Text. Kontext oder
-   Tagesansicht nicht verfügbar (auch ohne Verpflegung) → „Diese Seite ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung. *@
+   Tagesansicht nicht verfügbar (auch ohne Verpflegung) → „Diese Seite ist nicht verfügbar.“; scheitert das Laden, steht die Fehlermeldung. Story 6-5:
+   Offline (oder bei einem Netzfehler) liest die Seite Kontext und Tag aus dem Offline-Speicher (ohne Wahl heute, sonst den ersten Tag); der Restetag
+   ist dann nur ein ausgegrautes Ankreuzfeld. Ist der Tag nicht gespeichert: „Auf diesem Gerät nicht gespeichert.“ *@
 <PageTitle>Tagesansicht – Zeltlotse</PageTitle>
 
 @if (_nichtVerfuegbar)
@@ -26,7 +32,13 @@ else
     <h1>Tagesansicht</h1>
     <KuecheReiter FreizeitId="FreizeitId" Aktiv="tagesansicht" />
 
-    @if (_meldung is not null)
+    @if (_nichtGespeichert)
+    {
+        <Meldung Titel="Hinweis">
+            <p>@OfflineSpeicher.NichtGespeichertText</p>
+        </Meldung>
+    }
+    else if (_meldung is not null)
     {
         <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
             <p>@_meldung</p>
@@ -35,7 +47,7 @@ else
 
     @if (_ansicht is null || _kontext is null)
     {
-        @if (_meldung is null)
+        @if (_meldung is null && !_nichtGespeichert)
         {
             <Ladezustand />
         }
@@ -119,7 +131,12 @@ else
                             <p>@KuecheTexte.Ersatzportionen(gericht.Ersatzportionen)</p>
                         }
                     }
-                    @if (!Abgeschlossen)
+                    @if (_offline)
+                    {
+                        <Ankreuzfeld Label="Restetag" Id="@($"restetag-{mahlzeit.ProgrammpunktId}")" Wert="@mahlzeit.Restetag" Deaktiviert="true"
+                                     Hinweis="Offline nicht änderbar." />
+                    }
+                    else if (!Abgeschlossen)
                     {
                         <AutosaveAnkreuzfeld @key="@($"restetag-{mahlzeit.ProgrammpunktId}-{_ladung}")" Label="Restetag" Id="@($"restetag-{mahlzeit.ProgrammpunktId}")"
                                              Feldname="@MahlzeitFelder.Restetag" Pfad="@KuecheApiClient.MahlzeitPfad(FreizeitId, mahlzeit.ProgrammpunktId)"
@@ -142,6 +159,8 @@ else
     private int _ladung;
     private bool _nichtVerfuegbar;
     private string? _meldung;
+    private bool _offline;
+    private bool _nichtGespeichert;
 
     [Parameter] public Guid FreizeitId { get; set; }
 
@@ -159,7 +178,7 @@ else
     protected override async Task OnParametersSetAsync()
     {
         // Ein anderer Tag-Reiter lädt nur die Tagesansicht neu; der Kontext bleibt.
-        if (_kontext is not null && _kontext.FreizeitId == FreizeitId)
+        if (_kontext is not null && _kontext.FreizeitId == FreizeitId && !_offline)
         {
             await LadenAsync();
             return;
@@ -169,6 +188,14 @@ else
         _ansicht = null;
         _nichtVerfuegbar = false;
         _meldung = null;
+        _offline = false;
+        _nichtGespeichert = false;
+        if (Verbindung.Offline)
+        {
+            await AusDemSpeicherAsync();
+            return;
+        }
+
         try
         {
             var kontext = Kontext.LadenAsync(FreizeitId);
@@ -182,6 +209,11 @@ else
 
             _kontext = kontext.Result;
             Uebernehmen(ansicht.Result);
+        }
+        catch (Exception fehler) when (OfflineAbgleich.IstNetzfehler(fehler))
+        {
+            // Story 6-5: kein Netz, dann eben der Stand auf dem Gerät.
+            await AusDemSpeicherAsync();
         }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
         {
@@ -205,10 +237,41 @@ else
                 _nichtVerfuegbar = true;
             }
         }
+        catch (Exception fehler) when (OfflineAbgleich.IstNetzfehler(fehler))
+        {
+            await AusDemSpeicherAsync();
+        }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
         {
             _meldung = AnmeldungAbschluss.FehlerText;
         }
+    }
+
+    /// <summary>
+    /// Story 6-5: Kontext und Tagesansicht aus dem Offline-Speicher: der gewählte Tag, ohne Wahl heute (Europe/Berlin), wenn heute ein Tag der Freizeit
+    /// ist, sonst der erste Tag. Fehlt etwas, „Auf diesem Gerät nicht gespeichert.“
+    /// </summary>
+    private async Task AusDemSpeicherAsync()
+    {
+        _offline = true;
+        _meldung = null;
+        var freizeit = await Speicher.FreizeitLesenAsync(FreizeitId);
+        var ansicht = freizeit is null ? null : await Speicher.TagesansichtLesenAsync(FreizeitId, Gewaehlt ?? Vorgabetag(freizeit.Freizeit));
+        if (freizeit is null || ansicht is null)
+        {
+            (_kontext, _ansicht, _nichtGespeichert) = (null, null, true);
+            return;
+        }
+
+        _nichtGespeichert = false;
+        _kontext = freizeit.Kontext;
+        Uebernehmen(ansicht);
+    }
+
+    private DateOnly Vorgabetag(Zeltlotse.Api.Contracts.Freizeiten.FreizeitAntwort freizeit)
+    {
+        var heute = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(Uhr.GetUtcNow(), TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin")).DateTime);
+        return heute >= freizeit.ErsterTag && heute <= freizeit.LetzterTag ? heute : freizeit.ErsterTag;
     }
 
     private void Uebernehmen(ApiTagesansicht ansicht)

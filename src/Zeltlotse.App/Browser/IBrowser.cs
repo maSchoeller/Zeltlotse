@@ -49,7 +49,36 @@ public interface IBrowser
 
     /// <summary>Story 6-4: Legt den Text in die Zwischenablage (nur nach einem Tipp, z. B. „Link kopieren“); <c>false</c>, wenn der Browser es nicht erlaubt.</summary>
     ValueTask<bool> KopierenAsync(string text);
+
+    /// <summary>
+    /// Story 6-5: Legt einen Text verschlüsselt (AES-GCM, nicht exportierbarer Schlüssel des Geräts) in IndexedDB ab, mit der Freizeit und dem
+    /// Ablauf (UTC-Millisekunden); ein vorhandener Datensatz mit demselben Schlüssel wird ersetzt.
+    /// </summary>
+    ValueTask OfflineSchreibenAsync(string schluessel, Guid freizeitId, long ablaufMs, string text);
+
+    /// <summary>Story 6-5: Der entschlüsselte Text oder <c>null</c> (fehlt, abgelaufen und damit gelöscht oder nicht lesbar).</summary>
+    ValueTask<string?> OfflineLesenAsync(string schluessel);
+
+    /// <summary>Story 6-5: Alle nicht abgelaufenen Datensätze, deren Schlüssel mit <paramref name="praefix"/> beginnt, nach Schlüssel geordnet.</summary>
+    ValueTask<IReadOnlyList<OfflineDatensatz>> OfflineListeAsync(string praefix);
+
+    ValueTask OfflineEntfernenAsync(string schluessel);
+
+    /// <summary>Story 6-5: Löscht alle Datensätze einer Freizeit, auch wartende Einträge.</summary>
+    ValueTask OfflineFreizeitLoeschenAsync(Guid freizeitId);
+
+    /// <summary>Story 6-5: Löscht die ganze Offline-Datenbank samt Schlüssel (Abmelden, Sitzung abgelaufen, Konto gelöscht).</summary>
+    ValueTask OfflineAllesLoeschenAsync();
+
+    /// <summary>Story 6-5: Löscht alle abgelaufenen Datensätze (nur auf dem Gerät, auch ohne Netz).</summary>
+    ValueTask OfflineAufraeumenAsync();
+
+    /// <summary>Story 6-5: Fragt <c>navigator.storage.persist()</c> an, damit der Browser die Offline-Daten nicht vorzeitig räumt.</summary>
+    ValueTask SpeicherHaltenAsync();
 }
+
+/// <summary>Story 6-5: Ein entschlüsselter Datensatz des Offline-Speichers.</summary>
+public sealed record OfflineDatensatz(string Schluessel, string Text);
 
 /// <summary>Story 6-1: Was ein Gerät mit Push kann.</summary>
 public enum PushStatus

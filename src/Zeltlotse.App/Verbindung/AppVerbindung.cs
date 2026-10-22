@@ -22,6 +22,9 @@ public sealed class AppVerbindung(IBrowser browser, TimeProvider uhr) : IVerbind
 
     public bool Offline => !_browserOnline || _netzfehler;
 
+    /// <summary>Story 6-5: Nur der Browser meldet offline (<c>navigator.onLine</c>); ein Netzfehler allein zählt hier nicht, ein neuer Versuch lohnt.</summary>
+    public bool BrowserOffline => !_browserOnline;
+
     public DateTimeOffset? ZuletztAktualisiert { get; private set; }
 
     /// <summary>Text der Offline-Leiste: „Offline – zuletzt aktualisiert HH:MM Uhr“ (Europe/Berlin) oder nur „Offline“.</summary>

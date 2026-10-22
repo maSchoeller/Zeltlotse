@@ -1,4 +1,6 @@
 @page "/freizeiten/{FreizeitId:guid}/vorfall/{PersonId:guid}"
+@attribute [OfflineNutzbar]
+@implements IDisposable
 @using Zeltlotse.Api.Contracts.Freizeiten
 @using Zeltlotse.Api.Contracts.Gemeinsam
 @using Zeltlotse.Api.Contracts.Sicherheit
@@ -6,13 +8,20 @@
 @inject FreizeitKontextDienst Kontext
 @inject FreizeitenApiClient Freizeiten
 @inject SicherheitApiClient SicherheitApi
+@inject OfflineSpeicher Speicher
+@inject OfflineAbgleich Abgleich
+@inject AppVerbindung Verbindung
+@inject TimeProvider Uhr
 @* Vorfall-Protokoll einer Person (CAP-17, FR-31, Story 2-10) für Leitung und Team, erreichbar über den Freizeitpass; die Sicherheitskette
    zeigt den Weg. Dachzeile „Notfall“, Überschrift und der Name der Person aus der Personenliste (ohne Treffer keine Zeile). Drei mehrzeilige
    Felder ohne Senden-Knopf: Beim Verlassen eines Felds mit nicht leerem Text entsteht genau ein unveränderlicher Eintrag dieser
    Art (Kennung vom Gerät je Text, ein erneuter Versuch nutzt dieselbe, AD-18); danach ist das Feld leer, „Gespeichert“ steht
    darunter, und die Liste lädt neu. Scheitert das
    Speichern, bleibt der Text im Feld, und die Meldung steht am Feld. Nach dem Abschluss (Phase „gelaufen“) fehlen die Felder. Card
-   „Protokoll“ mit allen Einträgen, neueste oben. Kontext oder Einträge nicht verfügbar → „Diese Seite ist nicht verfügbar.“ *@
+   „Protokoll“ mit allen Einträgen, neueste oben. Kontext oder Einträge nicht verfügbar → „Diese Seite ist nicht verfügbar.“ Story 6-5: Offline (oder
+   bei einem Netzfehler) kommen Kontext und Name aus dem Offline-Speicher; ein verlassenes Feld legt den Eintrag mit Gerätezeit verschlüsselt in die
+   Warteschlange (nur, wenn die Freizeit gespeichert ist), das Feld leert sich, und der Eintrag steht oben im Protokoll als „wartet auf Verbindung“,
+   bis der Abgleich ihn gesendet hat; dann lädt die Liste vom Server neu. Ist nichts gespeichert: „Auf diesem Gerät nicht gespeichert.“ *@
 <PageTitle>Vorfall-Protokoll – Zeltlotse</PageTitle>
 
 @if (_nichtVerfuegbar)
@@ -23,12 +32,18 @@ else
 {
     <Dachzeile>Notfall</Dachzeile>
     <h1>Vorfall-Protokoll</h1>
-    @if (_person is not null)
+    @if (_name is not null)
     {
-        <p>@Anzeige.Name(_person.Vorname, _person.Nachname)</p>
+        <p>@_name</p>
     }
 
-    @if (_aktionFehler)
+    @if (_nichtGespeichert)
+    {
+        <Meldung Titel="Hinweis">
+            <p>@OfflineSpeicher.NichtGespeichertText</p>
+        </Meldung>
+    }
+    else if (_aktionFehler)
     {
         <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
             <p>@AnmeldungAbschluss.FehlerText</p>
@@ -37,7 +52,7 @@ else
 
     @if (_eintraege is null || _kontext is null)
     {
-        @if (!_aktionFehler)
+        @if (!_aktionFehler && !_nichtGespeichert)
         {
             <Ladezustand />
         }
@@ -70,11 +85,23 @@ else
             }
         }
         <Card Titel="Protokoll">
-            @if (_eintraege.Count == 0)
+            @if (_offline)
+            {
+                <p>@OfflineText</p>
+            }
+            @foreach (var wartend in _wartend.OrderByDescending(w => w.ErfasstAm).ThenByDescending(w => w.Id))
+            {
+                <div id="@($"vorfall-{wartend.Id}")">
+                    <p><strong>@Anzeige.DatumUhrzeit(wartend.ErfasstAm ?? Uhr.GetUtcNow()) · @Anzeige.VorfallArtText(wartend.Art)</strong></p>
+                    <p>@wartend.Text</p>
+                    <p><Status Wort="@WartetText" Art="StatusArt.Warnung" /></p>
+                </div>
+            }
+            @if (_eintraege.Count == 0 && _wartend.Count == 0)
             {
                 <LeerZustand Satz="Noch keine Einträge." />
             }
-            @foreach (var eintrag in _eintraege)
+            @foreach (var eintrag in _eintraege.Where(e => _wartend.All(w => w.Id != e.Id)))
             {
                 <div id="@($"vorfall-{eintrag.Id}")">
                     <p><strong>@Anzeige.DatumUhrzeit(eintrag.ErfasstAm) · @Anzeige.VorfallArtText(eintrag.Art)</strong></p>
@@ -90,6 +117,12 @@ else
 @code {
     /// <summary>Text eines Eintrags, dessen Schlüssel vernichtet ist (die Person ist gelöscht).</summary>
     public const string NichtLesbar = "Inhalt nicht mehr lesbar.";
+
+    /// <summary>Story 6-5: Status eines Eintrags in der Warteschlange.</summary>
+    public const string WartetText = "wartet auf Verbindung";
+
+    /// <summary>Story 6-5: Satz im Protokoll, wenn die Seite aus dem Offline-Speicher kommt.</summary>
+    public const string OfflineText = "Ohne Verbindung stehen hier nur die Einträge dieses Geräts, die auf Verbindung warten.";
 
     private const string AbgeschlossenText = "Diese Freizeit ist abgeschlossen und nur lesbar.";
 
@@ -116,23 +149,37 @@ else
     private readonly HashSet<VorfallArt> _uebertraegt = [];
     private FreizeitKontext? _kontext;
     private List<VorfallEintrag>? _eintraege;
-    private PersonenlisteZeile? _person;
+    private string? _name;
+    private List<VorfallEintragNeu> _wartend = [];
     private VorfallArt? _gespeichert;
     private bool _nichtVerfuegbar;
     private bool _aktionFehler;
+    private bool _offline;
+    private bool _nichtGespeichert;
 
     [Parameter] public Guid FreizeitId { get; set; }
 
     [Parameter] public Guid PersonId { get; set; }
 
+    protected override void OnInitialized() => Abgleich.Geaendert += AbgleichGeaendert;
+
     protected override async Task OnParametersSetAsync()
     {
         _kontext = null;
         _eintraege = null;
-        _person = null;
+        _name = null;
+        _wartend = [];
         _gespeichert = null;
         _nichtVerfuegbar = false;
         _aktionFehler = false;
+        _offline = false;
+        _nichtGespeichert = false;
+        if (Verbindung.Offline)
+        {
+            await AusDemSpeicherAsync();
+            return;
+        }
+
         try
         {
             var kontext = Kontext.LadenAsync(FreizeitId);
@@ -140,14 +187,38 @@ else
             var personen = PersonenAsync();
             await Task.WhenAll(kontext, eintraege, personen);
             (_kontext, _eintraege) = (kontext.Result, eintraege.Result);
-            _person = personen.Result?.FirstOrDefault(p => p.PersonId == PersonId);
+            _name = personen.Result?.FirstOrDefault(p => p.PersonId == PersonId) is { } person ? Anzeige.Name(person.Vorname, person.Nachname) : null;
             _nichtVerfuegbar = _kontext is null || _eintraege is null;
+            _wartend = await WartendeAsync();
+        }
+        catch (Exception fehler) when (OfflineAbgleich.IstNetzfehler(fehler))
+        {
+            // Story 6-5: kein Netz, dann eben der Stand auf dem Gerät.
+            await AusDemSpeicherAsync();
         }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
         {
-            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (5xx) die Meldung statt „Wird geladen …“.
             _aktionFehler = true;
         }
+    }
+
+    /// <summary>Story 6-5: Kontext und Name aus dem Offline-Speicher, dazu die wartenden Einträge; ohne gespeicherte Freizeit „nicht gespeichert“.</summary>
+    private async Task AusDemSpeicherAsync()
+    {
+        _offline = true;
+        if (await Speicher.FreizeitLesenAsync(FreizeitId) is not { } freizeit)
+        {
+            _nichtGespeichert = true;
+            return;
+        }
+
+        _kontext = freizeit.Kontext;
+        _eintraege = [];
+        _name = (await Speicher.NotfallkarteLesenAsync(FreizeitId))?.FirstOrDefault(p => p.PersonId == PersonId) is { } person
+            ? Anzeige.Name(person.Vorname, person.Nachname)
+            : null;
+        _wartend = await WartendeAsync();
     }
 
     /// <summary>Die Personenliste für den Namen; scheitert sie, fehlt nur die Zeile mit dem Namen.</summary>
@@ -163,6 +234,31 @@ else
         }
     }
 
+    /// <summary>Story 6-5: Die wartenden Einträge dieser Person aus der Warteschlange.</summary>
+    private async Task<List<VorfallEintragNeu>> WartendeAsync() =>
+        [.. (await Speicher.WartendeAsync(FreizeitId)).Select(w => w.Eintrag).Where(e => e.PersonId == PersonId)];
+
+    /// <summary>
+    /// Story 6-5: Die Warteschlange hat sich geändert (eingereiht oder gesendet). Ist ein Eintrag dieser Person gesendet und die Verbindung da, lädt die
+    /// Liste vom Server neu, damit er dort steht.
+    /// </summary>
+    private void AbgleichGeaendert() => _ = InvokeAsync(async () =>
+    {
+        if (_kontext is null)
+        {
+            return;
+        }
+
+        var wartend = await WartendeAsync();
+        if (wartend.Count < _wartend.Count && !Verbindung.Offline && await NeuLadenAsync() is { } eintraege)
+        {
+            (_eintraege, _offline) = (eintraege, false);
+        }
+
+        _wartend = wartend;
+        StateHasChanged();
+    });
+
     /// <summary>Jede Eingabe merkt den Text; ein geänderter Text bekommt eine neue Kennung.</summary>
     private void TextGeaendert(VorfallArt art, string? text)
     {
@@ -177,7 +273,8 @@ else
 
     /// <summary>
     /// Beim Verlassen des Felds: ein nicht leerer Text wird genau ein Eintrag dieser Art. Nach einem Fehler schickt das erneute Verlassen
-    /// denselben Text mit derselben Kennung. Wurde der Text während der Übertragung weiter geändert, bleibt der neue Text im Feld.
+    /// denselben Text mit derselben Kennung. Wurde der Text während der Übertragung weiter geändert, bleibt der neue Text im Feld. Story 6-5: Offline
+    /// oder bei einem Netzfehler wartet der Eintrag auf dem Gerät.
     /// </summary>
     private async Task SpeichernAsync(VorfallArt art)
     {
@@ -192,16 +289,16 @@ else
         _gespeichert = null;
         try
         {
+            if (Verbindung.Offline)
+            {
+                await EinreihenAsync(art, kennung, text);
+                return;
+            }
+
             switch (await SicherheitApi.VorfallAnlegenAsync(FreizeitId, new VorfallEintragNeu(kennung, PersonId, art, text)))
             {
                 case VorfallAnlegenErgebnis.Erfolg:
-                    if (_werte[art] == text)
-                    {
-                        _werte[art] = null;
-                        _kennungen[art] = null;
-                        _runde[art]++;
-                    }
-
+                    Geleert(art, text);
                     _gespeichert = art;
                     // Scheitert das Neuladen, bleibt die bisherige Liste stehen.
                     _eintraege = await NeuLadenAsync() ?? _eintraege;
@@ -214,6 +311,11 @@ else
                     break;
             }
         }
+        catch (Exception fehler) when (OfflineAbgleich.IstNetzfehler(fehler))
+        {
+            // Story 6-5: Online am Netz gescheitert: Der Eintrag wartet auf dem Gerät statt einer Fehlermeldung.
+            await EinreihenAsync(art, kennung, text);
+        }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
         {
             _fehler[art] = AnmeldungAbschluss.FehlerText;
@@ -221,6 +323,34 @@ else
         finally
         {
             _uebertraegt.Remove(art);
+        }
+    }
+
+    /// <summary>
+    /// Story 6-5: Legt den Eintrag mit Gerätezeit in die verschlüsselte Warteschlange (dieselbe Kennung wie online, AD-18). Ist die Freizeit nicht auf dem
+    /// Gerät gespeichert, bleibt der Text im Feld, und die Meldung steht am Feld.
+    /// </summary>
+    private async Task EinreihenAsync(VorfallArt art, Guid kennung, string text)
+    {
+        if (await Abgleich.VorfallEinreihenAsync(FreizeitId, new VorfallEintragNeu(kennung, PersonId, art, text, Uhr.GetUtcNow())))
+        {
+            Geleert(art, text);
+            _wartend = await WartendeAsync();
+        }
+        else
+        {
+            _fehler[art] = Verbindung.Offline ? OfflineSpeicher.NichtGespeichertText : AnmeldungAbschluss.FehlerText;
+        }
+    }
+
+    /// <summary>Leert das Feld nach dem Speichern, außer der Text wurde inzwischen weiter geändert.</summary>
+    private void Geleert(VorfallArt art, string text)
+    {
+        if (_werte[art] == text)
+        {
+            _werte[art] = null;
+            _kennungen[art] = null;
+            _runde[art]++;
         }
     }
 
@@ -235,4 +365,6 @@ else
             return null;
         }
     }
+
+    public void Dispose() => Abgleich.Geaendert -= AbgleichGeaendert;
 }

@@ -83,6 +83,57 @@ public sealed class JsBrowser(IJSRuntime js) : IBrowser, IAsyncDisposable
     public async ValueTask AnsEndeScrollenAsync(string elementId) =>
         await (await Modul()).InvokeVoidAsync("ansEndeScrollen", elementId);
 
+    // Story 6-5: Offline-Speicher. Kann der Browser IndexedDB oder WebCrypto nicht (z. B. privater Modus), gilt: nichts gespeichert.
+    public ValueTask OfflineSchreibenAsync(string schluessel, Guid freizeitId, long ablaufMs, string text) =>
+        OhneFehlerAsync(m => m.InvokeVoidAsync("offlineSchreiben", schluessel, freizeitId.ToString("D"), ablaufMs, text));
+
+    public async ValueTask<string?> OfflineLesenAsync(string schluessel)
+    {
+        try
+        {
+            return await (await Modul()).InvokeAsync<string?>("offlineLesen", schluessel);
+        }
+        catch (JSException)
+        {
+            return null;
+        }
+    }
+
+    public async ValueTask<IReadOnlyList<OfflineDatensatz>> OfflineListeAsync(string praefix)
+    {
+        try
+        {
+            return await (await Modul()).InvokeAsync<List<OfflineDatensatz>>("offlineListe", praefix) ?? [];
+        }
+        catch (JSException)
+        {
+            return [];
+        }
+    }
+
+    public ValueTask OfflineEntfernenAsync(string schluessel) => OhneFehlerAsync(m => m.InvokeVoidAsync("offlineEntfernen", schluessel));
+
+    public ValueTask OfflineFreizeitLoeschenAsync(Guid freizeitId) =>
+        OhneFehlerAsync(m => m.InvokeVoidAsync("offlineFreizeitLoeschen", freizeitId.ToString("D")));
+
+    public ValueTask OfflineAllesLoeschenAsync() => OhneFehlerAsync(m => m.InvokeVoidAsync("offlineAllesLoeschen"));
+
+    public ValueTask OfflineAufraeumenAsync() => OhneFehlerAsync(m => m.InvokeVoidAsync("offlineAufraeumen"));
+
+    public ValueTask SpeicherHaltenAsync() => OhneFehlerAsync(m => m.InvokeVoidAsync("speicherHalten"));
+
+    private async ValueTask OhneFehlerAsync(Func<IJSObjectReference, ValueTask> aufruf)
+    {
+        try
+        {
+            await aufruf(await Modul());
+        }
+        catch (JSException)
+        {
+            // Ohne Offline-Speicher im Browser: dann eben nichts gespeichert.
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_modul is not null)

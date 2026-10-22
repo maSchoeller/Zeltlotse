@@ -34,6 +34,8 @@ public sealed class AppLayoutTests : BunitContext
         Services.AddSingleton<NeueVersion>();
         Services.AddSingleton<AppSitzung>();
         Services.AddZeltlotseUi(_ => _server.Client());
+        // Story 6-5: offline nutzbare Seiten und das Layout lesen den Offline-Speicher.
+        Services.AddOfflineDienste();
     }
 
     private IRenderedComponent<MainLayout> Layout(RenderFragment? inhalt = null) =>

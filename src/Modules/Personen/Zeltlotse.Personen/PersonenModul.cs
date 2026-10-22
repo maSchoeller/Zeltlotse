@@ -107,6 +107,9 @@ public static class PersonenModul
         // Story 2-11: Notfallordner, die Pässe bestätigter Personen gebündelt (Leitung und Team, FR-33, AD-8).
         api.MapGet($"/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/personen/notfallordner", NotfallordnerEndpunkt.Laden)
             .NurFreizeitRolle(FreizeitpassRechte.Einsicht);
+        // Story 6-5: Notfallkarte für den Offline-Speicher, nur die nötigen Felder (Leitung und Team, FR-65, AD-18).
+        api.MapGet($"/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/personen/notfallkarte", NotfallkarteEndpunkt.Laden)
+            .NurFreizeitRolle(FreizeitpassRechte.Einsicht);
         // Story 2-6: Freizeitpass-Stand und Erinnern zum Freizeitpass (nur Leitung, FR-25, FR-27).
         api.MapGet($"/freizeiten/{{{Rechtemerkmale.FreizeitRouteWert}:guid}}/personen/freizeitpass-stand", FreizeitpassStandEndpunkt.Laden)
             .NurFreizeitRolle(FreizeitpassRechte.Erinnern);

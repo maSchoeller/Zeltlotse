@@ -20,6 +20,10 @@ public enum ZugriffZweck
     /// <summary>Story 4-4: Der Sonderkost-Abgleich der Küche hat die Ernährungs-Auswahl gelesen (nur Anzahlen, ohne lesende Person, AD-8).</summary>
     [JsonStringEnumMemberName("sonderkostFuerKueche")]
     SonderkostFuerKueche = 4,
+
+    /// <summary>Story 6-5: Leitung oder Team hat die Notfallkarte für den Offline-Fall aufs Gerät geladen (AD-18).</summary>
+    [JsonStringEnumMemberName("notfallkarteGeladen")]
+    NotfallkarteGeladen = 5,
 }
 
 /// <summary>

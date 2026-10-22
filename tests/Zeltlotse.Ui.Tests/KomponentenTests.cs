@@ -827,6 +827,23 @@ public sealed class KomponentenTests : BunitContext
     }
 
     [Fact]
+    public void Offline_Leiste_zeigt_wartende_Eintraege_als_zweite_Zeile_Einzahl_und_Mehrzahl()
+    {
+        var cut = Render<OfflineLeiste>(ps => ps.Add(p => p.Text, "Offline").Add(p => p.Wartend, 1));
+
+        Assert.Equal(["Offline", "1 Eintrag wartet auf Verbindung"], cut.FindAll(".zl-offline-leiste p").Select(p => p.TextContent));
+
+        cut.Render(ps => ps.Add(p => p.Wartend, 2));
+        Assert.Equal(["Offline", "2 Einträge warten auf Verbindung"], cut.FindAll(".zl-offline-leiste p").Select(p => p.TextContent));
+
+        cut.Render(ps => ps.Add(p => p.Text, null).Add(p => p.Wartend, 3));
+        Assert.Equal(["3 Einträge warten auf Verbindung"], cut.FindAll(".zl-offline-leiste p").Select(p => p.TextContent));
+
+        cut.Render(ps => ps.Add(p => p.Text, "Offline").Add(p => p.Wartend, 0));
+        Assert.Equal(["Offline"], cut.FindAll(".zl-offline-leiste p").Select(p => p.TextContent));
+    }
+
+    [Fact]
     public void Offline_Bereich_ist_offline_inert_ausgegraut_und_mit_dem_Satz()
     {
         var cut = Render<OfflineBereich>(ps => ps.Add(p => p.Offline, true).AddChildContent("<button>Bearbeiten</button>"));

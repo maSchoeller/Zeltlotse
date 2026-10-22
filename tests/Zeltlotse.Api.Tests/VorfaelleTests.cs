@@ -197,6 +197,47 @@ public sealed class VorfaelleTests(PostgresContainer postgres) : IAsyncLifetime
         Assert.Equal(["Kopfweh"], (await LesenAsync(abfrage: $"?personId={_s.TobiasId}")).Select(e => e.GetProperty("text").GetString()));
     }
 
+    // ---------- Gerätezeit (Story 6-5, AD-18) ----------
+
+    private async Task<DateTimeOffset> ErfasstAmAsync(DateTimeOffset? erfasstAm)
+    {
+        var id = Guid.CreateVersion7();
+        using var antwort = await PostAsync(_s.Tobias, Pfad(_s.X), new VorfallEintragNeu(id, _s.MiriamId, VorfallArt.Geschehen, "Offline geschrieben", erfasstAm));
+        Assert.Equal(HttpStatusCode.Created, antwort.StatusCode);
+        return Assert.Single(await LesenAsync(), e => e.GetProperty("id").GetGuid() == id).GetProperty("erfasstAm").GetDateTimeOffset();
+    }
+
+    [Fact]
+    public async Task Geraetezeit_in_der_Vergangenheit_wird_uebernommen()
+    {
+        var jetzt = _s.VolleSekunde();
+
+        Assert.Equal(jetzt.AddHours(-3), await ErfasstAmAsync(jetzt.AddHours(-3)));
+    }
+
+    [Fact]
+    public async Task Geraetezeit_in_der_Zukunft_wird_zur_Serverzeit()
+    {
+        var jetzt = _s.VolleSekunde();
+
+        Assert.Equal(jetzt, await ErfasstAmAsync(jetzt.AddMinutes(10)));
+    }
+
+    [Fact]
+    public async Task Ohne_Geraetezeit_gilt_die_Serverzeit_und_das_JSON_Feld_heisst_erfasstAm()
+    {
+        var jetzt = _s.VolleSekunde();
+
+        Assert.Equal(jetzt, await ErfasstAmAsync(null));
+        var id = Guid.CreateVersion7();
+        var frueher = jetzt.AddDays(-1);
+        using var antwort = await SendenAsync(
+            _s.Tobias, HttpMethod.Post, Pfad(_s.X),
+            $$"""{"id":"{{id}}","personId":"{{_s.MiriamId}}","art":"Geschehen","text":"Roh","erfasstAm":"{{frueher:O}}"}""");
+        Assert.Equal(HttpStatusCode.Created, antwort.StatusCode);
+        Assert.Equal(frueher, Assert.Single(await LesenAsync(), e => e.GetProperty("id").GetGuid() == id).GetProperty("erfasstAm").GetDateTimeOffset());
+    }
+
     [Fact]
     public async Task Abgeschlossen_POST_409_freizeit_abgeschlossen_GET_200()
     {

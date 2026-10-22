@@ -51,6 +51,8 @@ public sealed class VorfallSeitenTests : BunitContext
             new SitzungsHandler(sp.GetRequiredService<ISitzung>()) { InnerHandler = sp.GetRequiredService<AntiforgeryHandler>() },
             disposeHandler: false) { BaseAddress = new Uri("http://localhost/app/") });
         Services.AddZeltlotseUi(sp => sp.GetRequiredService<HttpClient>());
+        // Story 6-5: offline nutzbare Seiten und das Layout lesen den Offline-Speicher.
+        Services.AddOfflineDienste();
         Services.AddScoped<AnmeldungAbschluss>();
     }
 
@@ -160,6 +162,8 @@ public sealed class VorfallSeitenTests : BunitContext
             () => NachgebildeterHandler.Problem(HttpStatusCode.Conflict, Problemcodes.Konflikt),
             () => NachgebildeterHandler.Json(HttpStatusCode.BadRequest, """{"errors":{"personId":["Diese Person gehört nicht zur Freizeit."]}}""", "application/problem+json"),
             () => new HttpResponseMessage(HttpStatusCode.InternalServerError),
+            () => new HttpResponseMessage(HttpStatusCode.NotFound),
+            () => new HttpResponseMessage(HttpStatusCode.Forbidden),
         };
         _server.BeiDerReihe(HttpMethod.Post, VorfaellePfad, antworten);
         var id = Guid.CreateVersion7();
@@ -170,7 +174,10 @@ public sealed class VorfallSeitenTests : BunitContext
         }
 
         Assert.Equal(
-            [VorfallAnlegenErgebnis.Erfolg, VorfallAnlegenErgebnis.Abgeschlossen, VorfallAnlegenErgebnis.Fehler, VorfallAnlegenErgebnis.Fehler, VorfallAnlegenErgebnis.Fehler],
+            [
+                VorfallAnlegenErgebnis.Erfolg, VorfallAnlegenErgebnis.Abgeschlossen, VorfallAnlegenErgebnis.Abgelehnt, VorfallAnlegenErgebnis.Abgelehnt,
+                VorfallAnlegenErgebnis.Fehler, VorfallAnlegenErgebnis.NichtVerfuegbar, VorfallAnlegenErgebnis.NichtVerfuegbar,
+            ],
             ergebnisse);
         Assert.Equal(
             $$"""{"id":"{{id}}","personId":"{{Mia}}","art":"Entnahme","text":"Pflaster"}""",

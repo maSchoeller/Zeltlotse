@@ -1,8 +1,10 @@
 @using Zeltlotse.Api.Contracts.Freizeiten
+@using Zeltlotse.Api.Contracts.Personen
 @* Schnellsuche (EXPERIENCE.md → Component Patterns „Schnellsuche“, FR-28, Story 2-8): sucht in der Personenliste der Freizeit (Freizeiten,
    AD-2) im Client ab dem ersten Zeichen nach Vor- und Nachnamen. Treffer stehen als Personenliste mit Initialen, Name und Art der
    Anmeldung; der Name öffnet direkt den Freizeitpass (Personen, AD-8). Über den Treffern steht für Screenreader angesagt
-   (role="status") „Keine Person gefunden.“, „1 Person gefunden.“ oder „<n> Personen gefunden.“; ohne Eingabe nichts. *@
+   (role="status") „Keine Person gefunden.“, „1 Person gefunden.“ oder „<n> Personen gefunden.“; ohne Eingabe nichts. Story 6-5: Offline sucht sie
+   in den Personen der gespeicherten Notfallkarte; ein Treffer öffnet dann die Notfallkarte der Person. *@
 <Feld Label="@Label" Id="@Id" Typ="search" Wert="@_suche" autocomplete="off" @oninput="@(e => _suche = e.Value?.ToString())" />
 @if (!string.IsNullOrWhiteSpace(_suche))
 {
@@ -22,7 +24,10 @@
     [Parameter, EditorRequired] public string Id { get; set; } = "";
 
     /// <summary>Die Personenliste der Freizeit aus <c>FreizeitenApiClient.PersonenlisteLadenAsync</c>.</summary>
-    [Parameter, EditorRequired] public IReadOnlyList<PersonenlisteZeile> Personen { get; set; } = [];
+    [Parameter] public IReadOnlyList<PersonenlisteZeile> Personen { get; set; } = [];
+
+    /// <summary>Story 6-5: Offline die Personen der gespeicherten Notfallkarte; gesetzt, sucht die Suche nur dort und führt zur Notfallkarte.</summary>
+    [Parameter] public IReadOnlyList<NotfallkartePerson>? Notfallkarte { get; set; }
 
     private static string TrefferText(int anzahl) => anzahl switch
     {
@@ -31,14 +36,13 @@
         _ => $"{anzahl} Personen gefunden.",
     };
 
-    private List<PersonenEintrag> Treffer =>
-    [
-        .. Personen
-            .Where(p => Anzeige.TitelTrifft(Anzeige.Name(p.Vorname, p.Nachname), _suche))
-            .Select(p => new PersonenEintrag(
-                Anzeige.Initialen(p.Vorname, p.Nachname),
-                Anzeige.Name(p.Vorname, p.Nachname),
-                p.Art == AnmeldungArt.Teilnehmende ? "Teilnehmende" : "Mitarbeitende",
-                $"freizeiten/{FreizeitId}/freizeitpaesse/{p.PersonId}")),
-    ];
+    private List<PersonenEintrag> Treffer => Notfallkarte is { } karte
+        ? [.. karte.Where(p => Trifft(p.Vorname, p.Nachname)).Select(p => Eintrag(p.Vorname, p.Nachname, "Notfallkarte", $"notfallkarte/{p.PersonId}"))]
+        : [.. Personen.Where(p => Trifft(p.Vorname, p.Nachname)).Select(p => Eintrag(
+            p.Vorname, p.Nachname, p.Art == AnmeldungArt.Teilnehmende ? "Teilnehmende" : "Mitarbeitende", $"freizeitpaesse/{p.PersonId}"))];
+
+    private bool Trifft(string? vorname, string? nachname) => Anzeige.TitelTrifft(Anzeige.Name(vorname, nachname), _suche);
+
+    private PersonenEintrag Eintrag(string? vorname, string? nachname, string zeile, string ziel) =>
+        new(Anzeige.Initialen(vorname, nachname), Anzeige.Name(vorname, nachname), zeile, $"freizeiten/{FreizeitId}/{ziel}");
 }

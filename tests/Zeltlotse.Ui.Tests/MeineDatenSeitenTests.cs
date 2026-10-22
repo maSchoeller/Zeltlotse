@@ -45,6 +45,8 @@ public sealed class MeineDatenSeitenTests : BunitContext
             disposeHandler: false) { BaseAddress = new Uri("http://localhost/app/") });
         Services.AddZeltlotseUi(sp => sp.GetRequiredService<HttpClient>());
         Services.AddScoped<AnmeldungAbschluss>();
+        // Story 6-5: Die Kontolöschung leert den Offline-Speicher.
+        Services.AddOfflineDienste();
     }
 
     private NavigationManager Navigation => Services.GetRequiredService<NavigationManager>();

@@ -27,7 +27,8 @@ namespace Zeltlotse.Sicherheit.Vorfaelle;
 /// in einer anderen Freizeit ist das ein Konflikt. Eine abgeschlossene Freizeit ist nur lesbar (AD-17). Story 3-4: Eine neue Entnahme geht als
 /// <c>ErsteHilfeEntnommen</c> an Inventar (Schadens- und Verlustliste).
 /// </summary>
-internal sealed record VorfallAnlegenCommand(Guid FreizeitId, Guid Id, Guid PersonId, Guid VerfasstVon, VorfallArt Art, string? Text)
+internal sealed record VorfallAnlegenCommand(
+    Guid FreizeitId, Guid Id, Guid PersonId, Guid VerfasstVon, VorfallArt Art, string? Text, DateTimeOffset? ErfasstAm = null)
     : ICommand<VorfallAnlegen>, IModulCommand<SicherheitDbContext>, IBenutzerCommand, IFreizeitCommand
 {
     /// <summary>Keinen Text und keine Personenkennung ausgeben (AD-22).</summary>
@@ -117,8 +118,11 @@ internal sealed class VorfallAnlegenHandler(
             return VorfallAnlegen.UnbekanntePerson;
         }
 
+        // Story 6-5: Offline geschriebene Einträge tragen die Gerätezeit; die Zukunft gibt es nicht, ohne Angabe gilt die Serverzeit.
+        var jetzt = uhr.GetUtcNow();
+        var erfasstAm = command.ErfasstAm is { } geraet && geraet < jetzt ? geraet.ToUniversalTime() : jetzt;
         var eintrag = VorfallEintrag.Anlegen(
-            command.Id, organisationId, command.FreizeitId, command.PersonId, command.VerfasstVon, command.Art, text, uhr.GetUtcNow());
+            command.Id, organisationId, command.FreizeitId, command.PersonId, command.VerfasstVon, command.Art, text, erfasstAm);
         // Story 3-4: Eine Entnahme meldet ErsteHilfeEntnommen; die Folgenummer danach steht im INSERT.
         eintrag.ErsteHilfeMelden();
         // Eindeutig je Kennung: Auch zwei gleichzeitige Aufrufe mit derselben Kennung ergeben genau eine Zeile.
@@ -244,7 +248,7 @@ internal static class VorfaelleLadenEndpunkt
 
 /// <summary>
 /// <c>POST /api/freizeiten/{freizeitId}/sicherheit/vorfaelle</c> (Leitung und Team, FR-31): Körper <see cref="VorfallEintragNeu"/>; die
-/// verfassende Person ist die angemeldete. <c>201</c> mit <c>Location</c>, auch wenn die Kennung in dieser Freizeit schon gespeichert ist;
+/// verfassende Person ist die angemeldete; Story 6-5: Zeitpunkt <c>min(erfasstAm, jetzt)</c>, ohne Angabe jetzt. <c>201</c> mit <c>Location</c>, auch wenn die Kennung in dieser Freizeit schon gespeichert ist;
 /// Formfehler und eine Person, die nicht zur Freizeit gehört, <c>400</c> am Feld; Kennung einer anderen Freizeit <c>409 konflikt</c>;
 /// abgeschlossene Freizeit <c>409 freizeit-abgeschlossen</c>.
 /// </summary>
@@ -255,7 +259,7 @@ internal static class VorfallAnlegenEndpunkt
     public static async Task<IResult> Anlegen(Guid freizeitId, VorfallEintragNeu koerper, IAngemeldet angemeldet, ISender sender, CancellationToken abbruch)
     {
         var ich = angemeldet.PersonId ?? throw new InvalidOperationException("Ohne Sitzung erreicht niemand diesen Endpunkt.");
-        return await sender.Send(new VorfallAnlegenCommand(freizeitId, koerper.Id, koerper.PersonId, ich, koerper.Art, koerper.Text), abbruch) switch
+        return await sender.Send(new VorfallAnlegenCommand(freizeitId, koerper.Id, koerper.PersonId, ich, koerper.Art, koerper.Text, koerper.ErfasstAm), abbruch) switch
         {
             VorfallAnlegen.Angelegt => TypedResults.Created($"/api/freizeiten/{freizeitId}/sicherheit/vorfaelle?personId={koerper.PersonId}"),
             VorfallAnlegen.UnbekanntePerson => throw new ValidierungsAusnahme(new Dictionary<string, string[]> { [VorfallFelder.PersonId] = [UnbekanntePerson] }),

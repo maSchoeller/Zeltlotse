@@ -7,6 +7,7 @@
 @inject IBrowser Browser
 @inject AppSitzung Sitzung
 @inject AntiforgeryHandler Antiforgery
+@inject OfflineSpeicher Offline
 @* Zugriffsprotokoll und Meine Daten (FR-13, FR-14, AD-8, AD-16, AD-25): wer wann Einsicht hatte (für die Person und ihre Kinder),
    die Auskunft über alle gespeicherten Daten mit „Als PDF speichern“ (Druckdialog des Browsers, Druck-CSS) und „Als CSV
    herunterladen“ (im Client erzeugt), und „Konto löschen“ mit Inline-Bestätigung. Auskunft und Löschen verlangen eine frische
@@ -173,6 +174,8 @@ else
             {
                 // Der Server hat die Sitzung beendet; auf dem Gerät ebenso (Token hängt an der Identität).
                 Antiforgery.TokenVerwerfen();
+                // Story 6-5: Offline-Daten samt Schlüssel verschwinden mit dem Konto.
+                await Offline.AllesLoeschenAsync();
                 Sitzung.Abmelden();
                 _geloescht = true;
             }

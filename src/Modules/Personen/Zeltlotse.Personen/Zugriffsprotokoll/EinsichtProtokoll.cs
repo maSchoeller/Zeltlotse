@@ -20,6 +20,9 @@ internal enum EinsichtZweck : short
 
     /// <summary>Story 4-4: Der Sonderkost-Abgleich der Küche hat die Ernährungs-Auswahl gelesen, ohne lesende Person (AD-8, Zweck ohne Menschen).</summary>
     SonderkostFuerKueche = 4,
+
+    /// <summary>Story 6-5: Leitung oder Team hat die Notfallkarte für den Offline-Fall aufs Gerät geladen (AD-18).</summary>
+    NotfallkarteGeladen = 5,
 }
 
 /// <summary>

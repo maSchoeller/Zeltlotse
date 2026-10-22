@@ -43,6 +43,8 @@ public sealed class TagesansichtSeitenTests : BunitContext
             disposeHandler: false) { BaseAddress = new Uri("http://localhost/app/") });
         Services.AddSingleton<TimeProvider>(new FakeTimeProvider(new DateTimeOffset(2026, 10, 19, 8, 0, 0, TimeSpan.Zero)));
         Services.AddZeltlotseUi(sp => sp.GetRequiredService<HttpClient>());
+        // Story 6-5: offline nutzbare Seiten und das Layout lesen den Offline-Speicher.
+        Services.AddOfflineDienste();
         Services.AddScoped<AnmeldungAbschluss>();
     }
 

@@ -1,11 +1,15 @@
 @page "/freizeiten/{FreizeitId:guid}/notfall"
+@attribute [OfflineNutzbar]
 @using Zeltlotse.Api.Contracts.Freizeiten
 @using Zeltlotse.Api.Contracts.Gemeinsam
+@using Zeltlotse.Api.Contracts.Personen
 @using Zeltlotse.Ui.Kontext
 @using ApiKette = Zeltlotse.Api.Contracts.Sicherheit.Sicherheitskette
 @inject FreizeitKontextDienst Kontext
 @inject FreizeitenApiClient Freizeiten
 @inject SicherheitApiClient SicherheitApi
+@inject OfflineSpeicher Speicher
+@inject AppVerbindung Verbindung
 @* Sicherheitskette (EXPERIENCE.md → Component Patterns „Sicherheitskette“, FR-28, FR-29, Story 2-8), in allen Phasen für Leitung und Team.
    Reihenfolge: Dachzeile „Notfall“ und Überschrift, ganz oben die Schnellsuche „Betroffene Person suchen“ (ein Treffer öffnet den
    Freizeitpass), ohne Einrichtung der Hinweis, Card „Was jetzt zu tun ist“ (ein Schritt je Zeile, nummeriert) und Card „Wen anrufen“ mit
@@ -13,7 +17,9 @@
    Kontext, Freizeit, Personenliste und Kette laden parallel. Kontext, Freizeit oder Kette nicht verfügbar → „Diese Seite ist nicht
    verfügbar.“; scheitert nur die Personenliste, entfällt nur die Suche. Story 2-10: Vor „Wen anrufen“ zeigt die Card „Vorfall-Protokoll“
    den Weg dorthin (betroffene Person suchen, im Freizeitpass „Vorfall-Protokoll“). Story 2-11: unter „Wen anrufen“ der Knopf
-   „Notfallordner drucken“, nur mit „freizeitpaesse-sehen“. Offline (V6) kommt später. *@
+   „Notfallordner drucken“, nur mit „freizeitpaesse-sehen“. Story 6-5: Offline (oder bei einem Netzfehler) liest die Seite Freizeit, Kette und
+   Notfallkarte aus dem Offline-Speicher; die Suche findet dann die Personen der Notfallkarte und öffnet deren Notfallkarte, „Notfallordner drucken“
+   ist ausgegraut. Ist nichts gespeichert: „Auf diesem Gerät nicht gespeichert.“ mit dem Verweis auf den ausgedruckten Notfallordner und 112. *@
 <PageTitle>Sicherheitskette – Zeltlotse</PageTitle>
 
 @if (_nichtVerfuegbar)
@@ -25,7 +31,15 @@ else
     <Dachzeile>Notfall</Dachzeile>
     <h1>Sicherheitskette</h1>
 
-    @if (_aktionFehler)
+    @if (_nichtGespeichert)
+    {
+        <Meldung Titel="Hinweis">
+            <p>@OfflineSpeicher.NichtGespeichertText</p>
+            <p>Offline gilt der ausgedruckte Notfallordner.</p>
+        </Meldung>
+        <p><TelefonLink Nummer="112" Text="Notruf 112" /></p>
+    }
+    else if (_aktionFehler)
     {
         <Meldung Titel="Fehler" Art="MeldungArt.Fehler">
             <p>@AnmeldungAbschluss.FehlerText</p>
@@ -38,7 +52,14 @@ else
     }
     else
     {
-        @if (_personen is not null)
+        @if (_offline)
+        {
+            @if (_karte is not null)
+            {
+                <Schnellsuche FreizeitId="FreizeitId" Label="Betroffene Person suchen" Id="betroffene-person" Notfallkarte="_karte" />
+            }
+        }
+        else if (_personen is not null)
         {
             <Schnellsuche FreizeitId="FreizeitId" Label="Betroffene Person suchen" Id="betroffene-person" Personen="_personen" />
         }
@@ -60,7 +81,14 @@ else
             </Card>
         }
         <Card Titel="Vorfall-Protokoll">
-            <p>Betroffene Person oben suchen und im Freizeitpass „Vorfall-Protokoll“ wählen. Jeder Eintrag ist sofort für die Leitung sichtbar.</p>
+            @if (_offline)
+            {
+                <p>Betroffene Person oben suchen und in der Notfallkarte „Vorfall-Protokoll“ wählen. Ohne Verbindung warten die Einträge verschlüsselt auf dem Gerät und gehen an die Leitung, sobald wieder Empfang da ist.</p>
+            }
+            else
+            {
+                <p>Betroffene Person oben suchen und im Freizeitpass „Vorfall-Protokoll“ wählen. Jeder Eintrag ist sofort für die Leitung sichtbar.</p>
+            }
         </Card>
         <Card Titel="Wen anrufen">
             <p><TelefonLink Nummer="112" Text="Notruf 112" /></p>
@@ -81,7 +109,7 @@ else
         @* Story 2-11: Druckansicht des Notfallordners, die Rückfallebene ohne Netz (NFR-11). *@
         @if (_darfPaesse)
         {
-            <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/notfallordner")" Ansichtswechsel="true">Notfallordner drucken</Knopf></p>
+            <p><Knopf Art="KnopfArt.Outline" Href="@($"freizeiten/{FreizeitId}/notfallordner")" Ansichtswechsel="true" Deaktiviert="@_offline">Notfallordner drucken</Knopf></p>
         }
     }
     <p><a href="@($"freizeiten/{FreizeitId}")">Zurück zur Freizeit</a></p>
@@ -91,6 +119,9 @@ else
     private FreizeitAntwort? _freizeit;
     private ApiKette? _kette;
     private List<PersonenlisteZeile>? _personen;
+    private List<NotfallkartePerson>? _karte;
+    private bool _offline;
+    private bool _nichtGespeichert;
     private bool _nichtVerfuegbar;
     private bool _aktionFehler;
     private bool _darfPaesse;
@@ -110,9 +141,18 @@ else
         _freizeit = null;
         _kette = null;
         _personen = null;
+        _karte = null;
+        _offline = false;
+        _nichtGespeichert = false;
         _nichtVerfuegbar = false;
         _aktionFehler = false;
         _darfPaesse = false;
+        if (Verbindung.Offline)
+        {
+            await AusDemSpeicherAsync();
+            return;
+        }
+
         try
         {
             var kontext = Kontext.LadenAsync(FreizeitId);
@@ -129,11 +169,33 @@ else
             (_freizeit, _kette, _personen) = (freizeit.Result, kette.Result, personen.Result);
             _darfPaesse = FreizeitKontextDienst.Darf(kontext.Result, Aktionsschluessel.FreizeitpaesseSehen);
         }
+        catch (Exception fehler) when (OfflineAbgleich.IstNetzfehler(fehler))
+        {
+            // Story 6-5: kein Netz, dann eben der Stand auf dem Gerät.
+            await AusDemSpeicherAsync();
+        }
         catch (Exception fehler) when (AnmeldungAbschluss.IstAktionsfehler(fehler))
         {
-            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (offline, 5xx) die Meldung statt „Wird geladen …“.
+            // 401 führt der Sitzungs-Handler zur Anmeldung; sonst (5xx) die Meldung statt „Wird geladen …“.
             _aktionFehler = true;
         }
+    }
+
+    /// <summary>Story 6-5: Freizeit, Kette und Notfallkarte aus dem Offline-Speicher; ohne Freizeit oder Kette „Auf diesem Gerät nicht gespeichert.“.</summary>
+    private async Task AusDemSpeicherAsync()
+    {
+        _offline = true;
+        var freizeit = await Speicher.FreizeitLesenAsync(FreizeitId);
+        var kette = freizeit is null ? null : await Speicher.SicherheitsketteLesenAsync(FreizeitId);
+        if (freizeit is null || kette is null)
+        {
+            _nichtGespeichert = true;
+            return;
+        }
+
+        (_freizeit, _kette) = (freizeit.Freizeit, kette);
+        _karte = await Speicher.NotfallkarteLesenAsync(FreizeitId);
+        _darfPaesse = FreizeitKontextDienst.Darf(freizeit.Kontext, Aktionsschluessel.FreizeitpaesseSehen);
     }
 
     /// <summary>Die Personenliste für die Suche; scheitert der Abruf, entfällt nur die Suche.</summary>

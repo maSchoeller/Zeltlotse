@@ -1,0 +1,67 @@
+@page "/freizeiten/{FreizeitId:guid}/notfallkarte/{PersonId:guid}"
+@attribute [OfflineNutzbar]
+@using Zeltlotse.Api.Contracts.Personen
+@inject OfflineSpeicher Speicher
+@* Story 6-5: Notfallkarte einer Person (FR-65, AD-18), offline lesbar. Liest immer aus dem Offline-Speicher (Abgleich in Phase „läuft“): Dachzeile
+   „Notfall“, Überschrift „Notfallkarte“, der Name und die vier Angaben Allergien, Medikamente, Krankheiten und Notfallkontakte (unbeantwortet
+   oder nicht abgefragt „keine Angabe“), offen und ohne Aufklapp. Darunter die Links „Vorfall-Protokoll“ und „Zurück zur Sicherheitskette“. Ist die
+   Person nicht gespeichert: „Auf diesem Gerät nicht gespeichert.“ *@
+<PageTitle>Notfallkarte – Zeltlotse</PageTitle>
+
+<Dachzeile>Notfall</Dachzeile>
+<h1>Notfallkarte</h1>
+@if (!_geladen)
+{
+    <Ladezustand />
+}
+else if (_person is null)
+{
+    <Meldung Titel="Hinweis">
+        <p>@OfflineSpeicher.NichtGespeichertText</p>
+        <p>Offline gilt der ausgedruckte Notfallordner.</p>
+    </Meldung>
+    <p><TelefonLink Nummer="112" Text="Notruf 112" /></p>
+}
+else
+{
+    <p>@Anzeige.Name(_person.Vorname, _person.Nachname)</p>
+    <Card Titel="Notfallangaben">
+        <DetailsListe Eintraege="Angaben" />
+    </Card>
+    <p><a href="@($"freizeiten/{FreizeitId}/vorfall/{PersonId}")">Vorfall-Protokoll</a></p>
+}
+<p><a href="@($"freizeiten/{FreizeitId}/notfall")">Zurück zur Sicherheitskette</a></p>
+
+@code {
+    /// <summary>Text einer Angabe, die fehlt (unbeantwortet oder von der Freizeit nicht abgefragt).</summary>
+    public const string KeineAngabe = "keine Angabe";
+
+    /// <summary>Die vier Angaben in fester Reihenfolge: Kennung der Frage und Beschriftung.</summary>
+    private static readonly (string Kennung, string Label)[] Felder =
+    [
+        ("allergien", "Allergien"),
+        ("medikamente", "Medikamente"),
+        ("krankheiten", "Krankheiten"),
+        ("notfallkontakte", "Notfallkontakte"),
+    ];
+
+    private NotfallkartePerson? _person;
+    private bool _geladen;
+
+    [Parameter] public Guid FreizeitId { get; set; }
+
+    [Parameter] public Guid PersonId { get; set; }
+
+    private IReadOnlyList<DetailsEintrag> Angaben =>
+    [
+        .. Felder.Select(f => new DetailsEintrag(
+            f.Label, _person!.Fragen.FirstOrDefault(q => q.Kennung == f.Kennung) is { } frage ? Anzeige.Antwort(frage) : KeineAngabe)),
+    ];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _geladen = false;
+        _person = (await Speicher.NotfallkarteLesenAsync(FreizeitId))?.FirstOrDefault(p => p.PersonId == PersonId);
+        _geladen = true;
+    }
+}

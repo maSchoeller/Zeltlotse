@@ -23,7 +23,16 @@ public enum VorfallArt
 /// <param name="Id">Kennung des Eintrags (UUID v7 vom Gerät).</param>
 /// <param name="PersonId">Die betroffene Person; mit ihrem Schlüssel wird der Text verschlüsselt (AD-14).</param>
 /// <param name="Text">Höchstens <see cref="VorfallFelder.TextMaximaleLaenge"/> Zeichen; wird getrimmt.</param>
-public sealed record VorfallEintragNeu(Guid Id, Guid PersonId, VorfallArt Art, string? Text);
+/// <param name="ErfasstAm">
+/// Story 6-5: Wann das Gerät den Eintrag geschrieben hat (offline geschriebene Einträge kommen später an). Der Server übernimmt
+/// <c>min(erfasstAm, jetzt)</c>; ohne Angabe gilt die Serverzeit.
+/// </param>
+public sealed record VorfallEintragNeu(
+    Guid Id,
+    Guid PersonId,
+    VorfallArt Art,
+    string? Text,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] DateTimeOffset? ErfasstAm = null);
 
 /// <summary>
 /// Story 2-10: Ein Eintrag im Vorfall-Protokoll, wie Leitung, Team und (im Archiv) Org-Admins ihn lesen. Bei gelöschten Personen ist der
@@ -57,6 +66,9 @@ public static class VorfallFelder
     public const string Art = "art";
 
     public const string Text = "text";
+
+    /// <summary>Story 6-5: Gerätezeit des Eintrags.</summary>
+    public const string ErfasstAm = "erfasstAm";
 
     public const int TextMaximaleLaenge = 2000;
 }

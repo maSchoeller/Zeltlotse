@@ -28,8 +28,14 @@ public enum VorfallAnlegenErgebnis
     /// <summary><c>409 freizeit-abgeschlossen</c>: Die Freizeit ist nur noch lesbar.</summary>
     Abgeschlossen,
 
-    /// <summary>Jede andere Antwort, z. B. ein Feldfehler, ein Konflikt oder nicht (mehr) verfügbar.</summary>
+    /// <summary>Jede andere Antwort, z. B. ein Serverfehler (<c>5xx</c>) oder die Zugriffsbegrenzung.</summary>
     Fehler,
+
+    /// <summary>Story 6-5: <c>403</c>/<c>404</c>: Die Freizeit ist für diese Person nicht (mehr) verfügbar.</summary>
+    NichtVerfuegbar,
+
+    /// <summary>Story 6-5: <c>400</c> oder ein anderer <c>409</c> (z. B. Feldfehler, Kennung eines anderen Eintrags): Der Eintrag wird nie angenommen.</summary>
+    Abgelehnt,
 }
 
 /// <summary>
@@ -118,7 +124,8 @@ public sealed class SicherheitApiClient(HttpClient http)
 
     /// <summary>
     /// Story 2-10: <c>POST /api/freizeiten/{freizeitId}/sicherheit/vorfaelle</c>: gespeichert, abgeschlossene Freizeit
-    /// (<c>409 freizeit-abgeschlossen</c>) oder ein anderer Fehler.
+    /// (<c>409 freizeit-abgeschlossen</c>) oder ein anderer Fehler; Story 6-5 unterscheidet nicht verfügbar (<c>403</c>/<c>404</c>) und abgelehnt
+    /// (<c>400</c>, anderer <c>409</c>) für die Warteschlange offline geschriebener Einträge.
     /// </summary>
     public async Task<VorfallAnlegenErgebnis> VorfallAnlegenAsync(Guid freizeitId, VorfallEintragNeu eintrag, CancellationToken abbruch = default)
     {
@@ -128,9 +135,13 @@ public sealed class SicherheitApiClient(HttpClient http)
             return VorfallAnlegenErgebnis.Erfolg;
         }
 
-        return antwort.StatusCode == HttpStatusCode.Conflict && await CodeAsync(antwort, abbruch) == Problemcodes.FreizeitAbgeschlossen
-            ? VorfallAnlegenErgebnis.Abgeschlossen
-            : VorfallAnlegenErgebnis.Fehler;
+        return antwort.StatusCode switch
+        {
+            HttpStatusCode.Conflict when await CodeAsync(antwort, abbruch) == Problemcodes.FreizeitAbgeschlossen => VorfallAnlegenErgebnis.Abgeschlossen,
+            HttpStatusCode.Conflict or HttpStatusCode.BadRequest => VorfallAnlegenErgebnis.Abgelehnt,
+            HttpStatusCode.Forbidden or HttpStatusCode.NotFound => VorfallAnlegenErgebnis.NichtVerfuegbar,
+            _ => VorfallAnlegenErgebnis.Fehler,
+        };
     }
 
     /// <summary>Story 2-10: Pfad des Archivs der Vorfall-Notizen einer Organisation.</summary>

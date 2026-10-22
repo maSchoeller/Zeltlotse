@@ -4,10 +4,13 @@ namespace Zeltlotse.Ui.Tests;
 
 /// <summary>
 /// Nachgebildeter Browser: Online-Status, Zeitpunkt, Neu laden, Drucken und Datei speichern ohne JavaScript. Story 6-1: Push-Status, Abo des Browsers,
-/// Abonnieren (mit oder ohne Erlaubnis), Abmelden, eingehende Pushes und ans Ende scrollen.
+/// Abonnieren (mit oder ohne Erlaubnis), Abmelden, eingehende Pushes und ans Ende scrollen. Story 6-5: Offline-Speicher als Wörterbuch (im Klartext, nur
+/// im Test) mit Ablauf gegen die Test-Uhr.
 /// </summary>
-internal sealed class NachgebildeterBrowser : IBrowser
+internal sealed class NachgebildeterBrowser(TimeProvider? uhr = null) : IBrowser
 {
+    private readonly TimeProvider _uhr = uhr ?? TimeProvider.System;
+
     private Func<bool, Task>? _geaendert;
     private Func<Task>? _push;
 
@@ -158,6 +161,89 @@ internal sealed class NachgebildeterBrowser : IBrowser
     public ValueTask AnsEndeScrollenAsync(string elementId)
     {
         AnsEnde.Add(elementId);
+        return ValueTask.CompletedTask;
+    }
+
+    /// <summary>Story 6-5: Der Offline-Speicher: Schlüssel → Freizeit, Ablauf (UTC-Millisekunden) und Text.</summary>
+    public SortedDictionary<string, (Guid FreizeitId, long Ablauf, string Text)> Offline { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Story 6-5: Wie oft die ganze Offline-Datenbank gelöscht wurde.</summary>
+    public int OfflineAllesGeloescht { get; private set; }
+
+    /// <summary>Story 6-5: Wie oft <c>navigator.storage.persist()</c> angefragt wurde.</summary>
+    public int SpeicherGehalten { get; private set; }
+
+    private bool Abgelaufen(long ablauf) => ablauf <= _uhr.GetUtcNow().ToUnixTimeMilliseconds();
+
+    public ValueTask OfflineSchreibenAsync(string schluessel, Guid freizeitId, long ablaufMs, string text)
+    {
+        Offline[schluessel] = (freizeitId, ablaufMs, text);
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask<string?> OfflineLesenAsync(string schluessel)
+    {
+        if (!Offline.TryGetValue(schluessel, out var datensatz))
+        {
+            return ValueTask.FromResult<string?>(null);
+        }
+
+        if (Abgelaufen(datensatz.Ablauf))
+        {
+            Offline.Remove(schluessel);
+            return ValueTask.FromResult<string?>(null);
+        }
+
+        return ValueTask.FromResult<string?>(datensatz.Text);
+    }
+
+    public ValueTask<IReadOnlyList<OfflineDatensatz>> OfflineListeAsync(string praefix)
+    {
+        foreach (var abgelaufen in Offline.Where(d => d.Key.StartsWith(praefix, StringComparison.Ordinal) && Abgelaufen(d.Value.Ablauf)).Select(d => d.Key).ToList())
+        {
+            Offline.Remove(abgelaufen);
+        }
+
+        return ValueTask.FromResult<IReadOnlyList<OfflineDatensatz>>(
+            [.. Offline.Where(d => d.Key.StartsWith(praefix, StringComparison.Ordinal)).Select(d => new OfflineDatensatz(d.Key, d.Value.Text))]);
+    }
+
+    public ValueTask OfflineEntfernenAsync(string schluessel)
+    {
+        Offline.Remove(schluessel);
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OfflineFreizeitLoeschenAsync(Guid freizeitId)
+    {
+        foreach (var schluessel in Offline.Where(d => d.Value.FreizeitId == freizeitId).Select(d => d.Key).ToList())
+        {
+            Offline.Remove(schluessel);
+        }
+
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OfflineAllesLoeschenAsync()
+    {
+        Offline.Clear();
+        OfflineAllesGeloescht++;
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OfflineAufraeumenAsync()
+    {
+        foreach (var schluessel in Offline.Where(d => Abgelaufen(d.Value.Ablauf)).Select(d => d.Key).ToList())
+        {
+            Offline.Remove(schluessel);
+        }
+
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask SpeicherHaltenAsync()
+    {
+        SpeicherGehalten++;
         return ValueTask.CompletedTask;
     }
 

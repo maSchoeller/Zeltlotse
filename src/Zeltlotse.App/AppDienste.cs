@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Zeltlotse.App.Browser;
 using Zeltlotse.App.Features.Konten;
+using Zeltlotse.App.Offline;
 using Zeltlotse.App.Sitzung;
 using Zeltlotse.App.Verbindung;
 using Zeltlotse.Ui;
@@ -12,7 +13,8 @@ namespace Zeltlotse.App;
 public static class AppDienste
 {
     /// <summary>
-    /// Registriert Browser-Schnittstelle, Verbindungszustand, Versions-Hinweis, Sitzung und den Transport aller API-Clients:
+    /// Registriert Browser-Schnittstelle, Verbindungszustand, Versions-Hinweis, Sitzung, Offline-Speicher und -Abgleich (Story 6-5) und den
+    /// Transport aller API-Clients:
     /// Verbindungs-Handler → Versions-Handler → Sitzungs-Handler → Antiforgery-Handler → Browser (fetch, gleiche Adresse,
     /// mit dem HttpOnly-Sitzungs-Cookie).
     /// </summary>
@@ -50,6 +52,9 @@ public static class AppDienste
             Timeout = Timeout.InfiniteTimeSpan,
         });
         services.AddZeltlotseUi(sp => sp.GetRequiredService<HttpClient>());
+        // Story 6-5: Offline-Speicher (verschlüsselt in IndexedDB) und der Abgleich mit Warteschlange des Vorfall-Protokolls.
+        services.AddScoped<OfflineSpeicher>();
+        services.AddScoped<OfflineAbgleich>();
         return services;
     }
 }

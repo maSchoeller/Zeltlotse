@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Zeltlotse.App.Offline;
 using Zeltlotse.Ui.Transport;
 
 namespace Zeltlotse.App.Sitzung;
@@ -8,9 +9,10 @@ namespace Zeltlotse.App.Sitzung;
 /// nach der Anmeldung. Die Sitzung selbst ist nur das HttpOnly-Cookie; hier liegt kein Token im Browser-Speicher (kein
 /// globaler Zustandsspeicher, nur diese Werte im Speicher der laufenden App).
 /// Eine <c>401</c>-Antwort (über den <see cref="SitzungsHandler"/>) führt zur Seite „Anmelden“ und merkt sich die Seite,
-/// auf der sie kam, als Rückweg.
+/// auf der sie kam, als Rückweg. Story 6-5: Eine abgelaufene Sitzung löscht vorher die ganze Offline-Datenbank samt Schlüssel (die Daten sind an die
+/// Sitzung gebunden); ohne Offline-Speicher (Tests) entfällt das.
 /// </summary>
-public sealed class AppSitzung(NavigationManager navigation) : ISitzung
+public sealed class AppSitzung(NavigationManager navigation, OfflineSpeicher? offline = null) : ISitzung
 {
     /// <summary>Pfad der Seite „Anmelden“ relativ zur Basis <c>/app/</c>.</summary>
     public const string AnmeldenPfad = "anmelden";
@@ -60,11 +62,16 @@ public sealed class AppSitzung(NavigationManager navigation) : ISitzung
     }
 
     /// <summary>
-    /// Abgemeldet und, außer auf den Anmelde-Seiten selbst und (Story 6-4) im Teilnehmer-Zugang, weiter zur Seite „Anmelden“. Die aktuelle Seite wird der
+    /// Abgemeldet (Story 6-5: Offline-Daten gelöscht) und, außer auf den Anmelde-Seiten selbst und (Story 6-4) im Teilnehmer-Zugang, weiter zur Seite „Anmelden“. Die aktuelle Seite wird der
     /// Rückweg; nur Pfade innerhalb der Web-App, nie eine fremde Adresse.
     /// </summary>
-    public ValueTask AbgelaufenAsync()
+    public async ValueTask AbgelaufenAsync()
     {
+        if (offline is not null)
+        {
+            await offline.AllesLoeschenAsync();
+        }
+
         Zuruecksetzen();
         var pfad = navigation.ToBaseRelativePath(navigation.Uri);
         // Story 6-4: Der Teilnehmer-Zugang kennt keine Anmeldung; seine Seiten bleiben, wo sie sind.
@@ -73,8 +80,6 @@ public sealed class AppSitzung(NavigationManager navigation) : ISitzung
             _rueckweg = IstEigenerPfad(pfad) ? pfad : null;
             navigation.NavigateTo(AnmeldenPfad);
         }
-
-        return ValueTask.CompletedTask;
     }
 
     /// <summary>Story 6-4: eine Seite des Teilnehmer-Zugangs (<c>teilnehmer</c>, <c>teilnehmer/{token}</c>, mit oder ohne Abfrage).</summary>
