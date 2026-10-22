@@ -5,7 +5,7 @@ created: '2026-10-22'
 baseline_revision: '5db66e4ab05ac25d237bee25a443b9c23b1e46f6'
 status: 'done'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/specs/spec-zeltlotse/SPEC.md'
 warnings: ['oversized']
@@ -111,6 +111,49 @@ deferred: []
   - `[false]` `[reject]` Intent: Status im Bericht veraltet — Doppel der Blind-Zeile, dort behoben.
   - `[false]` `[reject]` Intent: Reihenfolge „Test zuerst“ im Diff nicht sichtbar — Prozesshinweis ohne Fehlwirkung; rot vor grün ist im Umsetzungsbericht belegt.
 
+### 2026-10-22 — Review pass (Folgedurchlauf)
+- verdicts: 39 findings — high 0, medium 0, low 28, false 9, maybe-false 2
+- findings:
+  - `[low]` `[reject]` Blind: Übersichtstabelle und Summe werden nicht gegen die Abschnitte geprüft — carried: stimmen überein; ein Tabellen-Parser wäre zusätzliche Logik für ein einmaliges Dokument.
+  - `[low]` `[reject]` Blind: Methodenprüfung akzeptiert auskommentierte Deklaration, Helfer ohne `[Fact]` und `Skip` — carried: Umbenennen und Löschen aus AC3 deckt die Deklarationsprüfung ab; Attribut-Analyse wäre Zusatzlogik, `Skip` kommt im Repo nicht vor.
+  - `[low]` `[reject]` Blind: nicht lesbare Story-Dateien fallen still heraus, `status:` aus dem Text — carried: alle 44 Dateien haben Präfix und Frontmatter-Status.
+  - `[low]` `[reject]` Blind: Satz „Die übrigen 43 Stories sind done“ ist ungeprüft — stimmt heute; eine Zählprüfung aller Stände wäre zusätzliche Logik, die Intent fordert nur die blocked-Liste.
+  - `[false]` `[reject]` Blind: CAP-14 „unbesetzte Aufgaben“ auf der falschen Seite belegt — `AufgabenSeitenTests.StartRendern` rendert `FreizeitStart`, also das Cockpit.
+  - `[false]` `[reject]` Blind: CAP-17 Löschung der archivierten Notiz nicht belegt — das Archiv sind die Einträge im Modul Sicherheit mit Archiv-Zeitpunkt; `SicherheitLoeschlauf` löscht alle Einträge der abgelaufenen Freizeit per `FreizeitId`, archivierte eingeschlossen; die Frist je Organisation zeigt `LoeschlaufTests`.
+  - `[false]` `[reject]` Blind: CAP-15 Einschränkung „bestätigt, soweit freigegeben“ fehlt in der Begründung — Teilnehmende sind bestätigte Anmeldungen, „freigegeben“ ist das Freigabefenster laut Glossar; das ist der Vertrag, keine Lücke.
+  - `[false]` `[reject]` Blind: CAP-4 Ablauf nicht aus dem Ausstellungsdatum — der Test rechnet Ausstellung 2025-11-03 plus 12 Monate Richtlinie auf 2026-11-03.
+  - `[maybe-false]` `[reject]` Blind: CAP-26 „erscheint nirgends“ nur über die Startseite belegt — es gibt genau drei schaltbare Module (`ModulFeld`), je eins mit UI- und Server-Test; ob ein Modul an weiteren Stellen auftaucht, klärte nur eine Suche über alle Seiten; wäre höchstens low.
+  - `[false]` `[reject]` Blind: CAP-34 Beschreibung „neuer Haken, neuer Vermerk“ widerspricht dem Test — der Test endet mit einem neuen Haken durch Miriam (`BeitraegeTests.cs:146-147`).
+  - `[maybe-false]` `[reject]` Blind: CAP-8 Wiederanmeldung mit Konto ungetestet — ob `Mit_Konto_meldet_…` das gespeicherte Profil nutzt, klärte nur das Lesen des Tests; das Urteil ist schon teilweise, wäre höchstens low.
+  - `[low]` `[reject]` Blind: Bericht nennt keine Testergebnisse — Zahlen hängen vom Lauf ab und stehen im Auto Run Result der Story; im Bericht wären sie sofort veraltet.
+  - `[low]` `[reject]` Blind: „Offene Punkte“ werden nicht gegen Urteile und `deferred` geprüft — Freitext; die Story verbietet einen Parser für Freitext.
+  - `[low]` `[reject]` Blind: erledigte `deferred`-Einträge anderer Stories bleiben stehen — carried: `deferred` ist nur anfügbar; der Bericht vermerkt die Erledigung.
+  - `[low]` `[reject]` Blind: Backticks in der Begründung (z. B. CAP-13) ungeprüft — gewollt: geprüft wird laut Design Notes nur `**Belege:**`; eine zweite Prüfstelle wäre Zusatzlogik.
+  - `[low]` `[reject]` Blind: „erfüllt braucht Screenshot und Doku“ nicht maschinell geprüft — carried: `DokuRegeln` prüft Seiten und Bildpaare je CAP.
+  - `[low]` `[patch]` Blind: „AD-25“ ohne Erklärung, Zugriffsbegrenzung mehrfach — AD-25 im 6-4-Eintrag als Architekturregel „Web-Sicherheit“ erklärt; die Einträge bleiben je Story getrennt, weil der Abschnitt je Story-Id einen Satz verlangt.
+  - `[low]` `[reject]` Blind: `Enthaelt` liest Dateien mehrfach — der ganze Architekturtest-Lauf dauert 17 s; ein Cache wäre Zusatzlogik ohne spürbaren Nutzen.
+  - `[low]` `[reject]` Blind: `Existiert` erlaubt `../`-Pfade außerhalb des Repos — die Datei müsste trotzdem existieren und der Bericht liegt im Repo; der Schutz wäre ein zusätzlicher Wächter für einen nicht vorkommenden Fall.
+  - `[low]` `[reject]` Edge: auskommentierte Deklaration oder Helfer zählt als Test — carried, wie die Blind-Zeile oben.
+  - `[low]` `[reject]` Edge: `**Urteil:**` oder `**Erfolgskriterium:**` doppelt im Abschnitt — kommt nicht vor; Zusatzzweig.
+  - `[low]` `[reject]` Edge: zweiter `**Belege:**`-Block oder eingerückte Punkte ungeprüft — das Format ist in den Design Notes fest einzeilig; Zusatzlogik für einen nicht vorkommenden Fall.
+  - `[low]` `[reject]` Edge: Tabelle und Summe — carried, wie die Blind-Zeile oben.
+  - `[low]` `[reject]` Edge: Dateiname ohne Präfix oder `Blocked` groß — carried.
+  - `[low]` `[reject]` Edge: `status:` aus dem Text statt der Frontmatter — carried.
+  - `[low]` `[patch]` Edge: blocked-Zeile ohne Grund zählt als berichtet — `BlockedZeile` verlangt jetzt `– Grund`; Negativ-Test `Negativ_blocked_Story_ohne_Grund_gilt_als_nicht_berichtet` (erst rot, dann grün).
+  - `[low]` `[reject]` Edge: blocked-Stories vorhanden und zusätzlich „Keine.“ — carried.
+  - `[low]` `[reject]` Edge: `../`-Pfad außerhalb des Repos — wie die Blind-Zeile oben.
+  - `[low]` `[reject]` Edge: CAP-Nummer jenseits von `int` — scheitert laut mit Ausnahme (rot); kommt nicht vor.
+  - `[low]` `[reject]` Edge: umbrochene success-Zeile in SPEC.md — carried.
+  - `[low]` `[patch]` Edge (Claim): fehlt die ganze Testdatei, nennt die Meldung die Methode nicht (AC3) — Meldung nennt jetzt den ganzen Beleg `pfad::Methode`; `Negativ_fehlende_Beleg_Datei_wird_erkannt` erwartet das (erst rot, dann grün).
+  - `[false]` `[reject]` Edge (Claim): Begründungen länger als ein Satz — carried.
+  - `[low]` `[reject]` Intent: Methodenprüfung nur auf Existenz, nicht auf Test-Rolle — carried, wie die Blind-Zeile oben.
+  - `[low]` `[reject]` Intent: erfüllt-Regel (Screenshot, Doku, alle Teile) nicht maschinell — carried.
+  - `[false]` `[reject]` Intent: Begründung und offen nur auf Vorhandensein geprüft — genau das verlangt die I/O-Matrix; die Story verbietet einen Freitext-Parser.
+  - `[low]` `[patch]` Intent: Urteilsregel des Berichts nennt zusätzlich Architekturtests — carried: im ersten Durchlauf bewusst aufgenommen.
+  - `[false]` `[reject]` Intent: Teile von CAP-40 (Doku-Build, aktueller Stand) ruhen auf Text — CAP-40 ist deshalb teilweise und die Begründung sagt es.
+  - `[low]` `[reject]` Intent: Prüfung sieht nur `blocked`, „43 done“ ist ungeprüfter Text — wie die Blind-Zeile „43 Stories“ oben.
+  - `[false]` `[reject]` Intent: SPEC-Seite auf 40 CAPs festgelegt — beschreibend, laut Design Notes gewollt.
+
 ## Design Notes
 
 **Format je Capability** (fest, damit die Regel ohne Speziallogik prüfen kann):
@@ -169,3 +212,23 @@ Status: done
 - Die vom E2E-Lauf neu geschriebenen Screenshots enthielten nur Rendering-Rauschen und wurden zurückgesetzt.
 
 **Restrisiken:** Der Bericht wird rot, sobald SPEC.md ein Kriterium ändert oder ein zitierter Test umbenannt wird (gewollt). Übersichtstabelle und Summe sind nicht maschinell gegen die Abschnitte geprüft. Der Komplettlauf ist auf diesem Rechner nur mit Wiederholungen grün.
+
+### Folgedurchlauf 2026-10-22
+
+**Umgesetzt:** Drei kleine Korrekturen aus dem Folge-Review, testgetrieben (Tests zuerst rot, dann grün): Eine Zeile im Abschnitt „Stories mit Status blocked“ zählt nur mit Grund (`` - `x-y` – Grund ``); fehlt eine ganze Testdatei, nennt die Meldung den Beleg samt Methode; „AD-25“ im Bericht ist in Klartext erklärt.
+
+**Dateien:**
+- `tests/Zeltlotse.ArchitectureTests/AbnahmeRegeln.cs` – `BlockedZeile` verlangt einen Grund; Meldung „Beleg … fehlt“ nennt den ganzen Beleg.
+- `tests/Zeltlotse.ArchitectureTests/AbnahmeTests.cs` – neuer Negativ-Test für blocked ohne Grund, angepasste Erwartung bei fehlender Datei.
+- `_bmad-output/specs/spec-zeltlotse/abnahmebericht.md` – AD-25 erklärt.
+
+**Review:** 39 Befunde (high 0, medium 0, low 28, false 9, maybe-false 2). Korrigiert: 3 mit Verdikt low. Nichts zurückgestellt. Abgelehnt: alle übrigen mit Begründung im Triage-Log; die inhaltlichen Einwände zu CAP-4, CAP-14, CAP-15, CAP-17 und CAP-34 sind am Test widerlegt, die zu CAP-8 und CAP-26 sind ungeklärt, aber höchstens low.
+
+**Folge-Review empfohlen:** nein – kein high korrigiert (0 high, 0 medium, 3 low); die Arbeit ist konvergiert.
+
+**Verifikation:**
+- `dotnet test --project tests/Zeltlotse.ArchitectureTests --filter-class "*AbnahmeTests"`: vor der Korrektur 2 von 26 rot (genau die neuen Erwartungen).
+- `dotnet test --project tests/Zeltlotse.ArchitectureTests`: 180/180 grün.
+- Kein Komplettlauf der Lösung und kein `npm run build`: geändert sind nur das Architekturtest-Projekt und der Bericht, kein App-, API- oder Doku-Code; das Architekturtest-Projekt lief vollständig.
+
+**Restrisiken:** Unverändert zum ersten Durchlauf: Ob jedes erfüllt-Urteil jeden Teil seines Kriteriums abdeckt, sichert nur das Lesen der zitierten Tests. Die AD-30-Pflichtfälle aus dem Hinweis des Aufrufers haben in dieser Story keinen Gegenstand (kein Endpunkt).

@@ -140,7 +140,7 @@ internal static partial class AbnahmeRegeln
             var pfad = trenner < 0 ? beleg : beleg[..trenner];
             if (!existiert(pfad))
             {
-                yield return $"CAP-{nummer}: Beleg {pfad} fehlt.";
+                yield return $"CAP-{nummer}: Beleg {beleg} fehlt.";
             }
             else if (trenner >= 0)
             {
@@ -230,7 +230,7 @@ internal static partial class AbnahmeRegeln
     [GeneratedRegex(@"`([^`]+)`")]
     private static partial Regex Backticks();
 
-    [GeneratedRegex(@"^- `([^`]+)`")]
+    [GeneratedRegex(@"^- `([^`]+)` – \S")]
     private static partial Regex BlockedZeile();
 
     [GeneratedRegex(@"^(\d+-\d+)-")]

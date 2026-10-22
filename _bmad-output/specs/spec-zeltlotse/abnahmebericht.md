@@ -779,7 +779,7 @@ Zur gemeinsamen Zugriffsbegrenzung je IP-Adresse (`0-2`, `1-1`, `2-1`, `6-4`): N
 - `6-1` – Nach einem Wechsel des Push-Schlüssels (VAPID) bleiben bestehende Abos stumm und werden nie abgeräumt.
 - `6-1` – Push-Abos bleiben nach Verlassen des Teams bis zur Org-Frist gespeichert (nach Abschluss räumt 6-4 sie inzwischen ab).
 - `6-3` – Dass das Kästchen nach einem gescheiterten Tipp wieder den Stand des Servers zeigt, prüft kein Test (schränkt CAP-37 ein).
-- `6-4` – Die Zugriffsbegrenzung ist ein gemeinsames Budget je IP für alle begrenzten Routen; eine Scan-Welle im Lager-WLAN kann die Anmeldung der Leitung bis zu einer Minute sperren (schränkt CAP-38 ein, Entscheidung zu AD-25 nötig).
+- `6-4` – Die Zugriffsbegrenzung ist ein gemeinsames Budget je IP für alle begrenzten Routen; eine Scan-Welle im Lager-WLAN kann die Anmeldung der Leitung bis zu einer Minute sperren (schränkt CAP-38 ein; nötig ist eine Entscheidung zur Architekturregel AD-25 „Web-Sicherheit“, die die Zugriffsbegrenzung festlegt).
 - `6-4` – Auf dem iPhone fehlt der Web-App vom Home-Bildschirm vielleicht das Gast-Cookie aus Safari; nur am echten Gerät klärbar (schränkt CAP-38 ein).
 
 Erledigt, aber in der Story noch als zurückgestellt eingetragen: `2-10` (das Archiv bleibt leer, bis eine Freizeit abgeschlossen wird – seit 3-8 belegt durch den Abschluss-Test bei CAP-17), `3-4` (Anschaffungswünsche nur im Leer-Zustand – seit 3-8 zeigt der Screenshot-Test eine gefüllte Liste), `1-1`/`1-2`/`1-3` (abgelaufene Login-Anfragen und Einladungen werden seit 1-7 vom Löschlauf entfernt). Die übrigen zurückgestellten Befunde (`0-1`, `0-3`, `3-3`, `3-8` Demo-Team, `6-4` QR-Fehlerzweige) betreffen Testabdeckung oder Demo-Daten, nicht das Verhalten für Anwender.

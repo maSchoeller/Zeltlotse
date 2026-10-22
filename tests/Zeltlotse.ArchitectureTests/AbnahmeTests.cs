@@ -137,7 +137,7 @@ public sealed class AbnahmeTests
     {
         var bericht = Bericht(Abschnitt(1, belege: "- Test: `tests/A.cs::Zeigt_etwas` – ok\n- Doku: `pfad/x.md`\n- Test: `tests/Weg.cs::Zeigt_etwas`"));
 
-        Assert.Equal(["CAP-1: Beleg pfad/x.md fehlt.", "CAP-1: Beleg tests/Weg.cs fehlt."], Pruefe(bericht));
+        Assert.Equal(["CAP-1: Beleg pfad/x.md fehlt.", "CAP-1: Beleg tests/Weg.cs::Zeigt_etwas fehlt."], Pruefe(bericht));
     }
 
     [Fact]
@@ -188,6 +188,14 @@ public sealed class AbnahmeTests
         var bericht = Bericht(Abschnitt(1), blocked: "## Stories mit Status blocked\n\n- `3-4` – wartet auf Entscheidung.\n");
 
         Assert.Equal(["Story 2-2: Status blocked nicht berichtet."], Pruefe(bericht, "2-2", "3-4"));
+    }
+
+    [Fact]
+    public void Negativ_blocked_Story_ohne_Grund_gilt_als_nicht_berichtet()
+    {
+        var bericht = Bericht(Abschnitt(1), blocked: "## Stories mit Status blocked\n\n- `3-4`\n- `2-2` – \n");
+
+        Assert.Equal(["Story 2-2: Status blocked nicht berichtet.", "Story 3-4: Status blocked nicht berichtet."], Pruefe(bericht, "2-2", "3-4"));
     }
 
     [Fact]
