@@ -769,6 +769,27 @@ public sealed class OfflineModusTests : BunitContext
     }
 
     [Fact]
+    public async Task Tagesansicht_online_geladen_dann_Tageswechsel_mit_Netzfehler_kommt_aus_dem_Speicher()
+    {
+        await GespeichertAsync();
+        Laufend(Freizeit);
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"freizeiten/{Freizeit}/kueche/tagesansicht?tag=2027-08-03");
+        var cut = Render<TagesansichtSeite>(ps => ps.Add(p => p.FreizeitId, Freizeit));
+        cut.WaitForAssertion(() => Assert.Contains("Frühstück 03.08.", cut.Markup, StringComparison.Ordinal));
+        Assert.Contains(_server.Anfragen, a => a.Pfad.StartsWith(Pfad(Freizeit, "/kueche/tagesansicht"), StringComparison.Ordinal));
+        Assert.False(cut.Find($"#restetag-{Fruehstueck}").HasAttribute("disabled"));
+
+        // Das Netz bricht weg, ohne dass der Browser es meldet: Der Wechsel des Tages lädt nur den Tag nach und fällt auf den Speicher zurück.
+        _server.Bei(r => r.RequestUri!.AbsolutePath == Pfad(Freizeit, "/kueche/tagesansicht"), Netzfehler);
+        navigation.NavigateTo($"freizeiten/{Freizeit}/kueche/tagesansicht?tag=2027-08-04");
+
+        cut.WaitForAssertion(() => Assert.Contains("Frühstück 04.08.", cut.Markup, StringComparison.Ordinal));
+        Assert.True(cut.Find($"#restetag-{Fruehstueck}").HasAttribute("disabled"));
+        Assert.DoesNotContain(AnmeldungAbschluss.FehlerText, cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Vorfall_Laden_mit_Netzfehler_zeigt_die_Felder_aus_dem_Speicher_mit_dem_Offline_Satz()
     {
         await GespeichertAsync();

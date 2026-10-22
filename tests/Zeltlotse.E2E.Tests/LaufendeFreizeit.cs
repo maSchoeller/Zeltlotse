@@ -171,6 +171,41 @@ internal sealed class LaufendeFreizeit(VeroeffentlichterHost host)
         Assert.Fail("Der Offline-Abgleich hat die Freizeit nicht gespeichert.");
     }
 
+    /// <summary>
+    /// Legt über das Modul der Web-App eine zweite, nicht gelistete Freizeit an: Kopf und Notfallkarte als Kopie der eigenen (Kennung ersetzt) und einen
+    /// wartenden Vorfall-Eintrag. Argumente: eigene Freizeit-Kennung, fremde Freizeit-Kennung, Kennung des Eintrags.
+    /// </summary>
+    public const string FremdeFreizeitAnlegenJs =
+        """
+        async ([eigen, fremd, eintrag]) => {
+            const m = await import(new URL('js/zeltlotse.js', document.baseURI).href);
+            const ablauf = Date.now() + 3 * 24 * 60 * 60 * 1000;
+            const kopf = (await m.offlineLesen(eigen + '/freizeit')).split(eigen).join(fremd);
+            const karte = await m.offlineLesen(eigen + '/notfallkarte');
+            await m.offlineSchreiben(fremd + '/freizeit', fremd, ablauf, kopf);
+            await m.offlineSchreiben(fremd + '/notfallkarte', fremd, ablauf, karte);
+            await m.offlineSchreiben('vorfall/' + fremd + '/' + eintrag, fremd, ablauf,
+                JSON.stringify({ id: eintrag, personId: crypto.randomUUID(), art: 1, text: 'Probe einer fremden Freizeit' }));
+        }
+        """;
+
+    /// <summary>Wartet, bis der Offline-Abgleich alle Datensätze der Freizeit <paramref name="freizeitId"/> gelöscht hat, auch die wartenden Einträge.</summary>
+    public static async Task OhneFreizeitAsync(IPage seite, Guid freizeitId)
+    {
+        var freizeit = freizeitId.ToString("D");
+        for (var versuch = 0; versuch < 120; versuch++)
+        {
+            if (!(await SchluesselAsync(seite)).Any(s => s.StartsWith(freizeit, StringComparison.Ordinal) || s.StartsWith($"vorfall/{freizeit}/", StringComparison.Ordinal)))
+            {
+                return;
+            }
+
+            await Task.Delay(500, TestContext.Current.CancellationToken);
+        }
+
+        Assert.Fail("Der Offline-Abgleich hat die nicht mehr gelistete Freizeit nicht gelöscht.");
+    }
+
     /// <summary>Die Schlüssel der Datensätze im Offline-Speicher der Seite.</summary>
     public static async Task<List<string>> SchluesselAsync(IPage seite) =>
         [.. (await seite.EvaluateAsync<JsonElement>(OfflineRohJs)).GetProperty("schluessel").EnumerateArray().Select(s => s.GetString()!)];

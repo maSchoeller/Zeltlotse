@@ -69,9 +69,9 @@ Damit Leitung und Team im Zeltlager auch ohne Netz handeln können, legt Zeltlot
 
 - **Was:** die Sicherheitskette, die Küchen-Tagesansichten (nur Anzahlen, ohne Namen) und die **Notfallkarte**: je Person nur Name, Allergien, Medikamente, Krankheiten und Notfallkontakte, soweit die Freizeit danach fragt und das Team den Freizeitpass sehen darf. Dazu kommen offline geschriebene Einträge des Vorfall-Protokolls, bis sie gesendet sind.
 - **Wann:** nur vom ersten bis zum letzten Tag der Freizeit und nur auf Geräten von Leitung und Team.
-- **Wie:** verschlüsselt im Speicher des Browsers, mit einem Schlüssel, der auf dem Gerät entsteht und sich nicht auslesen lässt. Der Zwischenspeicher der Web-App enthält nie Antworten des Servers.
+- **Wie:** verschlüsselt im Speicher des Browsers, mit einem Schlüssel, der auf dem Gerät entsteht, im Browser bleibt und sich aus Zeltlotse heraus nicht weitergeben lässt. Der Zwischenspeicher der Web-App enthält nie Antworten des Servers.
 - **Zugriffsprotokoll:** Jedes Laden der Notfallkarte steht im Zugriffsprotokoll der Person als „Notfallkarte aufs Gerät geladen“, mit der Person, die sie geladen hat, höchstens einmal am Tag.
-- **Löschen:** um Mitternacht nach dem letzten Tag der Freizeit, auch ohne Netz; beim Abmelden, beim Löschen des Kontos und wenn die Anmeldung abgelaufen ist; bei der nächsten Verbindung auch dann, wenn die Person nicht mehr zu Leitung oder Team gehört.
+- **Löschen:** nach dem letzten Tag der Freizeit: ab Mitternacht nicht mehr angezeigt und gelöscht, sobald die Web-App wieder geöffnet wird, auch ohne Netz; beim Abmelden, beim Löschen des Kontos und wenn die Anmeldung abgelaufen ist; bei der nächsten Verbindung auch dann, wenn die Person nicht mehr zu Leitung oder Team gehört.
 
 ## Programm
 

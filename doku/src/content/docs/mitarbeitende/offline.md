@@ -38,7 +38,7 @@ Ist auf dem Gerät nichts gespeichert, etwa weil die Web-App während der Freize
 
 ## Notfallkarte
 
-Ohne Netz findet die Suche **Betroffene Person suchen** die Personen der Freizeit wie gewohnt. Ein Tipp auf den Namen öffnet statt des Freizeitpasses die **Notfallkarte**. Sie zeigt nur die Angaben, die im Notfall zählen:
+Ohne Netz findet die Suche **Betroffene Person suchen** die Personen, deren Notfallkarte auf dem Gerät liegt (siehe unten). Ein Tipp auf den Namen öffnet statt des Freizeitpasses die **Notfallkarte**. Sie zeigt nur die Angaben, die im Notfall zählen:
 
 - Allergien,
 - Medikamente,
@@ -75,13 +75,13 @@ Die Tagesansicht zeigt ohne Netz jeden Tag der Freizeit mit Mahlzeiten, Gerichte
 
 ## Wann die Daten vom Gerät verschwinden
 
-Die Daten auf dem Gerät sind verschlüsselt. Der Schlüssel entsteht auf dem Gerät und lässt sich nicht auslesen. Gelöscht wird alles von selbst:
+Die Daten auf dem Gerät sind verschlüsselt. Der Schlüssel entsteht auf dem Gerät, bleibt im Browser und lässt sich aus Zeltlotse heraus nicht weitergeben. Gelöscht wird alles von selbst:
 
-- **nach der Freizeit:** um Mitternacht nach dem letzten Tag, auch ohne Netz,
+- **nach der Freizeit:** Ab Mitternacht nach dem letzten Tag zeigt Zeltlotse die Daten nicht mehr an und löscht sie, sobald die Web-App wieder geöffnet wird, auch ohne Netz,
 - **beim Abmelden** und beim Löschen des Kontos,
 - **wenn die Anmeldung abgelaufen ist,**
 - **wenn die Person nicht mehr zu Leitung oder Team der Freizeit gehört.** Das merkt das Gerät bei der nächsten Verbindung.
 
-Wartende Einträge des Vorfall-Protokolls werden dabei mit gelöscht. Wer ein Gerät weitergibt, meldet sich vorher ab.
+Wartende Einträge des Vorfall-Protokolls werden dabei mit gelöscht. Ein Eintrag, der bis Mitternacht nach dem letzten Tag nicht gesendet ist, geht deshalb verloren; vorher die Web-App einmal mit Netz öffnen. Wer ein Gerät weitergibt, meldet sich vorher ab.
 
 Dass die Notfallkarte einer Person auf ein Gerät geladen wurde, steht in ihrem Zugriffsprotokoll als „Notfallkarte aufs Gerät geladen“, höchstens einmal am Tag. Mehr dazu unter [Was passiert mit meinen Daten](/daten/#offline-auf-dem-gerät).

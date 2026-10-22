@@ -9,7 +9,7 @@ namespace Zeltlotse.E2E.Tests;
 /// (<see cref="LaufendeFreizeit"/>) wird online geöffnet; der Abgleich legt sie verschlüsselt in IndexedDB ab (kein Klartext, z. B. das Medikament nicht im
 /// Rohinhalt). Im Flugmodus lädt die App neu: Notfall-Box „Notfallhilfe öffnen“ zur Sicherheitskette, Suche nach dem Kind zur Notfallkarte mit den
 /// Notfallangaben, Küchen-Tagesansicht; andere Bereiche zeigen „Offline nicht verfügbar.“. Ein Vorfall-Eintrag offline wartet („1 Eintrag wartet auf
-/// Verbindung“), mit Verbindung steht er in der Liste vom Server. Mit der Browser-Uhr nach dem Freizeitende ist offline alles gelöscht; Abmelden leert
+/// Verbindung“), mit Verbindung steht er in der Liste vom Server. Eine nicht mehr gelistete Freizeit löscht der Abgleich samt wartender Einträge. Mit der Browser-Uhr nach dem Freizeitende ist offline alles gelöscht; Abmelden leert
 /// IndexedDB. Auf jeder Seite axe ohne Verstoß gegen WCAG 2.2 AA und keine CSP-Meldung.
 /// </summary>
 public sealed class OfflineModusTests(VeroeffentlichterHost host)
@@ -114,7 +114,17 @@ public sealed class OfflineModusTests(VeroeffentlichterHost host)
         Assert.Equal("Nora", eintrag.GetProperty("verfasserVorname").GetString());
         Assert.True(DateTimeOffset.UtcNow - eintrag.GetProperty("erfasstAm").GetDateTimeOffset() < TimeSpan.FromMinutes(10));
 
-        // 9. Browser-Uhr nach dem Freizeitende, offline neu geladen: Die Daten der Freizeit sind gelöscht.
+        // 9. Eine Freizeit, die nicht mehr laufend gelistet ist (hier eine fremde Kennung mit Kopf, Notfallkarte und wartendem Eintrag): Der nächste
+        // Abgleich löscht ihre Datensätze im echten Browser über die Freizeit-Kennung (offlineFreizeitLoeschen), die eigene Freizeit bleibt.
+        var fremd = Guid.NewGuid();
+        await seite.EvaluateAsync(LaufendeFreizeit.FremdeFreizeitAnlegenJs, new[] { id.ToString("D"), fremd.ToString("D"), Guid.CreateVersion7().ToString("D") });
+        Assert.Contains($"{fremd:D}/notfallkarte", await LaufendeFreizeit.SchluesselAsync(seite));
+        await seite.ReloadAsync();
+        await Assertions.Expect(seite.Locator("h1")).ToHaveTextAsync("Sicherheitskette", new() { Timeout = 60_000 });
+        await LaufendeFreizeit.OhneFreizeitAsync(seite, fremd);
+        Assert.Contains($"{id:D}/notfallkarte", await LaufendeFreizeit.SchluesselAsync(seite));
+
+        // 10. Browser-Uhr nach dem Freizeitende, offline neu geladen: Die Daten der Freizeit sind gelöscht.
         await freizeit.GespeichertAsync(seite);
         var ende = new DateTimeOffset(freizeit.LetzterTag.AddDays(2).ToDateTime(new TimeOnly(12, 0)), TimeSpan.Zero);
         await kontext.SetOfflineAsync(true);
@@ -125,7 +135,7 @@ public sealed class OfflineModusTests(VeroeffentlichterHost host)
         await Assertions.Expect(seite.Locator(".zl-notfall-box")).ToContainTextAsync("Offline gilt der ausgedruckte Notfallordner.");
         Assert.DoesNotContain(await LaufendeFreizeit.SchluesselAsync(seite), s => s.StartsWith(id.ToString("D"), StringComparison.Ordinal));
 
-        // 10. Abmelden leert IndexedDB (Datensätze und Geräte-Schlüssel).
+        // 11. Abmelden leert IndexedDB (Datensätze und Geräte-Schlüssel).
         await kontext.SetOfflineAsync(false);
         await seite.GotoAsync(new Uri(host.Adresse, "/app/konto").ToString());
         await seite.GetByRole(AriaRole.Button, new() { Name = "Abmelden" }).ClickAsync(new() { Timeout = 60_000 });

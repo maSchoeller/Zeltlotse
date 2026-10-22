@@ -5,7 +5,7 @@ created: '2026-10-21'
 baseline_revision: '8075fb37356293fccce646aa6563abfadc9ad036'
 status: 'done'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-Zeltlotse-2026-10-11/ARCHITECTURE-SPINE.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-Zeltlotse-2026-10-10/EXPERIENCE.md'
@@ -158,6 +158,45 @@ deferred: []
   - `[low]` `[reject]` Intent: Löschpfade (403/404, nicht mehr gelistet, 401) nur gegen nachgebildeten Browser — dieselben JS-Funktionen laufen im E2E-Test (Freizeit-Löschen über Ablauf, Alles-Löschen über Abmelden).
   - `[low]` `[patch]` Intent: Zusätzlicher Layout-Auslöser nicht eigens geprüft — gleiche Ursache wie der Verification-Gap-Befund zum Layout-Auslöser.
 
+### 2026-10-22 — Review pass (Folgedurchlauf)
+- verdicts: 35 findings — high 0, medium 6, low 27, false 2, maybe-false 0
+- findings:
+  - `[low]` `[reject]` Intent: Verschlüsselung, Ablaufgrenze und IV/AAD nur über einen E2E-Pfad im echten Browser — der E2E-Test prüft Rohinhalt ohne Klartext, einen Geräte-Schlüssel, Löschen nach Freizeitende und beim Abmelden; die Grenze 00:00 Berlin ist in C# (`Ablauf`) geprüft. Mehr Browser-Tests ohne benannten Fehler.
+  - `[false]` `[reject]` Intent: Kein Test „falsche Rolle 403“ für die Notfallkarte — Leitung und Team sind die einzigen Freizeit-Rollen und beide dürfen lesen; eine Rolle mit 403 gibt es nicht (Design Note „Falsche Rolle 403“).
+  - `[low]` `[reject]` Intent: Demo-Daten nicht erweitert — die Demo-Freizeit liegt 2027 und erreicht nie Phase *läuft*; die Screenshots bauen eine eigene laufende Freizeit über echte Endpunkte (Design Note „Nur Phase läuft“).
+  - `[false]` `[reject]` Intent: Doku-Build im Diff nicht belegt — `npm run build` lief in der ersten Sitzung und in diesem Durchlauf fehlerfrei (69 Seiten).
+  - `[low]` `[reject]` Intent: Protokolltext „aufs Gerät“ statt „auf Gerät“ — carried: gleiche Bedeutung; Tasks nennen „aufs Gerät geladen“.
+  - `[low]` `[reject]` Intent: Jede 409 (nicht nur `freizeit-abgeschlossen`) entfernt den Eintrag — jede 409 ist endgültig (z. B. Kennung einer anderen Freizeit); sonst bliebe der Eintrag ewig hängen (Design Note „Warteschlange und Fehler“).
+  - `[low]` `[reject]` Intent: 403/404 für einen einzelnen Tag löscht die ganze Freizeit — Intent: 403/404 „für eine Freizeit“ löscht deren Daten; der Abgleich fragt nur Tage zwischen erstem und letztem Tag ab, 404 kommt nur, wenn die Freizeit nicht mehr verfügbar ist.
+  - `[low]` `[reject]` Intent: Layout stößt den Abgleich auch ohne Sitzung (bei Gespeichertem) und nach dem Laden einer laufenden Freizeit an — ohne Sitzung antwortet die API mit 401 und die Daten werden gelöscht, wie verlangt; der Zusatz-Auslöser ist getestet.
+  - `[low]` `[reject]` Intent: Netzfehler bei `navigator.onLine` = true gilt als offline — so entworfen (Design Note: online gescheiterte Speicherung landet in der Warteschlange); im Zeltlager meldet der Browser schwaches Netz oft nicht.
+  - `[low]` `[reject]` Intent: Notfallkarte-Seite liest online nur aus dem Speicher — carried: so vom Task vorgegeben.
+  - `[low]` `[reject]` Intent: E2E prüft Kopf und Sicherheitskette nur indirekt — die Offline-Seiten, die daraus lesen, sind genau die Oberfläche, an der der Intent sie verlangt.
+  - `[low]` `[reject]` Intent: E2E kann Gerätezeit nicht von Serverzeit unterscheiden — carried: Senden per bUnit, Übernahme per HTTP-Test belegt.
+  - `[medium]` `[reject]` Blind: Offline geschriebene Einträge vom letzten Abend gehen um Mitternacht nach dem letzten Tag ungesendet verloren — Intent verlangt ausdrücklich: jeder Datensatz (auch die Warteschlange) trägt `ablauf` = Freizeitende und wird beim Start, vor jedem Lesen und bei jedem Abgleich gelöscht. Die Doku sagt das jetzt ausdrücklich (siehe Patch zur Doku).
+  - `[low]` `[reject]` Blind: Jedes Wiederverbinden startet einen vollen Abgleich ohne Drosselung — Intent nennt „wenn die Verbindung zurückkommt“ als Auslöser; das Protokoll gilt höchstens 1×/Tag; eine Drosselung wäre zusätzliche Logik.
+  - `[low]` `[reject]` Blind: Gescheiterte Schreibvorgänge im Abgleich unsichtbar, Notfall-Box meldet „gespeichert“ nach dem Kopf allein — carried: gleiche Stelle wie „Kopf wird vor der Kette geschrieben“; die Zielseite zeigt dann „nicht gespeichert“ mit Notfallordner-Satz und 112.
+  - `[low]` `[reject]` Blind: Offline-Seiten zeigen nicht, wie alt die Daten sind — nicht verlangt; der Abgleich läuft bei jedem Öffnen und Wiederverbinden; ein Stand-Zeitpunkt wäre eine neue Funktion.
+  - `[low]` `[patch]` Blind: Offline-Suche findet nur Personen mit Notfallkarte, Doku sagt „wie gewohnt“ — Satz in `offline.md` korrigiert („die Personen, deren Notfallkarte auf dem Gerät liegt“).
+  - `[low]` `[reject]` Blind: Suchfeld fehlt ohne gespeicherte Notfallkarte, ohne Erklärung — Leitung und Team haben beide `freizeitpaesse-sehen`; tritt nur bei gescheitertem Schreiben auf.
+  - `[medium]` `[patch]` Blind: Doku übertreibt Schlüssel („lässt sich nicht auslesen“) und Löschen („um Mitternacht, auch ohne Netz“) — `offline.md` und `daten.md` sagen jetzt: Schlüssel bleibt im Browser und lässt sich aus Zeltlotse heraus nicht weitergeben; ab Mitternacht nicht mehr angezeigt und beim nächsten Öffnen gelöscht; ungesendete Einträge gehen dabei verloren.
+  - `[low]` `[reject]` Blind: Abmelden meldet Erfolg, auch wenn das Löschen blockiert oder scheitert — bei `onblocked` löscht der Browser, sobald das andere Fenster schließt; `JSException` beim Löschen ist nicht gezeigt; ein Wiederholungs-Merker wäre zusätzliche Logik (Restrisiko bleibt vermerkt).
+  - `[low]` `[reject]` Blind: Die vier Fragen-Kennungen stehen doppelt (Server-Konstanten, Client-Literale) — die App darf `Personen.Contracts` nicht referenzieren; eine umbenannte Kennung bräche ohnehin alle gespeicherten Antworten; kein benannter Aufrufer, der abweicht.
+  - `[low]` `[reject]` Blind: Notfallkarte schreibt je Abgleich N Protokoll-Aufrufe — höchstens 1×/Tag gespeichert; reine Performance, gleiches Muster wie die abgelehnte Einzelabfrage je Person.
+  - `[low]` `[reject]` Blind: `erfasstAm` ohne Plausibilitätsprüfung — carried: Intent legt `min(erfasstAm, jetzt)` fest, keine Untergrenze.
+  - `[low]` `[reject]` Blind: Testlücken (Ablauf der Warteschlange, 401 beim Senden, teilweises Schreiben, blockiertes Löschen, geändertes Ende) — einzeln in den übrigen Zeilen behandelt; das Ablaufdatum wird bei jedem Schreiben aus dem frischen `LetzterTag` berechnet.
+  - `[medium]` `[reject]` Edge: 401 beim Senden der Warteschlange löscht wartende Einträge — carried: Intent verlangt, dass eine abgelaufene Sitzung die ganze Datenbank löscht.
+  - `[medium]` `[reject]` Edge: Eintrag vom letzten Tag läuft vor dem Senden ab — gleiche Ursache wie der Blind-Befund oben; vom Intent so festgelegt, Doku ergänzt.
+  - `[low]` `[reject]` Edge: Ein Eintrag mit dauerhaftem 5xx blockiert Warteschlange und Abgleich — carried: bewusst so getestet (`Serverfehler_beim_Senden_…`).
+  - `[low]` `[reject]` Edge: Abgelehnte Einträge (400/409) verschwinden ohne Hinweis — carried: Matrix schreibt Entfernen vor.
+  - `[low]` `[reject]` Edge: Während eines Abgleichs eingereihter Eintrag wird von `FreizeitLoeschenAsync` mit gelöscht — tritt nur auf, wenn die Freizeit nicht mehr verfügbar oder nicht mehr laufend gelistet ist, also genau dann, wenn der Intent wartende Einträge mit löschen lässt; dazu ein enges Zeitfenster.
+  - `[low]` `[reject]` Edge: 403/404 für einen Tag löscht die ganze Freizeit — gleiche Ursache und Begründung wie der Intent-Befund dazu.
+  - `[low]` `[reject]` Edge: `erfasstAm` weit in der Vergangenheit — carried: Intent legt die Regel fest.
+  - `[medium]` `[reject]` Edge (Claim): Akzeptanzkriterium „Leitung sieht offline geschriebene Einträge“ gilt nicht in allen Fällen (401, Ablauf, 400/409, Löschen während des Abgleichs) — jeder dieser Wege ist vom Intent vorgegeben (siehe die Zeilen oben); die Doku nennt sie jetzt.
+  - `[medium]` `[patch]` Verification Gap: `offlineFreizeitLoeschen` (Löschen je Freizeit über den Index) läuft nie im echten Browser — E2E-Schritt 9 ergänzt: eine fremde, nicht gelistete Freizeit mit Kopf, Notfallkarte und wartendem Eintrag wird beim nächsten Abgleich vollständig gelöscht, die eigene bleibt (`LaufendeFreizeit.FremdeFreizeitAnlegenJs`, `OhneFreizeitAsync`).
+  - `[low]` `[patch]` Verification Gap: Netzfehler beim Tageswechsel der Tagesansicht (online geladen) ungetestet — bUnit-Test `Tagesansicht_online_geladen_dann_Tageswechsel_mit_Netzfehler_kommt_aus_dem_Speicher` ergänzt.
+  - `[low]` `[reject]` Verification Gap (Other): Triage-Zeile „dieselben JS-Funktionen laufen im E2E-Test“ stimmt für das Löschen je Freizeit nicht — Korrektur wäre eine Änderung am Spec; die Lücke selbst ist mit E2E-Schritt 9 geschlossen.
+
 ## Design Notes
 
 - **Nur Phase *läuft*:** AD-18 legt das Ende fest, nicht den Beginn. Gesundheitsdaten sollen nicht länger als nötig auf Geräten liegen; Notfall-Box und „Notfall“ gibt es ebenfalls nur in *läuft* (EXPERIENCE.md). Folge: Doku-Screenshots brauchen eine eigens angelegte laufende Freizeit (Muster `NotfallTests`), weil die Demo-Freizeit 2027 liegt; die Demo-Daten bleiben unberührt, die Bilder zeigen möglichst keine Tagesdaten.
@@ -210,3 +249,30 @@ deferred: []
 - Wartende Einträge gehen bei einer abgelaufenen Sitzung (401) mit verloren; so vom Intent gewollt.
 - Der Löschpfad, der im Browser blockiert wird (zweites offenes Fenster), ist nicht eigens getestet.
 - Mehrere Tabs teilen den Generation-Schutz nicht.
+
+### Folgedurchlauf 2026-10-22
+
+**Zusammenfassung:** Frischer Review mit vier Layern über den ganzen Story-Diff seit `8075fb37356293fccce646aa6563abfadc9ad036`. Kein Produktionscode geändert; ergänzt wurden ein Browser-Test, ein bUnit-Test und genauere Doku-Sätze.
+
+**Geänderte Dateien:**
+- `tests/Zeltlotse.E2E.Tests/OfflineModusTests.cs`: neuer Schritt 9 prüft im echten Browser das Löschen einer nicht mehr gelisteten Freizeit samt wartendem Eintrag.
+- `tests/Zeltlotse.E2E.Tests/LaufendeFreizeit.cs`: Hilfen `FremdeFreizeitAnlegenJs` und `OhneFreizeitAsync`.
+- `tests/Zeltlotse.Ui.Tests/OfflineModusTests.cs`: Test für den Tageswechsel der Tagesansicht bei Netzfehler nach dem Online-Laden.
+- `doku/src/content/docs/mitarbeitende/offline.md`, `doku/src/content/docs/daten.md`: Suche offline, Schlüssel, Löschen nach Freizeitende und Verlust ungesendeter Einträge genau beschrieben.
+
+**Review:** 35 Befunde (high 0, medium 6, low 27, false 2).
+- Korrigiert (patch): medium 2 (E2E-Löschpfad, Doku zu Schlüssel und Löschen), low 2 (Doku-Satz zur Suche, bUnit-Test Tageswechsel).
+- Zurückgestellt: keine.
+- Abgelehnt: 31, jeweils mit Grund im Review Triage Log. Die wichtigsten: Verlust wartender Einträge bei 401 und nach Freizeitende sowie Entfernen bei 400/409 sind vom Intent so vorgegeben (jetzt in der Doku genannt); kein 403-Test, weil keine Freizeit-Rolle 403 bekommt; Demo-Daten bleiben, weil die Demo-Freizeit nie *läuft*.
+
+**Folge-Review empfohlen: nein.** In diesem Folgedurchlauf wurde kein `high` korrigiert. Das Risiko aus der ersten Runde (Löschpfade nur gegen den nachgebildeten Browser) ist für das Löschen je Freizeit jetzt im echten Browser belegt.
+
+**Verifikation:**
+- `dotnet test --project tests/Zeltlotse.Ui.Tests -- --filter-class "*OfflineModusTests"`: 44/44 grün.
+- `dotnet test --project tests/Zeltlotse.E2E.Tests -- --filter-class "*OfflineModusTests"`: 1/1 grün (echter Browser, 2:30 min).
+- `npm run build` in `doku/`: fehlerfrei (69 Seiten).
+- Kein Komplettlauf der Lösung: Kein Produktionscode wurde geändert, nur Tests und Doku; Screenshots unverändert.
+
+**Restrisiken:**
+- Vorfall-Einträge, die bis Mitternacht nach dem letzten Tag oder vor einer abgelaufenen Sitzung nicht gesendet sind, gehen verloren (Intent-Vorgabe, jetzt dokumentiert).
+- Ein blockiertes Löschen der Datenbank beim Abmelden (zweites Fenster offen) ist weiter nicht eigens getestet.
