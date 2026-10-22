@@ -2,7 +2,7 @@
 
 Gepflegt vom Orchestrator. Eine Zeile je Durchlauf, nur anhängen. Maßgeblich für den Stand einer Story ist der `status` in `stories/<id>-*.md`; dieses Protokoll ist der Überblick und der Wiedereinstieg nach einer Kontext-Verdichtung.
 
-Branch: `mvp` · Start: 2026-10-11 12:30 · Ende: –
+Branch: `mvp` · Start: 2026-10-11 12:30 · Ende: 2026-10-22 21:30
 
 Test-Tempo ab 2-3 (Vorgabe von Marvin, 2026-10-12): Story-Sitzungen testen während der Umsetzung nur gezielt (betroffenes Testprojekt + Architekturtests) und lassen die ganze Lösung inkl. Playwright und Doku-Build nur einmal am Ende laufen (Regel in `_bmad/custom/bmad-build-auto.toml`). Die Regression des Orchestrators nach jeder Story ist schnell (Build + Architektur- und UI-Tests); die volle Regression (ganze Lösung + Doku-Build) läuft am Ende jedes Epics und vor 7-1, denn jede Story-Sitzung lässt die ganze Suite zum Abschluss ohnehin einmal laufen.
 
@@ -59,10 +59,23 @@ Test-Tempo ab 2-3 (Vorgabe von Marvin, 2026-10-12): Story-Sitzungen testen währ
 | 2026-10-22 11:35 | 6-5 | unterbrochen (in-progress) | – | – | 191548b | Sitzung vom 21.10. 18:08 endete ohne Ergebnis (Rechner aus, Docker gestoppt) mitten in der Umsetzung (46 Dateien); Zwischenstand committet, Story neu gestartet |
 | 2026-10-22 16:30 | 6-5 | done (mit Folgedurchlauf) | ja (done, keiner mehr) | voll (Ende Epic 6, jedes Projekt einzeln): 3200/3200 grün in 15 Projekten (Api 1081, E2E 208, UI 934) / grün (69 Seiten) | 34bebeb | Nach Unterbrechung fortgesetzt. Wartende Offline-Einträge gehen bei 401/400/409/Freizeitende verloren (laut Spec, dokumentiert); Gerätedaten verschlüsselt in IndexedDB, Schlüssel im Browser; Notfallkarten-Abruf erscheint im Zugriffsprotokoll der Betroffenen (bei Abnahme bestätigen). 38 Screenshots mit Rendering-Rauschen zurückgesetzt |
 | 2026-10-22 19:40 | 7-1 | done (mit Folgedurchlauf) | ja (done, keiner mehr) | Build, Architektur 154/154, UI 934/934 grün / grün (70 Seiten) | 9e91723 | Danach Regression nach 7-1: Doku-Screenshots zeigten US-Uhrzeit/-Datum → Testbrowser mit --lang=de-DE, 15 Screenshots neu (E2E 207/208, 1 wackliger Login-Timeout einzeln grün). Rest: Datei-Knopf zeigt „Choose File“ (englisch, nur im Testbrowser). Capability-zu-Doku-Zuordnung wird von Hand gepflegt |
+| 2026-10-22 21:30 | 7-2 | done (mit Folgedurchlauf) | ja (done, keiner mehr) | Sitzung: alle Projekte grün (Wiederholungslauf), Architektur 180/180 nach Folgedurchlauf | d747432 | Abnahmebericht: 25 CAPs erfüllt, 15 teilweise, 0 offen. Lauf beendet: 44/44 Stories done, 0 übersprungen |
 
 ## Entscheidungen im Lauf
 
 Entscheidungen, die der Orchestrator bei blockierten Stories getroffen hat (nach den Leitprinzipien, ohne Rückfrage). Marvin prüft sie bei der Abnahme.
+
+Keine Story war blockiert; der Orchestrator musste keine fachliche Entscheidung treffen. Fachliche Entscheidungen der Story-Sitzungen stehen jeweils unter „Design Notes“ im Story-Spec. Ablauf-Entscheidungen des Orchestrators: Test-Tempo (gezielte Tests während der Umsetzung, volle Regression je Epic), Api.Tests beschleunigt (nur Testcode), Testbrowser mit deutscher UI-Sprache für die Screenshots, unterbrochene Sitzungen (Neustart, Pause, Wochenlimit) als Zwischenstand committet und fortgesetzt.
+
+### Bei der Abnahme bewusst prüfen (aus den Durchläufen gesammelt)
+
+- Notfallordner: API liefert bei direkten Aufrufen auch Pässe bestätigter Mitarbeitender (2-11).
+- QR-Zugang: gemeinsames Rate-Limit 20/min/IP im Lager-WLAN (AD-25); Gäste sehen alle Programmtitel und bis 200 alte Nachrichten; Wiedereinschalten aktiviert alten QR-Code (6-4).
+- Belege ohne eigene Aufbewahrungsfrist, fallen unter die normale Löschfrist (5-2).
+- Programmbibliothek: Freitext-Titel können Namen enthalten und überdauern die Löschfrist (3-6).
+- Notfallkarten-Abruf im Offline-Modus erscheint im Zugriffsprotokoll der Betroffenen (6-5).
+- Demo-Daten mit festen Terminen im Aug. 2027 brechen danach auf frischer DB ab (3-3, 3-8).
+- Echte Push-Zustellung und iPhone-Home-Bildschirm-App nur am echten Gerät prüfbar (6-1, 6-4).
 
 ## Übersprungene Stories
 
