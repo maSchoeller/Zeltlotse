@@ -5,6 +5,15 @@ description: Freigabe und Freigabefenster, Einsicht und Zugriffsprotokoll, Ausku
 
 Die Daten in Zeltlotse gehören der Person, nicht der Organisation und nicht der Freizeit. Eine Freizeit bekommt nur eine befristete Einsicht, und nur in das, was sie abgefragt hat. Diese Seite erklärt die Regeln, die für alle Organisationen gleich gelten.
 
+## Auf einen Blick
+
+- **Freigabe:** Mit der Anmeldung zu einer Freizeit sieht deren Leitung den Freizeitpass, das Team erst ab der Bestätigung der Anmeldung – und beide nur die Antworten auf die Fragen, die diese Freizeit abfragt. Eine Absage beendet die Freigabe sofort. Mehr unter [Freigabe](#freigabe-wer-den-freizeitpass-sieht).
+- **Freigabefenster:** Die Einsicht ist befristet. Sie endet einen festen Zeitraum nach dem letzten Freizeittag, ohne eigene Festlegung der Organisation nach 30 Tagen. Bei jeder Anmeldung steht, bis wann die Freizeit Einsicht hat. Mehr unter [Freigabefenster](#freigabefenster-wann-die-einsicht-endet).
+- **Einsicht und Zugriffsprotokoll:** Jeder Blick von Leitung oder Team in persönliche Angaben wird festgehalten. Im Zugriffsprotokoll sieht jede Person, wer wann ihre Daten angesehen hat, Eltern auch für ihre Kinder; dazu gibt es Auskunft und Export. Mehr unter [Einsicht und Zugriffsprotokoll](#einsicht-und-zugriffsprotokoll).
+- **Nachweise:** Führungszeugnis und andere Nachweise liegen nur am eigenen Profil. Eine Organisation bekommt nur eine einmalige Einsicht und speichert nur die Bestätigung, keine Datei. Mehr unter [Nachweise](#nachweise-nur-eine-einmalige-einsicht).
+- **Offline:** Damit im Notfall nichts am Netz hängt, liegen während der Freizeit wenige Angaben verschlüsselt auf den Geräten von Leitung und Team; nach der Freizeit werden sie gelöscht. Mehr unter [Offline auf dem Gerät](#offline-auf-dem-gerät).
+- **Löschen:** Das eigene Konto lässt sich jederzeit löschen; Profil, Nachweise und Zugriffsprotokoll sind dann sofort endgültig weg. Ist die Person der einzige Elternteil im Familienkonto, werden die Profile der Kinder mitgelöscht. Was sie bei anderen hinterlassen hat, etwa ihre Anmeldungen, bleibt ohne Namen stehen. Was eine Freizeit eine Zeit lang braucht, löscht Zeltlotse automatisch nach den Fristen der Organisation, Vorgabe 12 Monate. Gelöscht heißt endgültig gelöscht. Mehr unter [Löschen](#löschen).
+
 ## Vertrauensseite einer Freizeit
 
 Jede Freizeit hat neben ihrer Freizeitseite eine **Vertrauensseite**. Sie erklärt für genau diese Freizeit, welche Daten erhoben werden, wer sie sieht und wann sie verschwinden: mit dem Datum, an dem das Freigabefenster endet, den Pflicht-Nachweisen und den Löschfristen der Organisation. Die Werte kommen aus den gespeicherten Einstellungen; ändert die Organisation sie, ändert sich auch die Seite. Erreichbar ist sie über den Anmeldelink der Freizeit (siehe [Freizeitseite und Vertrauensseite](/eltern/freizeitseite/)).

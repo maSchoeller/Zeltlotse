@@ -19,6 +19,7 @@ export default defineConfig({
 			lastUpdated: false,
 			sidebar: [
 				{ label: 'Startseite', link: '/' },
+				{ label: 'Rollen im Überblick', slug: 'rollen' },
 				{ label: 'Erste Schritte', items: [{ autogenerate: { directory: 'erste-schritte' } }] },
 				{ label: 'Eltern', items: [{ autogenerate: { directory: 'eltern' } }] },
 				{ label: 'Mitarbeitende', items: [{ autogenerate: { directory: 'mitarbeitende' } }] },
